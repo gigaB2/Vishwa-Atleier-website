@@ -281,42 +281,90 @@
       color: var(--gold-bright); font-family: var(--font-mono); font-weight: 700; font-size: 0.75rem;
     }
 
-    /* Modal Gallery Inspector */
+    /* Modal Gallery Inspector Redesign */
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(5, 10, 6, 0.92); backdrop-filter: blur(16px);
-      z-index: 1000; display: none; align-items: center; justify-content: center; padding: 2rem;
+      background: rgba(4, 7, 5, 0.95); backdrop-filter: blur(20px);
+      z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1.5rem;
     }
     .modal-overlay.active { display: flex; }
     .modal-box {
-      background: var(--card-bg); border: 1px solid var(--gold-primary);
-      max-width: 1100px; width: 100%; border-radius: var(--radius-lg);
-      overflow: hidden; display: grid; grid-template-columns: 1.2fr 0.8fr; position: relative;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8); max-height: 90vh;
+      background: rgba(14, 22, 16, 0.96);
+      border: 1px solid var(--card-border);
+      max-width: 1150px; width: 100%; border-radius: var(--radius-lg);
+      overflow: hidden; display: grid; grid-template-columns: 1fr 340px; position: relative;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9), 0 0 40px rgba(197, 160, 89, 0.15);
+      max-height: 92vh; height: 680px;
     }
     .modal-gallery-view {
-      background: #000; display: flex; flex-direction: column; justify-content: center; position: relative;
+      background: #040705; display: flex; flex-direction: column; justify-content: space-between;
+      position: relative; overflow: hidden; padding: 1.25rem;
     }
-    .modal-gallery-view img {
-      width: 100%; height: 520px; object-fit: contain; background: #000;
+    .main-img-container {
+      position: relative; width: 100%; flex: 1; display: flex; align-items: center; justify-content: center;
+      overflow: hidden; border-radius: var(--radius-md); background: #000;
+    }
+    .modal-gallery-view img.main-img {
+      max-width: 100%; max-height: 540px; width: auto; height: auto; object-fit: contain;
+      transition: opacity 0.25s ease, transform 0.3s ease;
+    }
+    
+    /* Nav arrows */
+    .modal-nav-btn {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(11, 17, 12, 0.7); border: 1px solid var(--card-border);
+      color: var(--gold-bright); font-size: 1.2rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: var(--transition-smooth); z-index: 5; backdrop-filter: blur(4px);
+    }
+    .modal-nav-btn:hover {
+      background: var(--gold-primary); color: #0B110C; border-color: var(--gold-bright);
+      box-shadow: 0 0 15px rgba(197, 160, 89, 0.5);
+    }
+    .modal-nav-btn.prev { left: 16px; }
+    .modal-nav-btn.next { right: 16px; }
+
+    /* Micro Tiny Thumbnails Bar */
+    .thumbs-container {
+      margin-top: 0.8rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      background: rgba(11, 17, 12, 0.8); backdrop-filter: blur(10px);
+      border: 1px solid rgba(197, 160, 89, 0.2); padding: 0.6rem 1rem;
+      border-radius: var(--radius-md);
     }
     .thumbs-strip {
-      display: flex; gap: 6px; padding: 8px; overflow-x: auto; background: rgba(0, 0, 0, 0.9);
+      display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; align-items: center;
     }
+    .thumbs-strip::-webkit-scrollbar { display: none; }
+    
+    /* Really small thumbnails (24px x 24px) */
     .thumb-item {
-      width: 42px; height: 42px; object-fit: cover; border-radius: 3px; cursor: pointer;
-      opacity: 0.5; border: 1px solid transparent; transition: var(--transition-smooth); flex-shrink: 0;
+      width: 24px; height: 24px; object-fit: cover; border-radius: 3px; cursor: pointer;
+      opacity: 0.4; border: 1px solid rgba(255, 255, 255, 0.15); transition: all 0.2s ease; flex-shrink: 0;
     }
-    .thumb-item.active, .thumb-item:hover { opacity: 1; border-color: var(--gold-bright); box-shadow: 0 0 8px rgba(229, 193, 124, 0.4); }
+    .thumb-item:hover { opacity: 0.8; transform: scale(1.15); border-color: var(--gold-bright); }
+    .thumb-item.active {
+      opacity: 1; border: 1.5px solid var(--gold-bright);
+      box-shadow: 0 0 10px rgba(229, 193, 124, 0.6); transform: scale(1.2); z-index: 2;
+    }
+
+    .photo-counter {
+      font-family: var(--font-mono); font-size: 0.72rem; color: var(--gold-bright);
+      white-space: nowrap; font-weight: 600; letter-spacing: 0.05em;
+    }
 
     .modal-content-side {
-      padding: 2.5rem; display: flex; flex-direction: column; justify-content: space-between;
+      padding: 2.2rem 1.8rem; display: flex; flex-direction: column; justify-content: space-between;
+      border-left: 1px solid rgba(197, 160, 89, 0.15); background: rgba(18, 26, 20, 0.6);
     }
     .modal-close {
-      position: absolute; top: 16px; right: 20px; font-size: 1.8rem; color: var(--gold-bright);
-      cursor: pointer; border: none; background: none; z-index: 10; transition: var(--transition-smooth);
+      position: absolute; top: 16px; right: 20px; font-size: 1.6rem; color: var(--gold-bright);
+      cursor: pointer; border: none; background: rgba(0,0,0,0.4); width: 36px; height: 36px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      z-index: 10; transition: var(--transition-smooth); border: 1px solid var(--card-border);
     }
-    .modal-close:hover { color: #FFF; transform: scale(1.1); }
+    .modal-close:hover { color: #FFF; background: var(--gold-primary); border-color: var(--gold-bright); transform: scale(1.05); }
   </style>
 </head>
 <body>
@@ -483,22 +531,35 @@
       <button class="modal-close" onclick="closeModalDirect()">&times;</button>
       
       <div class="modal-gallery-view">
-        <img src="" id="modal-main-img" alt="Design Photo">
-        <div class="thumbs-strip" id="modal-thumbs"></div>
+        <div class="main-img-container">
+          <button class="modal-nav-btn prev" onclick="navigatePhoto(-1)">‹</button>
+          <img src="" id="modal-main-img" class="main-img" alt="Design Photo">
+          <button class="modal-nav-btn next" onclick="navigatePhoto(1)">›</button>
+        </div>
+        <div class="thumbs-container">
+          <div class="thumbs-strip" id="modal-thumbs"></div>
+          <span class="photo-counter" id="modal-photo-counter">1 / 1</span>
+        </div>
       </div>
 
       <div class="modal-content-side">
         <div>
           <span class="film-badge" id="modal-design-tag">DESIGN SPECIFICATION</span>
-          <h2 id="modal-title" style="font-family: var(--font-serif); font-size: 2.2rem; color: #FFF; margin: 1rem 0 0.5rem 0;"></h2>
-          <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 2rem;">
+          <h2 id="modal-title" style="font-family: var(--font-serif); font-size: 2rem; color: #FFF; margin: 1rem 0 0.5rem 0;"></h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.8rem;">
             High-fashion handcrafted luxury saree from Vishwa Atelier's Bloom collection. Features Mulberry silk blend and intricate Jacquard motifs.
           </p>
         </div>
 
-        <a href="Lookbook_3_Bloom.pdf" download class="btn-gold" style="justify-content: center; width: 100%;">
-          Download Full Catalog (PDF)
-        </a>
+        <div>
+          <div style="background: rgba(197, 160, 89, 0.08); border: 1px dashed var(--card-border); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+            <p style="font-size: 0.8rem; color: var(--gold-bright); font-family: var(--font-mono); text-transform: uppercase; margin-bottom: 0.3rem;">Craftsmanship Note</p>
+            <p style="font-size: 0.825rem; color: var(--text-muted);">Authentic Jacquard weave crafted with precision looms. High-resolution imagery captured during official campaign shoot.</p>
+          </div>
+          <a href="Lookbook_3_Catalog.pdf" target="_blank" class="btn-gold" style="justify-content: center; width: 100%;">
+            Download Catalog PDF
+          </a>
+        </div>
       </div>
     </div>
   </div>
@@ -570,6 +631,9 @@
       container.innerHTML = html;
     }
 
+    let currentPhotos = [];
+    let currentPhotoIndex = 0;
+
     function openInspector(index) {
       const data = getFilteredData();
       const item = data[index];
@@ -578,27 +642,50 @@
       document.getElementById('modal-title').innerText = `Design #${item.design_no}`;
       document.getElementById('modal-design-tag').innerText = `BLOOM CAMPAIGN — ${item.design_no}`;
 
-      const photos = item.all_photos || [item.photo];
-      const mainImg = document.getElementById('modal-main-img');
-      const thumbsContainer = document.getElementById('modal-thumbs');
+      currentPhotos = item.all_photos || [item.photo];
+      currentPhotoIndex = 0;
 
-      if (photos.length > 0) {
-        mainImg.src = encodeURI(photos[0]);
-        let thumbsHtml = '';
-        photos.forEach((p, idx) => {
-          const encoded = encodeURI(p);
-          thumbsHtml += `<img src="${encoded}" class="thumb-item ${idx===0?'active':''}" onclick="setModalImage('${encoded}', this)" alt="Thumb ${idx + 1}">`;
-        });
-        thumbsContainer.innerHTML = thumbsHtml;
-      }
-
+      renderModalPhoto();
       document.getElementById('modal-overlay').classList.add('active');
     }
 
-    function setModalImage(src, el) {
-      document.getElementById('modal-main-img').src = src;
-      document.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
-      if (el) el.classList.add('active');
+    function renderModalPhoto() {
+      if (!currentPhotos.length) return;
+      const src = encodeURI(currentPhotos[currentPhotoIndex]);
+      const mainImg = document.getElementById('modal-main-img');
+      mainImg.style.opacity = '0.3';
+      setTimeout(() => {
+        mainImg.src = src;
+        mainImg.style.opacity = '1';
+      }, 100);
+
+      document.getElementById('modal-photo-counter').innerText = `${currentPhotoIndex + 1} / ${currentPhotos.length}`;
+
+      const thumbsContainer = document.getElementById('modal-thumbs');
+      let thumbsHtml = '';
+      currentPhotos.forEach((p, idx) => {
+        const encoded = encodeURI(p);
+        const activeClass = idx === currentPhotoIndex ? 'active' : '';
+        thumbsHtml += `<img src="${encoded}" class="thumb-item ${activeClass}" onclick="selectModalPhoto(${idx})" alt="Micro Thumb ${idx + 1}" title="Photo ${idx + 1}">`;
+      });
+      thumbsContainer.innerHTML = thumbsHtml;
+
+      // Scroll thumbnail into view smoothly
+      const activeThumb = thumbsContainer.children[currentPhotoIndex];
+      if (activeThumb) {
+        activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+
+    function selectModalPhoto(idx) {
+      currentPhotoIndex = idx;
+      renderModalPhoto();
+    }
+
+    function navigatePhoto(direction) {
+      if (!currentPhotos.length) return;
+      currentPhotoIndex = (currentPhotoIndex + direction + currentPhotos.length) % currentPhotos.length;
+      renderModalPhoto();
     }
 
     function closeModal(e) {
@@ -610,6 +697,15 @@
     function closeModalDirect() {
       document.getElementById('modal-overlay').classList.remove('active');
     }
+
+    // Keyboard navigation (Arrow keys & Escape)
+    document.addEventListener('keydown', (e) => {
+      const modal = document.getElementById('modal-overlay');
+      if (!modal.classList.contains('active')) return;
+      if (e.key === 'ArrowLeft') navigatePhoto(-1);
+      if (e.key === 'ArrowRight') navigatePhoto(1);
+      if (e.key === 'Escape') closeModalDirect();
+    });
 
     // Initial Render
     renderGrid();
