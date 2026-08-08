@@ -301,13 +301,13 @@
       width: 100%; height: 520px; object-fit: contain; background: #000;
     }
     .thumbs-strip {
-      display: flex; gap: 8px; padding: 12px; overflow-x: auto; background: rgba(0, 0, 0, 0.8);
+      display: flex; gap: 6px; padding: 8px; overflow-x: auto; background: rgba(0, 0, 0, 0.9);
     }
     .thumb-item {
-      width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;
-      opacity: 0.6; border: 1px solid transparent; transition: var(--transition-smooth); flex-shrink: 0;
+      width: 42px; height: 42px; object-fit: cover; border-radius: 3px; cursor: pointer;
+      opacity: 0.5; border: 1px solid transparent; transition: var(--transition-smooth); flex-shrink: 0;
     }
-    .thumb-item.active, .thumb-item:hover { opacity: 1; border-color: var(--gold-bright); }
+    .thumb-item.active, .thumb-item:hover { opacity: 1; border-color: var(--gold-bright); box-shadow: 0 0 8px rgba(229, 193, 124, 0.4); }
 
     .modal-content-side {
       padding: 2.5rem; display: flex; flex-direction: column; justify-content: space-between;
