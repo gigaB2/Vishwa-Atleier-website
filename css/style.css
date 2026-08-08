@@ -1287,3 +1287,21 @@ img, video {
     max-width: calc((100% - 48px) / 3) !important;
   }
 }
+
+/* Cross-Platform Mobile Video Autoplay & Controls Suppression */
+video {
+  pointer-events: none !important;
+}
+
+video::-webkit-media-controls,
+video::-webkit-media-controls-start-playback-button,
+video::-webkit-media-controls-play-button,
+video::-webkit-media-controls-panel,
+video::-webkit-media-controls-enclosure,
+video::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+

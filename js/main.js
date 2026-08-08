@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initNavbarScrollspy();
   initMobileMenu();
   initGroupCompaniesSlider();
+  initAutoplayVideos();
 });
 
 /* 1. Manufacturing Process Stepper */
@@ -45,6 +46,11 @@ function initProcessStepper() {
         // Play active video if available
         const activeVideo = activePane.querySelector('video');
         if (activeVideo) {
+          activeVideo.muted = true;
+          activeVideo.defaultMuted = true;
+          activeVideo.playsInline = true;
+          activeVideo.setAttribute('playsinline', '');
+          activeVideo.setAttribute('webkit-playsinline', '');
           activeVideo.play().catch(() => {});
         }
       }
@@ -325,3 +331,74 @@ function initGroupCompaniesSlider() {
   setTimeout(updateSlider, 100);
   updateSlider();
 }
+
+/* 6. Cross-Platform Mobile Video Autoplay Engine (iOS & Android) */
+function initAutoplayVideos() {
+  const videos = document.querySelectorAll('video');
+  if (!videos.length) return;
+
+  function prepareAndPlay(video) {
+    if (!video) return;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.setAttribute('x5-playsinline', 'true');
+
+    const promise = video.play();
+    if (promise !== undefined) {
+      promise.catch(() => {
+        // Autoplay policy or Low Power Mode restricted playback; will retry on interaction
+      });
+    }
+  }
+
+  function playVisibleVideos() {
+    videos.forEach(video => {
+      const pane = video.closest('.process-pane');
+      if (!pane || !pane.classList.contains('hidden')) {
+        prepareAndPlay(video);
+      }
+    });
+  }
+
+  // Attempt initial playback immediately and on window load
+  playVisibleVideos();
+  window.addEventListener('load', playVisibleVideos);
+
+  // Re-trigger playback on user gestures (touch, tap, scroll) for iOS/Android Low Power Mode
+  const interactionEvents = ['touchstart', 'touchend', 'pointerdown', 'click', 'scroll'];
+  const handleUserGesture = () => {
+    playVisibleVideos();
+  };
+
+  interactionEvents.forEach(evt => {
+    window.addEventListener(evt, handleUserGesture, { passive: true });
+  });
+
+  // Re-attempt playback when returning to document focus
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      playVisibleVideos();
+    }
+  });
+
+  // IntersectionObserver to auto-start video when scrolling into viewport on mobile
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const video = entry.target;
+        const pane = video.closest('.process-pane');
+        const isPaneHidden = pane && pane.classList.contains('hidden');
+
+        if (entry.isIntersecting && !isPaneHidden) {
+          prepareAndPlay(video);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    videos.forEach(v => observer.observe(v));
+  }
+}
+
