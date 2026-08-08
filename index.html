@@ -772,17 +772,50 @@
       </div>
     </section>
 
-    <!-- Newsletter CTA Section -->
+    <!-- Newsletter & WhatsApp CTA Section -->
     <section class="py-24 bg-primary text-white text-center">
       <div class="max-w-2xl mx-auto px-margin-mobile">
         <h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg mb-4 text-white">Stay Woven In</h2>
-        <p class="font-body-md text-white/70 mb-10">Receive exclusive previews of our new textile arrivals and insights into the world of luxury tailoring.</p>
+        <p class="font-body-md text-white/70 mb-8">Connect directly with our leadership team on WhatsApp or receive exclusive previews of our luxury textile collections.</p>
+        
+        <!-- WhatsApp Direct Owner Connect -->
+        <div class="bg-white/5 border border-white/15 p-6 md:p-8 rounded-sm mb-10 text-left backdrop-blur-sm max-w-lg mx-auto">
+          <label class="block font-label-caps text-xs text-white/80 mb-2 uppercase tracking-wider">Select Owner / Managing Director</label>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-grow">
+              <select id="whatsappOwnerSelect" class="w-full bg-surface-container/90 border border-white/30 text-on-surface px-4 py-3 text-sm rounded-none focus:outline-none focus:border-white appearance-none cursor-pointer pr-10 font-body-md" onchange="updateWhatsAppOwnerLink()">
+                <option value="919313772824" data-name="Vishwa Sheth">Vishwa Sheth, M.D. (+91 93137 72824)</option>
+                <option value="919974750009" data-name="Rajiv Sheth">Rajiv Sheth, M.D. (+91 99747 50009)</option>
+                <option value="919712991204" data-name="Manisha Sheth">Manisha Sheth, M.D. (+91 97129 91204)</option>
+              </select>
+              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-xl">expand_more</span>
+            </div>
+            <a id="whatsappOwnerBtn" href="https://wa.me/919313772824?text=Hello%20Vishwa%20Sheth,%20I%20would%20like%20to%20inquire%20about%20Vishwa%20Atelier%20textiles." target="_blank" class="bg-secondary text-white hover:bg-secondary/90 transition-colors px-6 py-3 font-label-caps text-xs tracking-wider flex items-center justify-center gap-2 whitespace-nowrap">
+              <span class="material-symbols-outlined text-lg">chat</span>
+              <span>Connect on WhatsApp</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Newsletter Form -->
         <form class="flex flex-col md:flex-row gap-4 max-w-md mx-auto" onsubmit="event.preventDefault(); alert('Thank you for subscribing to Vishwa Atelier.');">
           <input class="flex-grow bg-transparent border-b border-white/40 px-4 py-3 focus:border-white focus:ring-0 outline-none transition-colors text-white placeholder-white/50 font-body-md" placeholder="Your email address" type="email" required/>
           <button class="bg-white text-primary px-8 py-3.5 font-label-caps text-label-caps hover:bg-primary-fixed transition-colors">Subscribe</button>
         </form>
       </div>
     </section>
+
+    <script>
+      function updateWhatsAppOwnerLink() {
+        const select = document.getElementById('whatsappOwnerSelect');
+        const btn = document.getElementById('whatsappOwnerBtn');
+        const phone = select.value;
+        const selectedOption = select.options[select.selectedIndex];
+        const name = selectedOption.getAttribute('data-name');
+        const message = encodeURIComponent(`Hello ${name}, I would like to inquire about Vishwa Atelier textiles.`);
+        btn.href = `https://wa.me/${phone}?text=${message}`;
+      }
+    </script>
   </main>
 
   <!-- Sticky Floating WhatsApp Action Button -->
