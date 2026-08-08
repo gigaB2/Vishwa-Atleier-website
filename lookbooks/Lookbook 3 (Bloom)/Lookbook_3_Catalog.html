@@ -587,7 +587,7 @@
         let thumbsHtml = '';
         photos.forEach((p, idx) => {
           const encoded = encodeURI(p);
-          thumbsHtml += `<img src="${encoded}" class="thumb-item ${idx===0?'active':''}" onclick="setModalImage('${encoded}', this)" alt="Thumb">`;
+          thumbsHtml += `<img src="${encoded}" class="thumb-item ${idx===0?'active':''}" onclick="setModalImage('${encoded}', this)" alt="Thumb ${idx + 1}">`;
         });
         thumbsContainer.innerHTML = thumbsHtml;
       }
@@ -598,7 +598,7 @@
     function setModalImage(src, el) {
       document.getElementById('modal-main-img').src = src;
       document.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
-      el.classList.add('active');
+      if (el) el.classList.add('active');
     }
 
     function closeModal(e) {

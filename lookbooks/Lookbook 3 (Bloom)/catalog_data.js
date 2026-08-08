@@ -4,18 +4,8 @@ const CATALOG_DATA = [
     "photo": "collection/AT38/Copy of 2W9A4134.webp",
     "all_photos": [
       "collection/AT38/Copy of 2W9A4134.webp",
-      "collection/AT38/Copy of 2W9A4159.webp",
-      "collection/AT38/Copy of 2W9A4162.webp",
-      "collection/AT38/Copy of 2W9A4178.webp",
       "collection/AT38/Copy of 2W9A4195-2.webp",
-      "collection/AT38/Copy of 2W9A4195.webp",
-      "collection/AT38/Copy of 2W9A4199.webp",
-      "collection/AT38/Copy of 2W9A4207.webp",
-      "collection/AT38/Copy of 2W9A4212.webp",
-      "collection/AT38/Copy of 2W9A4213.webp",
-      "collection/AT38/Copy of 2W9A4216-2.webp",
-      "collection/AT38/Copy of 2W9A4223-2.webp",
-      "collection/AT38/Copy of 2W9A4223.webp"
+      "collection/AT38/Copy of 2W9A4213.webp"
     ]
   },
   {
