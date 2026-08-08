@@ -218,6 +218,7 @@ function initMobileMenu() {
 /* 5. Group Companies 3-Card Row Slider */
 function initGroupCompaniesSlider() {
   const track = document.getElementById('gc-track');
+  const trackContainer = document.getElementById('gc-track-container');
   const cards = document.querySelectorAll('.gc-card');
   const prevBtn = document.getElementById('gc-prev-btn');
   const nextBtn = document.getElementById('gc-next-btn');
@@ -244,7 +245,7 @@ function initGroupCompaniesSlider() {
     if (currentIndex < 0) currentIndex = 0;
 
     const gap = 24; // 24px gap (gap-6)
-    const cardWidth = cards[0].offsetWidth;
+    const cardWidth = cards[0].offsetWidth || (trackContainer ? trackContainer.clientWidth : 300);
     const shiftAmount = currentIndex * (cardWidth + gap);
     
     track.style.transform = `translateX(-${shiftAmount}px)`;
@@ -295,7 +296,6 @@ function initGroupCompaniesSlider() {
   // Touch / Swipe support
   let startX = 0;
   let isDragging = false;
-  const trackContainer = document.getElementById('gc-track-container');
 
   if (trackContainer) {
     trackContainer.addEventListener('touchstart', (e) => {
@@ -320,5 +320,6 @@ function initGroupCompaniesSlider() {
   }
 
   window.addEventListener('resize', updateSlider);
+  setTimeout(updateSlider, 100);
   updateSlider();
 }
