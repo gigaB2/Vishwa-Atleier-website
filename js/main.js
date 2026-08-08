@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initLookbookSlider();
   initNavbarScrollspy();
   initMobileMenu();
+  initGroupCompaniesSlider();
 });
 
 /* 1. Manufacturing Process Stepper */
@@ -212,4 +213,113 @@ function initMobileMenu() {
     navMenu.classList.toggle('border-b');
     navMenu.classList.toggle('border-outline-variant');
   });
+}
+
+/* 5. Group Companies 3-Card Row Slider */
+function initGroupCompaniesSlider() {
+  const track = document.getElementById('gc-track');
+  const cards = document.querySelectorAll('.gc-card');
+  const prevBtn = document.getElementById('gc-prev-btn');
+  const nextBtn = document.getElementById('gc-next-btn');
+  const dotsContainer = document.getElementById('gc-dots');
+  
+  if (!track || !cards.length) return;
+
+  let currentIndex = 0;
+
+  function getVisibleCount() {
+    if (window.innerWidth >= 1024) return 3;
+    if (window.innerWidth >= 768) return 2;
+    return 1;
+  }
+
+  function getMaxIndex() {
+    return Math.max(0, cards.length - getVisibleCount());
+  }
+
+  function updateSlider() {
+    const visibleCount = getVisibleCount();
+    const maxIndex = getMaxIndex();
+    
+    if (currentIndex > maxIndex) currentIndex = maxIndex;
+    if (currentIndex < 0) currentIndex = 0;
+
+    const gap = 24; // 24px gap (gap-6)
+    const cardWidth = cards[0].offsetWidth;
+    const shiftAmount = currentIndex * (cardWidth + gap);
+    
+    track.style.transform = `translateX(-${shiftAmount}px)`;
+
+    if (prevBtn) {
+      prevBtn.disabled = currentIndex === 0;
+      prevBtn.style.opacity = currentIndex === 0 ? '0.3' : '1';
+      prevBtn.style.cursor = currentIndex === 0 ? 'not-allowed' : 'pointer';
+    }
+    if (nextBtn) {
+      nextBtn.disabled = currentIndex >= maxIndex;
+      nextBtn.style.opacity = currentIndex >= maxIndex ? '0.3' : '1';
+      nextBtn.style.cursor = currentIndex >= maxIndex ? 'not-allowed' : 'pointer';
+    }
+
+    if (dotsContainer) {
+      dotsContainer.innerHTML = '';
+      for (let i = 0; i <= maxIndex; i++) {
+        const dot = document.createElement('span');
+        dot.className = `w-2.5 h-2.5 rounded-full cursor-pointer transition-all duration-300 ${i === currentIndex ? 'bg-primary scale-110' : 'bg-outline/40 hover:bg-outline'}`;
+        dot.addEventListener('click', () => {
+          currentIndex = i;
+          updateSlider();
+        });
+        dotsContainer.appendChild(dot);
+      }
+    }
+  }
+
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        updateSlider();
+      }
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      if (currentIndex < getMaxIndex()) {
+        currentIndex++;
+        updateSlider();
+      }
+    });
+  }
+
+  // Touch / Swipe support
+  let startX = 0;
+  let isDragging = false;
+  const trackContainer = document.getElementById('gc-track-container');
+
+  if (trackContainer) {
+    trackContainer.addEventListener('touchstart', (e) => {
+      isDragging = true;
+      startX = e.touches[0].clientX;
+    }, { passive: true });
+
+    trackContainer.addEventListener('touchend', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      const endX = e.changedTouches[0].clientX;
+      const diffX = startX - endX;
+      if (Math.abs(diffX) > 40) {
+        if (diffX > 0 && currentIndex < getMaxIndex()) {
+          currentIndex++;
+        } else if (diffX < 0 && currentIndex > 0) {
+          currentIndex--;
+        }
+        updateSlider();
+      }
+    });
+  }
+
+  window.addEventListener('resize', updateSlider);
+  updateSlider();
 }
