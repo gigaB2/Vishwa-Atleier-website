@@ -776,40 +776,13 @@
     <section class="py-24 bg-primary text-white text-center">
       <div class="max-w-2xl mx-auto px-margin-mobile">
         <h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg mb-4 text-white">Stay Woven In</h2>
-        <p class="font-body-md text-white/70 mb-8">Connect directly with our leadership team on WhatsApp for bespoke textile inquiries and consultations.</p>
-        
-        <!-- WhatsApp Direct Owner Connect -->
-        <div class="bg-white/5 border border-white/20 p-6 md:p-8 rounded-none text-left backdrop-blur-md max-w-lg mx-auto shadow-2xl">
-          <label class="block font-label-caps text-[11px] text-white/70 mb-3 uppercase tracking-widest">Select Managing Director</label>
-          <div class="flex flex-col sm:flex-row gap-4">
-            <div class="relative flex-grow">
-              <select id="whatsappOwnerSelect" class="w-full bg-primary/80 border border-white/40 text-white px-4 py-3.5 text-xs font-label-caps tracking-wider rounded-none focus:outline-none focus:border-white focus:ring-1 focus:ring-white appearance-none cursor-pointer pr-10 transition-colors" onchange="updateWhatsAppOwnerLink()">
-                <option class="bg-primary text-white py-2" value="919313772824" data-name="Vishwa Sheth">Vishwa Sheth, M.D. (+91 93137 72824)</option>
-                <option class="bg-primary text-white py-2" value="919974750009" data-name="Rajiv Sheth">Rajiv Sheth, M.D. (+91 99747 50009)</option>
-                <option class="bg-primary text-white py-2" value="919712991204" data-name="Manisha Sheth">Manisha Sheth, M.D. (+91 97129 91204)</option>
-              </select>
-              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-white/70 pointer-events-none text-xl">expand_more</span>
-            </div>
-            <a id="whatsappOwnerBtn" href="https://wa.me/919313772824?text=Hello%20Vishwa%20Sheth,%20I%20would%20like%20to%20inquire%20about%20Vishwa%20Atelier%20textiles." target="_blank" class="bg-white text-primary hover:bg-primary-fixed transition-colors px-8 py-3.5 font-label-caps text-label-caps flex items-center justify-center gap-2 whitespace-nowrap">
-              <span class="material-symbols-outlined text-lg">chat</span>
-              <span>Connect on WhatsApp</span>
-            </a>
-          </div>
-        </div>
+        <p class="font-body-md text-white/70 mb-8">Connect directly with our leadership team for bespoke textile inquiries and consultations.</p>
+        <a href="#footer" class="inline-flex items-center gap-2 bg-white text-primary hover:bg-primary-fixed transition-colors px-8 py-3.5 font-label-caps text-label-caps">
+          <span class="material-symbols-outlined text-lg">chat</span>
+          <span>Contact Our Directors</span>
+        </a>
       </div>
     </section>
-
-    <script>
-      function updateWhatsAppOwnerLink() {
-        const select = document.getElementById('whatsappOwnerSelect');
-        const btn = document.getElementById('whatsappOwnerBtn');
-        const phone = select.value;
-        const selectedOption = select.options[select.selectedIndex];
-        const name = selectedOption.getAttribute('data-name');
-        const message = encodeURIComponent(`Hello ${name}, I would like to inquire about Vishwa Atelier textiles.`);
-        btn.href = `https://wa.me/${phone}?text=${message}`;
-      }
-    </script>
   </main>
 
   <!-- Sticky Floating WhatsApp Action Button -->
