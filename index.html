@@ -162,26 +162,43 @@
 
   <!-- Top Navigation Bar -->
   <nav class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-sm border-b border-outline-variant transition-all duration-300" id="site-header">
-    <div class="flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 max-w-container-max mx-auto">
+    <div class="flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 max-w-container-max mx-auto relative">
       <a href="#hero" class="font-headline-md text-headline-md tracking-tighter text-primary flex items-center gap-2">
         <span class="font-headline-md text-primary font-bold">VISHWA</span>
         <span class="font-headline-md italic font-normal text-secondary">ATELIER</span>
       </a>
-      
-      <div class="hidden md:flex items-center gap-8" id="nav-menu">
-        <a class="font-label-caps text-label-caps text-secondary hover:text-primary transition-colors nav-link" href="#story">Heritage</a>
-        <a class="font-label-caps text-label-caps text-secondary hover:text-primary transition-colors nav-link" href="#process">Process</a>
-        <a class="font-label-caps text-label-caps text-secondary hover:text-primary transition-colors nav-link" href="#bento">Factory Showcase</a>
-        <a class="font-label-caps text-label-caps text-secondary hover:text-primary transition-colors nav-link" href="#lookbook">Look Book</a>
-        <a class="font-label-caps text-label-caps text-secondary hover:text-primary transition-colors nav-link" href="#group-companies">Group Entities</a>
-        <a class="font-label-caps text-label-caps text-secondary hover:text-primary transition-colors nav-link" href="#footer">Contact</a>
-      </div>
 
-      <div class="flex items-center gap-4">
-        <a href="#lookbook" class="hidden sm:inline-block bg-primary text-white px-6 py-2.5 font-label-caps text-label-caps hover:bg-tertiary-container hover:text-tertiary-fixed transition-colors">
-          Explore Look Book
-        </a>
-        <button class="md:hidden material-symbols-outlined p-2 text-primary" id="mobile-toggle-btn" aria-label="Toggle Menu">menu</button>
+      <!-- Right Side Button with Dropdown Box -->
+      <div class="relative">
+        <button class="material-symbols-outlined p-2 text-primary hover:bg-surface-container transition-colors cursor-pointer select-none" id="mobile-toggle-btn" aria-label="Toggle Navigation Dropdown">menu</button>
+
+        <!-- Right-Aligned Dropdown Box -->
+        <div class="hidden absolute right-0 top-full mt-2 w-64 bg-white border border-outline-variant shadow-xl p-2 flex flex-col gap-1 z-50 divide-y divide-outline-variant/30" id="nav-menu">
+          <a class="font-label-caps text-xs text-primary hover:text-tertiary-container hover:bg-surface-container p-3 transition-colors flex items-center justify-between nav-link" href="#story">
+            <span>01. Heritage</span>
+            <span class="text-[10px] text-secondary">→</span>
+          </a>
+          <a class="font-label-caps text-xs text-primary hover:text-tertiary-container hover:bg-surface-container p-3 transition-colors flex items-center justify-between nav-link" href="#process">
+            <span>02. Process</span>
+            <span class="text-[10px] text-secondary">→</span>
+          </a>
+          <a class="font-label-caps text-xs text-primary hover:text-tertiary-container hover:bg-surface-container p-3 transition-colors flex items-center justify-between nav-link" href="#bento">
+            <span>03. Factory Showcase</span>
+            <span class="text-[10px] text-secondary">→</span>
+          </a>
+          <a class="font-label-caps text-xs text-primary hover:text-tertiary-container hover:bg-surface-container p-3 transition-colors flex items-center justify-between nav-link" href="#lookbook">
+            <span>04. Look Book</span>
+            <span class="text-[10px] text-secondary">→</span>
+          </a>
+          <a class="font-label-caps text-xs text-primary hover:text-tertiary-container hover:bg-surface-container p-3 transition-colors flex items-center justify-between nav-link" href="#group-companies">
+            <span>05. Group Entities</span>
+            <span class="text-[10px] text-secondary">→</span>
+          </a>
+          <a class="font-label-caps text-xs text-primary hover:text-tertiary-container hover:bg-surface-container p-3 transition-colors flex items-center justify-between nav-link" href="#footer">
+            <span>06. Contact</span>
+            <span class="text-[10px] text-secondary">→</span>
+          </a>
+        </div>
       </div>
     </div>
   </nav>
@@ -1073,9 +1090,9 @@
 
   <!-- Footer Section -->
   <footer class="bg-surface-container border-t border-outline-variant" id="footer">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-mobile md:px-margin-desktop py-16 max-w-container-max mx-auto">
-      <div class="space-y-6">
-        <a href="#hero" class="font-headline-md text-headline-md text-primary flex items-center gap-2">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 px-margin-mobile md:px-margin-desktop py-16 max-w-container-max mx-auto">
+      <div class="sm:col-span-1 lg:col-span-4 space-y-6">
+        <a href="#hero" class="font-headline-md text-2xl lg:text-3xl text-primary flex items-center gap-2">
           <span class="font-bold">VISHWA</span>
           <span class="italic font-normal text-secondary">ATELIER</span>
         </a>
@@ -1086,7 +1103,7 @@
         </div>
       </div>
       
-      <div>
+      <div class="sm:col-span-1 lg:col-span-2">
         <h4 class="font-label-caps text-label-caps text-primary mb-6">Collections</h4>
         <ul class="space-y-3 font-body-md text-sm">
           <li><a class="text-on-surface-variant hover:text-primary transition-colors" href="lookbooks/Lookbook 1 (AVF)/Lookbook_1_Catalog.html">Lookbook 01 (AVF)</a></li>
@@ -1095,7 +1112,7 @@
         </ul>
       </div>
 
-      <div>
+      <div class="sm:col-span-1 lg:col-span-2">
         <h4 class="font-label-caps text-label-caps text-primary mb-6">Company</h4>
         <ul class="space-y-3 font-body-md text-sm">
           <li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#story">Our Heritage</a></li>
@@ -1106,7 +1123,7 @@
         </ul>
       </div>
 
-      <div>
+      <div class="sm:col-span-1 lg:col-span-4">
         <h4 class="font-label-caps text-label-caps text-primary mb-6">Contact & Inquiry</h4>
         <div class="space-y-4 font-body-md text-sm">
           <div class="border-b border-outline-variant/40 pb-3">

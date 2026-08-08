@@ -192,26 +192,28 @@ function initNavbarScrollspy() {
   });
 }
 
-/* 4. Mobile Navigation Toggle */
+/* 4. Dropdown Navigation Controller */
 function initMobileMenu() {
   const toggleBtn = document.getElementById('mobile-toggle-btn');
   const navMenu = document.getElementById('nav-menu');
 
   if (!toggleBtn || !navMenu) return;
 
-  toggleBtn.addEventListener('click', () => {
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     navMenu.classList.toggle('hidden');
-    navMenu.classList.toggle('flex');
-    navMenu.classList.toggle('flex-col');
-    navMenu.classList.toggle('absolute');
-    navMenu.classList.toggle('top-full');
-    navMenu.classList.toggle('left-0');
-    navMenu.classList.toggle('w-full');
-    navMenu.classList.toggle('bg-white');
-    navMenu.classList.toggle('p-6');
-    navMenu.classList.toggle('shadow-lg');
-    navMenu.classList.toggle('border-b');
-    navMenu.classList.toggle('border-outline-variant');
+  });
+
+  navMenu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      navMenu.classList.add('hidden');
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!navMenu.contains(e.target) && !toggleBtn.contains(e.target)) {
+      navMenu.classList.add('hidden');
+    }
   });
 }
 
