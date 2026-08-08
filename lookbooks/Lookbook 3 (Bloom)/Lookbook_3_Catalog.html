@@ -334,7 +334,7 @@
       border-radius: var(--radius-md);
     }
     .thumbs-strip {
-      display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; padding: 3px 0; align-items: center;
+      display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 6px 8px; align-items: center;
     }
     .thumbs-strip::-webkit-scrollbar { display: none; }
     
@@ -342,11 +342,12 @@
     .thumb-item {
       width: 38px; height: 38px; object-fit: cover; border-radius: 4px; cursor: pointer;
       opacity: 0.5; border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); flex-shrink: 0;
+      box-sizing: border-box;
     }
-    .thumb-item:hover { opacity: 0.9; transform: scale(1.1); border-color: var(--gold-bright); }
+    .thumb-item:hover { opacity: 0.9; transform: scale(1.08); border-color: var(--gold-bright); }
     .thumb-item.active {
       opacity: 1; border: 2px solid var(--gold-bright);
-      box-shadow: 0 0 12px rgba(229, 193, 124, 0.65); transform: scale(1.15); z-index: 2;
+      box-shadow: 0 0 12px rgba(229, 193, 124, 0.65); transform: scale(1.12); z-index: 2;
     }
 
     .main-img-container {
@@ -723,10 +724,14 @@
       });
       thumbsContainer.innerHTML = thumbsHtml;
 
-      // Scroll thumbnail into view smoothly
+      // Scroll active thumbnail into view without clipping
       const activeThumb = thumbsContainer.children[currentPhotoIndex];
       if (activeThumb) {
-        activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        if (currentPhotoIndex === 0) {
+          thumbsContainer.scrollLeft = 0;
+        } else {
+          activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }
       }
     }
 
