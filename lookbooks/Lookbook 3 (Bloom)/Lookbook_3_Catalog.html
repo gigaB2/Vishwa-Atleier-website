@@ -661,6 +661,7 @@
         const coverPhoto = encodeURI(item.photo);
         const photos = item.all_photos || [item.photo];
         const photoCount = photos.length;
+        const displayDesign = item.design_no.replace(/^MIX\s*-\s*/i, '');
         html += `
           <div class="product-card">
             <div class="product-img-wrap">
@@ -669,7 +670,7 @@
             </div>
             <div class="product-info">
               <div>
-                <h3 class="product-title">Design #${item.design_no}</h3>
+                <h3 class="product-title">Design # ${displayDesign}</h3>
                 <div class="product-meta">
                   <span>Bloom Campaign</span>
                   <span style="color:var(--gold-bright);">Jacquard Weave</span>
@@ -693,7 +694,8 @@
       const item = data[index];
       if (!item) return;
 
-      document.getElementById('modal-title').innerText = `Design #${item.design_no}`;
+      const displayDesign = item.design_no.replace(/^MIX\s*-\s*/i, '');
+      document.getElementById('modal-title').innerText = `Design # ${displayDesign}`;
       document.getElementById('modal-design-tag').innerText = `BLOOM CAMPAIGN`;
 
       currentPhotos = item.all_photos || [item.photo];
