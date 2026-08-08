@@ -1271,7 +1271,7 @@ img, video {
   }
 }
 
-/* Group Entities Card Slider Responsive Rules (1 card per view <= 786px, 3 cards per view > 786px) */
+/* Group Entities Card Slider Responsive Rules (1 card per view < 1024px including 768px & 784px, 3 cards per view >= 1024px) */
 .gc-card {
   width: 100% !important;
   min-width: 100% !important;
@@ -1280,7 +1280,7 @@ img, video {
   box-sizing: border-box !important;
 }
 
-@media (min-width: 787px) {
+@media (min-width: 1024px) {
   .gc-card {
     width: calc((100% - 48px) / 3) !important;
     min-width: calc((100% - 48px) / 3) !important;
