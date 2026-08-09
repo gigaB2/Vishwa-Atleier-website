@@ -69,8 +69,10 @@
 
 body {
   margin-left: var(--sidebar-w) !important;
-  transition: margin-left 0.2s ease;
-  will-change: margin-left;
+  width: calc(100% - var(--sidebar-w)) !important;
+  box-sizing: border-box !important;
+  transition: margin-left 0.2s ease, width 0.2s ease;
+  will-change: margin-left, width;
 }
 
 .vf-sidebar {
@@ -181,10 +183,65 @@ body {
   color: #f1f5f9 !important;
 }
 
+.vf-sb-mode-selector {
+  display: flex !important;
+  background: rgba(139, 92, 246, 0.08) !important;
+  padding: 3px !important;
+  border-radius: 10px !important;
+  margin-bottom: 0.85rem !important;
+  gap: 3px !important;
+  border: 1px solid rgba(139, 92, 246, 0.12) !important;
+}
+
+.vf-sb-mode-btn {
+  flex: 1 !important;
+  padding: 0.4rem 0.5rem !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  border-radius: 7px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  text-align: center !important;
+  box-shadow: none !important;
+  min-height: 0 !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+}
+
+.vf-sb-mode-btn:hover {
+  color: #7c3aed !important;
+  background: rgba(139, 92, 246, 0.06) !important;
+}
+
+.vf-sb-mode-btn.active {
+  background: #ffffff !important;
+  color: #7c3aed !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.dark-mode .vf-sb-mode-selector {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: #27272a !important;
+}
+
+.dark-mode .vf-sb-mode-btn {
+  color: #a1a1aa !important;
+}
+
+.dark-mode .vf-sb-mode-btn.active {
+  background: #18181b !important;
+  color: #a78bfa !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
 .vf-sb-nav {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.75rem 0.65rem 1.5rem;
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 0.75rem 0.65rem 1.5rem !important;
+  -webkit-overflow-scrolling: touch;
 }
 .vf-sb-nav::-webkit-scrollbar { width: 4px; }
 .vf-sb-nav::-webkit-scrollbar-track { background: transparent; }
@@ -616,44 +673,48 @@ html.vf-sidebar-collapsed .vf-sb-footer {
   padding: 0.75rem 0.5rem;
 }
 .vf-sb-collapse-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.65rem;
-  width: 100%;
-  background: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  padding: 0.5rem 0.65rem !important;
+  width: 100% !important;
+  min-height: 38px !important;
+  height: 38px !important;
+  background: transparent !important;
   border: none !important;
-  border-radius: 8px;
-  color: var(--muted) !important;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease-out;
+  border-radius: 8px !important;
+  color: #8b8fa3 !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease-out !important;
+  box-shadow: none !important;
 }
 html.vf-sidebar-collapsed .vf-sb-collapse-btn {
-  justify-content: center;
-  padding: 0.65rem 0;
+  justify-content: center !important;
+  padding: 0.5rem 0 !important;
 }
 .vf-sb-collapse-btn:hover {
-  background: rgba(139, 92, 246, 0.06) !important;
-  color: var(--accent) !important;
+  background: rgba(139, 92, 246, 0.08) !important;
+  color: #7c3aed !important;
+}
+.dark-mode .vf-sb-collapse-btn {
+  color: #a1a1aa !important;
 }
 .dark-mode .vf-sb-collapse-btn:hover {
-  background: rgba(124, 58, 237, 0.08) !important;
+  background: rgba(124, 58, 237, 0.12) !important;
   color: #a78bfa !important;
 }
 .vf-sb-collapse-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--muted);
-  transition: transform 0.2s ease;
+  width: 16px !important;
+  height: 16px !important;
+  color: inherit !important;
+  transition: transform 0.2s ease !important;
+  flex-shrink: 0 !important;
 }
-.vf-sb-collapse-btn:hover .vf-sb-collapse-icon {
-  color: var(--accent);
-}
-.dark-mode .vf-sb-collapse-btn:hover .vf-sb-collapse-icon {
-  color: #a78bfa;
+html.vf-sidebar-collapsed .vf-sb-collapse-icon {
+  transform: rotate(180deg) !important;
 }
 
 /* Mode Selector Styles */
@@ -1824,10 +1885,9 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   .pagination button,
   .icon-btn,
   .vf-filter-dd-btn,
-  .vf-sb-mode-btn,
   .auth-tab-btn,
-  button,
-  button[class*="btn"],
+  button:not(.vf-sb-mode-btn):not(.vf-sb-logout-btn):not(.vf-sb-toggle),
+  button[class*="btn"]:not(.vf-sb-mode-btn),
   a[class*="btn"] {
     min-height: 48px !important;
     min-width: 44px !important;
