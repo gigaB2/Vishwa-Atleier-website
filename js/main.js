@@ -15,47 +15,137 @@ document.addEventListener('DOMContentLoaded', () => {
 function initProcessStepper() {
   const tabs = document.querySelectorAll('.stepper-tab');
   const panes = document.querySelectorAll('.process-pane');
+  const processSection = document.getElementById('process');
 
   if (!tabs.length || !panes.length) return;
 
-  tabs.forEach((tab, index) => {
-    tab.addEventListener('click', () => {
-      // Update Tab active styling
-      tabs.forEach(t => {
+  let currentStep = 0;
+
+  function goToStep(index) {
+    if (index < 0 || index >= tabs.length) return;
+    currentStep = index;
+
+    // Update Tab active styling
+    tabs.forEach((t, i) => {
+      if (i === currentStep) {
+        t.classList.add('active', 'border-primary', 'text-primary');
+        t.classList.remove('text-secondary', 'border-transparent');
+      } else {
         t.classList.remove('active', 'border-primary', 'text-primary');
         t.classList.add('text-secondary', 'border-transparent');
-      });
-      tab.classList.add('active', 'border-primary', 'text-primary');
-      tab.classList.remove('text-secondary', 'border-transparent');
-
-      // Update Pane active state
-      panes.forEach(pane => {
-        pane.classList.add('hidden');
-        pane.classList.remove('active');
-        
-        // Pause any HTML5 videos inside hidden panes
-        const video = pane.querySelector('video');
-        if (video) video.pause();
-      });
-
-      const activePane = document.getElementById(`pane-${index}`);
-      if (activePane) {
-        activePane.classList.remove('hidden');
-        activePane.classList.add('active');
-        
-        // Play active video if available
-        const activeVideo = activePane.querySelector('video');
-        if (activeVideo) {
-          activeVideo.muted = true;
-          activeVideo.defaultMuted = true;
-          activeVideo.playsInline = true;
-          activeVideo.setAttribute('playsinline', '');
-          activeVideo.setAttribute('webkit-playsinline', '');
-          activeVideo.play().catch(() => {});
-        }
       }
     });
+
+    // Scroll active tab into view in #stepper-nav-bar
+    const activeTab = tabs[currentStep];
+    if (activeTab && activeTab.scrollIntoView) {
+      activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+
+    // Update Pane active state
+    panes.forEach(pane => {
+      pane.classList.add('hidden');
+      pane.classList.remove('active');
+      
+      // Pause any HTML5 videos inside hidden panes
+      const video = pane.querySelector('video');
+      if (video) video.pause();
+    });
+
+    const activePane = document.getElementById(`pane-${currentStep}`);
+    if (activePane) {
+      activePane.classList.remove('hidden');
+      activePane.classList.add('active');
+      
+      // Play active video if available
+      const activeVideo = activePane.querySelector('video');
+      if (activeVideo) {
+        activeVideo.muted = true;
+        activeVideo.defaultMuted = true;
+        activeVideo.playsInline = true;
+        activeVideo.setAttribute('playsinline', '');
+        activeVideo.setAttribute('webkit-playsinline', '');
+        activeVideo.play().catch(() => {});
+      }
+    }
+  }
+
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => {
+      goToStep(index);
+    });
   });
+
+  // Touch & Pointer Swipe Support for Mobile, Tablet, and Touch Screen Laptops
+  if (processSection) {
+    let startX = 0;
+    let startY = 0;
+    let isDragging = false;
+    let lastSwipeTime = 0;
+
+    // Touch events for Mobile/Tablet
+    processSection.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length > 0) {
+        isDragging = true;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    processSection.addEventListener('touchend', (e) => {
+      if (!isDragging || !e.changedTouches || !e.changedTouches.length) return;
+      isDragging = false;
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      handleSwipe(startX, startY, endX, endY);
+    }, { passive: true });
+
+    // Pointer events for Touch-Screen Laptops & Pointer Devices
+    processSection.addEventListener('pointerdown', (e) => {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+    }, { passive: true });
+
+    processSection.addEventListener('pointerup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      handleSwipe(startX, startY, e.clientX, e.clientY);
+    }, { passive: true });
+
+    // Mouse fallback for desktop / drag emulation
+    processSection.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+    }, { passive: true });
+
+    processSection.addEventListener('mouseup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      handleSwipe(startX, startY, e.clientX, e.clientY);
+    }, { passive: true });
+
+    function handleSwipe(sX, sY, eX, eY) {
+      const now = Date.now();
+      if (now - lastSwipeTime < 300) return; // Guard against double execution
+
+      const diffX = sX - eX;
+      const diffY = sY - eY;
+
+      // Ensure horizontal swipe is dominant and exceeds swipe threshold (30px)
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 30) {
+        lastSwipeTime = now;
+        if (diffX > 0 && currentStep < tabs.length - 1) {
+          // Swipe Left -> Next Card
+          goToStep(currentStep + 1);
+        } else if (diffX < 0 && currentStep > 0) {
+          // Swipe Right -> Previous Card
+          goToStep(currentStep - 1);
+        }
+      }
+    }
+  }
 }
 
 /* 2. Interactive Lookbook Slider & Auto-Rolling Saree Showcase */

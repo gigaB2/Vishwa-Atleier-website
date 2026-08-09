@@ -1311,3 +1311,9 @@ video::-webkit-media-controls-overlay-play-button {
   pointer-events: none !important;
 }
 
+/* Looms Journey Stepper Panes Swipe Touch Action */
+.process-pane {
+  touch-action: pan-y;
+  user-select: none;
+}
+
