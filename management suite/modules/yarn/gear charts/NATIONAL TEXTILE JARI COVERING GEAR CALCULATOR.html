@@ -1,0 +1,2095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="../../../assets/supabase-client.js"></script>
+
+  <script>
+    (function() {
+      const isDark = localStorage.getItem('vishwa_fashions_theme') === 'true' ||
+                     (localStorage.getItem('vishwa_fashions_theme') === null && true);
+      if (isDark) {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
+      const isCollapsed = localStorage.getItem('vf_sidebar_collapsed') === 'true';
+      if (isCollapsed) {
+        document.documentElement.classList.add('vf-sidebar-collapsed');
+      }
+    })();
+  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>National Textile Jari Covering Machine Gear Chart - Change Gear & TPM Calculator</title>
+    <link rel="stylesheet" href="../../../sidebar.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="../../../sidebar.js" defer></script>
+    
+    <style>
+        :root {
+            --bg-darker: #f8f7fc;
+            --bg-dark: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f4f4f5;
+            --border-color: #e4e4e7;
+            --border-glow: rgba(6, 182, 212, 0.3);
+            
+            --text-primary: #18181b;
+            --text-secondary: #52525b;
+            --text-muted: #71717a;
+            
+            --color-teal: #0891b2;
+            --color-teal-glow: rgba(6, 182, 212, 0.2);
+            --color-cyan: #06b6d4;
+            --color-emerald: #059669;
+            --color-emerald-glow: rgba(16, 185, 129, 0.2);
+            --color-indigo: #4f46e5;
+            --color-red: #dc2626;
+            
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.dark-mode, .dark-mode {
+            --bg-darker: #09090b;
+            --bg-dark: #121214;
+            --bg-card: #1c1c1f;
+            --bg-card-hover: #232327;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(6, 182, 212, 0.3);
+            
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            
+            --color-teal: #06b6d4;
+            --color-teal-glow: rgba(6, 182, 212, 0.4);
+            --color-cyan: #22d3ee;
+            --color-emerald: #10b981;
+            --color-emerald-glow: rgba(16, 185, 129, 0.3);
+            --color-indigo: #6366f1;
+            --color-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-darker);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.5;
+            padding: 24px;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.1) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        /* Layout Grid */
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+            gap: 24px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        /* Header Styling */
+        header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 8px;
+        }
+
+        .header-title-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-title-area svg {
+            width: 42px;
+            height: 42px;
+            fill: var(--color-teal);
+            filter: drop-shadow(0 0 8px var(--color-teal-glow));
+            animation: spin-slow 15s linear infinite;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 1.8rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 40%, var(--color-cyan) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h1 .nt-title-full,
+        h1 .nt-title-short {
+            background: inherit;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .file-upload-btn {
+            position: relative;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition-smooth);
+        }
+
+        .file-upload-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--color-teal);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+        }
+
+        .file-upload-btn input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Card System */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: transparent;
+            transition: var(--transition-smooth);
+        }
+
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .card.active-card::before {
+            background: linear-gradient(90deg, var(--color-teal), var(--color-indigo));
+        }
+
+        .card-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+        }
+
+        .card-title svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--text-secondary);
+        }
+
+        /* Sidebar Control Styles */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .tpm-input {
+            width: 100%;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 1.25rem;
+            font-weight: 600;
+            transition: var(--transition-smooth);
+            text-align: center;
+        }
+
+        .tpm-input:focus {
+            outline: none;
+            border-color: var(--color-teal);
+            box-shadow: 0 0 12px var(--border-glow);
+        }
+
+        .tpm-slider-container {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tpm-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-darker);
+            outline: none;
+        }
+
+        .tpm-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--color-teal);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--color-teal-glow);
+            transition: var(--transition-smooth);
+        }
+
+        .tpm-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .constant-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .btn-toggle {
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-family: var(--font-display);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            text-align: center;
+        }
+
+        .btn-toggle:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .btn-toggle.active {
+            background: rgba(6, 182, 212, 0.1);
+            border-color: var(--color-teal);
+            color: var(--color-cyan);
+            box-shadow: 0 0 8px rgba(6, 182, 212, 0.1);
+        }
+
+        /* Gear Tags — block + inline-flex (avoid flex+overflow padding clip) */
+        .gear-tags-container {
+            display: block;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            padding: 12px 10px 10px;
+            border-radius: 10px;
+            min-height: 80px;
+            max-height: 150px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .gear-tag {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 4px 8px;
+            margin: 3px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-primary);
+            transition: var(--transition-smooth);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            max-width: calc(100% - 6px);
+            box-sizing: border-box;
+        }
+
+        .gear-tag:hover {
+            border-color: var(--color-red);
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            cursor: pointer;
+        }
+
+        .gear-tag::after {
+            content: ' ×';
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        /* Repository Tags */
+        .repo-tag {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 4px 8px;
+            margin: 3px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            color: var(--text-primary);
+            transition: var(--transition-smooth);
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            max-width: calc(100% - 6px);
+            box-sizing: border-box;
+        }
+
+        .repo-tag.active {
+            border-color: var(--color-teal);
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--color-cyan);
+        }
+
+        .repo-tag.inactive {
+            color: var(--text-muted);
+            opacity: 0.65;
+        }
+
+        .repo-tag.inactive:hover {
+            border-color: var(--color-teal);
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--color-cyan);
+            opacity: 1;
+        }
+
+        .add-gear-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .add-gear-input {
+            flex: 1;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+        }
+
+        .add-gear-input:focus {
+            outline: none;
+            border-color: var(--color-teal);
+        }
+
+        .btn-add-gear {
+            background: var(--color-teal);
+            border: none;
+            color: #ffffff;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .btn-add-gear:hover {
+            background: var(--color-cyan);
+            box-shadow: 0 0 10px var(--color-teal-glow);
+        }
+
+        /* Constraint options */
+        .radio-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            padding: 12px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .radio-option:hover {
+            border-color: var(--color-teal);
+            background: var(--bg-card-hover);
+        }
+
+        .radio-option input[type="radio"] {
+            margin-top: 4px;
+            accent-color: var(--color-teal);
+        }
+
+        .radio-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .radio-label {
+            font-size: 0.85rem;
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .radio-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* Right Panel Layout */
+        .main-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+
+
+        /* Results table styling */
+        .results-wrapper {
+            max-height: 410px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-dark);
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        .table-custom th {
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: var(--text-secondary);
+            background: var(--bg-darker);
+            padding: 12px 16px;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .table-custom td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-family: var(--font-body);
+            color: var(--text-primary);
+            transition: var(--transition-smooth);
+        }
+
+        .table-custom tbody tr {
+            cursor: pointer;
+        }
+
+        .table-custom tbody tr:hover td {
+            background: var(--bg-card-hover);
+        }
+
+        .table-custom tbody tr.selected td {
+            background: rgba(6, 182, 212, 0.12);
+            border-bottom-color: var(--color-teal);
+            color: var(--text-primary);
+        }
+
+        .badge-error {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-error.excellent {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--color-emerald);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-error.good {
+            background: rgba(99, 102, 241, 0.1);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .badge-error.poor {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--color-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .gear-train-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        .gear-train-display span.driver {
+            color: var(--color-cyan);
+        }
+
+        .gear-train-display span.driven {
+            color: #fca5a5;
+        }
+
+        .gear-train-display span.sep {
+            color: var(--text-muted);
+        }
+
+        /* Reference Table section */
+        .reference-section {
+            grid-column: 1 / -1;
+        }
+
+        .table-search-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .search-input {
+            flex: 1;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-family: var(--font-body);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--color-teal);
+        }
+
+        .reference-table-wrapper {
+            max-height: 620px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-darker);
+        }
+
+        .table-highlight-row td {
+            background: rgba(16, 185, 129, 0.05) !important;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+
+
+        .toast, .toast.show {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        .toast-icon {
+            color: var(--color-teal);
+            width: 18px;
+            height: 18px;
+        }
+    
+
+        /* ==========================================================================
+           MOBILE & TOUCHSCREEN ENHANCEMENTS (Phones, iPhones, Android, iPads, Tablets)
+           ========================================================================== */
+        html, body {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .tpm-slider-container {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .slider-step-btn {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            border-radius: 10px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            color: var(--color-cyan);
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: var(--transition-smooth);
+        }
+
+        .slider-step-btn:hover,
+        .slider-step-btn:active {
+            background: rgba(6, 182, 212, 0.2);
+            border-color: var(--color-teal);
+            color: #ffffff;
+            transform: scale(1.05);
+        }
+
+        .tpm-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            outline: none;
+            touch-action: pan-y;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+        }
+
+        /* WebKit (Chrome, Safari, iOS Safari, Android) Thumb */
+        .tpm-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--color-teal);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--color-teal-glow), 0 2px 6px rgba(0, 0, 0, 0.4);
+            border: 2px solid #ffffff;
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+
+        .tpm-slider::-webkit-slider-thumb:hover,
+        .tpm-slider::-webkit-slider-thumb:active,
+        .tpm-slider:focus::-webkit-slider-thumb {
+            transform: scale(1.15);
+            background: var(--color-cyan);
+            box-shadow: 0 0 14px var(--color-teal-glow), 0 3px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Firefox Thumb & Track */
+        .tpm-slider::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--color-teal);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--color-teal-glow), 0 2px 6px rgba(0, 0, 0, 0.4);
+            border: 2px solid #ffffff;
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+
+        .tpm-slider::-moz-range-thumb:hover,
+        .tpm-slider::-moz-range-thumb:active,
+        .tpm-slider:focus::-moz-range-thumb {
+            transform: scale(1.15);
+            background: var(--color-cyan);
+        }
+
+        .tpm-slider::-moz-range-track {
+            height: 10px;
+            border-radius: 5px;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Microsoft / Edge Thumb */
+        .tpm-slider::-ms-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--color-teal);
+            cursor: pointer;
+            border: 2px solid #ffffff;
+        }
+
+        /* Touch Targets for Interactive Elements */
+        .radio-option {
+            min-height: 48px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .gear-tag, .repo-tag, .btn-add-gear, .file-upload-btn, .btn-toggle, .btn-inventory-action {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .gear-tag, .repo-tag {
+            padding: 6px 10px;
+            font-size: 0.85rem;
+        }
+
+        .nt-title-short { display: none; }
+        .nt-title-full { display: block; }
+
+        .process-corrections-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin-bottom: 12px;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .process-corrections-row > div {
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        .guidelines-scroll {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Responsive Layout Breakpoints */
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: minmax(0, 1fr);
+                gap: 1.15rem;
+                width: 100%;
+                max-width: 100%;
+                margin-left: auto;
+                margin-right: auto;
+                box-sizing: border-box;
+            }
+
+            .sidebar,
+            .main-panel {
+                width: 100%;
+                min-width: 0;
+                max-width: 100%;
+            }
+
+            body {
+                padding: 1rem !important;
+                padding-top: 4.25rem !important;
+                overflow-x: clip;
+                max-width: 100%;
+                box-sizing: border-box;
+                margin-left: 0 !important;
+            }
+
+            header {
+                margin-top: 0;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.75rem;
+                padding-bottom: 0.85rem;
+                width: 100%;
+                min-width: 0;
+            }
+
+            .header-title-area {
+                gap: 0.75rem;
+                width: 100%;
+                min-width: 0;
+                align-items: flex-start;
+            }
+
+            .header-title-area > div {
+                min-width: 0;
+                flex: 1;
+            }
+
+            .header-title-area svg {
+                width: 36px;
+                height: 36px;
+                flex-shrink: 0;
+            }
+
+            h1 {
+                font-size: 1.15rem !important;
+                line-height: 1.25 !important;
+                letter-spacing: -0.02em;
+                max-width: 100%;
+                overflow-wrap: anywhere;
+            }
+
+            .nt-title-full { display: none !important; }
+            .nt-title-short { display: block !important; }
+
+            .subtitle {
+                font-size: 0.8rem;
+                line-height: 1.35;
+            }
+
+            .card {
+                padding: 1.1rem !important;
+                border-radius: 14px;
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                box-sizing: border-box;
+                overflow: visible !important;
+            }
+
+            .card-title {
+                font-size: 1rem;
+                margin-bottom: 0.9rem;
+                flex-wrap: wrap;
+            }
+
+            .form-group {
+                min-width: 0;
+                max-width: 100%;
+            }
+
+            .tpm-input,
+            .search-input,
+            .add-gear-input,
+            input[type="number"],
+            input[type="text"] {
+                font-size: 16px !important;
+                min-height: 44px;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .tpm-slider-container {
+                gap: 0.5rem;
+                width: 100%;
+            }
+
+            .tpm-slider {
+                min-width: 0;
+            }
+
+            .slider-step-btn {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                flex-shrink: 0;
+            }
+
+            .gear-tags-container {
+                display: block !important;
+                padding: 12px 8px 10px !important;
+                min-height: 96px;
+                max-height: 220px;
+                overflow-x: hidden !important;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                box-sizing: border-box;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            #allGearsContainer {
+                max-height: 200px !important;
+                min-height: 96px !important;
+            }
+
+            .gear-tag,
+            .repo-tag {
+                padding: 0.4rem 0.55rem;
+                margin: 3px;
+                font-size: 0.78rem;
+                line-height: 1.2;
+                max-width: calc(100% - 6px);
+            }
+
+            .process-corrections-row {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+
+            .file-upload-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .results-wrapper,
+            .reference-table-wrapper,
+            .guidelines-scroll {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                max-width: 100%;
+            }
+
+            .table-custom {
+                min-width: 560px;
+            }
+
+            .table-search-bar {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .main-panel > div[style*="grid-template-columns"] {
+                grid-template-columns: minmax(0, 1fr) !important;
+            }
+        }
+
+        @media (min-width: 641px) and (max-width: 1024px) {
+            body {
+                padding-left: 1.25rem !important;
+                padding-right: 1.25rem !important;
+            }
+
+            h1 {
+                font-size: 1.25rem !important;
+            }
+
+            .nt-title-full { display: none !important; }
+            .nt-title-short { display: block !important; }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0.75rem !important;
+                padding-top: 4.1rem !important;
+            }
+
+            h1 {
+                font-size: 1.05rem !important;
+            }
+
+            .card {
+                padding: 1rem 0.85rem !important;
+            }
+
+            .process-corrections-row {
+                grid-template-columns: minmax(0, 1fr) !important;
+            }
+
+            .table-custom {
+                min-width: 500px;
+            }
+        }
+        </style>
+
+
+  <link rel="stylesheet" href="../../../sidebar.css">
+  <script src="../../../sidebar.js" defer></script>
+</head>
+<body>
+
+<!-- VF Sidebar -->
+<!-- End VF Sidebar -->
+
+
+
+
+
+
+
+
+
+
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div class="header-title-area">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 35c-8.3 0-15 6.7-15 15s6.7 15 15 15 15-6.7 15-15-6.7-15-15-15zm0 25c-5.5 0-10-4.5-10-10s4.5-10 10-10 10 4.5 10 10-4.5 10-10 10z"/>
+                    <path d="M91.3 43.6l-8-2.6c-.6-1.8-1.5-3.5-2.6-5.1l4-7.4c.5-.9.3-2.1-.5-2.8l-5.7-5.7c-.8-.8-2-.9-2.8-.5l-7.4 4c-1.6-1.1-3.3-2-5.1-2.6l-2.6-8c-.3-1-.1-2.1.8-2.7C60.2 1 58.7.6 57.2.4l-.8-.1c-.9-.1-1.8.5-2 1.4l-2.6 8c-1.9.3-3.7.9-5.4 1.8l-7.4-4c-.9-.5-2.1-.3-2.8.5l-5.7 5.7c-.8.8-.9 2-.5 2.8l4 7.4c-1.1 1.6-2 3.3-2.6 5.1l-8 2.6c-1 .3-1.7 1.2-1.7 2.2 0 1.5.3 3 .8 4.5l.2.7c.3.9 1.2 1.5 2.2 1.3l8-2.6c.6 1.8 1.5 3.5 2.6 5.1l-4 7.4c-.5.9-.3 2.1.5 2.8l5.7 5.7c.8.8 2 .9 2.8.5l7.4-4c1.6 1.1 3.3 2 5.1 2.6l2.6 8c.3 1 1.2 1.7 2.2 1.7 1.5 0 3-.3 4.5-.8l.7-.2c.9-.3 1.5-1.2 1.3-2.2l-2.6-8c1.8-.6 3.5-1.5 5.1-2.6l7.4 4c.9.5 2.1.3 2.8-.5l5.7-5.7c.8-.8.9-2 .5-2.8l-4-7.4c1.1-1.6 2-3.3 2.6-5.1l8-2.6c1-.3 1.7-1.2 1.7-2.2 0-1.5-.3-3-.8-4.5l-.2-.7c-.3-.9-1.2-1.5-2.2-1.3zM50 70c-11 0-20-9-20-20s9-20 20-20 20 9 20 20-9 20-20 20z"/>
+                </svg>
+                <div>
+                    <h1>
+                        <span class="nt-title-full">NATIONAL TEXTILE JARI COVERING MACHINE GEAR CHART</span>
+                        <span class="nt-title-short">National Textile Jari Gear Chart</span>
+                    </h1>
+                    <div class="subtitle">Premium Change Gear & TPM Calculator</div>
+                </div>
+            </div>
+            
+
+        </header>
+
+        <!-- Sidebar Inputs -->
+        <div class="sidebar">
+            <div class="card active-card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                    Target parameters
+                </div>
+                
+                <!-- Target TPM -->
+                <div class="form-group">
+                    <label for="tpmInput">Target TPM (Twists Per Metre)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="tpmInput" class="tpm-input" value="1200" min="50" max="10000" step="1">
+                    </div>
+                    <div class="tpm-slider-container">
+                        <button type="button" class="slider-step-btn" id="sliderMinusBtn" aria-label="Decrease value" title="Decrease value">−</button>
+                        <input type="range" id="tpmSlider" class="tpm-slider" min="100" max="4000" value="1200" step="1">
+                        <button type="button" class="slider-step-btn" id="sliderPlusBtn" aria-label="Increase value" title="Increase value">+</button>
+                    </div>
+                </div>
+
+                <!-- Constant K -->
+                <div class="form-group">
+                    <label for="kInput">Twist Constant (K)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="kInput" class="tpm-input" value="802.86" style="font-size:1.1rem; padding:8px;" readonly disabled>
+                    </div>
+                </div>
+
+                <!-- Physical Process Corrections -->
+                <div class="form-group" style="margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                    <label style="margin-bottom: 8px;">Physical Process Corrections</label>
+                    <div class="process-corrections-row">
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); display:block; margin-bottom: 4px;">Belt Slip (%)</span>
+                            <input type="number" id="slipInput" class="tpm-input" value="0" min="0" max="99" step="0.1" style="font-size:1.0rem; padding:6px;">
+                        </div>
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); display:block; margin-bottom: 4px;">Contraction (%)</span>
+                            <input type="number" id="contractionInput" class="tpm-input" value="0" min="0" max="99" step="0.01" style="font-size:1.0rem; padding:6px;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Jari Covering Industrial Guidelines Table -->
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; margin-top: 10px;">
+                    <div style="font-weight: 700; color: var(--color-cyan); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Typical Jari Covering Guidelines</div>
+                    <div class="guidelines-scroll">
+                    <table style="width: 100%; min-width: 420px; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.68rem;">
+                                <th style="padding: 4px 6px; border-right: 1px solid var(--border-color);">Process / Core Yarn</th>
+                                <th style="padding: 4px 6px; border-right: 1px solid var(--border-color); white-space: nowrap;">Slip %</th>
+                                <th style="padding: 4px 6px; white-space: nowrap;">Contraction %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td style="padding: 4px 6px; border-right: 1px solid var(--border-color); font-weight: 500;">Metallic Jari / Nylon Core</td>
+                                <td style="padding: 4px 6px; border-right: 1px solid var(--border-color); font-family: var(--font-mono);">1.5 - 2.5%</td>
+                                <td style="padding: 4px 6px; font-family: var(--font-mono);">3.5 - 5.5%</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td style="padding: 4px 6px; border-right: 1px solid var(--border-color); font-weight: 500;">Metallic Jari / Polyester Core</td>
+                                <td style="padding: 4px 6px; border-right: 1px solid var(--border-color); font-family: var(--font-mono);">1.5 - 2.5%</td>
+                                <td style="padding: 4px 6px; font-family: var(--font-mono);">3.5 - 5.5%</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td style="padding: 4px 6px; border-right: 1px solid var(--border-color); font-weight: 500;">Spandex Core (Elastic Yarn)</td>
+                                <td style="padding: 4px 6px; border-right: 1px solid var(--border-color); font-family: var(--font-mono);">2.0 - 3.5%</td>
+                                <td style="padding: 4px 6px; font-family: var(--font-mono);">7.0 - 12.0%</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 6px; border-right: 1px solid var(--border-color); font-weight: 500;">Viscose Jari / Cotton Core</td>
+                                <td style="padding: 4px 6px; border-right: 1px solid var(--border-color); font-family: var(--font-mono);">1.2 - 2.0%</td>
+                                <td style="padding: 4px 6px; font-family: var(--font-mono);">2.5 - 4.5%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+                    Gear Inventory
+                </div>
+                
+                <div class="form-group">
+                    <label>Available Gears (Teeth Count)</label>
+                    <div class="gear-tags-container" id="gearTagsContainer">
+                        <!-- Tags inserted dynamically -->
+                    </div>
+                    <div class="add-gear-row">
+                        <input type="number" id="newGearInput" class="add-gear-input" placeholder="Teeth" min="10" max="200">
+                        <button class="btn-add-gear" onclick="addNewGear()">Add</button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                    <label>All Gears Repository</label>
+                    <div class="gear-tags-container" id="allGearsContainer" style="min-height: 60px; max-height: 120px;">
+                        <!-- Tags inserted dynamically -->
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 8px; line-height: 1.3;">
+                        * Active gears are highlighted in cyan. Click any gray inactive gear to add it back to Available.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                    Combinatorial Rules
+                </div>
+                
+                <div class="form-group">
+                    <label>Gear Allocation Constraints</label>
+                    <div class="radio-options">
+                        <label class="radio-option">
+                            <input type="radio" name="dupConstraint" value="none" onchange="calculate()">
+                            <div class="radio-text">
+                                <span class="radio-label">Strictly Unique Gears</span>
+                                <span class="radio-desc">A, B, C, D must be four distinct physical gears.</span>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="dupConstraint" value="idler" checked onchange="calculate()">
+                            <div class="radio-text">
+                                <span class="radio-label">Simple Train Idler Allowed</span>
+                                <span class="radio-desc">B and C can be identical (acts as a single intermediate idler gear).</span>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="dupConstraint" value="all" onchange="calculate()">
+                            <div class="radio-text">
+                                <span class="radio-label">Unrestricted Duplicates</span>
+                                <span class="radio-desc">Assume multiple copies of all gear sizes are available.</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Body -->
+        <div class="main-panel">
+            
+            <!-- Active Gearing Details -->
+            <div class="card active-card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2zm0 8H7v-2h10v2z"/></svg>
+                    Active Gearing Calculation
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Active Train Ratio</span>
+                        <span id="infoRatio" style="font-size: 1.2rem; font-family: var(--font-mono); font-weight: 700; color: var(--text-primary); margin-top: 2px;">0.0000</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Nominal Calculated TPM</span>
+                        <span id="infoCalcTpm" style="font-size: 1.2rem; font-family: var(--font-mono); font-weight: 700; color: var(--color-teal); margin-top: 2px;">0.00</span>
+                    </div>
+                    <div id="actualTpmContainer" style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Actual Delivered TPM</span>
+                        <span id="infoActualTpm" style="font-size: 1.2rem; font-family: var(--font-mono); font-weight: 700; color: var(--color-emerald); margin-top: 2px;">0.00</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Gear Train Setup (A/B × C/D)</span>
+                        <span id="infoGearTrainSetup" style="font-size: 1.1rem; font-family: var(--font-mono); font-weight: 700; color: var(--text-secondary); margin-top: 2px;">- / - × - / -</span>
+                    </div>
+                    <div style="grid-column: span 2; border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 4px; display: flex; flex-direction: column;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Gearing Equation Details</span>
+                        <span id="infoEquation" style="font-size: 0.85rem; font-family: var(--font-mono); color: var(--text-secondary); margin-top: 4px;">TPM = 802.86 × (B / A) × (D / C)</span>
+                    </div>
+                </div>
+                <div id="saveBtnContainer"></div>
+            </div>
+            
+            <!-- Suggested Gearing Matches -->
+            <div class="card" style="display: flex; flex-direction: column;">
+                <div class="card-title" style="margin-bottom: 12px;">
+                    <svg viewBox="0 0 24 24"><path d="M4 14h6v-4H4v4zm0 5h6v-4H4v4zM4 9h6V5H4v4zm7 5h10v-4H11v4zm0 5h10v-4H11v4zM11 5v4h10V5H11z"/></svg>
+                    Suggested Gearing Matches
+                </div>
+                
+                <!-- Section 1: Verified Table Matches -->
+                <div style="margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.8rem; font-family: var(--font-display); font-weight: 700; color: var(--color-emerald); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--color-emerald); box-shadow: 0 0 6px var(--color-emerald-glow);"></span>
+                        Verified Manual Matches
+                    </span>
+                    <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Approved by Manual</span>
+                </div>
+                <div class="results-wrapper" style="max-height: 190px; margin-bottom: 16px;">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th style="width: 45px;">Rank</th>
+                                <th>Gears (A, B, C, D)</th>
+                                <th>Nom TPM</th>
+                                <th>Dev.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableMatchesBody">
+                            <!-- Generated Dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Section 2: Calculated Alternatives -->
+                <div style="margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.8rem; font-family: var(--font-display); font-weight: 700; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background-color: #fbbf24; box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);"></span>
+                        Mathematical Alternatives
+                    </span>
+                    <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Calculated Combos</span>
+                </div>
+                <div class="results-wrapper" style="max-height: 190px;">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th style="width: 45px;">Rank</th>
+                                <th>Gears (A, B, C, D)</th>
+                                <th>Calc TPM</th>
+                                <th>Dev.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alternativesBody">
+                            <!-- Generated Dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 12px; font-size: 0.7rem; color: var(--text-muted); line-height: 1.3;">
+                    * Click any row to highlight the matching combinations in the tables. <span style="color:#6ee7b7; font-weight:600;">Manual Matches</span> are physically verified. <span style="color:#fbbf24; font-weight:600;">Alternatives</span> must be checked for casing clearance.
+                </div>
+            </div>
+
+            <!-- Reference Table -->
+            <div class="card reference-section">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M5 4v3h14V4H5zm10 10H9v-3h6v3zm-8 5v-3H5v3h2zm0-5v-3H5v3h2zm0-5V7H5v3h2zm6 10v-3H9v3h4zm8 0v-3h-6v3h6zm0-5v-3h-6v3h6zm0-5V7h-6v3h6z"/></svg>
+                    Original Change Gear Table Reference
+                </div>
+
+                <div class="table-search-bar">
+                    <input type="text" id="tableSearch" class="search-input" placeholder="Search by TPM, or gear size (e.g. 'A=66' or '286')..." oninput="filterReferenceTable()">
+                </div>
+
+                <div class="reference-table-wrapper">
+                    <table class="table-custom" id="refTable">
+                        <thead>
+                            <tr>
+                                <th>CSV Row</th>
+                                <th>Table TPM</th>
+                                <th>A (Driver)</th>
+                                <th>B (Driven)</th>
+                                <th>C (Driver)</th>
+                                <th>D (Driven)</th>
+                                <th>Calculated TPM (801.8)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="refTableBody">
+                            <!-- CSV rows loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Default CSV Gearing Database
+        let csvDatabase = [
+            { tpm: 286, a: 66, b: 22, c: 24, d: 26 },
+            { tpm: 263, a: 66, b: 20, c: 24, d: 26 },
+            { tpm: 376, a: 66, b: 24, c: 48, d: 62 },
+            { tpm: 515, a: 66, b: 24, c: 26, d: 46 },
+            { tpm: 631, a: 66, b: 26, c: 24, d: 48 },
+            { tpm: 639, a: 66, b: 24, c: 22, d: 48 },
+            { tpm: 695, a: 66, b: 24, c: 26, d: 62 },
+            { tpm: 689, a: 66, b: 26, c: 22, d: 48 },
+            { tpm: 760, a: 46, b: 20, c: 22, d: 48 },
+            { tpm: 816, a: 66, b: 26, c: 24, d: 62 },
+            { tpm: 912, a: 46, b: 24, c: 22, d: 48 },
+            { tpm: 989, a: 46, b: 26, c: 22, d: 48 },
+            { tpm: 1087, a: 46, b: 26, c: 20, d: 48 },
+            { tpm: 1122, a: 48, b: 26, c: 24, d: 62 },
+            { tpm: 1171, a: 46, b: 26, c: 24, d: 62 },
+            { tpm: 1224, a: 48, b: 26, c: 22, d: 62 },
+            { tpm: 1243, a: 48, b: 24, c: 20, d: 62 },
+            { tpm: 1346, a: 48, b: 26, c: 20, d: 62 },
+            { tpm: 1433, a: 48, b: 26, c: 20, d: 66 },
+            { tpm: 1495, a: 46, b: 26, c: 20, d: 66 },
+            { tpm: 1575, a: 62, b: 48, c: 26, d: 66 },
+            { tpm: 1636, a: 62, b: 66, c: 24, d: 46 },
+            { tpm: 1785, a: 62, b: 46, c: 22, d: 66 },
+            { tpm: 1832, a: 48, b: 46, c: 26, d: 62 },
+            { tpm: 1985, a: 48, b: 46, c: 24, d: 62 },
+            { tpm: 1995, a: 26, b: 48, c: 46, d: 62 },
+            { tpm: 2035, a: 26, b: 46, c: 46, d: 66 },
+            { tpm: 2113, a: 24, b: 46, c: 48, d: 66 },
+            { tpm: 2124, a: 26, b: 48, c: 46, d: 66 },
+            { tpm: 2166, a: 48, b: 46, c: 22, d: 62 },
+            { tpm: 2301, a: 46, b: 48, c: 24, d: 66 },
+            { tpm: 2382, a: 48, b: 46, c: 20, d: 62 },
+            { tpm: 2443, a: 26, b: 24, c: 20, d: 66 },
+            { tpm: 2536, a: 48, b: 46, c: 20, d: 66 },
+            { tpm: 2594, a: 46, b: 48, c: 20, d: 62 },
+            { tpm: 2693, a: 24, b: 26, c: 20, d: 62 }
+        ];
+
+        // Global State Variables
+        let gearInventory = [20, 22, 24, 26, 46, 48, 62, 66];
+        let allGearsRepository = [20, 22, 24, 26, 46, 48, 62, 66];
+        let kConstant = 802.86;
+        let selectedGears = { a: 66, b: 22, c: 24, d: 26 };
+        let qualityId = null;
+
+        function saveAndApply() {
+            if (!qualityId) return;
+            const slipField = document.getElementById('slipInput');
+            const slip = slipField ? parseFloat(slipField.value) || 0 : 0;
+            const payload = {
+                type: 'COVERING_GEAR_SELECT',
+                qualityId: qualityId,
+                a: selectedGears.a,
+                b: selectedGears.b,
+                c: selectedGears.c,
+                d: selectedGears.d,
+                beltSlip: slip
+            };
+            
+            // Save to localStorage
+            localStorage.setItem(`covering-gear-selection-${qualityId}`, JSON.stringify({
+                a: selectedGears.a,
+                b: selectedGears.b,
+                c: selectedGears.c,
+                d: selectedGears.d,
+                beltSlip: slip
+            }));
+            
+            // Post message to parent/opener
+            if (window.opener) {
+                window.opener.postMessage(payload, '*');
+            }
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(payload, '*');
+            }
+            
+            showToast("Selection applied successfully!");
+        }
+
+        function saveAndClose() {
+            saveAndApply();
+            setTimeout(() => {
+                window.close();
+            }, 300);
+        }
+
+        // Helper to extract unique gears from current database
+        function extractGearsFromDatabase() {
+            const gears = new Set();
+            csvDatabase.forEach(row => {
+                gears.add(row.a);
+                gears.add(row.b);
+                gears.add(row.c);
+                gears.add(row.d);
+            });
+            return Array.from(gears).sort((x, y) => x - y);
+        }
+
+        // Initialize Application
+        window.addEventListener('DOMContentLoaded', () => {
+            allGearsRepository = extractGearsFromDatabase();
+            gearInventory = [...allGearsRepository];
+            initializeInventory();
+            
+            // Set slider max to max of csv TPM or 4000
+            const maxCsvTpm = Math.max(...csvDatabase.map(d => d.tpm));
+            const slider = document.getElementById('tpmSlider');
+            slider.max = Math.max(maxCsvTpm, 4000);
+            
+            // Connect inputs
+            const tpmInput = document.getElementById('tpmInput');
+            tpmInput.addEventListener('input', (e) => {
+                let val = parseFloat(e.target.value);
+                if (!isNaN(val)) {
+                    if (val < 10) val = 10;
+                    slider.value = val;
+                    calculate();
+                }
+            });
+
+            ['input', 'change'].forEach(evt => {
+                slider.addEventListener(evt, (e) => {
+                    tpmInput.value = e.target.value;
+                    calculate();
+                });
+            });
+
+            const sliderMinusBtn = document.getElementById('sliderMinusBtn');
+            const sliderPlusBtn = document.getElementById('sliderPlusBtn');
+            if (sliderMinusBtn) {
+                sliderMinusBtn.addEventListener('click', () => {
+                    let step = parseFloat(slider.step) || 1;
+                    let cur = parseFloat(slider.value) || 0;
+                    let min = parseFloat(slider.min) || 50;
+                    let next = Math.max(min, cur - step);
+                    slider.value = next;
+                    tpmInput.value = next;
+                    calculate();
+                });
+            }
+            if (sliderPlusBtn) {
+                sliderPlusBtn.addEventListener('click', () => {
+                    let step = parseFloat(slider.step) || 1;
+                    let cur = parseFloat(slider.value) || 0;
+                    let max = parseFloat(slider.max) || 4000;
+                    let next = Math.min(max, cur + step);
+                    slider.value = next;
+                    tpmInput.value = next;
+                    calculate();
+                });
+            }
+
+            // Bind new contraction and slip changes to recalculate
+            const contractionInput = document.getElementById('contractionInput');
+            if (contractionInput) {
+                contractionInput.addEventListener('input', calculate);
+            }
+            const slipInput = document.getElementById('slipInput');
+            if (slipInput) {
+                slipInput.addEventListener('input', calculate);
+            }
+
+            // Extract query parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            qualityId = urlParams.get('qualityId');
+            
+            if (qualityId) {
+                const btnContainer = document.getElementById('saveBtnContainer');
+                if (btnContainer) {
+                    btnContainer.innerHTML = `
+                        <button type="button" class="save-btn" onclick="saveAndClose()">Apply & Close</button>
+                    `;
+                }
+                const actualTpmContainer = document.getElementById('actualTpmContainer');
+                if (actualTpmContainer) {
+                    actualTpmContainer.style.display = 'flex';
+                }
+            }
+            
+            const pTpm = urlParams.get('tpm');
+            const pContraction = urlParams.get('contraction');
+            const pBeltSlip = urlParams.get('beltSlip');
+            const pA = urlParams.get('a');
+            const pB = urlParams.get('b');
+            const pC = urlParams.get('c');
+            const pD = urlParams.get('d');
+            
+            if (pTpm) {
+                tpmInput.value = pTpm;
+                tpmInput.readOnly = true;
+                tpmInput.disabled = true;
+                
+                const sliderContainer = document.querySelector('.tpm-slider-container');
+                if (sliderContainer) {
+                    sliderContainer.style.display = 'none';
+                }
+            }
+            
+            if (pContraction && contractionInput) {
+                contractionInput.value = parseFloat(pContraction).toFixed(2);
+                contractionInput.readOnly = true;
+                contractionInput.disabled = true;
+            }
+            
+            if (pBeltSlip && slipInput) {
+                slipInput.value = parseFloat(pBeltSlip).toFixed(1);
+            }
+            
+            if (pA && pB && pC && pD) {
+                selectedGears = {
+                    a: parseInt(pA),
+                    b: parseInt(pB),
+                    c: parseInt(pC),
+                    d: parseInt(pD)
+                };
+            }
+
+            // Initial Calculations & UI draws
+            calculate();
+            renderReferenceTable();
+        });
+
+        // Initialize Gear Inventory UI tags
+        function initializeInventory() {
+            // 1. Render Available Gears
+            const container = document.getElementById('gearTagsContainer');
+            container.innerHTML = '';
+            
+            gearInventory.sort((a, b) => a - b).forEach(teeth => {
+                const tag = document.createElement('div');
+                tag.className = 'gear-tag';
+                tag.textContent = teeth;
+                tag.title = 'Click to remove';
+                tag.addEventListener('click', () => removeGear(teeth));
+                container.appendChild(tag);
+            });
+
+            // 2. Render All Gears Repository
+            const repoContainer = document.getElementById('allGearsContainer');
+            if (repoContainer) {
+                repoContainer.innerHTML = '';
+                allGearsRepository.sort((a, b) => a - b).forEach(teeth => {
+                    const tag = document.createElement('div');
+                    const isActive = gearInventory.includes(teeth);
+                    tag.className = `repo-tag ${isActive ? 'active' : 'inactive'}`;
+                    tag.textContent = teeth;
+                    if (isActive) {
+                        tag.title = 'Click to remove from Available Gears';
+                        tag.addEventListener('click', () => removeGear(teeth));
+                    } else {
+                        tag.title = 'Click to add to Available Gears';
+                        tag.addEventListener('click', () => addGearToAvailable(teeth));
+                    }
+                    repoContainer.appendChild(tag);
+                });
+            }
+        }
+
+        // Add a gear to available gears
+        function addGearToAvailable(teeth) {
+            if (!gearInventory.includes(teeth)) {
+                gearInventory.push(teeth);
+                initializeInventory();
+                calculate();
+            }
+        }
+
+        // Remove gear size from inventory
+        function removeGear(teeth) {
+            if (gearInventory.length <= 4) {
+                showToast("You need at least 4 gears in inventory to calculate combinations!", true);
+                return;
+            }
+            gearInventory = gearInventory.filter(g => g !== teeth);
+            initializeInventory();
+            calculate();
+        }
+
+        // Add a new gear size to inventory
+        function addNewGear() {
+            const input = document.getElementById('newGearInput');
+            const teeth = parseInt(input.value);
+            
+            if (isNaN(teeth) || teeth < 5 || teeth > 300) {
+                showToast("Please enter a valid gear size (5 to 300 teeth)!", true);
+                return;
+            }
+            
+            // Add to repository if not there
+            if (!allGearsRepository.includes(teeth)) {
+                allGearsRepository.push(teeth);
+                allGearsRepository.sort((x, y) => x - y);
+            }
+            
+            if (gearInventory.includes(teeth)) {
+                showToast("Gear size already exists in available gears!", true);
+                return;
+            }
+            
+            gearInventory.push(teeth);
+            input.value = '';
+            initializeInventory();
+            calculate();
+            showToast(`Added ${teeth}T gear.`);
+        }
+
+        // Global variables for matches
+        let tableMatches = [];
+        let alternatives = [];
+
+        // Calculate all gear combinations for target TPM and active rules
+        function calculate() {
+            const targetTpm = parseFloat(document.getElementById('tpmInput').value) || 100;
+            const duplicateConstraint = document.querySelector('input[name="dupConstraint"]:checked').value;
+            const slipPct = parseFloat(document.getElementById('slipInput')?.value) || 0;
+            const contractionPct = parseFloat(document.getElementById('contractionInput')?.value) || 0;
+            
+            // 1. VERIFIED TABLE MATCHES
+            tableMatches = [];
+            csvDatabase.forEach(row => {
+                const ratio = (row.b / row.a) * (row.d / row.c);
+                const calcTpm = kConstant * ratio;
+                const actualTpm = (calcTpm * (1 - (slipPct / 100))) / (1 - (contractionPct / 100));
+                
+                // Dev/Error is calculated against the actual delivered TPM
+                const absError = Math.abs(actualTpm - targetTpm);
+                const pctError = (absError / targetTpm) * 100;
+                
+                // Only keep matches within 2% variation
+                if (pctError <= 2.0) {
+                    tableMatches.push({
+                        a: row.a, b: row.b, c: row.c, d: row.d,
+                        ratio: ratio,
+                        rowTpm: row.tpm,
+                        calcTpm: calcTpm,
+                        actualTpm: actualTpm,
+                        absError: absError,
+                        pctError: pctError
+                    });
+                }
+            });
+            
+            // Sort table matches by error
+            tableMatches.sort((x, y) => x.absError - y.absError);
+            
+            // Keep unique physical configurations for the table matches (A-B-C-D unique)
+            const uniqueTableKeys = new Set();
+            const filteredTableMatches = [];
+            tableMatches.forEach(item => {
+                const key = `${item.a}-${item.b}-${item.c}-${item.d}`;
+                if (!uniqueTableKeys.has(key)) {
+                    uniqueTableKeys.add(key);
+                    filteredTableMatches.push(item);
+                }
+            });
+            tableMatches = filteredTableMatches.slice(0, 15);
+            
+            // Set of table combinations for easy exclusion
+            const tableCombos = new Set(csvDatabase.map(row => `${row.a}-${row.b}-${row.c}-${row.d}`));
+            
+            // 2. CALCULATED ALTERNATIVES
+            const results = [];
+            // Run permutation scan
+            for (let a of gearInventory) {
+                for (let b of gearInventory) {
+                    for (let c of gearInventory) {
+                        for (let d of gearInventory) {
+                            
+                            // Exclude if it is in the reference table
+                            const key = `${a}-${b}-${c}-${d}`;
+                            if (tableCombos.has(key)) continue;
+                            
+                            // Apply physical constraints based on constraint options
+                            if (duplicateConstraint === 'none') {
+                                if (new Set([a, b, c, d]).size < 4) continue;
+                            } else if (duplicateConstraint === 'idler') {
+                                if (b !== c) {
+                                    if (new Set([a, b, c, d]).size < 4) continue;
+                                } else {
+                                    if (new Set([a, b, d]).size < 3) continue;
+                                }
+                            }
+                            
+                            const ratio = (b / a) * (d / c);
+                            const calcTpm = kConstant * ratio;
+                            const actualTpm = (calcTpm * (1 - (slipPct / 100))) / (1 - (contractionPct / 100));
+                            const absError = Math.abs(actualTpm - targetTpm);
+                            const pctError = (absError / targetTpm) * 100;
+                            
+                            // Only keep matches within 2% variation
+                            if (pctError <= 2.0) {
+                                results.push({
+                                    a, b, c, d,
+                                    ratio,
+                                    calcTpm,
+                                    actualTpm,
+                                    absError,
+                                    pctError
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Sort by absolute error ascending
+            results.sort((x, y) => x.absError - y.absError);
+            
+            // Limit results to top 25 unique gear combinations
+            alternatives = [];
+            const uniqueCombinations = new Set();
+            
+            for (let res of results) {
+                const key = `${res.a}-${res.b}-${res.c}-${res.d}`;
+                if (!uniqueCombinations.has(key)) {
+                    uniqueCombinations.add(key);
+                    alternatives.push(res);
+                }
+                if (alternatives.length >= 25) break;
+            }
+            
+            renderResults();
+            
+            // Check if current selectedGears are valid and matches one of the combinations
+            let preserveSelected = false;
+            let preserveItem = null;
+            
+            // Check in tableMatches
+            for (let item of tableMatches) {
+                if (item.a === selectedGears.a && item.b === selectedGears.b && item.c === selectedGears.c && item.d === selectedGears.d) {
+                    preserveSelected = true;
+                    preserveItem = item;
+                    break;
+                }
+            }
+            // Check in alternatives if not found
+            if (!preserveSelected) {
+                for (let item of alternatives) {
+                    if (item.a === selectedGears.a && item.b === selectedGears.b && item.c === selectedGears.c && item.d === selectedGears.d) {
+                        preserveSelected = true;
+                        preserveItem = item;
+                        break;
+                    }
+                }
+            }
+            
+            if (preserveSelected && preserveItem) {
+                selectCombination(preserveItem.a, preserveItem.b, preserveItem.c, preserveItem.d, preserveItem.calcTpm || (kConstant * (preserveItem.b / preserveItem.a) * (preserveItem.d / preserveItem.c)), preserveItem.ratio);
+            } else if (tableMatches.length > 0) {
+                const top = tableMatches[0];
+                selectCombination(top.a, top.b, top.c, top.d, top.calcTpm, top.ratio);
+            } else if (alternatives.length > 0) {
+                const top = alternatives[0];
+                selectCombination(top.a, top.b, top.c, top.d, top.calcTpm, top.ratio);
+            } else {
+                // Clear active info if nothing matches
+                document.getElementById('infoCalcTpm').textContent = "N/A";
+                const infoActual = document.getElementById('infoActualTpm');
+                if (infoActual) infoActual.textContent = "N/A";
+                document.getElementById('infoRatio').textContent = "N/A";
+                document.getElementById('infoEquation').textContent = "No combinations found within 2% variation.";
+            }
+        }
+
+        // Render calculated combinations in UI results table
+        function renderResults() {
+            const matchesTbody = document.getElementById('tableMatchesBody');
+            const altsTbody = document.getElementById('alternativesBody');
+            
+            matchesTbody.innerHTML = '';
+            altsTbody.innerHTML = '';
+            
+            // 1. Render Table Matches
+            if (tableMatches.length === 0) {
+                matchesTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:15px; font-size: 0.8rem;">No manual matches within 2% variation.</td></tr>`;
+            } else {
+                tableMatches.forEach((calc, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-combo', `${calc.a}-${calc.b}-${calc.c}-${calc.d}`);
+                    if (selectedGears.a === calc.a && selectedGears.b === calc.b && selectedGears.c === calc.c && selectedGears.d === calc.d) {
+                        tr.className = 'selected';
+                    }
+                    
+                    tr.addEventListener('click', () => {
+                        document.querySelectorAll('.table-custom tbody tr').forEach(r => r.classList.remove('selected'));
+                        tr.classList.add('selected');
+                        selectCombination(calc.a, calc.b, calc.c, calc.d, calc.calcTpm, calc.ratio);
+                    });
+                    
+                    let errorClass = 'excellent';
+                    if (calc.pctError > 1.5) errorClass = 'good';
+                    if (calc.pctError > 5.0) errorClass = 'poor';
+                    
+                    tr.innerHTML = `
+                        <td style="font-family:var(--font-mono); font-weight:700; color:var(--text-secondary);">${idx + 1}</td>
+                        <td>
+                            <div class="gear-train-display" style="border-color: rgba(16, 185, 129, 0.15); background: rgba(16, 185, 129, 0.02);">
+                                <span class="driver" title="A (Driver)" style="color:var(--color-cyan);">${calc.a}</span>
+                                <span class="sep">/</span>
+                                <span class="driven" title="B (Driven)" style="color:var(--color-indigo);">${calc.b}</span>
+                                <span class="sep">×</span>
+                                <span class="driver" title="C (Driver)" style="color:var(--color-emerald);">${calc.c}</span>
+                                <span class="sep">/</span>
+                                <span class="driven" title="D (Driven)" style="color:#fca5a5;">${calc.d}</span>
+                            </div>
+                        </td>
+                        <td style="font-family:var(--font-mono); font-weight:700; color:var(--color-emerald);">${calc.rowTpm}</td>
+                        <td>
+                            <span class="badge-error ${errorClass}" title="Deviation: ${calc.absError.toFixed(1)} TPM">
+                                ${calc.pctError.toFixed(1)}%
+                            </span>
+                        </td>
+                    `;
+                    matchesTbody.appendChild(tr);
+                });
+            }
+            
+            // 2. Render Alternatives
+            if (alternatives.length === 0) {
+                altsTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:15px; font-size: 0.8rem;">No alternatives within 2% variation.</td></tr>`;
+            } else {
+                alternatives.forEach((calc, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-combo', `${calc.a}-${calc.b}-${calc.c}-${calc.d}`);
+                    if (selectedGears.a === calc.a && selectedGears.b === calc.b && selectedGears.c === calc.c && selectedGears.d === calc.d) {
+                        tr.className = 'selected';
+                    }
+                    
+                    tr.addEventListener('click', () => {
+                        document.querySelectorAll('.table-custom tbody tr').forEach(r => r.classList.remove('selected'));
+                        tr.classList.add('selected');
+                        selectCombination(calc.a, calc.b, calc.c, calc.d, calc.calcTpm, calc.ratio);
+                    });
+                    
+                    let errorClass = 'excellent';
+                    if (calc.pctError > 1.5) errorClass = 'good';
+                    if (calc.pctError > 5.0) errorClass = 'poor';
+                    
+                    tr.innerHTML = `
+                        <td style="font-family:var(--font-mono); font-weight:700; color:var(--text-secondary);">${idx + 1}</td>
+                        <td>
+                            <div class="gear-train-display">
+                                <span class="driver" title="A (Driver)" style="color:var(--color-cyan);">${calc.a}</span>
+                                <span class="sep">/</span>
+                                <span class="driven" title="B (Driven)" style="color:var(--color-indigo);">${calc.b}</span>
+                                <span class="sep">×</span>
+                                <span class="driver" title="C (Driver)" style="color:var(--color-emerald);">${calc.c}</span>
+                                <span class="sep">/</span>
+                                <span class="driven" title="D (Driven)" style="color:#fca5a5;">${calc.d}</span>
+                            </div>
+                        </td>
+                        <td style="font-family:var(--font-mono); font-weight:600;">${calc.calcTpm.toFixed(1)}</td>
+                        <td>
+                            <span class="badge-error ${errorClass}" title="Deviation: ${calc.absError.toFixed(1)} TPM">
+                                ${calc.pctError.toFixed(1)}%
+                            </span>
+                        </td>
+                    `;
+                    altsTbody.appendChild(tr);
+                });
+            }
+            
+            highlightMatchingReferenceRows();
+        }
+
+        // Highlight rows in reference table that match any generated combination
+        function highlightMatchingReferenceRows() {
+            // Un-highlight all
+            document.querySelectorAll('#refTableBody tr').forEach(tr => {
+                tr.classList.remove('table-highlight-row');
+            });
+            
+            // Check top 5 combinations
+            tableMatches.slice(0, 5).forEach(calc => {
+                const tr = document.getElementById(`ref-row-${calc.a}-${calc.b}-${calc.c}-${calc.d}`);
+                if (tr) {
+                    tr.classList.add('table-highlight-row');
+                }
+            });
+        }
+
+        // Select a gear combination to highlight in both tables
+        function selectCombination(a, b, c, d, calcTpm, ratio) {
+            selectedGears = { a, b, c, d };
+            
+            const slipPct = parseFloat(document.getElementById('slipInput')?.value) || 0;
+            const contractionPct = parseFloat(document.getElementById('contractionInput')?.value) || 0;
+            const actualTpm = (calcTpm * (1 - (slipPct / 100))) / (1 - (contractionPct / 100));
+            
+            // Update info labels
+            document.getElementById('infoRatio').textContent = ratio.toFixed(4);
+            document.getElementById('infoCalcTpm').textContent = calcTpm.toFixed(2);
+            const actualEl = document.getElementById('infoActualTpm');
+            if (actualEl) actualEl.textContent = actualTpm.toFixed(2);
+            
+            const gearTrainSetupEl = document.getElementById('infoGearTrainSetup');
+            if (gearTrainSetupEl) {
+                gearTrainSetupEl.textContent = `${a} / ${b} × ${c} / ${d}`;
+            }
+            
+            let eqText = `TPM = ${kConstant} × (${b} [B] / ${a} [A]) × (${d} [D] / ${c} [C]) = ${calcTpm.toFixed(2)}`;
+            if (slipPct > 0 || contractionPct > 0) {
+                eqText += ` → Actual (Slip: ${slipPct}%, Contraction: ${contractionPct}%) = ${actualTpm.toFixed(2)}`;
+            }
+            document.getElementById('infoEquation').textContent = eqText;
+            
+            // Update matching row in original table
+            document.querySelectorAll('#refTableBody tr').forEach(r => r.style.outline = 'none');
+            const refTr = document.getElementById(`ref-row-${a}-${b}-${c}-${d}`);
+            if (refTr) {
+                refTr.style.outline = '2px solid var(--color-teal)';
+            }
+            
+            // Synchronize selected class in both tables
+            document.querySelectorAll('.table-custom tbody tr').forEach(r => r.classList.remove('selected'));
+            document.querySelectorAll(`.table-custom tbody tr[data-combo="${a}-${b}-${c}-${d}"]`).forEach(tr => {
+                tr.classList.add('selected');
+            });
+            
+            saveAndApply();
+        }
+
+        // Render reference table from local database
+        function renderReferenceTable(filterText = '') {
+            const tbody = document.getElementById('refTableBody');
+            tbody.innerHTML = '';
+            
+            const normalizedFilter = filterText.toLowerCase().trim();
+            
+            csvDatabase.forEach((row, idx) => {
+                const calcTpm = kConstant * (row.b / row.a) * (row.d / row.c);
+                
+                // Filtering match logic
+                let matches = true;
+                if (normalizedFilter) {
+                    const rowStr = `tpm=${row.tpm} e=${row.a} b=${row.b} c=${row.c} d=${row.d} ratio=${((row.b/row.a)*(row.d/row.c)).toFixed(4)}`.toLowerCase();
+                    const words = normalizedFilter.split(' ');
+                    matches = words.every(word => {
+                        if (word.includes('=')) {
+                            const [key, val] = word.split('=');
+                            if (key === 'e' || key === 'a') return row.a.toString() === val;
+                            if (key === 'b' && val.length < 3) return row.b.toString() === val;
+                            if (key === 'c') return row.c.toString() === val;
+                            if (key === 'd') return row.d.toString() === val;
+                            if (key === 'tpm') return row.tpm.toString() === val;
+                        }
+                        return rowStr.includes(word) || row.tpm.toString().includes(word);
+                    });
+                }
+                
+                if (!matches) return;
+                
+                const tr = document.createElement('tr');
+                tr.id = `ref-row-${row.a}-${row.b}-${row.c}-${row.d}`;
+                
+                tr.innerHTML = `
+                    <td style="font-family:var(--font-mono); color:var(--text-muted);">${idx + 1}</td>
+                    <td style="font-weight:700; color:var(--color-teal);">${row.tpm}</td>
+                    <td style="font-family:var(--font-mono); color:var(--color-cyan); font-weight:600;">${row.a}</td>
+                    <td style="font-family:var(--font-mono); color:var(--color-indigo); font-weight:600;">${row.b}</td>
+                    <td style="font-family:var(--font-mono); color:var(--color-emerald); font-weight:600;">${row.c}</td>
+                    <td style="font-family:var(--font-mono); color:#fca5a5; font-weight:600;">${row.d}</td>
+                    <td style="font-family:var(--font-mono); color:var(--color-emerald);">${calcTpm.toFixed(1)}</td>
+                `;
+                
+                // Allow selecting combination from reference table too
+                tr.style.cursor = 'pointer';
+                tr.addEventListener('click', () => {
+                    document.getElementById('tpmInput').value = row.tpm;
+                    document.getElementById('tpmSlider').value = row.tpm;
+                    calculate();
+                    selectCombination(row.a, row.b, row.c, row.d, calcTpm, (row.b/row.a)*(row.d/row.c));
+                });
+                
+                tbody.appendChild(tr);
+            });
+            
+            highlightMatchingReferenceRows();
+        }
+
+        // Search reference table
+        function filterReferenceTable() {
+            const val = document.getElementById('tableSearch').value;
+            renderReferenceTable(val);
+        }
+
+
+
+
+
+        // Toast notifications (disabled)
+        function showToast(message, isError = false) {}
+
+
+    </script>
+
+
+</body>
+</html>

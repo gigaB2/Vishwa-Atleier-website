@@ -1,0 +1,88 @@
+diff --git a/modules/weaving/weaving-costing.html b/modules/weaving/weaving-costing.html
+index 8c08ee4..be04440 100644
+--- a/modules/weaving/weaving-costing.html
++++ b/modules/weaving/weaving-costing.html
+@@ -195,6 +195,9 @@
+             z-index: -1 !important;
+         }
+         .printable-offscreen-wrapper.yc-pdf-exporting {
++            width: 1200px !important;
++            min-width: 1200px !important;
++            max-width: 1200px !important;
+             height: auto !important;
+             max-height: none !important;
+             overflow: visible !important;
+@@ -6462,6 +6465,9 @@ const App = () => {
+       position: wrapper.style.position,
+       left: wrapper.style.left,
+       top: wrapper.style.top,
++      width: wrapper.style.width,
++      minWidth: wrapper.style.minWidth,
++      maxWidth: wrapper.style.maxWidth,
+       opacity: wrapper.style.opacity,
+       zIndex: wrapper.style.zIndex,
+       pointerEvents: wrapper.style.pointerEvents,
+@@ -6478,6 +6484,9 @@ const App = () => {
+       wrapper.style.position = 'fixed';
+       wrapper.style.left = '0px';
+       wrapper.style.top = '0px';
++      wrapper.style.width = '1200px';
++      wrapper.style.minWidth = '1200px';
++      wrapper.style.maxWidth = '1200px';
+       wrapper.style.opacity = '0';
+       wrapper.style.zIndex = '-1';
+       wrapper.style.pointerEvents = 'none';
+@@ -6496,6 +6505,9 @@ const App = () => {
+           wrapper.style.position = prevWrapper.position;
+           wrapper.style.left = prevWrapper.left;
+           wrapper.style.top = prevWrapper.top;
++          wrapper.style.width = prevWrapper.width;
++          wrapper.style.minWidth = prevWrapper.minWidth;
++          wrapper.style.maxWidth = prevWrapper.maxWidth;
+           wrapper.style.opacity = prevWrapper.opacity;
+           wrapper.style.zIndex = prevWrapper.zIndex;
+           wrapper.style.pointerEvents = prevWrapper.pointerEvents;
+diff --git a/modules/yarn/yarn-costing.html b/modules/yarn/yarn-costing.html
+index 8e7344d..4e7cc85 100644
+--- a/modules/yarn/yarn-costing.html
++++ b/modules/yarn/yarn-costing.html
+@@ -208,6 +208,9 @@
+             z-index: -1 !important;
+         }
+         .printable-offscreen-wrapper.yc-pdf-exporting {
++            width: 1200px !important;
++            min-width: 1200px !important;
++            max-width: 1200px !important;
+             height: auto !important;
+             max-height: none !important;
+             overflow: visible !important;
+@@ -6461,6 +6464,9 @@ const App = () => {
+       position: wrapper.style.position,
+       left: wrapper.style.left,
+       top: wrapper.style.top,
++      width: wrapper.style.width,
++      minWidth: wrapper.style.minWidth,
++      maxWidth: wrapper.style.maxWidth,
+       opacity: wrapper.style.opacity,
+       zIndex: wrapper.style.zIndex,
+       pointerEvents: wrapper.style.pointerEvents,
+@@ -6477,6 +6483,9 @@ const App = () => {
+       wrapper.style.position = 'fixed';
+       wrapper.style.left = '0px';
+       wrapper.style.top = '0px';
++      wrapper.style.width = '1200px';
++      wrapper.style.minWidth = '1200px';
++      wrapper.style.maxWidth = '1200px';
+       wrapper.style.opacity = '0';
+       wrapper.style.zIndex = '-1';
+       wrapper.style.pointerEvents = 'none';
+@@ -6495,6 +6504,9 @@ const App = () => {
+           wrapper.style.position = prevWrapper.position;
+           wrapper.style.left = prevWrapper.left;
+           wrapper.style.top = prevWrapper.top;
++          wrapper.style.width = prevWrapper.width;
++          wrapper.style.minWidth = prevWrapper.minWidth;
++          wrapper.style.maxWidth = prevWrapper.maxWidth;
+           wrapper.style.opacity = prevWrapper.opacity;
+           wrapper.style.zIndex = prevWrapper.zIndex;
+           wrapper.style.pointerEvents = prevWrapper.pointerEvents;

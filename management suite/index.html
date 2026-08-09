@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Vishwa Atelier Management Suite — Enterprise Portal</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase Synchronization Adapter -->
+    <script src="assets/supabase-client.js"></script>
+    <!-- Financial Year Engine -->
+    <script src="assets/fy-engine.js"></script>
+    
+    <style>
+        :root {
+            --bg-deep: #050713;
+            --surface-glass: rgba(14, 18, 30, 0.75);
+            --surface-border: rgba(255, 255, 255, 0.1);
+            --surface-border-glow: rgba(56, 189, 248, 0.4);
+            --accent-primary: #38bdf8;
+            --accent-secondary: #818cf8;
+            --accent-pink: #ec4899;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --font-heading: 'Outfit', sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: var(--font-heading);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Interactive Particle & Mesh Canvas */
+        #heroCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Subtle Ambient Glow Follower */
+        .mouse-glow {
+            position: fixed;
+            width: 650px;
+            height: 650px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.14) 0%, rgba(129, 140, 248, 0.06) 45%, transparent 70%);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 2;
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+
+        /* Container Layout */
+        .portal-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: max(1.5rem, env(safe-area-inset-top, 0px)) max(1.25rem, env(safe-area-inset-right, 0px)) max(1.5rem, env(safe-area-inset-bottom, 0px)) max(1.25rem, env(safe-area-inset-left, 0px));
+        }
+
+        /* Top Header */
+        header {
+            width: 100%;
+            max-width: 1300px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .brand-logo-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1.25rem;
+            background: var(--surface-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--surface-border);
+            border-radius: 9999px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        }
+
+        .brand-icon-box {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #040814;
+            font-weight: 800;
+            font-size: 0.95rem;
+            font-family: var(--font-display);
+        }
+
+        .brand-name-display {
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            border-radius: 50%;
+            background: var(--surface-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--surface-border);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            touch-action: manipulation;
+        }
+
+        .icon-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--surface-border-glow);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px -6px rgba(56, 189, 248, 0.3);
+        }
+
+        /* Double-Bezel Nested Architecture Outer Glass Shell */
+        .portal-outer-bezel {
+            width: 100%;
+            max-width: 470px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 2.75rem;
+            padding: 0.5rem;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+            margin: auto 0;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Inner Core Card */
+        .portal-card {
+            width: 100%;
+            background: rgba(10, 14, 26, 0.92);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: calc(2.75rem - 0.5rem);
+            padding: 2.5rem 2.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .portal-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), var(--accent-secondary), transparent);
+            opacity: 0.8;
+        }
+
+        /* Segmented Auth Mode Switcher */
+        .auth-segmented-nav {
+            display: flex;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--surface-border);
+            border-radius: 9999px;
+            padding: 4px;
+            gap: 4px;
+            margin-bottom: 2rem;
+        }
+
+        .auth-tab-btn {
+            flex: 1;
+            padding: 0.7rem 0.5rem;
+            border-radius: 9999px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: var(--font-heading);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            touch-action: manipulation;
+            white-space: nowrap;
+        }
+
+        .auth-tab-btn.active {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-primary);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 1.75rem;
+        }
+
+        .card-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 9999px;
+            color: var(--accent-primary);
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 0.75rem;
+        }
+
+        .card-title {
+            font-size: 1.85rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.4rem;
+            background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* Form Controls */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            font-size: 0.775rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 1.15rem;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            pointer-events: none;
+            transition: color 0.2s ease;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 1rem 1.15rem 1rem 3.15rem;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--surface-border);
+            border-radius: 1.15rem;
+            color: var(--text-primary);
+            font-family: var(--font-heading);
+            font-size: 16px !important; /* iOS Auto-zoom prevention */
+            min-height: 44px;
+            outline: none;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .form-input:focus {
+            border-color: var(--accent-primary);
+            background: rgba(15, 23, 42, 0.95);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.18);
+        }
+
+        .form-input:focus ~ .input-icon {
+            color: var(--accent-primary);
+        }
+
+        /* Button-in-Button Trailing Icon Architecture */
+        .submit-btn {
+            position: relative;
+            width: 100%;
+            padding: 0.6rem 0.6rem 0.6rem 1.5rem;
+            border-radius: 9999px;
+            border: none;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: #040814;
+            font-family: var(--font-heading);
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            margin-top: 0.75rem;
+            box-shadow: 0 12px 28px -8px rgba(56, 189, 248, 0.4);
+            touch-action: manipulation;
+            min-height: 52px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 36px -8px rgba(56, 189, 248, 0.6);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .btn-trailing-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: rgba(4, 8, 20, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: #040814;
+            transition: transform 0.25s ease;
+        }
+
+        .submit-btn:hover .btn-trailing-circle {
+            transform: translateX(2px) scale(1.05);
+        }
+
+        .auth-message {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.85rem;
+            font-size: 0.825rem;
+            display: none;
+            text-align: center;
+        }
+
+        .auth-message.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .auth-message.success {
+            display: block;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+
+        /* Google SSO Auth Button */
+        .google-auth-btn {
+            width: 100%;
+            padding: 0.8rem 1.25rem;
+            border-radius: 9999px;
+            border: 1px solid var(--surface-border);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font-family: var(--font-heading);
+            font-size: 0.925rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            margin-bottom: 1.25rem;
+            min-height: 48px;
+            touch-action: manipulation;
+        }
+
+        .google-auth-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1.5px);
+            box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.4);
+        }
+
+        .google-auth-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.25rem 0;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .auth-divider::before, .auth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--surface-border);
+        }
+
+        /* Open Workspace Mode Banner */
+        .open-mode-banner {
+            display: none;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px dashed rgba(56, 189, 248, 0.3);
+            border-radius: 1.15rem;
+            padding: 1rem;
+            margin-bottom: 1.25rem;
+            text-align: center;
+        }
+
+        .open-mode-banner p {
+            font-size: 0.825rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(4, 6, 12, 0.8);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Footer Info */
+        footer {
+            width: 100%;
+            max-width: 1300px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 1.5rem;
+        }
+
+        .footer-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--surface-border);
+            border-radius: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #10b981;
+        }
+
+        /* Mobile & Tablet Responsiveness */
+        @media (max-width: 768px) {
+            .portal-outer-bezel {
+                border-radius: 2rem;
+                padding: 0.35rem;
+            }
+
+            .portal-card {
+                padding: 2rem 1.5rem;
+                border-radius: calc(2rem - 0.35rem);
+            }
+
+            .card-title {
+                font-size: 1.5rem;
+            }
+
+            .auth-tab-btn {
+                font-size: 0.8rem;
+                padding: 0.6rem 0.4rem;
+            }
+
+            footer {
+                flex-direction: column;
+                gap: 0.75rem;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Interactive Background Elements -->
+    <div class="mouse-glow" id="mouseGlow"></div>
+    <canvas id="heroCanvas"></canvas>
+
+    <div class="portal-wrapper">
+        <!-- Top Navigation Bar -->
+        <header>
+            <div class="brand-logo-badge">
+                <div class="brand-icon-box" id="headerLogoIcon">VA</div>
+                <span class="brand-name-display" id="headerBrandName">Vishwa Atelier Management Suite</span>
+            </div>
+
+            <div class="header-actions">
+            </div>
+        </header>
+
+        <!-- Double-Bezel Card Container -->
+        <div class="portal-outer-bezel">
+            <main class="portal-card" id="portalCard">
+                <!-- Segmented Auth Mode Switcher -->
+                <div class="auth-segmented-nav">
+                    <button class="auth-tab-btn active" data-tab="employee">
+                        <i class="ph ph-envelope-simple"></i>
+                        <span>Employee Login</span>
+                    </button>
+
+                    <button class="auth-tab-btn" data-tab="admin">
+                        <i class="ph ph-shield-check"></i>
+                        <span>Admin Sign-In</span>
+                    </button>
+                </div>
+
+                <!-- Open Workspace Mode Banner -->
+                <div class="open-mode-banner" id="openModeBanner">
+                    <span class="card-eyebrow" style="margin-bottom:0;"><i class="ph ph-globe"></i> Open Portal Mode Active</span>
+                    <p>Login is currently optional. Click below for instant guest entry.</p>
+                </div>
+
+                <!-- FORM 1: Employee Sign In (Email + Password) -->
+                <div class="auth-panel" id="employeePanel">
+                    <div class="card-header">
+                        <span class="card-eyebrow"><i class="ph ph-lock-key"></i> Employee Access</span>
+                        <h1 class="card-title">Welcome Back</h1>
+                        <p class="card-subtitle">Sign in with your registered email & password</p>
+                    </div>
+
+                    <form id="employeeLoginForm" autocomplete="off">
+                        <div class="form-group">
+                            <label class="form-label" for="empEmailInput">Email Address</label>
+                            <div class="input-wrapper">
+                                <input type="email" id="empEmailInput" class="form-input" placeholder="employee@vishwafashions.com" required autofocus>
+                                <i class="ph ph-envelope-simple input-icon"></i>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="empPassInput">Password</label>
+                            <div class="input-wrapper">
+                                <input type="password" id="empPassInput" class="form-input" placeholder="••••••••" required>
+                                <i class="ph ph-key input-icon"></i>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="submit-btn">
+                            <span>Sign In to Workspace</span>
+                            <div class="btn-trailing-circle"><i class="ph ph-arrow-right"></i></div>
+                        </button>
+                    </form>
+                </div>
+
+
+
+                <!-- FORM 3: Admin Sign In (Admin Email + Admin Password) -->
+                <div class="auth-panel" id="adminPanel" style="display: none;">
+                    <div class="card-header">
+                        <span class="card-eyebrow" style="background: rgba(236,72,153,0.1); border-color: rgba(236,72,153,0.3); color: var(--accent-pink);"><i class="ph ph-crown"></i> Master Management</span>
+                        <h1 class="card-title">Admin Sign In</h1>
+                        <p class="card-subtitle">Access user management & system controls</p>
+                    </div>
+
+                    <form id="adminLoginForm" autocomplete="off">
+                        <div class="form-group">
+                            <label class="form-label" for="adminEmailInput">Admin Email Address</label>
+                            <div class="input-wrapper">
+                                <input type="email" id="adminEmailInput" class="form-input" placeholder="admin@vishwafashions.com" required>
+                                <i class="ph ph-shield-check input-icon"></i>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="adminPassInput">Admin Password</label>
+                            <div class="input-wrapper">
+                                <input type="password" id="adminPassInput" class="form-input" placeholder="••••••••" required>
+                                <i class="ph ph-lock input-icon"></i>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="submit-btn" style="background: linear-gradient(135deg, var(--accent-secondary), var(--accent-pink));">
+                            <span>Authenticate Admin</span>
+                            <div class="btn-trailing-circle"><i class="ph ph-arrow-right"></i></div>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="auth-message" id="authMsg"></div>
+            </main>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div class="footer-badge">
+                <span class="status-dot"></span>
+                <span>SYSTEM ONLINE & CLOUD SYNCED</span>
+            </div>
+            <p>&copy; <span id="currentYear"></span> <span id="footerBrandName">Vishwa Atelier</span>. All rights reserved.</p>
+        </footer>
+    </div>
+
+
+
+    <script>
+        const STORAGE_KEY_GROUP = 'vf_group_name';
+        const STORAGE_KEY_SETTINGS = 'vishwa_fashions_settings';
+        const STORAGE_KEY_USER = 'vf_user_name';
+        const STORAGE_KEY_SESSION = 'vf_session';
+        const STORAGE_KEY_USERS = 'vf_users';
+        const STORAGE_KEY_AUTH_CONFIG = 'vf_auth_config';
+
+        // Default Master Admin & Config Setup
+        function initDefaultAuthData() {
+            let config = { 
+                access_mode: 'require_login',
+                admin_email: 'admin@vishwafashions.com',
+                admin_pass: 'admin123'
+            };
+            try {
+                const cfgRaw = localStorage.getItem(STORAGE_KEY_AUTH_CONFIG);
+                if (cfgRaw) config = Object.assign(config, JSON.parse(cfgRaw));
+            } catch(e) {}
+            localStorage.setItem(STORAGE_KEY_AUTH_CONFIG, JSON.stringify(config));
+
+            let users = [];
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY_USERS);
+                if (raw) users = JSON.parse(raw) || [];
+            } catch(e) {}
+
+            return { users, config };
+        }
+
+        const authData = initDefaultAuthData();
+
+        // Clear lingering session when landing on login page without explicit user action
+        try {
+            const currentSession = localStorage.getItem(STORAGE_KEY_SESSION);
+            if (currentSession) {
+                const parsedSess = JSON.parse(currentSession);
+                if (!parsedSess || !parsedSess.role) {
+                    localStorage.removeItem(STORAGE_KEY_SESSION);
+                }
+            }
+        } catch(e) {}
+
+        function getGroupName() {
+            try {
+                const group = localStorage.getItem(STORAGE_KEY_GROUP);
+                if (group && group.trim()) {
+                    return group.trim();
+                }
+            } catch (e) {}
+            return 'Vishwa Atelier';
+        }
+
+        function updateBrandUI(name) {
+            const trimmed = (name && name.trim()) ? name.trim() : 'Vishwa Atelier';
+            document.title = `${trimmed} Management Suite — Enterprise Portal`;
+            document.getElementById('headerBrandName').textContent = `${trimmed} Management Suite`;
+            document.getElementById('footerBrandName').textContent = trimmed;
+            const initials = trimmed.split(' ').filter(Boolean).map(w => w.charAt(0)).join('').toUpperCase().slice(0, 3);
+            document.getElementById('headerLogoIcon').textContent = initials || 'VA';
+        }
+
+        // Initialize UI
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+        const initialGroup = getGroupName();
+        updateBrandUI(initialGroup);
+
+        // Set default Admin email in form placeholder/value
+        let defaultAdminEmail = authData.config.admin_email || 'admin@vishwafashions.com';
+        try {
+            const rawAdmins = localStorage.getItem('vf_admin_users');
+            if (rawAdmins) {
+                const list = JSON.parse(rawAdmins);
+                if (Array.isArray(list) && list.length > 0 && list[0].email) {
+                    defaultAdminEmail = list[0].email;
+                }
+            }
+        } catch(e) {}
+        document.getElementById('adminEmailInput').value = defaultAdminEmail;
+
+        // Check Open Mode Banner
+        if (authData.config.access_mode === 'open_portal') {
+            document.getElementById('openModeBanner').style.display = 'block';
+        }
+
+        // Auth Tab Switching
+        const tabBtns = document.querySelectorAll('.auth-tab-btn');
+        const panels = {
+            employee: document.getElementById('employeePanel'),
+            admin: document.getElementById('adminPanel')
+        };
+        const authMsg = document.getElementById('authMsg');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const target = btn.dataset.tab;
+                Object.keys(panels).forEach(p => {
+                    if (panels[p]) panels[p].style.display = p === target ? 'block' : 'none';
+                });
+                authMsg.style.display = 'none';
+            });
+        });
+
+        function showAuthMsg(text, type) {
+            authMsg.textContent = text;
+            authMsg.className = `auth-message ${type}`;
+            authMsg.style.display = 'block';
+        }
+
+        function getFirstAllowedPage(userPerms) {
+            const pages = [
+                { key: 'order-book', url: 'modules/weaving/order-book.html' },
+                { key: 'rm-weft-stock-book', url: 'modules/weaving/rm-weft-stock-book.html' },
+                { key: 'rm-warp-stock-book', url: 'modules/weaving/rm-warp-stock-book.html' },
+                { key: 'costing-sheet', url: 'modules/weaving/weaving-costing.html' },
+                { key: 'weaving-production', url: 'modules/weaving/weaving-production.html' },
+                { key: 'dispatch', url: 'modules/weaving/dispatch.html' },
+                { key: 'design-library', url: 'modules/weaving/design-library.html' },
+                { key: 'yarn-production', url: 'modules/yarn/yarn-production.html' },
+                { key: 'yarn-sales', url: 'modules/yarn/yarn-sales.html' },
+                { key: 'yarn-stock-dashboard', url: 'modules/yarn/yarn-stock-dashboard.html' },
+                { key: 'salary-sheet', url: 'modules/salary-sheet.html' },
+                { key: 'manage', url: 'modules/manage.html' },
+                { key: 'ep-parser', url: 'modules/weaving/tools/ep-parser.html' },
+                { key: 'jacquard-castout-calculator', url: 'modules/weaving/tools/jacquard-castout-calculator.html' },
+                { key: 'gear', url: 'modules/yarn/gear%20charts/NATIONAL%20TEXTILE%20JARI%20COVERING%20GEAR%20CALCULATOR.html' }
+            ];
+
+            if (!userPerms || userPerms === '*') return pages[0].url;
+
+            for (const p of pages) {
+                if (userPerms[p.key] !== 'none') {
+                    return p.url;
+                }
+            }
+            return pages[0].url;
+        }
+
+        // 1. Employee Form Submit (Supabase Auth first, with legacy fallback)
+        document.getElementById('employeeLoginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const emailInput = document.getElementById('empEmailInput').value.trim().toLowerCase();
+            const passInput = document.getElementById('empPassInput').value;
+
+            showAuthMsg('Authenticating with Supabase Auth...', 'info');
+
+            // Try Supabase Auth first
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.signIn === 'function') {
+                const sbRes = await window.VishwaSupabase.signIn(emailInput, passInput);
+                if (sbRes && !sbRes.error && sbRes.data) {
+                    const session = window.VishwaSupabase.getSession() || {};
+                    showAuthMsg(`Welcome back, ${session.name || emailInput}! Redirecting...`, 'success');
+                    const targetPage = getFirstAllowedPage(session.permissions);
+                    setTimeout(() => window.location.href = targetPage, 400);
+                    return;
+                }
+            }
+
+            // Legacy local user check fallback
+            let users = [];
+            try { users = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS)) || []; } catch(e) {}
+
+            const found = users.find(u => u.email && u.email.toLowerCase() === emailInput);
+            if (!found) {
+                if (authData.config.access_mode === 'open_portal') {
+                    const sessionUser = { email: emailInput, name: emailInput.split('@')[0], role: 'employee', permissions: {} };
+                    localStorage.setItem(STORAGE_KEY_USER, sessionUser.name);
+                    localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(sessionUser));
+                    showAuthMsg('Welcome! Redirecting...', 'success');
+                    setTimeout(() => window.location.href = 'modules/weaving/order-book.html', 400);
+                    return;
+                }
+                showAuthMsg('Authentication failed. Invalid email or password.', 'error');
+                return;
+            }
+
+            if (found.passHash && found.passHash !== passInput) {
+                showAuthMsg('Invalid password. Please check and try again.', 'error');
+                return;
+            }
+
+            localStorage.setItem(STORAGE_KEY_USER, found.email);
+            localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(found));
+            showAuthMsg(`Welcome back, ${found.email}! Redirecting...`, 'success');
+            setTimeout(() => window.location.href = getFirstAllowedPage(found.permissions), 400);
+        });
+
+
+
+        // 3. Admin Form Submit (Admin Email + Admin Password)
+        document.getElementById('adminLoginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const adminEmail = document.getElementById('adminEmailInput').value.trim().toLowerCase();
+            const adminPass = document.getElementById('adminPassInput').value;
+
+            let admins = null;
+            try {
+                const raw = localStorage.getItem('vf_admin_users');
+                if (raw !== null) admins = JSON.parse(raw) || [];
+            } catch(e) {}
+
+            let cfg = { admin_email: 'admin@vishwafashions.com', admin_pass: 'admin123' };
+            try {
+                const cfgRaw = localStorage.getItem(STORAGE_KEY_AUTH_CONFIG);
+                if (cfgRaw) cfg = Object.assign(cfg, JSON.parse(cfgRaw));
+            } catch(e) {}
+
+            const validLegacyEmail = cfg.admin_email ? cfg.admin_email.toLowerCase() : 'admin@vishwafashions.com';
+            const validLegacyPass = cfg.admin_pass || 'admin123';
+
+            let matchedAdmin = null;
+            if (admins !== null) {
+                matchedAdmin = admins.find(a => a.email && a.email.toLowerCase() === adminEmail && a.passHash === adminPass);
+            } else {
+                if ((adminEmail === validLegacyEmail || adminEmail === 'admin@vishwafashions.com' || adminEmail === 'admin') && (adminPass === validLegacyPass || adminPass === 'admin123')) {
+                    matchedAdmin = { id: 'admin-master', email: validLegacyEmail, name: validLegacyEmail, role: 'admin' };
+                }
+            }
+
+            if (matchedAdmin) {
+                const adminSession = { 
+                    id: matchedAdmin.id || ('admin-' + Date.now()), 
+                    email: matchedAdmin.email || validLegacyEmail, 
+                    username: matchedAdmin.email || matchedAdmin.name || 'admin', 
+                    name: matchedAdmin.email || matchedAdmin.name || 'Admin', 
+                    role: 'admin', 
+                    permissions: '*' 
+                };
+                localStorage.setItem(STORAGE_KEY_USER, adminSession.email);
+                localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(adminSession));
+                showAuthMsg('Admin Authenticated! Redirecting to Settings...', 'success');
+                setTimeout(() => window.location.href = 'modules/settings.html', 400);
+            } else {
+                showAuthMsg('Invalid Admin Email or Password.', 'error');
+            }
+        });
+
+
+
+        // Particle Background & Physics
+        const canvas = document.getElementById('heroCanvas');
+        const ctx = canvas.getContext('2d');
+        const mouseGlow = document.getElementById('mouseGlow');
+        const portalBezel = document.querySelector('.portal-outer-bezel');
+
+        let width, height;
+        let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2, targetX: window.innerWidth / 2, targetY: window.innerHeight / 2 };
+        let particles = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initParticles();
+        }
+
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.4;
+                this.vy = (Math.random() - 0.5) * 0.4;
+                this.radius = Math.random() * 2 + 1;
+                this.baseAlpha = Math.random() * 0.35 + 0.15;
+                this.alpha = this.baseAlpha;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+                const dx = mouse.x - this.x;
+                const dy = mouse.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const maxDist = 180;
+                if (dist < maxDist) {
+                    const force = (maxDist - dist) / maxDist;
+                    this.alpha = this.baseAlpha + force * 0.5;
+                    this.x -= (dx / dist) * force * 1.5;
+                    this.y -= (dy / dist) * force * 1.5;
+                } else {
+                    this.alpha = this.baseAlpha;
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(56, 189, 248, ${this.alpha})`;
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            const count = Math.min(Math.floor((width * height) / 12000), 100);
+            for (let i = 0; i < count; i++) particles.push(new Particle());
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.targetX = e.clientX;
+            mouse.targetY = e.clientY;
+        });
+
+        function animate() {
+            mouse.x += (mouse.targetX - mouse.x) * 0.08;
+            mouse.y += (mouse.targetY - mouse.y) * 0.08;
+            mouseGlow.style.left = `${mouse.x}px`;
+            mouseGlow.style.top = `${mouse.y}px`;
+
+            if (portalBezel && window.innerWidth > 768) {
+                const cardRect = portalBezel.getBoundingClientRect();
+                const cardCenterX = cardRect.left + cardRect.width / 2;
+                const cardCenterY = cardRect.top + cardRect.height / 2;
+                const tiltX = (mouse.y - cardCenterY) / 45;
+                const tiltY = (cardCenterX - mouse.x) / 45;
+                portalBezel.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+            }
+
+            ctx.clearRect(0, 0, width, height);
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 130) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.strokeStyle = `rgba(56, 189, 248, ${0.15 * (1 - dist / 130)})`;
+                        ctx.lineWidth = 0.75;
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        animate();
+    </script>
+</body>
+</html>

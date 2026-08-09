@@ -1,0 +1,26 @@
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+*.key
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+
+# Generated / Build outputs
+graphify-out/
+.serena/
+.playwright-mcp/
+
+# Local debug / screenshot dumps
+tmp-*.js
+tmp-*.png
+_tmp_*.js
+_tmp_*.png
+

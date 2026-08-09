@@ -1,0 +1,43 @@
+diff --git a/modules/salary-sheet.html b/modules/salary-sheet.html
+index c1fd9e0..956c6e9 100644
+--- a/modules/salary-sheet.html
++++ b/modules/salary-sheet.html
+@@ -1477,6 +1477,16 @@
+ 
+             }
+ 
++            html, body, .container {
++
++                width: 1200px !important;
++
++                min-width: 1200px !important;
++
++                max-width: 1200px !important;
++
++            }
++
+             html, body {
+ 
+                 background: #ffffff !important;
+@@ -1487,10 +1497,6 @@
+ 
+                 margin: 0 !important;
+ 
+-                width: 100% !important;
+-
+-                max-width: 100% !important;
+-
+                 font-size: 9pt !important;
+ 
+                 -webkit-print-color-adjust: exact !important;
+@@ -1503,10 +1509,6 @@
+ 
+             .container {
+ 
+-                max-width: 100% !important;
+-
+-                width: 100% !important;
+-
+                 margin: 0 !important;
+ 
+                 padding: 0 !important;
