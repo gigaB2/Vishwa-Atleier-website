@@ -418,6 +418,62 @@
       z-index: 10; transition: var(--transition-smooth); border: 1px solid var(--card-border);
     }
     .modal-close:hover { color: #FFF; background: var(--gold-primary); border-color: var(--gold-bright); transform: scale(1.05); }
+
+    /* Mobile Responsive Optimizations for Inspect & Zoom Popups */
+    @media (max-width: 900px) {
+      .modal-overlay {
+        padding: 0.5rem;
+      }
+      .modal-box {
+        grid-template-columns: 1fr;
+        height: auto;
+        max-height: 92vh;
+        overflow-y: auto;
+        border-radius: var(--radius-md);
+      }
+      .modal-gallery-view {
+        padding: 0.75rem;
+        min-height: auto;
+      }
+      .main-img-container {
+        height: 380px;
+        max-height: 48vh;
+      }
+      .modal-gallery-view img.main-img {
+        max-height: 100%;
+      }
+      .modal-content-side {
+        padding: 1.25rem 1rem;
+        border-left: none;
+        border-top: 1px solid rgba(197, 160, 89, 0.2);
+        background: rgba(14, 22, 16, 0.98);
+      }
+      .modal-close {
+        top: 10px; right: 10px; width: 44px; height: 44px; font-size: 1.8rem;
+        background: rgba(11, 17, 12, 0.9);
+      }
+      .modal-nav-btn {
+        width: 44px; height: 44px; font-size: 1.4rem;
+      }
+      .modal-nav-btn.prev { left: 8px; }
+      .modal-nav-btn.next { right: 8px; }
+      .main-img-container::after {
+        font-size: 0.68rem; padding: 0.25rem 0.6rem; bottom: 8px; right: 8px;
+      }
+      .thumbs-container {
+        padding: 0.5rem 0.75rem;
+        margin-top: 0.5rem;
+      }
+      .thumb-item {
+        width: 42px; height: 42px;
+      }
+      .full-zoom-close {
+        top: 15px; right: 15px; width: 44px; height: 44px; font-size: 1.8rem;
+      }
+      .full-zoom-badge {
+        bottom: 15px; font-size: 0.72rem; padding: 0.35rem 0.9rem; text-align: center; max-width: 90vw;
+      }
+    }
   </style>
 </head>
 <body>
@@ -752,6 +808,29 @@
       if (e.key === 'ArrowRight') navigatePhoto(1);
       if (e.key === 'Escape') closeModalDirect();
     });
+
+    // Touch Swipe Support for Mobile Photo Inspection
+    const mainImgContainer = document.querySelector('.main-img-container');
+    if (mainImgContainer) {
+      let touchStartX = 0;
+      let touchStartY = 0;
+      mainImgContainer.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length === 1) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      mainImgContainer.addEventListener('touchend', (e) => {
+        if (!e.changedTouches || !e.changedTouches.length) return;
+        const diffX = touchStartX - e.changedTouches[0].clientX;
+        const diffY = touchStartY - e.changedTouches[0].clientY;
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 35) {
+          if (diffX > 0) navigatePhoto(1);
+          else navigatePhoto(-1);
+        }
+      }, { passive: true });
+    }
 
     // Initial Render
     renderGrid();

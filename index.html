@@ -815,27 +815,27 @@
         </div>
 
         <!-- Lookbook Selector Tabs -->
-        <div class="flex flex-wrap justify-center gap-3 mb-12" id="lb-tabs">
+        <div class="flex flex-nowrap sm:flex-wrap justify-start sm:justify-center gap-2 sm:gap-3 mb-8 sm:mb-12 overflow-x-auto pb-2 sm:pb-0 scrollbar-none" id="lb-tabs">
           <button
-            class="lb-tab-btn active px-6 py-3 font-label-caps text-xs bg-primary text-white border border-primary transition-all"
+            class="lb-tab-btn active px-4 sm:px-6 py-2.5 sm:py-3 font-label-caps text-xs bg-primary text-white border border-primary transition-all flex-shrink-0"
             data-index="0">Lookbook 01 (AVF Collection)</button>
           <button
-            class="lb-tab-btn px-6 py-3 font-label-caps text-xs bg-white text-primary border border-outline-variant hover:border-primary transition-all"
+            class="lb-tab-btn px-4 sm:px-6 py-2.5 sm:py-3 font-label-caps text-xs bg-white text-primary border border-outline-variant hover:border-primary transition-all flex-shrink-0"
             data-index="1">Lookbook 02 (VK Collection)</button>
           <button
-            class="lb-tab-btn px-6 py-3 font-label-caps text-xs bg-white text-primary border border-outline-variant hover:border-primary transition-all"
+            class="lb-tab-btn px-4 sm:px-6 py-2.5 sm:py-3 font-label-caps text-xs bg-white text-primary border border-outline-variant hover:border-primary transition-all flex-shrink-0"
             data-index="2">Lookbook 03 (Bloom Collection)</button>
         </div>
 
         <!-- Carousel Outer -->
-        <div class="relative bg-white border border-outline-variant shadow-sm p-6 md:p-12 overflow-hidden"
+        <div class="relative bg-white border border-outline-variant shadow-sm p-4 sm:p-6 md:p-12 overflow-hidden"
           id="lb-track-container">
           <div class="w-full overflow-hidden">
             <div class="lb-carousel-track flex transition-transform duration-500" id="lb-track">
 
               <!-- Slide 0: Lookbook 1 -->
-              <div class="lb-slide w-full flex-shrink-0 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-                <div class="md:col-span-6 relative aspect-[2/3] overflow-hidden bg-surface-container rolling-wrap"
+              <div class="lb-slide w-full flex-shrink-0 grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center">
+                <div class="md:col-span-6 relative aspect-[3/4] sm:aspect-[2/3] max-h-[50vh] sm:max-h-none overflow-hidden bg-surface-container rolling-wrap"
                   data-lookbook="1">
                   <span
                     class="absolute top-4 left-4 bg-primary text-white text-[10px] font-label-caps px-3 py-1 z-10">51
@@ -887,8 +887,8 @@
               </div>
 
               <!-- Slide 1: Lookbook 2 -->
-              <div class="lb-slide w-full flex-shrink-0 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-                <div class="md:col-span-6 relative aspect-[2/3] overflow-hidden bg-surface-container rolling-wrap"
+              <div class="lb-slide w-full flex-shrink-0 grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center">
+                <div class="md:col-span-6 relative aspect-[3/4] sm:aspect-[2/3] max-h-[50vh] sm:max-h-none overflow-hidden bg-surface-container rolling-wrap"
                   data-lookbook="2">
                   <span
                     class="absolute top-4 left-4 bg-primary text-white text-[10px] font-label-caps px-3 py-1 z-10">65
@@ -940,8 +940,8 @@
               </div>
 
               <!-- Slide 2: Lookbook 3 -->
-              <div class="lb-slide w-full flex-shrink-0 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-                <div class="md:col-span-6 relative aspect-[2/3] overflow-hidden bg-surface-container rolling-wrap"
+              <div class="lb-slide w-full flex-shrink-0 grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center">
+                <div class="md:col-span-6 relative aspect-[3/4] sm:aspect-[2/3] max-h-[50vh] sm:max-h-none overflow-hidden bg-surface-container rolling-wrap"
                   data-lookbook="3">
                   <span
                     class="absolute top-4 left-4 bg-primary text-white text-[10px] font-label-caps px-3 py-1 z-10">12
