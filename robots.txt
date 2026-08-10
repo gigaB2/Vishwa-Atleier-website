@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /management suite/
+Allow: /
+
+Sitemap: https://vishwaatelier.com/sitemap.xml
