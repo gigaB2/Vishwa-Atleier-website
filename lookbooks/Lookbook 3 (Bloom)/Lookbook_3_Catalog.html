@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lookbook 3: Bloom Collection | Vishwa Atelier</title>
+  <meta name="description" content="Official High-Fashion Lookbook Catalog for Vishwa Atelier's Bloom Collection. Explore 12 high-fashion saree designs, brand film, and all 8 cinematic video reels.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-canvas: #0D140E;
+      --gold-primary: #C5A059;
+      --gold-bright: #E5C17C;
+      --gold-dark: #9E7D36;
+      --card-bg: rgba(18, 26, 20, 0.88);
+      --card-border: rgba(197, 160, 89, 0.3);
+      --text-main: #F4F1EA;
+      --text-muted: #A3B19B;
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'Fragment Mono', monospace;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 16px;
+      --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.4);
+      --transition-smooth: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background-image: url("Bloom background photo.webp");
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 17, 12, 0.92);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 1.1rem 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .brand-title { display: flex; align-items: center; gap: 1rem; }
+    .brand-logo {
+      width: 44px; height: 44px; border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+      display: flex; align-items: center; justify-content: center;
+      color: #0B110C; font-family: var(--font-serif); font-weight: 700; font-size: 1.5rem;
+      box-shadow: 0 4px 15px rgba(197, 160, 89, 0.3);
+    }
+
+    .brand-text h1 { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 600; letter-spacing: 0.05em; color: #FFF; }
+    .brand-text p { font-size: 0.75rem; color: var(--gold-bright); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; }
+
+    .header-actions { display: flex; align-items: center; gap: 1rem; }
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+      color: #0B110C; padding: 0.7rem 1.5rem; border-radius: var(--radius-sm);
+      text-decoration: none; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em;
+      transition: var(--transition-smooth); display: inline-flex; align-items: center; gap: 8px;
+      box-shadow: 0 4px 15px rgba(197, 160, 89, 0.25);
+    }
+    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(197, 160, 89, 0.4); color: #000; }
+    .btn-back {
+      background: rgba(255, 255, 255, 0.08); border: 1px solid var(--card-border);
+      color: var(--text-main); padding: 0.7rem 1.4rem; border-radius: var(--radius-sm);
+      text-decoration: none; font-weight: 600; font-size: 0.85rem; transition: var(--transition-smooth);
+    }
+    .btn-back:hover { background: rgba(255, 255, 255, 0.18); border-color: var(--gold-primary); }
+
+    .container { max-width: 1440px; margin: 0 auto; padding: 2.5rem 2rem; }
+
+    /* Widescreen Hero Brand Film Section (TOP) */
+    .hero-film-section {
+      margin-bottom: 3.5rem;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+    .film-header {
+      padding: 2rem 2.5rem 1.25rem 2.5rem;
+      border-bottom: 1px solid rgba(197, 160, 89, 0.15);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .film-header h2 { font-family: var(--font-serif); font-size: 2.2rem; color: #FFF; font-weight: 600; }
+    .film-header p { color: var(--text-muted); font-size: 0.95rem; max-width: 650px; }
+    .film-badge {
+      background: rgba(197, 160, 89, 0.15); border: 1px solid var(--gold-primary);
+      color: var(--gold-bright); font-family: var(--font-mono); font-size: 0.75rem;
+      padding: 0.35rem 0.9rem; border-radius: 20px; text-transform: uppercase;
+    }
+
+    .hero-video-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      max-height: 620px;
+      background: #000;
+    }
+    .hero-video-wrapper iframe, .hero-video-wrapper video {
+      width: 100%; height: 100%; object-fit: cover; display: block; border: none;
+    }
+
+    /* Search & Filter Control Bar */
+    .control-panel {
+      margin-bottom: 2.5rem;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 1.5rem 2rem;
+      box-shadow: var(--shadow-card);
+    }
+    .panel-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+    }
+    .panel-title { font-family: var(--font-serif); font-size: 1.6rem; color: #FFF; display: flex; align-items: center; gap: 1rem; }
+    .count-badge {
+      background: rgba(197, 160, 89, 0.2); border: 1px solid var(--gold-primary);
+      color: var(--gold-bright); font-family: var(--font-mono); font-size: 0.75rem;
+      padding: 0.25rem 0.75rem; border-radius: 12px;
+    }
+    .search-box {
+      position: relative; width: 100%;
+    }
+    .search-box svg {
+      position: absolute; left: 1.2rem; top: 50%; transform: translateY(-50%);
+      width: 20px; height: 20px; stroke: var(--gold-primary); opacity: 0.8;
+    }
+    .search-box input {
+      width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--card-border);
+      color: #FFF; padding: 0.9rem 1.2rem 0.9rem 3.2rem; border-radius: var(--radius-sm);
+      font-family: var(--font-sans); font-size: 0.95rem; outline: none; transition: var(--transition-smooth);
+    }
+    .search-box input:focus { border-color: var(--gold-bright); box-shadow: 0 0 15px rgba(197, 160, 89, 0.25); }
+    .search-box input::placeholder { color: var(--text-muted); }
+
+    /* Catalog Grid Section */
+    .section-heading {
+      font-family: var(--font-serif); font-size: 2.4rem; color: #FFF;
+      margin-bottom: 1.5rem; text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .section-heading::after {
+      content: ''; flex: 1; height: 1px; background: linear-gradient(to right, var(--gold-primary), transparent); opacity: 0.4;
+    }
+
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 2.2rem;
+      margin-bottom: 4rem;
+    }
+
+    @media (max-width: 1024px) {
+      .catalog-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+      }
+    }
+
+    .product-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+      transition: var(--transition-smooth);
+      display: flex; flex-direction: column;
+    }
+    .product-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--gold-bright);
+      box-shadow: 0 15px 35px rgba(197, 160, 89, 0.25);
+    }
+    .product-img-wrap {
+      height: 420px; position: relative; overflow: hidden; background: #000;
+    }
+    .product-img-wrap img {
+      width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s ease;
+    }
+    .product-card:hover .product-img-wrap img { transform: scale(1.06); }
+    
+    .badge-overlay {
+      position: absolute; top: 14px; left: 14px;
+      background: rgba(11, 17, 12, 0.85); backdrop-filter: blur(8px);
+      border: 1px solid var(--gold-primary); color: var(--gold-bright);
+      font-family: var(--font-mono); font-size: 0.7rem; padding: 0.3rem 0.75rem; border-radius: 4px;
+    }
+
+    .product-info {
+      padding: 1.5rem; display: flex; flex-direction: column; flex: 1; justify-content: space-between;
+    }
+    .product-title {
+      font-family: var(--font-serif); font-size: 1.5rem; color: #FFF; margin-bottom: 0.4rem; font-weight: 600;
+    }
+    .product-meta {
+      font-size: 0.825rem; color: var(--text-muted); margin-bottom: 1.2rem; display: flex; justify-content: space-between;
+    }
+    .btn-inspect {
+      width: 100%; background: transparent; border: 1px solid var(--gold-primary);
+      color: var(--gold-bright); padding: 0.8rem 1rem; border-radius: var(--radius-sm);
+      font-family: var(--font-sans); font-weight: 600; font-size: 0.85rem; cursor: pointer;
+      transition: var(--transition-smooth); display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-inspect:hover {
+      background: var(--gold-primary); color: #0B110C; font-weight: 700;
+      box-shadow: 0 4px 15px rgba(197, 160, 89, 0.3);
+    }
+
+    /* ALL 8 REELS SHOWCASE SECTION (BOTTOM) */
+    .reels-section-bottom {
+      margin-top: 5rem;
+      margin-bottom: 4rem;
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      box-shadow: var(--shadow-card);
+    }
+    .reels-header-bottom {
+      margin-bottom: 2rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(197, 160, 89, 0.2);
+      display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;
+    }
+    .reels-header-bottom h2 { font-family: var(--font-serif); font-size: 2.2rem; color: #FFF; font-weight: 600; }
+    .reels-header-bottom p { color: var(--text-muted); font-size: 0.95rem; }
+
+    .reels-grid-8 {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.8rem;
+    }
+
+    .reel-card-8 {
+      background: #000;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+      transition: var(--transition-smooth);
+    }
+    .reel-card-8:hover {
+      transform: translateY(-5px); border-color: var(--gold-bright);
+      box-shadow: 0 12px 30px rgba(197, 160, 89, 0.3);
+    }
+    .reel-card-8 video,
+    .reel-card-8 iframe {
+      width: 100%; height: 500px; border: none; display: block;
+    }
+    .reel-badge-bottom {
+      position: absolute; bottom: 14px; left: 14px; right: 14px;
+      background: rgba(11, 17, 12, 0.85); backdrop-filter: blur(8px);
+      border: 1px solid rgba(197, 160, 89, 0.4); color: #FFF;
+      padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.8rem; font-family: var(--font-sans);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .reel-num {
+      color: var(--gold-bright); font-family: var(--font-mono); font-weight: 700; font-size: 0.75rem;
+    }
+
+    /* Modal Gallery Inspector Redesign */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(4, 7, 5, 0.95); backdrop-filter: blur(20px);
+      z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1.5rem;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: rgba(14, 22, 16, 0.96);
+      border: 1px solid var(--card-border);
+      max-width: 1150px; width: 100%; border-radius: var(--radius-lg);
+      overflow: hidden; display: grid; grid-template-columns: 1fr 340px; position: relative;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9), 0 0 40px rgba(197, 160, 89, 0.15);
+      max-height: 92vh; height: 680px;
+    }
+    .modal-gallery-view {
+      background: #040705; display: flex; flex-direction: column; justify-content: space-between;
+      position: relative; overflow: hidden; padding: 1.25rem;
+    }
+    .main-img-container {
+      position: relative; width: 100%; flex: 1; display: flex; align-items: center; justify-content: center;
+      overflow: hidden; border-radius: var(--radius-md); background: #000;
+    }
+    .modal-gallery-view img.main-img {
+      max-width: 100%; max-height: 540px; width: auto; height: auto; object-fit: contain;
+      transition: opacity 0.25s ease, transform 0.3s ease;
+    }
+    
+    /* Nav arrows */
+    .modal-nav-btn {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(11, 17, 12, 0.7); border: 1px solid var(--card-border);
+      color: var(--gold-bright); font-size: 1.2rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: var(--transition-smooth); z-index: 5; backdrop-filter: blur(4px);
+    }
+    .modal-nav-btn:hover {
+      background: var(--gold-primary); color: #0B110C; border-color: var(--gold-bright);
+      box-shadow: 0 0 15px rgba(197, 160, 89, 0.5);
+    }
+    .modal-nav-btn.prev { left: 16px; }
+    .modal-nav-btn.next { right: 16px; }
+
+    /* Micro Thumbnails Bar */
+    .thumbs-container {
+      margin-top: 0.8rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      background: rgba(11, 17, 12, 0.85); backdrop-filter: blur(10px);
+      border: 1px solid rgba(197, 160, 89, 0.25); padding: 0.6rem 1rem;
+      border-radius: var(--radius-md);
+    }
+    .thumbs-strip {
+      display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 6px 8px; align-items: center;
+    }
+    .thumbs-strip::-webkit-scrollbar { display: none; }
+    
+    /* Slightly bigger thumbnails (38px x 38px) */
+    .thumb-item {
+      width: 38px; height: 38px; object-fit: cover; border-radius: 4px; cursor: pointer;
+      opacity: 0.5; border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); flex-shrink: 0;
+      box-sizing: border-box;
+    }
+    .thumb-item:hover { opacity: 0.9; transform: scale(1.08); border-color: var(--gold-bright); }
+    .thumb-item.active {
+      opacity: 1; border: 2px solid var(--gold-bright);
+      box-shadow: 0 0 12px rgba(229, 193, 124, 0.65); transform: scale(1.12); z-index: 2;
+    }
+
+    .main-img-container {
+      position: relative; width: 100%; flex: 1; display: flex; align-items: center; justify-content: center;
+      overflow: hidden; border-radius: var(--radius-md); background: #000; cursor: zoom-in;
+    }
+    .main-img-container::after {
+      content: '🔍 Click to expand high-res';
+      position: absolute; bottom: 12px; right: 14px;
+      background: rgba(11, 17, 12, 0.75); backdrop-filter: blur(6px);
+      border: 1px solid var(--card-border); color: var(--gold-bright);
+      font-size: 0.75rem; font-family: var(--font-mono); padding: 0.3rem 0.75rem;
+      border-radius: 20px; pointer-events: none; opacity: 0.85; transition: var(--transition-smooth);
+    }
+    .main-img-container:hover::after { opacity: 1; background: rgba(11, 17, 12, 0.95); border-color: var(--gold-bright); }
+
+    /* High-Res Fullscreen Zoom Lightbox Modal */
+    .full-zoom-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(2, 4, 3, 0.98); backdrop-filter: blur(24px);
+      z-index: 2000; display: none; align-items: center; justify-content: center;
+      cursor: zoom-out; opacity: 0; transition: opacity 0.3s ease;
+    }
+    .full-zoom-overlay.active { display: flex; opacity: 1; }
+    .full-zoom-box {
+      position: relative; max-width: 95vw; max-height: 95vh; display: flex; align-items: center; justify-content: center;
+    }
+    .full-zoom-box img {
+      max-width: 95vw; max-height: 92vh; width: auto; height: auto; object-fit: contain;
+      border-radius: var(--radius-sm); box-shadow: 0 0 50px rgba(0,0,0,0.9), 0 0 30px rgba(197, 160, 89, 0.2);
+      border: 1px solid var(--card-border);
+    }
+    .full-zoom-close {
+      position: absolute; top: 20px; right: 25px; font-size: 2rem; color: var(--gold-bright);
+      background: rgba(11, 17, 12, 0.8); border: 1px solid var(--card-border);
+      width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: var(--transition-smooth); z-index: 2010;
+    }
+    .full-zoom-close:hover { color: #FFF; background: var(--gold-primary); border-color: var(--gold-bright); transform: scale(1.1); }
+    .full-zoom-badge {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(11, 17, 12, 0.85); backdrop-filter: blur(10px);
+      border: 1px solid var(--gold-primary); color: var(--gold-bright);
+      font-family: var(--font-mono); font-size: 0.8rem; padding: 0.4rem 1.2rem; border-radius: 20px;
+    }
+
+    .photo-counter {
+      font-family: var(--font-mono); font-size: 0.72rem; color: var(--gold-bright);
+      white-space: nowrap; font-weight: 600; letter-spacing: 0.05em;
+    }
+
+    .modal-content-side {
+      padding: 2.2rem 1.8rem; display: flex; flex-direction: column; justify-content: space-between;
+      border-left: 1px solid rgba(197, 160, 89, 0.15); background: rgba(18, 26, 20, 0.6);
+    }
+    .modal-close {
+      position: absolute; top: 16px; right: 20px; font-size: 1.6rem; color: var(--gold-bright);
+      cursor: pointer; border: none; background: rgba(0,0,0,0.4); width: 36px; height: 36px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      z-index: 10; transition: var(--transition-smooth); border: 1px solid var(--card-border);
+    }
+    .modal-close:hover { color: #FFF; background: var(--gold-primary); border-color: var(--gold-bright); transform: scale(1.05); }
+
+    /* Responsive Header & Layout Optimizations for Tablets and Phones */
+    @media (max-width: 900px) {
+      header {
+        padding: 0.85rem 1.25rem;
+      }
+      .brand-text h1 {
+        font-size: 1.3rem;
+      }
+      .brand-text p {
+        font-size: 0.68rem;
+      }
+      .btn-back {
+        padding: 0.55rem 1rem;
+        font-size: 0.8rem;
+      }
+    }
+
+    @media (max-width: 600px) {
+      header {
+        padding: 0.75rem 1rem;
+        gap: 0.75rem;
+      }
+      .brand-logo {
+        width: 36px;
+        height: 36px;
+        font-size: 1.25rem;
+      }
+      .brand-text h1 {
+        font-size: 1.1rem;
+      }
+      .brand-text p {
+        font-size: 0.62rem;
+        letter-spacing: 0.05em;
+      }
+      .btn-back {
+        padding: 0.45rem 0.75rem;
+        font-size: 0.75rem;
+        border-radius: var(--radius-sm);
+        white-space: nowrap;
+      }
+      .container {
+        padding: 1.25rem 0.85rem;
+      }
+    }
+
+    /* Mobile Responsive Optimizations for Inspect & Zoom Popups */
+    @media (max-width: 900px) {
+      .modal-overlay {
+        padding: 0.5rem;
+      }
+      .modal-box {
+        grid-template-columns: 1fr;
+        height: auto;
+        max-height: 92vh;
+        overflow-y: auto;
+        border-radius: var(--radius-md);
+      }
+      .modal-gallery-view {
+        padding: 0.75rem;
+        min-height: auto;
+      }
+      .main-img-container {
+        height: 380px;
+        max-height: 48vh;
+      }
+      .modal-gallery-view img.main-img {
+        max-height: 100%;
+      }
+      .modal-content-side {
+        padding: 1.25rem 1rem;
+        border-left: none;
+        border-top: 1px solid rgba(197, 160, 89, 0.2);
+        background: rgba(14, 22, 16, 0.98);
+      }
+      .modal-close {
+        top: 10px; right: 10px; width: 44px; height: 44px; font-size: 1.8rem;
+        background: rgba(11, 17, 12, 0.9);
+      }
+      .modal-nav-btn {
+        width: 44px; height: 44px; font-size: 1.4rem;
+      }
+      .modal-nav-btn.prev { left: 8px; }
+      .modal-nav-btn.next { right: 8px; }
+      .main-img-container::after {
+        font-size: 0.68rem; padding: 0.25rem 0.6rem; bottom: 8px; right: 8px;
+      }
+      .thumbs-container {
+        padding: 0.5rem 0.75rem;
+        margin-top: 0.5rem;
+      }
+      .thumb-item {
+        width: 42px; height: 42px;
+      }
+      .full-zoom-close {
+        top: 15px; right: 15px; width: 44px; height: 44px; font-size: 1.8rem;
+      }
+      .full-zoom-badge {
+        bottom: 15px; font-size: 0.72rem; padding: 0.35rem 0.9rem; text-align: center; max-width: 90vw;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand-title">
+      <div class="brand-logo">V</div>
+      <div class="brand-text">
+        <h1>VISHWA ATELIER</h1>
+        <p>Lookbook 03 — Bloom Campaign</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <a href="../../index.html#lookbook" class="btn-back">← Back to Website</a>
+    </div>
+  </header>
+
+  <div class="container">
+    
+    <!-- Hero Cinematic Widescreen Brand Film Section (TOP) -->
+    <section class="hero-film-section">
+      <div class="film-header">
+        <div>
+          <h2>🌸 Vishwa Atelier — Bloom Campaign Brand Film</h2>
+          <p>Watch our official cinematic brand film showcasing handcrafted Jacquard sarees in motion.</p>
+        </div>
+        <span class="film-badge">OFFICIAL BRAND FILM</span>
+      </div>
+
+      <div class="hero-video-wrapper">
+        <iframe src="https://www.youtube-nocookie.com/embed/TLo_jihFCi0?rel=0" title="Vishwa Atelier — Bloom Campaign Brand Film" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      </div>
+    </section>
+
+    <!-- Search & Control Panel -->
+    <section class="control-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>Explore Bloom Saree Masterpieces</span>
+          <span class="count-badge" id="results-count">12 Collections</span>
+        </div>
+      </div>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="search-input" placeholder="Search by design number, weave, or fabric (separate multiple terms with commas: e.g. AT38, MIX, V10B1005)..." oninput="handleSearch()">
+      </div>
+    </section>
+
+    <!-- Collection Grid -->
+    <h2 class="section-heading">Signature Saree Designs</h2>
+    <div class="catalog-grid" id="catalog-grid"></div>
+
+    <!-- ALL 8 CAMPAIGN FILM REELS SHOWCASE (BOTTOM) -->
+    <section class="reels-section-bottom">
+      <div class="reels-header-bottom">
+        <div>
+          <h2>🎬 Bloom Campaign Film Reels</h2>
+          <p>Explore all 8 high-fashion cinematic film reels captured on location.</p>
+        </div>
+        <span class="film-badge">8 FULL REELS SHOWCASE</span>
+      </div>
+
+      <div class="reels-grid-8">
+        <!-- Reel 1 -->
+        <div class="reel-card-8">
+          <iframe src="https://www.youtube-nocookie.com/embed/8B5jzuSR4_0" title="Bloom Campaign Reel 1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+
+        <!-- Reel 2 -->
+        <div class="reel-card-8">
+          <iframe src="https://www.youtube-nocookie.com/embed/R40GL9SxmPc" title="Bloom Campaign Reel 2" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+
+        <!-- Reel 3 -->
+        <div class="reel-card-8">
+          <iframe src="https://www.youtube-nocookie.com/embed/6Tw2Hlawm8U" title="Bloom Campaign Reel 3" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+
+        <!-- Reel 4 -->
+        <div class="reel-card-8">
+          <iframe src="https://www.youtube-nocookie.com/embed/crN2Vwb9-SU" title="Bloom Campaign Reel 4" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+
+        <!-- Reel 5 -->
+        <div class="reel-card-8">
+          <iframe src="https://www.youtube-nocookie.com/embed/RGTntLhlx1E" title="Bloom Campaign Reel 5" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+
+        <!-- Reel 6 -->
+        <div class="reel-card-8">
+          <iframe src="https://www.youtube-nocookie.com/embed/lIC94GrNns4" title="Bloom Campaign Reel 6" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+
+        <!-- Reel 7 -->
+        <div class="reel-card-8">
+          <iframe src="https://www.youtube-nocookie.com/embed/UA3Kksb9dGI" title="Bloom Campaign Reel 7" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+
+        <!-- Reel 8 -->
+        <div class="reel-card-8">
+          <iframe src="https://www.youtube-nocookie.com/embed/J3NZeCqE3eI" title="Bloom Campaign Reel 8" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Lightbox Gallery Modal -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModalDirect()">&times;</button>
+      
+      <div class="modal-gallery-view">
+        <div class="main-img-container" onclick="openHighResZoom()">
+          <button class="modal-nav-btn prev" onclick="event.stopPropagation(); navigatePhoto(-1)">‹</button>
+          <img src="" id="modal-main-img" class="main-img" alt="Design Photo">
+          <button class="modal-nav-btn next" onclick="event.stopPropagation(); navigatePhoto(1)">›</button>
+        </div>
+        <div class="thumbs-container">
+          <div class="thumbs-strip" id="modal-thumbs"></div>
+          <span class="photo-counter" id="modal-photo-counter">1 / 1</span>
+        </div>
+      </div>
+
+      <div class="modal-content-side">
+        <div>
+          <span class="film-badge" id="modal-design-tag">DESIGN SPECIFICATION</span>
+          <h2 id="modal-title" style="font-family: var(--font-serif); font-size: 2rem; color: #FFF; margin: 1rem 0 0.5rem 0;"></h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.8rem;">
+            High-fashion handcrafted luxury saree from Vishwa Atelier's Bloom collection. Features Mulberry silk blend and intricate Jacquard motifs.
+          </p>
+        </div>
+
+        <div>
+          <div style="background: rgba(197, 160, 89, 0.08); border: 1px dashed var(--card-border); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+            <p style="font-size: 0.8rem; color: var(--gold-bright); font-family: var(--font-mono); text-transform: uppercase; margin-bottom: 0.3rem;">Craftsmanship Note</p>
+            <p style="font-size: 0.825rem; color: var(--text-muted);">Authentic Jacquard weave crafted with precision looms. High-resolution imagery captured during official campaign shoot.</p>
+          </div>
+          <a href="Lookbook_3_Catalog.pdf" target="_blank" class="btn-gold" style="justify-content: center; width: 100%;">
+            Download Catalog PDF
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- High-Res Fullscreen Zoom Overlay Modal -->
+  <div class="full-zoom-overlay" id="full-zoom-overlay" onclick="closeHighResZoom()">
+    <button class="full-zoom-close" onclick="closeHighResZoom()">&times;</button>
+    <div class="full-zoom-box" onclick="event.stopPropagation()">
+      <img src="" id="full-zoom-img" alt="High Resolution Saree Photo">
+      <span class="full-zoom-badge" id="full-zoom-badge">ULTRA HIGH-RES VIEW</span>
+    </div>
+  </div>
+
+  <!-- Dataset & Dynamic JS -->
+  <script src="catalog_data.js"></script>
+  <script>
+    let currentSearch = '';
+
+    function getFilteredData() {
+      if (typeof CATALOG_DATA === 'undefined') return [];
+      if (!currentSearch) return CATALOG_DATA;
+
+      const terms = currentSearch.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      if (terms.length === 0) return CATALOG_DATA;
+
+      return CATALOG_DATA.filter(item => {
+        const text = ((item.design_no || '') + ' ' + (item.photo || '')).toLowerCase();
+        return terms.some(t => text.includes(t));
+      });
+    }
+
+    function handleSearch() {
+      currentSearch = document.getElementById('search-input').value.toLowerCase().trim();
+      renderGrid();
+    }
+
+    function renderGrid() {
+      const container = document.getElementById('catalog-grid');
+      const data = getFilteredData();
+      document.getElementById('results-count').innerText = `${data.length} Collections`;
+
+      if (data.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column:1/-1; text-align:center; padding:4rem; background:var(--card-bg); border-radius:var(--radius-md); border:1px solid var(--card-border);">
+            <h3 style="font-family:var(--font-serif); font-size:1.8rem; color:#FFF;">No Designs Found</h3>
+            <p style="color:var(--text-muted); margin-top:0.5rem;">Try adjusting your search terms.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      data.forEach((item, idx) => {
+        const coverPhoto = encodeURI(item.photo);
+        const photos = item.all_photos || [item.photo];
+        const photoCount = photos.length;
+        const displayDesign = item.design_no.replace(/^MIX\s*-\s*/i, '');
+        html += `
+          <div class="product-card">
+            <div class="product-img-wrap">
+              <img src="${coverPhoto}" alt="${item.design_no}" loading="lazy">
+              <span class="badge-overlay">${photoCount} HIGH-RES PHOTOS</span>
+            </div>
+            <div class="product-info">
+              <div>
+                <h3 class="product-title">Design # ${displayDesign}</h3>
+                <div class="product-meta">
+                  <span>Bloom Campaign</span>
+                  <span style="color:var(--gold-bright);">Jacquard Weave</span>
+                </div>
+              </div>
+              <button onclick="openInspector(${idx})" class="btn-inspect">
+                Inspect Design & Photos →
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    let currentPhotos = [];
+    let currentPhotoIndex = 0;
+
+    function openInspector(index) {
+      const data = getFilteredData();
+      const item = data[index];
+      if (!item) return;
+
+      const displayDesign = item.design_no.replace(/^MIX\s*-\s*/i, '');
+      document.getElementById('modal-title').innerText = `Design # ${displayDesign}`;
+      document.getElementById('modal-design-tag').innerText = `BLOOM CAMPAIGN`;
+
+      currentPhotos = item.all_photos || [item.photo];
+      currentPhotoIndex = 0;
+
+      renderModalPhoto();
+      document.getElementById('modal-overlay').classList.add('active');
+    }
+
+    function renderModalPhoto() {
+      if (!currentPhotos.length) return;
+      const src = encodeURI(currentPhotos[currentPhotoIndex]);
+      const mainImg = document.getElementById('modal-main-img');
+      mainImg.style.opacity = '0.3';
+      setTimeout(() => {
+        mainImg.src = src;
+        mainImg.style.opacity = '1';
+      }, 100);
+
+      document.getElementById('modal-photo-counter').innerText = `${currentPhotoIndex + 1} / ${currentPhotos.length}`;
+
+      const thumbsContainer = document.getElementById('modal-thumbs');
+      let thumbsHtml = '';
+      currentPhotos.forEach((p, idx) => {
+        const encoded = encodeURI(p);
+        const activeClass = idx === currentPhotoIndex ? 'active' : '';
+        thumbsHtml += `<img src="${encoded}" class="thumb-item ${activeClass}" onclick="selectModalPhoto(${idx})" alt="Micro Thumb ${idx + 1}" title="Photo ${idx + 1}">`;
+      });
+      thumbsContainer.innerHTML = thumbsHtml;
+
+      // Scroll active thumbnail into view without clipping
+      const activeThumb = thumbsContainer.children[currentPhotoIndex];
+      if (activeThumb) {
+        if (currentPhotoIndex === 0) {
+          thumbsContainer.scrollLeft = 0;
+        } else {
+          activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }
+      }
+    }
+
+    function selectModalPhoto(idx) {
+      currentPhotoIndex = idx;
+      renderModalPhoto();
+    }
+
+    function navigatePhoto(direction) {
+      if (!currentPhotos.length) return;
+      currentPhotoIndex = (currentPhotoIndex + direction + currentPhotos.length) % currentPhotos.length;
+      renderModalPhoto();
+    }
+
+    function openHighResZoom() {
+      if (!currentPhotos.length) return;
+      const src = encodeURI(currentPhotos[currentPhotoIndex]);
+      const fullZoomImg = document.getElementById('full-zoom-img');
+      fullZoomImg.src = src;
+      
+      const designTitle = document.getElementById('modal-title').innerText;
+      document.getElementById('full-zoom-badge').innerText = `${designTitle} — PHOTO ${currentPhotoIndex + 1} OF ${currentPhotos.length}`;
+      
+      document.getElementById('full-zoom-overlay').classList.add('active');
+    }
+
+    function closeHighResZoom() {
+      document.getElementById('full-zoom-overlay').classList.remove('active');
+    }
+
+    function closeModal(e) {
+      if (e.target.id === 'modal-overlay') {
+        document.getElementById('modal-overlay').classList.remove('active');
+        closeHighResZoom();
+      }
+    }
+
+    function closeModalDirect() {
+      document.getElementById('modal-overlay').classList.remove('active');
+      closeHighResZoom();
+    }
+
+    // Keyboard navigation (Arrow keys & Escape)
+    document.addEventListener('keydown', (e) => {
+      const zoomOverlay = document.getElementById('full-zoom-overlay');
+      if (zoomOverlay.classList.contains('active')) {
+        if (e.key === 'Escape') closeHighResZoom();
+        if (e.key === 'ArrowLeft') { navigatePhoto(-1); openHighResZoom(); }
+        if (e.key === 'ArrowRight') { navigatePhoto(1); openHighResZoom(); }
+        return;
+      }
+
+      const modal = document.getElementById('modal-overlay');
+      if (!modal.classList.contains('active')) return;
+      if (e.key === 'ArrowLeft') navigatePhoto(-1);
+      if (e.key === 'ArrowRight') navigatePhoto(1);
+      if (e.key === 'Escape') closeModalDirect();
+    });
+
+    // Touch Swipe Support for Mobile Photo Inspection
+    const mainImgContainer = document.querySelector('.main-img-container');
+    if (mainImgContainer) {
+      let touchStartX = 0;
+      let touchStartY = 0;
+      mainImgContainer.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length === 1) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      mainImgContainer.addEventListener('touchend', (e) => {
+        if (!e.changedTouches || !e.changedTouches.length) return;
+        const diffX = touchStartX - e.changedTouches[0].clientX;
+        const diffY = touchStartY - e.changedTouches[0].clientY;
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 35) {
+          if (diffX > 0) navigatePhoto(1);
+          else navigatePhoto(-1);
+        }
+      }, { passive: true });
+    }
+
+    // Initial Render
+    renderGrid();
+  </script>
+</body>
+</html>

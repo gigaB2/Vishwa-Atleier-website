@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Beam Card Photo Upload - Vishwa Fashions</title>
+  <script src="assets/supabase-client.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --fg: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #6366f1;
+      --success: #10b981;
+      --error: #ef4444;
+      --font: 'Plus Jakarta Sans', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1.75rem;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    .header {
+      margin-bottom: 1.5rem;
+    }
+    .header h1 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+    .header p {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .upload-dropzone {
+      position: relative;
+      border: 2px dashed var(--accent);
+      background: rgba(99, 102, 241, 0.05);
+      border-radius: 16px;
+      padding: 2rem 1rem;
+      margin-bottom: 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      min-height: 200px;
+    }
+    .upload-dropzone:active {
+      transform: scale(0.98);
+      background: rgba(99, 102, 241, 0.12);
+    }
+    .upload-dropzone input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    .icon-box {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+    .btn {
+      width: 100%;
+      padding: 0.9rem;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      font-family: inherit;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .preview-img {
+      max-width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      display: none;
+    }
+    .status-msg {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .status-msg.success { color: var(--success); }
+    .status-msg.error { color: var(--error); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🏗️</div>
+      <h1>Upload Beam Card</h1>
+      <p id="session-info">Connected to desktop Beam Loading form</p>
+    </div>
+
+    <div id="upload-box" class="upload-dropzone">
+      <input type="file" id="file-input" accept="image/*" capture="environment" onchange="handleFileSelect(this)">
+      <div id="placeholder-box" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+        <div class="icon-box"><i class="ri-camera-fill"></i></div>
+        <span style="font-weight: 700; font-size: 0.95rem;">Tap to Take Photo</span>
+        <span style="font-size: 0.75rem; color: var(--muted);">or upload image from gallery</span>
+      </div>
+      <img id="preview" class="preview-img">
+    </div>
+
+    <button id="upload-btn" class="btn btn-primary" onclick="submitPhoto()" disabled>
+      <i class="ri-send-plane-fill"></i> Send Photo to Desktop
+    </button>
+
+    <div id="status" class="status-msg"></div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    let sessionId = urlParams.get('session');
+    let imageDataUrl = '';
+
+    if (!sessionId && window.location.hash) {
+      sessionId = window.location.hash.replace('#', '');
+    }
+
+    if (window.location.protocol === 'file:') {
+      document.getElementById('session-info').innerHTML = '<span style="color: #f59e0b; font-weight: 700;">⚠️ Local File Protocol</span><br>For phone scanning to work over network, host files via live local web server or upload to domain.';
+    } else if (!sessionId) {
+      document.getElementById('session-info').textContent = '⚠️ Session ID missing. Please scan the QR code from the Desktop app.';
+      document.getElementById('upload-box').style.pointerEvents = 'none';
+      document.getElementById('upload-box').style.opacity = '0.5';
+    }
+
+    function handleFileSelect(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        // Compress image via canvas to optimize transfer speed & storage
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1200;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          imageDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+          const previewEl = document.getElementById('preview');
+          previewEl.src = imageDataUrl;
+          previewEl.style.display = 'block';
+          document.getElementById('placeholder-box').style.display = 'none';
+          document.getElementById('upload-btn').disabled = false;
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function submitPhoto() {
+      if (!sessionId || !imageDataUrl) return;
+
+      const btn = document.getElementById('upload-btn');
+      const statusEl = document.getElementById('status');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Uploading...';
+      statusEl.className = 'status-msg';
+      statusEl.textContent = 'Syncing image to desktop app...';
+
+      try {
+        const payload = {
+          session: sessionId,
+          imageUrl: imageDataUrl,
+          timestamp: new Date().toISOString()
+        };
+
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+          await window.VishwaSupabase.set(`bl_qr_session_${sessionId}`, payload);
+        } else {
+          localStorage.setItem(`bl_qr_session_${sessionId}`, JSON.stringify(payload));
+        }
+
+        statusEl.className = 'status-msg success';
+        statusEl.innerHTML = '✅ Photo successfully sent to Desktop!<br><span style="font-weight: 400; font-size: 0.78rem; opacity: 0.8;">You can close this tab now.</span>';
+        btn.innerHTML = '✓ Photo Sent!';
+      } catch (err) {
+        console.error(err);
+        statusEl.className = 'status-msg error';
+        statusEl.textContent = 'Failed to send photo. Please try again.';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-send-plane-fill"></i> Retry Sending Photo';
+      }
+    }
+  </script>
+</body>
+</html>

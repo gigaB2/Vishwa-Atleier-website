@@ -1,0 +1,2598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="../../../assets/supabase-client.js"></script>
+
+  <script>
+    (function() {
+      const isDark = localStorage.getItem('vishwa_fashions_theme') === 'true' ||
+                     (localStorage.getItem('vishwa_fashions_theme') === null && true);
+      if (isDark) {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
+      const isCollapsed = localStorage.getItem('vf_sidebar_collapsed') === 'true';
+      if (isCollapsed) {
+        document.documentElement.classList.add('vf-sidebar-collapsed');
+      }
+    })();
+  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>Doubler Gear Calculations Machine Gear Chart - Change Gear & TPM Calculator</title>
+    <link rel="stylesheet" href="../../../sidebar.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="../../../sidebar.js" defer></script>
+    
+    <style>
+        :root {
+            --bg-darker: #f8f7fc;
+            --bg-dark: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f4f4f5;
+            --border-color: #e4e4e7;
+            --border-glow: rgba(6, 182, 212, 0.3);
+            
+            --text-primary: #18181b;
+            --text-secondary: #52525b;
+            --text-muted: #71717a;
+            
+            --color-teal: #0891b2;
+            --color-teal-glow: rgba(6, 182, 212, 0.2);
+            --color-cyan: #06b6d4;
+            --color-emerald: #059669;
+            --color-emerald-glow: rgba(16, 185, 129, 0.2);
+            --color-indigo: #4f46e5;
+            --color-red: #dc2626;
+            
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.dark-mode, .dark-mode {
+            --bg-darker: #09090b;
+            --bg-dark: #121214;
+            --bg-card: #1c1c1f;
+            --bg-card-hover: #232327;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(6, 182, 212, 0.3);
+            
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            
+            --color-teal: #06b6d4;
+            --color-teal-glow: rgba(6, 182, 212, 0.4);
+            --color-cyan: #22d3ee;
+            --color-emerald: #10b981;
+            --color-emerald-glow: rgba(16, 185, 129, 0.3);
+            --color-indigo: #6366f1;
+            --color-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-darker);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.5;
+            padding: 24px;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.1) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        /* Layout Grid */
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Header Styling */
+        header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 8px;
+        }
+
+        .header-title-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-title-area svg {
+            width: 42px;
+            height: 42px;
+            fill: var(--color-teal);
+            filter: drop-shadow(0 0 8px var(--color-teal-glow));
+            animation: spin-slow 15s linear infinite;
+        }
+
+        @keyframes spin-slow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 1.8rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 40%, var(--color-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .file-upload-btn {
+            position: relative;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition-smooth);
+        }
+
+        .file-upload-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--color-teal);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+        }
+
+        .file-upload-btn input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Card System */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: transparent;
+            transition: var(--transition-smooth);
+        }
+
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .card.active-card::before {
+            background: linear-gradient(90deg, var(--color-teal), var(--color-indigo));
+        }
+
+        .card-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+        }
+
+        .card-title svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--text-secondary);
+        }
+
+        /* Sidebar Control Styles */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .tpm-input {
+            width: 100%;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 1.25rem;
+            font-weight: 600;
+            transition: var(--transition-smooth);
+            text-align: center;
+        }
+
+        .tpm-input:focus {
+            outline: none;
+            border-color: var(--color-teal);
+            box-shadow: 0 0 12px var(--border-glow);
+        }
+
+        .tpm-slider-container {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tpm-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-darker);
+            outline: none;
+        }
+
+        .tpm-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--color-teal);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--color-teal-glow);
+            transition: var(--transition-smooth);
+        }
+
+        .tpm-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Gear Tags */
+        .gear-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 10px;
+            min-height: 80px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-bottom: 8px;
+        }
+
+        .gear-tag {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-primary);
+            transition: var(--transition-smooth);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .gear-tag:hover {
+            border-color: var(--color-red);
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            cursor: pointer;
+        }
+
+        .gear-tag::after {
+            content: ' ×';
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        /* Repository Tags */
+        .repo-tag {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            color: var(--text-primary);
+            transition: var(--transition-smooth);
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .repo-tag.active {
+            border-color: var(--color-teal);
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--color-cyan);
+        }
+
+        .repo-tag.inactive {
+            color: var(--text-muted);
+            opacity: 0.65;
+        }
+
+        .repo-tag.inactive:hover {
+            border-color: var(--color-teal);
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--color-cyan);
+            opacity: 1;
+        }
+
+        .add-gear-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .add-gear-input {
+            flex: 1;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+        }
+
+        .add-gear-input:focus {
+            outline: none;
+            border-color: var(--color-teal);
+        }
+
+        .btn-add-gear {
+            background: var(--color-teal);
+            border: none;
+            color: #ffffff;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .btn-add-gear:hover {
+            background: var(--color-cyan);
+            box-shadow: 0 0 10px var(--color-teal-glow);
+        }
+
+        /* Constraint options */
+        .radio-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            padding: 12px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .radio-option:hover {
+            border-color: var(--color-teal);
+            background: var(--bg-card-hover);
+        }
+
+        .radio-option input[type="radio"] {
+            margin-top: 4px;
+            accent-color: var(--color-teal);
+        }
+
+        .radio-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .radio-label {
+            font-size: 0.85rem;
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .radio-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* Right Panel Layout */
+        .main-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Results table styling */
+        .results-wrapper {
+            max-height: 410px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-dark);
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        .table-custom th {
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: var(--text-secondary);
+            background: var(--bg-darker);
+            padding: 12px 16px;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .table-custom td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-family: var(--font-body);
+            color: var(--text-primary);
+            transition: var(--transition-smooth);
+        }
+
+        .table-custom tbody tr {
+            cursor: pointer;
+        }
+
+        .table-custom tbody tr:hover td {
+            background: var(--bg-card-hover);
+        }
+
+        .table-custom tbody tr.selected td {
+            background: rgba(6, 182, 212, 0.12);
+            border-bottom-color: var(--color-teal);
+            color: var(--text-primary);
+        }
+
+        .badge-error {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-error.excellent {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--color-emerald);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-error.good {
+            background: rgba(99, 102, 241, 0.1);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .badge-error.poor {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--color-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .gear-train-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        .gear-train-display span.driver {
+            color: var(--color-cyan);
+        }
+
+        .gear-train-display span.driven {
+            color: #fca5a5;
+        }
+
+        .gear-train-display span.sep {
+            color: var(--text-muted);
+        }
+
+        /* Reference Table section */
+        .reference-section {
+            grid-column: 1 / -1;
+        }
+
+        .table-search-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .search-input {
+            flex: 1;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-family: var(--font-body);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--color-teal);
+        }
+
+        .reference-table-wrapper {
+            max-height: 720px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-darker);
+        }
+
+        .table-highlight-row td {
+            background: rgba(16, 185, 129, 0.05) !important;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .toast, .toast.show {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        .toast-icon {
+            color: var(--color-teal);
+            width: 18px;
+            height: 18px;
+        }
+    
+        /* Comprehensive Mobile & Touchscreen Enhancements */
+        html, body {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-text-size-adjust: 100%;
+            overflow-x: hidden !important;
+            width: 100% !important;
+            max-width: 100vw !important;
+            box-sizing: border-box !important;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .sidebar, .main-panel, .card {
+            min-width: 0;
+            box-sizing: border-box;
+        }
+
+        .card div, .card form, .form-group, .input-wrapper, .add-gear-row, .tpm-slider-container {
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .add-gear-input, .tpm-input, .search-input, input[type="number"], input[type="text"] {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        #infoEquation {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            word-break: break-all !important;
+            overflow-wrap: anywhere !important;
+            white-space: normal !important;
+        }
+
+        .results-wrapper, .reference-table-wrapper, .guidelines-table-wrapper {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            box-sizing: border-box !important;
+        }
+
+        .tpm-slider-container {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .slider-step-btn {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            border-radius: 10px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            color: var(--color-cyan);
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: var(--transition-smooth);
+        }
+
+        .slider-step-btn:hover,
+        .slider-step-btn:active {
+            background: rgba(6, 182, 212, 0.2);
+            border-color: var(--color-teal);
+            color: #ffffff;
+            transform: scale(1.05);
+        }
+
+        .tpm-slider {
+            flex: 1;
+            min-width: 0 !important;
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            outline: none;
+            touch-action: pan-y;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+        }
+
+        /* WebKit Thumb */
+        .tpm-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--color-teal);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--color-teal-glow), 0 2px 6px rgba(0, 0, 0, 0.4);
+            border: 2px solid #ffffff;
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+
+        .tpm-slider::-webkit-slider-thumb:hover,
+        .tpm-slider::-webkit-slider-thumb:active,
+        .tpm-slider:focus::-webkit-slider-thumb {
+            transform: scale(1.15);
+            background: var(--color-cyan);
+            box-shadow: 0 0 14px var(--color-teal-glow), 0 3px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Firefox Thumb & Track */
+        .tpm-slider::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--color-teal);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--color-teal-glow), 0 2px 6px rgba(0, 0, 0, 0.4);
+            border: 2px solid #ffffff;
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+
+        .tpm-slider::-moz-range-thumb:hover,
+        .tpm-slider::-moz-range-thumb:active,
+        .tpm-slider:focus::-moz-range-thumb {
+            transform: scale(1.15);
+            background: var(--color-cyan);
+        }
+
+        .tpm-slider::-moz-range-track {
+            height: 10px;
+            border-radius: 5px;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Microsoft / Edge Thumb */
+        .tpm-slider::-ms-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--color-teal);
+            cursor: pointer;
+            border: 2px solid #ffffff;
+        }
+
+        /* Touch Targets for Interactive Elements */
+        .radio-option {
+            min-height: 48px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .gear-tag, .repo-tag, .btn-add-gear, .file-upload-btn, .btn-toggle, .btn-inventory-action {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .gear-tag, .repo-tag {
+            padding: 6px 10px;
+            font-size: 0.85rem;
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .guidelines-table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
+            margin-top: 6px;
+            border-radius: 6px;
+        }
+
+        .save-btn {
+            width: 100%;
+            margin-top: 16px;
+            background: linear-gradient(135deg, var(--color-teal), var(--color-indigo));
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 4px 14px var(--color-teal-glow);
+            transition: var(--transition-smooth);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 44px;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px var(--color-teal-glow);
+        }
+
+        /* Responsive Layout Breakpoints */
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 12px 10px !important;
+                margin-left: 0 !important;
+            }
+
+            header {
+                margin-top: 48px; /* Space for fixed sidebar toggle button */
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+                padding-bottom: 12px;
+            }
+
+            .header-title-area {
+                gap: 12px;
+                align-items: center;
+            }
+
+            .header-title-area svg {
+                width: 36px;
+                height: 36px;
+                flex-shrink: 0;
+            }
+
+            h1 {
+                font-size: 1.3rem;
+                line-height: 1.25;
+                word-break: break-word;
+                overflow-wrap: anywhere;
+            }
+
+            .subtitle {
+                font-size: 0.8rem;
+            }
+
+            .file-upload-btn {
+                width: 100%;
+                justify-content: center;
+                padding: 12px;
+                min-height: 44px;
+            }
+
+            .app-container {
+                gap: 16px;
+            }
+
+            .card {
+                padding: 16px 12px;
+                border-radius: 14px;
+                box-sizing: border-box;
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+            }
+
+            /* Prevent iOS Auto-Zoom on form focus by ensuring 16px font-size */
+            .tpm-input,
+            .search-input,
+            .add-gear-input,
+            input[type="number"],
+            input[type="text"] {
+                font-size: 16px !important;
+            }
+
+            .tpm-input {
+                padding: 10px 12px;
+            }
+
+            /* Smooth horizontal scrolling for reference tables */
+            .results-wrapper,
+            .reference-table-wrapper {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                touch-action: pan-x pan-y;
+                max-height: 380px;
+            }
+
+            /* Suggested Matches Table Fits 100% Width on Phones */
+            .suggested-table {
+                min-width: 100% !important;
+                width: 100% !important;
+                table-layout: fixed !important;
+            }
+
+            .suggested-table th,
+            .suggested-table td {
+                padding: 8px 4px !important;
+                font-size: 0.8rem !important;
+            }
+
+            .table-custom th,
+            .table-custom td {
+                padding: 10px 6px;
+                font-size: 0.8rem;
+            }
+
+            .table-search-bar {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            #infoEquation {
+                word-break: break-all;
+                overflow-wrap: anywhere;
+                white-space: normal;
+                line-height: 1.4;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 8px 6px 16px 6px !important;
+            }
+
+            h1 {
+                font-size: 1.15rem;
+            }
+
+            .card-title {
+                font-size: 0.95rem;
+            }
+
+            .slider-step-btn {
+                width: 42px;
+                height: 42px;
+                min-width: 42px;
+            }
+
+            .gear-tag, .repo-tag {
+                padding: 6px 8px;
+                font-size: 0.8rem;
+            }
+
+            .add-gear-row {
+                gap: 6px;
+                width: 100%;
+            }
+
+            .add-gear-input {
+                min-width: 0 !important;
+                flex: 1 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .btn-add-gear {
+                padding: 8px 14px;
+                min-height: 44px;
+                flex-shrink: 0;
+            }
+
+            .active-gearing-grid {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 10px !important;
+            }
+
+            .active-gearing-stat-val {
+                font-size: 1.05rem !important;
+            }
+
+            .match-section-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 2px;
+            }
+
+            #refTable {
+                min-width: 320px !important;
+            }
+        }
+
+        @media (max-width: 425px) {
+            body {
+                padding: 6px 4px 16px 4px !important;
+            }
+
+            header {
+                margin-top: 44px;
+                gap: 8px;
+                padding-bottom: 10px;
+            }
+
+            .header-title-area {
+                gap: 10px;
+            }
+
+            .header-title-area svg {
+                width: 32px;
+                height: 32px;
+            }
+
+            h1 {
+                font-size: 1.08rem !important;
+                line-height: 1.25;
+            }
+
+            .subtitle {
+                font-size: 0.75rem;
+            }
+
+            .card {
+                padding: 12px 8px !important;
+                border-radius: 12px;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .card-title {
+                font-size: 0.88rem !important;
+                margin-bottom: 12px !important;
+                gap: 6px !important;
+            }
+
+            .active-gearing-grid {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 6px !important;
+            }
+
+            .active-gearing-grid > div:not(:last-child) {
+                background: rgba(0, 0, 0, 0.12);
+                border: 1px solid var(--border-color);
+                padding: 8px 6px;
+                border-radius: 8px;
+                box-sizing: border-box;
+                min-width: 0;
+            }
+
+            body.dark-mode .active-gearing-grid > div:not(:last-child) {
+                background: rgba(255, 255, 255, 0.03);
+            }
+
+            .active-gearing-grid span:first-child {
+                font-size: 0.64rem !important;
+                line-height: 1.2 !important;
+                letter-spacing: 0 !important;
+                word-break: break-word !important;
+            }
+
+            .active-gearing-stat-val {
+                font-size: 0.95rem !important;
+            }
+
+            #infoEquation {
+                font-size: 0.76rem !important;
+                word-break: break-all !important;
+                overflow-wrap: anywhere !important;
+                white-space: normal !important;
+                line-height: 1.4 !important;
+            }
+
+            /* Tables fit phone viewport perfectly */
+            .suggested-table {
+                width: 100% !important;
+                min-width: 100% !important;
+                table-layout: fixed !important;
+            }
+
+            .suggested-table th,
+            .suggested-table td {
+                padding: 6px 2px !important;
+                font-size: 0.75rem !important;
+                box-sizing: border-box !important;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .suggested-table th:nth-child(1),
+            .suggested-table td:nth-child(1) {
+                width: 12% !important;
+                text-align: center;
+            }
+
+            .suggested-table th:nth-child(2),
+            .suggested-table td:nth-child(2) {
+                width: 44% !important;
+            }
+
+            .suggested-table th:nth-child(3),
+            .suggested-table td:nth-child(3) {
+                width: 24% !important;
+            }
+
+            .suggested-table th:nth-child(4),
+            .suggested-table td:nth-child(4) {
+                width: 20% !important;
+                text-align: right;
+            }
+
+            .gear-train-display {
+                padding: 2px 4px !important;
+                gap: 2px !important;
+                font-size: 0.72rem !important;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .badge-error {
+                padding: 2px 3px !important;
+                font-size: 0.68rem !important;
+                display: inline-block;
+            }
+
+            .reference-table-wrapper {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+                width: 100% !important;
+                box-sizing: border-box;
+                border-radius: 8px;
+            }
+
+            #refTable {
+                min-width: 300px !important;
+                width: 100% !important;
+            }
+
+            #refTable th,
+            #refTable td {
+                padding: 6px 3px !important;
+                font-size: 0.74rem !important;
+            }
+
+            .slider-step-btn {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+                font-size: 1.0rem;
+            }
+
+            .gear-tag, .repo-tag {
+                padding: 4px 6px !important;
+                font-size: 0.75rem !important;
+                min-height: 32px !important;
+            }
+        }
+
+        @media (max-width: 375px) {
+            body {
+                padding: 4px 2px 14px 2px !important;
+            }
+
+            header {
+                margin-top: 40px;
+                gap: 6px;
+                padding-bottom: 8px;
+            }
+
+            .header-title-area {
+                gap: 8px;
+            }
+
+            .header-title-area svg {
+                width: 26px;
+                height: 26px;
+            }
+
+            h1 {
+                font-size: 0.98rem !important;
+                line-height: 1.2;
+            }
+
+            .subtitle {
+                font-size: 0.7rem;
+            }
+
+            .card {
+                padding: 10px 6px !important;
+                border-radius: 10px !important;
+            }
+
+            .card-title {
+                font-size: 0.84rem !important;
+                margin-bottom: 10px !important;
+                gap: 5px !important;
+            }
+
+            .active-gearing-grid {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 4px !important;
+            }
+
+            .active-gearing-grid > div:not(:last-child) {
+                padding: 6px 4px !important;
+                border-radius: 6px;
+            }
+
+            .active-gearing-grid span:first-child {
+                font-size: 0.6rem !important;
+                line-height: 1.15 !important;
+            }
+
+            .active-gearing-stat-val {
+                font-size: 0.88rem !important;
+            }
+
+            #infoEquation {
+                font-size: 0.72rem !important;
+                line-height: 1.35 !important;
+            }
+
+            .suggested-table th,
+            .suggested-table td {
+                padding: 5px 1px !important;
+                font-size: 0.72rem !important;
+            }
+
+            .suggested-table th:nth-child(1),
+            .suggested-table td:nth-child(1) {
+                width: 12% !important;
+            }
+
+            .suggested-table th:nth-child(2),
+            .suggested-table td:nth-child(2) {
+                width: 44% !important;
+            }
+
+            .suggested-table th:nth-child(3),
+            .suggested-table td:nth-child(3) {
+                width: 24% !important;
+            }
+
+            .suggested-table th:nth-child(4),
+            .suggested-table td:nth-child(4) {
+                width: 20% !important;
+            }
+
+            .gear-train-display {
+                padding: 1px 3px !important;
+                gap: 2px !important;
+                font-size: 0.7rem !important;
+            }
+
+            .badge-error {
+                padding: 1px 2px !important;
+                font-size: 0.65rem !important;
+            }
+
+            #refTable {
+                min-width: 270px !important;
+            }
+
+            #refTable th,
+            #refTable td {
+                padding: 5px 2px !important;
+                font-size: 0.71rem !important;
+            }
+
+            .slider-step-btn {
+                width: 32px;
+                height: 32px;
+                min-width: 32px;
+                font-size: 0.9rem;
+            }
+
+            .tpm-input {
+                padding: 8px 6px !important;
+            }
+
+            .gear-tag, .repo-tag {
+                padding: 3px 5px !important;
+                font-size: 0.72rem !important;
+                min-height: 28px !important;
+            }
+        }
+
+        @media (max-width: 320px) {
+            body {
+                padding: 2px 0px 10px 0px !important;
+            }
+
+            header {
+                margin-top: 36px;
+                gap: 4px;
+                padding-bottom: 6px;
+            }
+
+            .header-title-area svg {
+                width: 22px;
+                height: 22px;
+            }
+
+            h1 {
+                font-size: 0.9rem !important;
+            }
+
+            .subtitle {
+                font-size: 0.68rem;
+            }
+
+            .card {
+                padding: 8px 4px !important;
+                border-radius: 8px !important;
+            }
+
+            .card-title {
+                font-size: 0.8rem !important;
+                margin-bottom: 8px !important;
+            }
+
+            .active-gearing-grid {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 3px !important;
+            }
+
+            .active-gearing-grid > div:not(:last-child) {
+                padding: 4px 3px !important;
+            }
+
+            .active-gearing-grid span:first-child {
+                font-size: 0.58rem !important;
+            }
+
+            .active-gearing-stat-val {
+                font-size: 0.82rem !important;
+            }
+
+            #infoEquation {
+                font-size: 0.68rem !important;
+            }
+
+            .suggested-table th,
+            .suggested-table td {
+                padding: 4px 1px !important;
+                font-size: 0.68rem !important;
+            }
+
+            .gear-train-display {
+                padding: 1px 2px !important;
+                gap: 1px !important;
+                font-size: 0.65rem !important;
+            }
+
+            .badge-error {
+                padding: 1px 2px !important;
+                font-size: 0.6rem !important;
+            }
+
+            #refTable {
+                min-width: 250px !important;
+            }
+
+            #refTable th,
+            #refTable td {
+                padding: 4px 1px !important;
+                font-size: 0.68rem !important;
+            }
+
+            .slider-step-btn {
+                width: 28px;
+                height: 28px;
+                min-width: 28px;
+                font-size: 0.85rem;
+            }
+
+            .gear-tag, .repo-tag {
+                padding: 2px 4px !important;
+                font-size: 0.68rem !important;
+                min-height: 26px !important;
+            }
+        }
+        </style>
+</head>
+<body>
+
+<!-- End VF Sidebar -->
+
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div class="header-title-area">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 35c-8.3 0-15 6.7-15 15s6.7 15 15 15 15-6.7 15-15-6.7-15-15-15zm0 25c-5.5 0-10-4.5-10-10s4.5-10 10-10 10 4.5 10 10-4.5 10-10 10z"/>
+                    <path d="M91.3 43.6l-8-2.6c-.6-1.8-1.5-3.5-2.6-5.1l4-7.4c.5-.9.3-2.1-.5-2.8l-5.7-5.7c-.8-.8-2-.9-2.8-.5l-7.4 4c-1.6-1.1-3.3-2-5.1-2.6l-2.6-8c-.3-1-.1-2.1.8-2.7C60.2 1 58.7.6 57.2.4l-.8-.1c-.9-.1-1.8.5-2 1.4l-2.6 8c-1.9.3-3.7.9-5.4 1.8l-7.4-4c-.9-.5-2.1-.3-2.8.5l-5.7 5.7c-.8.8-.9 2-.5 2.8l4 7.4c-1.1 1.6-2 3.3-2.6 5.1l-8 2.6c-1 .3-1.7 1.2-1.7 2.2 0 1.5.3 3 .8 4.5l.2.7c.3.9 1.2 1.5 2.2 1.3l8-2.6c.6 1.8 1.5 3.5 2.6 5.1l-4 7.4c-.5.9-.3 2.1.5 2.8l5.7 5.7c.8.8 2 .9 2.8.5l7.4-4c1.6 1.1 3.3 2 5.1 2.6l2.6 8c.3 1 1.2 1.7 2.2 1.7 1.5 0 3-.3 4.5-.8l.7-.2c.9-.3 1.5-1.2 1.3-2.2l-2.6-8c1.8-.6 3.5-1.5 5.1-2.6l7.4 4c.9.5 2.1.3 2.8-.5l5.7-5.7c.8-.8.9-2 .5-2.8l-4-7.4c1.1-1.6 2-3.3 2.6-5.1l8-2.6c1-.3 1.7-1.2 1.7-2.2 0-1.5-.3-3-.8-4.5l-.2-.7c-.3-.9-1.2-1.5-2.2-1.3zM50 70c-11 0-20-9-20-20s9-20 20-20 20 9 20 20-9 20-20 20z"/>
+                </svg>
+                <div>
+                    <h1>DOUBLER GEAR CALCULATIONS</h1>
+                    <div class="subtitle">Premium Change Gear & TPM Calculator</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Sidebar Inputs -->
+        <div class="sidebar">
+            <div class="card active-card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                    Target parameters
+                </div>
+                
+                <!-- Target TPM -->
+                <div class="form-group">
+                    <label for="tpmInput">Target TPM (Twists Per Metre)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="tpmInput" class="tpm-input" value="450" min="50" max="10000" step="1">
+                    </div>
+                    <div class="tpm-slider-container">
+                        <button type="button" class="slider-step-btn" id="sliderMinusBtn" aria-label="Decrease value" title="Decrease value">−</button>
+                        <input type="range" id="tpmSlider" class="tpm-slider" min="100" max="3000" value="450" step="1">
+                        <button type="button" class="slider-step-btn" id="sliderPlusBtn" aria-label="Increase value" title="Increase value">+</button>
+                    </div>
+                </div>
+
+                <!-- Constant K -->
+                <div class="form-group">
+                    <label for="kSelect">Twist Constant (K)</label>
+                    <div class="input-wrapper">
+                        <select id="kSelect" class="tpm-input" style="font-size:0.95rem; padding:10px 12px; text-align:left; cursor:pointer; font-family:var(--font-display); font-weight:600;" onchange="onKConfigChange()">
+                            <option value="412">K = 412 (Rajkot Doubler)</option>
+                            <option value="386">K = 386 (National Doubler)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Physical Process Corrections -->
+                <div class="form-group" style="margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                    <label style="margin-bottom: 8px;">Physical Process Corrections</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <div style="flex: 1;">
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); display:block; margin-bottom: 4px;">Drive Slip (%)</span>
+                            <input type="number" id="slipInput" class="tpm-input" value="0" min="0" max="10" step="0.1" style="font-size:1.0rem; padding:6px;" oninput="calculate()">
+                        </div>
+                        <div style="flex: 1;">
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); display:block; margin-bottom: 4px;">Contraction (%)</span>
+                            <input type="number" id="contractionInput" class="tpm-input" value="0" min="0" max="15" step="0.1" style="font-size:1.0rem; padding:6px;" oninput="calculate()">
+                        </div>
+                    </div>
+                    
+                    <!-- Industrial Standard Guidelines Table -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4;">
+                        <div style="font-weight: 700; color: var(--color-cyan); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Typical Industrial Standard Guidelines</div>
+                        <div class="guidelines-table-wrapper">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.68rem;">
+                                        <th style="padding: 4px 6px; border-right: 1px solid var(--border-color);">Yarn Type & Process</th>
+                                        <th style="padding: 4px 6px; border-right: 1px solid var(--border-color); white-space: nowrap;">Slip %</th>
+                                        <th style="padding: 4px 6px; white-space: nowrap;">Contraction %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                        <td style="padding: 4px 6px; border-right: 1px solid rgba(255,255,255,0.08); color: var(--text-primary);">Polyester / Filament Doubling</td>
+                                        <td style="padding: 4px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-family: var(--font-mono); font-weight: 600; white-space: nowrap;">0.5% – 1.0%</td>
+                                        <td style="padding: 4px 6px; font-family: var(--font-mono); font-weight: 600; white-space: nowrap;">0.5% – 1.5%</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                        <td style="padding: 4px 6px; border-right: 1px solid rgba(255,255,255,0.08); color: var(--text-primary);">Cotton Spun (2/30s, 2/40s)</td>
+                                        <td style="padding: 4px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-family: var(--font-mono); font-weight: 600; white-space: nowrap;">1.0% – 1.5%</td>
+                                        <td style="padding: 4px 6px; font-family: var(--font-mono); font-weight: 600; white-space: nowrap;">1.5% – 3.0%</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                        <td style="padding: 4px 6px; border-right: 1px solid rgba(255,255,255,0.08); color: var(--text-primary);">Jari / Metallic Covered</td>
+                                        <td style="padding: 4px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-family: var(--font-mono); font-weight: 600; white-space: nowrap;">0.8% – 1.2%</td>
+                                        <td style="padding: 4px 6px; font-family: var(--font-mono); font-weight: 600; white-space: nowrap;">1.0% – 2.5%</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                        <td style="padding: 4px 6px; border-right: 1px solid rgba(255,255,255,0.08); color: var(--text-primary);">High Twist / Voile Yarns</td>
+                                        <td style="padding: 4px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-family: var(--font-mono); font-weight: 600; white-space: nowrap;">1.0% – 2.0%</td>
+                                        <td style="padding: 4px 6px; font-family: var(--font-mono); font-weight: 600; white-space: nowrap;">4.0% – 8.0%</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 4px 6px; border-right: 1px solid rgba(255,255,255,0.08); color: var(--color-emerald); font-weight: 600;">Pure Machinery Chart</td>
+                                        <td style="padding: 4px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-family: var(--font-mono); color: var(--color-emerald); font-weight: 600; white-space: nowrap;">0.0%</td>
+                                        <td style="padding: 4px 6px; font-family: var(--font-mono); color: var(--color-emerald); font-weight: 600; white-space: nowrap;">0.0%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+                    Gear Inventory
+                </div>
+                
+                <div class="form-group">
+                    <label>Available Gears (Teeth Count)</label>
+                    <div class="gear-tags-container" id="gearTagsContainer">
+                        <!-- Tags inserted dynamically -->
+                    </div>
+                    <div class="add-gear-row">
+                        <input type="number" id="newGearInput" class="add-gear-input" placeholder="Teeth" min="10" max="200">
+                        <button class="btn-add-gear" onclick="addNewGear()">Add</button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                    <label>All Gears Repository</label>
+                    <div class="gear-tags-container" id="allGearsContainer" style="min-height: 60px; max-height: 120px;">
+                        <!-- Tags inserted dynamically -->
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 8px; line-height: 1.3;">
+                        * Active gears are highlighted in cyan. Click any gray inactive gear to add it back to Available.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                    Combinatorial Rules
+                </div>
+                
+                <div class="form-group">
+                    <label>Gear Allocation Constraints</label>
+                    <div class="radio-options">
+                        <label class="radio-option">
+                            <input type="radio" name="dupConstraint" value="none" onchange="calculate()">
+                            <div class="radio-text">
+                                <span class="radio-label">Strictly Unique Gears</span>
+                                <span class="radio-desc">Drum and Shaft gears must be distinct sizes.</span>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="dupConstraint" value="all" checked onchange="calculate()">
+                            <div class="radio-text">
+                                <span class="radio-label">Unrestricted Duplicates</span>
+                                <span class="radio-desc">Assume any available gear sizes can be used.</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                    <label>Physical Machine Limits</label>
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px;">
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); display:block; margin-bottom: 4px;">Drum Gear Range (Min / Max)</span>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="number" id="minDrumInput" class="add-gear-input" placeholder="Drum Min" value="12" min="12" max="110" onchange="initializeInventory(); calculate(); renderReferenceTable();">
+                                <input type="number" id="maxDrumInput" class="add-gear-input" placeholder="Drum Max" value="110" min="12" max="110" onchange="initializeInventory(); calculate(); renderReferenceTable();">
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); display:block; margin-bottom: 4px;">Shaft Gear Range (Min / Max)</span>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="number" id="minShaftInput" class="add-gear-input" placeholder="Shaft Min" value="12" min="12" max="30" onchange="initializeInventory(); calculate(); renderReferenceTable();">
+                                <input type="number" id="maxShaftInput" class="add-gear-input" placeholder="Shaft Max" value="30" min="12" max="30" onchange="initializeInventory(); calculate(); renderReferenceTable();">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 6px;">
+                        Completely excludes physically impossible combinations violating drum or shaft gear casing limits.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Body -->
+        <div class="main-panel">
+            
+            <!-- Active Gearing Details -->
+            <div class="card active-card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2zm0 8H7v-2h10v2z"/></svg>
+                    Active Gearing Calculation
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;" class="active-gearing-grid">
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Active Train Ratio</span>
+                        <span id="infoRatio" class="active-gearing-stat-val" style="font-size: 1.2rem; font-family: var(--font-mono); font-weight: 700; color: var(--text-primary); margin-top: 2px;">1.0909</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Nominal Calculated TPM</span>
+                        <span id="infoCalcTpm" class="active-gearing-stat-val" style="font-size: 1.2rem; font-family: var(--font-mono); font-weight: 700; color: var(--color-teal); margin-top: 2px;">449.45</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Actual Delivered TPM</span>
+                        <span id="infoActualTpm" class="active-gearing-stat-val" style="font-size: 1.2rem; font-family: var(--font-mono); font-weight: 700; color: var(--color-emerald); margin-top: 2px;">449.45</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Teeth Sum & Pinion Check</span>
+                        <span id="infoToothSum" class="active-gearing-stat-val" style="font-size: 1.1rem; font-family: var(--font-mono); font-weight: 700; color: var(--text-secondary); margin-top: 2px;">46T (Safe)</span>
+                    </div>
+                    <div style="grid-column: span 2; border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 4px; display: flex; flex-direction: column;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Gearing Equation Details</span>
+                        <span id="infoEquation" style="font-size: 0.85rem; font-family: var(--font-mono); color: var(--text-secondary); margin-top: 4px;">TPM = 412 × (24 [Drum] / 22 [Shaft]) = 449.45</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Suggested Gearing Matches -->
+            <div class="card" style="display: flex; flex-direction: column;">
+                <div class="card-title" style="margin-bottom: 12px;">
+                    <svg viewBox="0 0 24 24"><path d="M4 14h6v-4H4v4zm0 5h6v-4H4v4zM4 9h6V5H4v4zm7 5h10v-4H11v4zm0 5h10v-4H11v4zM11 5v4h10V5H11z"/></svg>
+                    Suggested Gearing Matches
+                </div>
+                
+                <!-- Section 1: Verified Table Matches -->
+                <div style="margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;" class="match-section-header">
+                    <span style="font-size: 0.8rem; font-family: var(--font-display); font-weight: 700; color: var(--color-emerald); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--color-emerald); box-shadow: 0 0 6px var(--color-emerald-glow);"></span>
+                        Verified Manual Matches
+                    </span>
+                    <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Approved by Manual</span>
+                </div>
+                <div class="results-wrapper" style="max-height: 190px; margin-bottom: 16px;">
+                    <table class="table-custom suggested-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 45px;">Rank</th>
+                                <th>Gears (Drum / Shaft)</th>
+                                <th>Nom TPM</th>
+                                <th>Dev.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableMatchesBody">
+                            <!-- Generated Dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Section 2: Calculated Alternatives -->
+                <div style="margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;" class="match-section-header">
+                    <span style="font-size: 0.8rem; font-family: var(--font-display); font-weight: 700; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background-color: #fbbf24; box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);"></span>
+                        Mathematical Alternatives
+                    </span>
+                    <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Calculated Combos</span>
+                </div>
+                <div class="results-wrapper" style="max-height: 190px;">
+                    <table class="table-custom suggested-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 45px;">Rank</th>
+                                <th>Gears (Drum / Shaft)</th>
+                                <th>Calc TPM</th>
+                                <th>Dev.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alternativesBody">
+                            <!-- Generated Dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 12px; font-size: 0.7rem; color: var(--text-muted); line-height: 1.3;">
+                    * Click any row to highlight the matching combinations in the tables. <span style="color:#6ee7b7; font-weight:600;">Manual Matches</span> are physically verified. <span style="color:#fbbf24; font-weight:600;">Alternatives</span> must be checked for casing clearance.
+                </div>
+            </div>
+
+            <!-- Reference Table -->
+            <div class="card reference-section">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M5 4v3h14V4H5zm10 10H9v-3h6v3zm-8 5v-3H5v3h2zm0-5v-3H5v3h2zm0-5V7H5v3h2zm6 10v-3H9v3h4zm8 0v-3h-6v3h6zm0-5v-3h-6v3h6zm0-5V7h-6v3h6z"/></svg>
+                    Original Change Gear Table Reference
+                </div>
+
+                <div class="table-search-bar">
+                    <input type="text" id="tableSearch" class="search-input" placeholder="Search by TPM, or gear size (e.g. 'drum=24' or '450')..." oninput="filterReferenceTable()">
+                </div>
+
+                <div class="reference-table-wrapper">
+                    <table class="table-custom" id="refTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 8%;">#</th>
+                                <th style="width: 20%;">Table TPM</th>
+                                <th style="width: 16%;">Drum</th>
+                                <th style="width: 16%;">Shaft</th>
+                                <th style="width: 18%;">Ratio</th>
+                                <th style="width: 22%;">Calc TPM</th>
+                            </tr>
+                        </thead>
+                        <tbody id="refTableBody">
+                            <!-- CSV rows loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Rajkot Doubler Chart Database (K = 412, same gear sequence: drum increasing, shaft decreasing)
+        const standardDatabase412 = [
+            // D = 17
+            { tpm: 350,  drum: 17, shaft: 20 },
+            { tpm: 369,  drum: 17, shaft: 19 },
+            { tpm: 389,  drum: 17, shaft: 18 },
+            { tpm: 412,  drum: 17, shaft: 17 },
+            { tpm: 438,  drum: 17, shaft: 16 },
+            { tpm: 467,  drum: 17, shaft: 15 },
+            { tpm: 500,  drum: 17, shaft: 14 },
+
+            // D = 25
+            { tpm: 515,  drum: 25, shaft: 20 },
+            { tpm: 542,  drum: 25, shaft: 19 },
+            { tpm: 572,  drum: 25, shaft: 18 },
+            { tpm: 606,  drum: 25, shaft: 17 },
+            { tpm: 644,  drum: 25, shaft: 16 },
+            { tpm: 687,  drum: 25, shaft: 15 },
+            { tpm: 736,  drum: 25, shaft: 14 },
+
+            // D = 40
+            { tpm: 824,  drum: 40, shaft: 20 },
+            { tpm: 867,  drum: 40, shaft: 19 },
+            { tpm: 916,  drum: 40, shaft: 18 },
+            { tpm: 969,  drum: 40, shaft: 17 },
+            { tpm: 1030, drum: 40, shaft: 16 },
+            { tpm: 1099, drum: 40, shaft: 15 },
+            { tpm: 1177, drum: 40, shaft: 14 },
+
+            // D = 55
+            { tpm: 1133, drum: 55, shaft: 20 },
+            { tpm: 1193, drum: 55, shaft: 19 },
+            { tpm: 1259, drum: 55, shaft: 18 },
+            { tpm: 1333, drum: 55, shaft: 17 },
+            { tpm: 1416, drum: 55, shaft: 16 },
+            { tpm: 1511, drum: 55, shaft: 15 },
+            { tpm: 1619, drum: 55, shaft: 14 },
+
+            // D = 70
+            { tpm: 1442, drum: 70, shaft: 20 },
+            { tpm: 1518, drum: 70, shaft: 19 },
+            { tpm: 1602, drum: 70, shaft: 18 },
+            { tpm: 1696, drum: 70, shaft: 17 },
+            { tpm: 1803, drum: 70, shaft: 16 },
+            { tpm: 1923, drum: 70, shaft: 15 },
+            { tpm: 2060, drum: 70, shaft: 14 },
+
+            // D = 85
+            { tpm: 1751, drum: 85, shaft: 20 },
+            { tpm: 1843, drum: 85, shaft: 19 },
+            { tpm: 1946, drum: 85, shaft: 18 },
+            { tpm: 2060, drum: 85, shaft: 17 },
+            { tpm: 2189, drum: 85, shaft: 16 },
+            { tpm: 2335, drum: 85, shaft: 15 },
+            { tpm: 2501, drum: 85, shaft: 14 },
+
+            // D = 100
+            { tpm: 2060, drum: 100, shaft: 20 },
+            { tpm: 2168, drum: 100, shaft: 19 },
+            { tpm: 2289, drum: 100, shaft: 18 },
+            { tpm: 2424, drum: 100, shaft: 17 },
+            { tpm: 2575, drum: 100, shaft: 16 },
+            { tpm: 2747, drum: 100, shaft: 15 },
+            { tpm: 2943, drum: 100, shaft: 14 },
+
+            // D = 110
+            { tpm: 2266, drum: 110, shaft: 20 },
+            { tpm: 2385, drum: 110, shaft: 19 },
+            { tpm: 2518, drum: 110, shaft: 18 },
+            { tpm: 2666, drum: 110, shaft: 17 },
+            { tpm: 2833, drum: 110, shaft: 16 },
+            { tpm: 3021, drum: 110, shaft: 15 },
+            { tpm: 3237, drum: 110, shaft: 14 }
+        ];
+
+        // National Doubler Chart Database (K = 386, TPI 8.5 to 28 extended up to 3000 TPM)
+        const chartDatabase386 = [
+            // D = 17 (8.5 to 11.75 TPI)
+            { tpi: 8.5,   tpm: 330,  drum: 17, shaft: 20 },
+            { tpi: 8.75,  tpm: 350,  drum: 17, shaft: 19 },
+            { tpi: 9.25,  tpm: 370,  drum: 17, shaft: 18 },
+            { tpi: 10.0,  tpm: 390,  drum: 17, shaft: 17 },
+            { tpi: 10.5,  tpm: 410,  drum: 17, shaft: 16 },
+            { tpi: 11.0,  tpm: 440,  drum: 17, shaft: 15 },
+            { tpi: 11.75, tpm: 470,  drum: 17, shaft: 14 },
+
+            // D = 25 (12 to 17.5 TPI)
+            { tpi: 12.0,  tpm: 480,  drum: 25, shaft: 20 },
+            { tpi: 12.75, tpm: 510,  drum: 25, shaft: 19 },
+            { tpi: 13.5,  tpm: 540,  drum: 25, shaft: 18 },
+            { tpi: 14.25, tpm: 570,  drum: 25, shaft: 17 },
+            { tpi: 15.25, tpm: 610,  drum: 25, shaft: 16 },
+            { tpi: 16.5,  tpm: 650,  drum: 25, shaft: 15 },
+            { tpi: 17.5,  tpm: 700,  drum: 25, shaft: 14 },
+
+            // D = 40 (19.5 to 28 TPI)
+            { tpi: 19.5,  tpm: 770,  drum: 40, shaft: 20 },
+            { tpi: 20.5,  tpm: 820,  drum: 40, shaft: 19 },
+            { tpi: 21.5,  tpm: 860,  drum: 40, shaft: 18 },
+            { tpi: 23.0,  tpm: 910,  drum: 40, shaft: 17 },
+            { tpi: 24.0,  tpm: 970,  drum: 40, shaft: 16 },
+            { tpi: 26.0,  tpm: 1040, drum: 40, shaft: 15 },
+            { tpi: 28.0,  tpm: 1110, drum: 40, shaft: 14 },
+
+            // D = 55 (Extended sequence)
+            { tpi: 27.5,  tpm: 1070, drum: 55, shaft: 20 },
+            { tpi: 28.95, tpm: 1130, drum: 55, shaft: 19 },
+            { tpi: 30.56, tpm: 1190, drum: 55, shaft: 18 },
+            { tpi: 32.35, tpm: 1260, drum: 55, shaft: 17 },
+            { tpi: 34.38, tpm: 1340, drum: 55, shaft: 16 },
+            { tpi: 36.67, tpm: 1430, drum: 55, shaft: 15 },
+            { tpi: 39.29, tpm: 1530, drum: 55, shaft: 14 },
+
+            // D = 70 (Extended sequence)
+            { tpi: 35.0,  tpm: 1370, drum: 70, shaft: 20 },
+            { tpi: 36.84, tpm: 1440, drum: 70, shaft: 19 },
+            { tpi: 38.89, tpm: 1520, drum: 70, shaft: 18 },
+            { tpi: 41.18, tpm: 1610, drum: 70, shaft: 17 },
+            { tpi: 43.75, tpm: 1710, drum: 70, shaft: 16 },
+            { tpi: 46.67, tpm: 1820, drum: 70, shaft: 15 },
+            { tpi: 50.0,  tpm: 1950, drum: 70, shaft: 14 },
+
+            // D = 85 (Extended sequence)
+            { tpi: 42.5,  tpm: 1660, drum: 85, shaft: 20 },
+            { tpi: 44.74, tpm: 1745, drum: 85, shaft: 19 },
+            { tpi: 47.22, tpm: 1840, drum: 85, shaft: 18 },
+            { tpi: 50.0,  tpm: 1950, drum: 85, shaft: 17 },
+            { tpi: 53.13, tpm: 2070, drum: 85, shaft: 16 },
+            { tpi: 56.67, tpm: 2210, drum: 85, shaft: 15 },
+            { tpi: 60.71, tpm: 2370, drum: 85, shaft: 14 },
+
+            // D = 100 (Extended sequence)
+            { tpi: 50.0,  tpm: 1950, drum: 100, shaft: 20 },
+            { tpi: 52.63, tpm: 2050, drum: 100, shaft: 19 },
+            { tpi: 55.56, tpm: 2170, drum: 100, shaft: 18 },
+            { tpi: 58.82, tpm: 2290, drum: 100, shaft: 17 },
+            { tpi: 62.5,  tpm: 2440, drum: 100, shaft: 16 },
+            { tpi: 66.67, tpm: 2600, drum: 100, shaft: 15 },
+            { tpi: 71.43, tpm: 2780, drum: 100, shaft: 14 },
+
+            // D = 110 (Extended sequence up to 3060 TPM)
+            { tpi: 55.0,  tpm: 2145, drum: 110, shaft: 20 },
+            { tpi: 57.89, tpm: 2260, drum: 110, shaft: 19 },
+            { tpi: 61.11, tpm: 2380, drum: 110, shaft: 18 },
+            { tpi: 64.71, tpm: 2520, drum: 110, shaft: 17 },
+            { tpi: 68.75, tpm: 2680, drum: 110, shaft: 16 },
+            { tpi: 73.33, tpm: 2860, drum: 110, shaft: 15 },
+            { tpi: 78.57, tpm: 3060, drum: 110, shaft: 14 }
+        ];
+
+        let csvDatabase = standardDatabase412;
+        let kConstant = 412.0;
+
+        function onKConfigChange() {
+            const select = document.getElementById('kSelect');
+            if (select) {
+                kConstant = parseFloat(select.value) || 412.0;
+            }
+            csvDatabase = (kConstant === 386) ? chartDatabase386 : standardDatabase412;
+            allGearsRepository = extractGearsFromDatabase();
+            allGearsRepository.forEach(g => {
+                if (!gearInventory.includes(g)) gearInventory.push(g);
+            });
+            gearInventory.sort((a, b) => a - b);
+            initializeInventory();
+            calculate();
+            renderReferenceTable();
+        }
+
+        // Helper to get active physical machine limits
+        function getPhysicalMachineLimits() {
+            const minDrum = parseInt(document.getElementById('minDrumInput')?.value) || 12;
+            const maxDrum = parseInt(document.getElementById('maxDrumInput')?.value) || 110;
+            const minShaft = parseInt(document.getElementById('minShaftInput')?.value) || 12;
+            const maxShaft = parseInt(document.getElementById('maxShaftInput')?.value) || 30;
+            return {
+                minDrum,
+                maxDrum,
+                minShaft,
+                maxShaft,
+                minLimit: Math.min(minDrum, minShaft),
+                maxLimit: Math.max(maxDrum, maxShaft)
+            };
+        }
+
+        // Global State Variables (Capped within physical machine limits 12 to 110)
+        let gearInventory = [12, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 65, 68, 71, 75, 79, 83, 88, 96, 102, 110];
+        let allGearsRepository = [12, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 65, 68, 71, 75, 79, 83, 88, 96, 102, 110];
+        let selectedGears = { drum: 24, shaft: 22 };
+
+        // Helper to extract unique gears from current database respecting physical limits
+        function extractGearsFromDatabase() {
+            const { minLimit, maxLimit } = getPhysicalMachineLimits();
+            const baseGears = [12, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 65, 68, 71, 75, 79, 83, 88, 96, 102, 110];
+            const gears = new Set();
+            baseGears.forEach(g => {
+                if (g >= minLimit && g <= maxLimit) gears.add(g);
+            });
+            csvDatabase.forEach(row => {
+                if (row.drum >= minLimit && row.drum <= maxLimit) gears.add(row.drum);
+                if (row.shaft >= minLimit && row.shaft <= maxLimit) gears.add(row.shaft);
+            });
+            return Array.from(gears).sort((x, y) => x - y);
+        }
+
+        // Save and Apply logic back to costing sheet
+        function saveAndApply() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const qualityId = urlParams.get('qualityId');
+            if (!qualityId) return;
+            
+            const drum = selectedGears.drum;
+            const shaft = selectedGears.shaft;
+            const slipPct = parseFloat(document.getElementById('slipInput')?.value) || 0;
+            
+            const data = {
+                qualityId: qualityId,
+                drum: drum,
+                shaft: shaft,
+                beltSlip: slipPct,
+                kConstant: kConstant
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('doubler-gear-selection-' + qualityId, JSON.stringify(data));
+            
+            // Send message to opener (new tab case)
+            if (window.opener) {
+                try {
+                    window.opener.postMessage({ type: 'DOUBLER_GEAR_SELECT', ...data }, '*');
+                } catch (e) {
+                    console.error("Error posting message to opener:", e);
+                }
+            }
+            
+            // Send message to parent (iframe case)
+            if (window.parent && window.parent !== window) {
+                try {
+                    window.parent.postMessage({ type: 'DOUBLER_GEAR_SELECT', ...data }, '*');
+                } catch (e) {
+                    console.error("Error posting message to parent:", e);
+                }
+            }
+        }
+
+        function saveAndClose() {
+            saveAndApply();
+            if (window.opener || (window.parent && window.parent !== window)) {
+                window.close();
+            } else {
+                showToast("Selection applied successfully!");
+            }
+        }
+
+        // Initialize Application
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const qualityId = urlParams.get('qualityId');
+            const tpmParam = urlParams.get('tpm');
+            const contractionParam = urlParams.get('contraction');
+            const beltSlipParam = urlParams.get('beltSlip');
+            const drumParam = urlParams.get('drum');
+            const shaftParam = urlParams.get('shaft');
+            const kParam = urlParams.get('k');
+
+            if (kParam && !isNaN(parseFloat(kParam))) {
+                const kVal = parseFloat(kParam);
+                const kSelect = document.getElementById('kSelect');
+                if (kSelect) {
+                    kSelect.value = kVal.toString();
+                }
+                kConstant = kVal;
+                csvDatabase = (kConstant === 386) ? chartDatabase386 : standardDatabase412;
+            }
+
+            allGearsRepository = extractGearsFromDatabase();
+            gearInventory = [...allGearsRepository];
+            initializeInventory();
+
+            // Add save button if qualityId is present
+            if (qualityId) {
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'save-btn';
+                saveBtn.textContent = 'Apply & Close';
+                saveBtn.onclick = saveAndClose;
+                
+                const activeCard = document.querySelector('.main-panel .card');
+                if (activeCard) {
+                    activeCard.appendChild(saveBtn);
+                }
+            }
+
+            if (tpmParam && !isNaN(parseFloat(tpmParam))) {
+                const tpmVal = parseFloat(tpmParam);
+                const tpmInput = document.getElementById('tpmInput');
+                tpmInput.value = tpmVal;
+                tpmInput.readOnly = true;
+                tpmInput.disabled = true;
+                
+                const sliderContainer = document.querySelector('.tpm-slider-container');
+                if (sliderContainer) {
+                    sliderContainer.style.display = 'none';
+                }
+            }
+
+            if (contractionParam && !isNaN(parseFloat(contractionParam))) {
+                const contractionVal = parseFloat(contractionParam);
+                const contractionInput = document.getElementById('contractionInput');
+                contractionInput.value = contractionVal;
+                contractionInput.readOnly = true;
+                contractionInput.disabled = true;
+            }
+
+            if (beltSlipParam && !isNaN(parseFloat(beltSlipParam))) {
+                const beltSlipVal = parseFloat(beltSlipParam);
+                const slipInput = document.getElementById('slipInput');
+                slipInput.value = beltSlipVal;
+            }
+
+            const maxCsvTpm = Math.max(...csvDatabase.map(d => d.tpm));
+            const slider = document.getElementById('tpmSlider');
+            slider.max = Math.max(maxCsvTpm, 3000);
+            
+            const tpmInput = document.getElementById('tpmInput');
+            tpmInput.addEventListener('input', (e) => {
+                if (tpmInput.readOnly) return;
+                let val = parseFloat(e.target.value);
+                if (!isNaN(val)) {
+                    if (val < 10) val = 10;
+                    slider.value = val;
+                    calculate();
+                }
+            });
+
+            ['input', 'change'].forEach(evt => {
+                slider.addEventListener(evt, (e) => {
+                    if (tpmInput.readOnly) return;
+                    tpmInput.value = e.target.value;
+                    calculate();
+                });
+            });
+
+            const sliderMinusBtn = document.getElementById('sliderMinusBtn');
+            const sliderPlusBtn = document.getElementById('sliderPlusBtn');
+            if (sliderMinusBtn) {
+                sliderMinusBtn.addEventListener('click', () => {
+                    if (tpmInput.readOnly) return;
+                    let step = parseFloat(slider.step) || 1;
+                    let cur = parseFloat(slider.value) || 0;
+                    let min = parseFloat(slider.min) || 50;
+                    let next = Math.max(min, cur - step);
+                    slider.value = next;
+                    tpmInput.value = next;
+                    calculate();
+                });
+            }
+            if (sliderPlusBtn) {
+                sliderPlusBtn.addEventListener('click', () => {
+                    if (tpmInput.readOnly) return;
+                    let step = parseFloat(slider.step) || 1;
+                    let cur = parseFloat(slider.value) || 0;
+                    let max = parseFloat(slider.max) || 4000;
+                    let next = Math.min(max, cur + step);
+                    slider.value = next;
+                    tpmInput.value = next;
+                    calculate();
+                });
+            }
+
+            if (drumParam && shaftParam && !isNaN(parseInt(drumParam)) && !isNaN(parseInt(shaftParam))) {
+                selectedGears = { drum: parseInt(drumParam), shaft: parseInt(shaftParam) };
+            }
+
+            calculate();
+            renderReferenceTable();
+
+            if (drumParam && shaftParam && !isNaN(parseInt(drumParam)) && !isNaN(parseInt(shaftParam))) {
+                const drum = parseInt(drumParam);
+                const shaft = parseInt(shaftParam);
+                const ratio = drum / shaft;
+                const calcTpm = kConstant * ratio;
+                selectCombination(drum, shaft, calcTpm, ratio);
+            }
+        });
+
+        // Initialize Gear Inventory UI tags (Filters out impossible gears violating physical machine limits)
+        function initializeInventory() {
+            const { minLimit, maxLimit } = getPhysicalMachineLimits();
+            
+            const validAvailable = gearInventory.filter(teeth => teeth >= minLimit && teeth <= maxLimit);
+            const validRepo = allGearsRepository.filter(teeth => teeth >= minLimit && teeth <= maxLimit);
+            
+            const container = document.getElementById('gearTagsContainer');
+            container.innerHTML = '';
+            
+            validAvailable.sort((a, b) => a - b).forEach(teeth => {
+                const tag = document.createElement('div');
+                tag.className = 'gear-tag';
+                tag.textContent = teeth;
+                tag.title = 'Click to remove';
+                tag.addEventListener('click', () => removeGear(teeth));
+                container.appendChild(tag);
+            });
+
+            const repoContainer = document.getElementById('allGearsContainer');
+            if (repoContainer) {
+                repoContainer.innerHTML = '';
+                validRepo.sort((a, b) => a - b).forEach(teeth => {
+                    const tag = document.createElement('div');
+                    const isActive = validAvailable.includes(teeth);
+                    tag.className = `repo-tag ${isActive ? 'active' : 'inactive'}`;
+                    tag.textContent = teeth;
+                    if (isActive) {
+                        tag.title = 'Click to remove from Available Gears';
+                        tag.addEventListener('click', () => removeGear(teeth));
+                    } else {
+                        tag.title = 'Click to add to Available Gears';
+                        tag.addEventListener('click', () => addGearToAvailable(teeth));
+                    }
+                    repoContainer.appendChild(tag);
+                });
+            }
+        }
+
+        function addGearToAvailable(teeth) {
+            const { minLimit, maxLimit } = getPhysicalMachineLimits();
+            if (teeth < minLimit || teeth > maxLimit) {
+                showToast(`Gear size ${teeth}T is outside physical machine limits (${minLimit}T to ${maxLimit}T)!`, true);
+                return;
+            }
+            if (!gearInventory.includes(teeth)) {
+                gearInventory.push(teeth);
+                initializeInventory();
+                calculate();
+            }
+        }
+
+        function removeGear(teeth) {
+            if (gearInventory.length <= 2) {
+                showToast("You need at least 2 gears in inventory to calculate combinations!", true);
+                return;
+            }
+            gearInventory = gearInventory.filter(g => g !== teeth);
+            initializeInventory();
+            calculate();
+        }
+
+        function addNewGear() {
+            const input = document.getElementById('newGearInput');
+            const teeth = parseInt(input.value);
+            const { minLimit, maxLimit } = getPhysicalMachineLimits();
+            
+            if (isNaN(teeth) || teeth < minLimit || teeth > maxLimit) {
+                showToast(`Please enter a valid gear size within machine limits (${minLimit}T to ${maxLimit}T)!`, true);
+                return;
+            }
+            
+            if (!allGearsRepository.includes(teeth)) {
+                allGearsRepository.push(teeth);
+                allGearsRepository.sort((x, y) => x - y);
+            }
+            
+            if (gearInventory.includes(teeth)) {
+                showToast("Gear size already exists in available gears!", true);
+                return;
+            }
+            
+            gearInventory.push(teeth);
+            input.value = '';
+            initializeInventory();
+            calculate();
+            showToast(`Added ${teeth}T gear.`);
+        }
+
+        // Global variables for matches
+        let tableMatches = [];
+        let alternatives = [];
+
+        function calculate() {
+            const targetTpm = parseFloat(document.getElementById('tpmInput').value) || 450;
+            const duplicateConstraint = document.querySelector('input[name="dupConstraint"]:checked').value;
+            const slipPct = parseFloat(document.getElementById('slipInput')?.value) || 0;
+            const contractionPct = parseFloat(document.getElementById('contractionInput')?.value) || 0;
+            const minDrum = parseInt(document.getElementById('minDrumInput')?.value) || 12;
+            const maxDrum = parseInt(document.getElementById('maxDrumInput')?.value) || 110;
+            const minShaft = parseInt(document.getElementById('minShaftInput')?.value) || 12;
+            const maxShaft = parseInt(document.getElementById('maxShaftInput')?.value) || 30;
+            
+            // 1. VERIFIED TABLE MATCHES (Excludes impossible combinations)
+            let allTableList = [];
+            csvDatabase.forEach(row => {
+                if (row.drum < minDrum || row.drum > maxDrum) return;
+                if (row.shaft < minShaft || row.shaft > maxShaft) return;
+                
+                const toothSum = row.drum + row.shaft;
+                const ratio = row.drum / row.shaft;
+                const calcTpm = kConstant * ratio;
+                const actualTpm = (calcTpm * (1 - (slipPct / 100))) / (1 - (contractionPct / 100));
+                const absError = Math.abs(actualTpm - targetTpm);
+                const pctError = (absError / targetTpm) * 100;
+                
+                allTableList.push({
+                    drum: row.drum,
+                    shaft: row.shaft,
+                    ratio: ratio,
+                    rowTpm: row.tpm,
+                    calcTpm: calcTpm,
+                    actualTpm: actualTpm,
+                    toothSum: toothSum,
+                    absError: absError,
+                    pctError: pctError
+                });
+            });
+            
+            allTableList.sort((x, y) => {
+                if (Math.abs(x.absError - y.absError) > 0.0001) return x.absError - y.absError;
+                if (x.drum !== y.drum) return x.drum - y.drum;
+                return y.shaft - x.shaft;
+            });
+            
+            const uniqueTableKeys = new Set();
+            tableMatches = [];
+            allTableList.forEach(item => {
+                const key = `${item.drum}-${item.shaft}`;
+                if (!uniqueTableKeys.has(key)) {
+                    uniqueTableKeys.add(key);
+                    if (item.pctError <= 2.0) {
+                        tableMatches.push(item);
+                    }
+                }
+            });
+            tableMatches = tableMatches.slice(0, 15);
+            
+            const tableCombos = new Set(csvDatabase.map(row => `${row.drum}-${row.shaft}`));
+            
+            // 2. CALCULATED ALTERNATIVES FROM INVENTORY (Excludes impossible combinations)
+            const results = [];
+            for (let drum of gearInventory) {
+                if (drum < minDrum || drum > maxDrum) continue;
+                for (let shaft of gearInventory) {
+                    if (shaft < minShaft || shaft > maxShaft) continue;
+                    
+                    const key = `${drum}-${shaft}`;
+                    if (tableCombos.has(key)) continue;
+                    
+                    if (duplicateConstraint === 'none' && drum === shaft) continue;
+                    
+                    const toothSum = drum + shaft;
+                    const ratio = drum / shaft;
+                    const calcTpm = kConstant * ratio;
+                    const actualTpm = (calcTpm * (1 - (slipPct / 100))) / (1 - (contractionPct / 100));
+                    const absError = Math.abs(actualTpm - targetTpm);
+                    const pctError = (absError / targetTpm) * 100;
+                    
+                    results.push({
+                        drum, shaft,
+                        ratio,
+                        calcTpm,
+                        actualTpm,
+                        toothSum,
+                        absError,
+                        pctError
+                    });
+                }
+            }
+            
+            results.sort((x, y) => {
+                if (Math.abs(x.absError - y.absError) > 0.0001) return x.absError - y.absError;
+                if (x.drum !== y.drum) return x.drum - y.drum;
+                return y.shaft - x.shaft;
+            });
+            
+            alternatives = [];
+            const uniqueCombinations = new Set();
+            for (let res of results) {
+                const key = `${res.drum}-${res.shaft}`;
+                if (!uniqueCombinations.has(key)) {
+                    uniqueCombinations.add(key);
+                    if (res.pctError <= 2.0) {
+                        alternatives.push(res);
+                    }
+                }
+                if (alternatives.length >= 25) break;
+            }
+            
+            renderResults();
+            
+            // Check if current selectedGears are valid and matches one of the combinations
+            let preserveSelected = false;
+            let preserveItem = null;
+            
+            // Check in tableMatches
+            for (let item of tableMatches) {
+                if (item.drum === selectedGears.drum && item.shaft === selectedGears.shaft) {
+                    preserveSelected = true;
+                    preserveItem = item;
+                    break;
+                }
+            }
+            // Check in alternatives if not found
+            if (!preserveSelected) {
+                for (let item of alternatives) {
+                    if (item.drum === selectedGears.drum && item.shaft === selectedGears.shaft) {
+                        preserveSelected = true;
+                        preserveItem = item;
+                        break;
+                    }
+                }
+            }
+            
+            if (preserveSelected && preserveItem) {
+                selectCombination(preserveItem.drum, preserveItem.shaft, preserveItem.calcTpm || (kConstant * preserveItem.drum / preserveItem.shaft), preserveItem.ratio);
+            } else if (tableMatches.length > 0) {
+                const top = tableMatches[0];
+                selectCombination(top.drum, top.shaft, top.calcTpm, top.ratio);
+            } else if (alternatives.length > 0) {
+                const top = alternatives[0];
+                selectCombination(top.drum, top.shaft, top.calcTpm, top.ratio);
+            } else {
+                document.getElementById('infoCalcTpm').textContent = "N/A";
+                const infoActual = document.getElementById('infoActualTpm');
+                if (infoActual) infoActual.textContent = "N/A";
+                document.getElementById('infoRatio').textContent = "N/A";
+                const infoSum = document.getElementById('infoToothSum');
+                if (infoSum) infoSum.textContent = "N/A";
+                document.getElementById('infoEquation').textContent = "No valid physical combinations found matching criteria.";
+            }
+        }
+
+        function renderResults() {
+            const matchesTbody = document.getElementById('tableMatchesBody');
+            const altsTbody = document.getElementById('alternativesBody');
+            
+            matchesTbody.innerHTML = '';
+            altsTbody.innerHTML = '';
+            
+            // 1. Render Table Matches
+            if (tableMatches.length === 0) {
+                matchesTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:15px; font-size: 0.8rem;">No valid matches within physical machine limits.</td></tr>`;
+            } else {
+                tableMatches.forEach((calc, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-combo', `${calc.drum}-${calc.shaft}`);
+                    if (selectedGears.drum === calc.drum && selectedGears.shaft === calc.shaft) {
+                        tr.className = 'selected';
+                    }
+                    
+                    tr.addEventListener('click', () => {
+                        document.querySelectorAll('.table-custom tbody tr').forEach(r => r.classList.remove('selected'));
+                        tr.classList.add('selected');
+                        selectCombination(calc.drum, calc.shaft, calc.calcTpm, calc.ratio);
+                    });
+                    
+                    let errorClass = 'excellent';
+                    if (calc.pctError > 1.5) errorClass = 'good';
+                    if (calc.pctError > 5.0) errorClass = 'poor';
+                    
+                    tr.innerHTML = `
+                        <td style="font-family:var(--font-mono); font-weight:700; color:var(--text-secondary);">${idx + 1}</td>
+                        <td>
+                            <div class="gear-train-display" style="border-color: rgba(16, 185, 129, 0.15); background: rgba(16, 185, 129, 0.02);">
+                                <span class="driver" title="Gear on Drum Shaft" style="color:var(--color-cyan);">${calc.drum}</span>
+                                <span class="sep">/</span>
+                                <span class="driven" title="Gear on Gear Shaft" style="color:#fca5a5;">${calc.shaft}</span>
+                            </div>
+                        </td>
+                        <td style="font-family:var(--font-mono); font-weight:700; color:var(--color-emerald);">${calc.rowTpm}</td>
+                        <td>
+                            <span class="badge-error ${errorClass}" title="Deviation: ${calc.absError.toFixed(1)} TPM">
+                                ${calc.pctError.toFixed(1)}%
+                            </span>
+                        </td>
+                    `;
+                    matchesTbody.appendChild(tr);
+                });
+            }
+            
+            // 2. Render Alternatives
+            if (alternatives.length === 0) {
+                altsTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:15px; font-size: 0.8rem;">No valid alternatives within physical machine limits.</td></tr>`;
+            } else {
+                alternatives.forEach((calc, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-combo', `${calc.drum}-${calc.shaft}`);
+                    if (selectedGears.drum === calc.drum && selectedGears.shaft === calc.shaft) {
+                        tr.className = 'selected';
+                    }
+                    
+                    tr.addEventListener('click', () => {
+                        document.querySelectorAll('.table-custom tbody tr').forEach(r => r.classList.remove('selected'));
+                        tr.classList.add('selected');
+                        selectCombination(calc.drum, calc.shaft, calc.calcTpm, calc.ratio);
+                    });
+                    
+                    let errorClass = 'excellent';
+                    if (calc.pctError > 1.5) errorClass = 'good';
+                    if (calc.pctError > 5.0) errorClass = 'poor';
+                    
+                    tr.innerHTML = `
+                        <td style="font-family:var(--font-mono); font-weight:700; color:var(--text-secondary);">${idx + 1}</td>
+                        <td>
+                            <div class="gear-train-display">
+                                <span class="driver" title="Gear on Drum Shaft" style="color:var(--color-cyan);">${calc.drum}</span>
+                                <span class="sep">/</span>
+                                <span class="driven" title="Gear on Gear Shaft" style="color:#fca5a5;">${calc.shaft}</span>
+                            </div>
+                        </td>
+                        <td style="font-family:var(--font-mono); font-weight:600;">${calc.calcTpm.toFixed(1)}</td>
+                        <td>
+                            <span class="badge-error ${errorClass}" title="Deviation: ${calc.absError.toFixed(1)} TPM">
+                                ${calc.pctError.toFixed(1)}%
+                            </span>
+                        </td>
+                    `;
+                    altsTbody.appendChild(tr);
+                });
+            }
+            
+            highlightMatchingReferenceRows();
+        }
+
+        function highlightMatchingReferenceRows() {
+            document.querySelectorAll('#refTableBody tr').forEach(tr => {
+                tr.classList.remove('table-highlight-row');
+            });
+            
+            tableMatches.slice(0, 5).forEach(calc => {
+                const tr = document.getElementById(`ref-row-${calc.drum}-${calc.shaft}`);
+                if (tr) {
+                    tr.classList.add('table-highlight-row');
+                }
+            });
+        }
+
+        function selectCombination(drum, shaft, calcTpm, ratio) {
+            selectedGears = { drum, shaft };
+            const slipPct = parseFloat(document.getElementById('slipInput')?.value) || 0;
+            const contractionPct = parseFloat(document.getElementById('contractionInput')?.value) || 0;
+            const actualTpm = (calcTpm * (1 - (slipPct / 100))) / (1 - (contractionPct / 100));
+            const toothSum = drum + shaft;
+            
+            document.getElementById('infoRatio').textContent = ratio.toFixed(4);
+            document.getElementById('infoCalcTpm').textContent = calcTpm.toFixed(2);
+            const actualEl = document.getElementById('infoActualTpm');
+            if (actualEl) actualEl.textContent = actualTpm.toFixed(2);
+            
+            const toothSumEl = document.getElementById('infoToothSum');
+            if (toothSumEl) {
+                toothSumEl.innerHTML = `<span style="color:var(--color-emerald); font-weight:700;">${toothSum}T (Valid)</span>`;
+            }
+            let eqText = `TPM = ${kConstant} × (${drum} [Drum] / ${shaft} [Shaft]) = ${calcTpm.toFixed(2)}`;
+            if (slipPct > 0 || contractionPct > 0) {
+                eqText += ` → Actual Delivered (Slip: ${slipPct}%, Contraction: ${contractionPct}%) = ${actualTpm.toFixed(2)}`;
+            }
+            document.getElementById('infoEquation').textContent = eqText;
+            
+            document.querySelectorAll('#refTableBody tr').forEach(r => r.style.outline = 'none');
+            const refTr = document.getElementById(`ref-row-${drum}-${shaft}`);
+            if (refTr) {
+                refTr.style.outline = '2px solid var(--color-teal)';
+            }
+            
+            document.querySelectorAll('.table-custom tbody tr').forEach(r => r.classList.remove('selected'));
+            document.querySelectorAll(`.table-custom tbody tr[data-combo="${drum}-${shaft}"]`).forEach(tr => {
+                tr.classList.add('selected');
+            });
+            
+            saveAndApply();
+        }
+
+        function renderReferenceTable(filterText = '') {
+            const tbody = document.getElementById('refTableBody');
+            tbody.innerHTML = '';
+            
+            const normalizedFilter = filterText.toLowerCase().trim();
+            const minDrum = parseInt(document.getElementById('minDrumInput')?.value) || 5;
+            const maxDrum = parseInt(document.getElementById('maxDrumInput')?.value) || 200;
+            const minShaft = parseInt(document.getElementById('minShaftInput')?.value) || 5;
+            const maxShaft = parseInt(document.getElementById('maxShaftInput')?.value) || 200;
+            
+            csvDatabase.forEach((row, idx) => {
+                if (row.drum < minDrum || row.drum > maxDrum) return;
+                if (row.shaft < minShaft || row.shaft > maxShaft) return;
+                
+                const ratio = row.drum / row.shaft;
+                const calcTpm = kConstant * ratio;
+                
+                let matches = true;
+                if (normalizedFilter) {
+                    const rowStr = `tpm=${row.tpm} drum=${row.drum} shaft=${row.shaft} ratio=${ratio.toFixed(4)}`.toLowerCase();
+                    const words = normalizedFilter.split(' ');
+                    matches = words.every(word => {
+                        if (word.includes('=')) {
+                            const [key, val] = word.split('=');
+                            if (key === 'drum') return row.drum.toString() === val;
+                            if (key === 'shaft') return row.shaft.toString() === val;
+                            if (key === 'tpm') return row.tpm.toString() === val;
+                        }
+                        return rowStr.includes(word) || row.tpm.toString().includes(word);
+                    });
+                }
+                
+                if (!matches) return;
+                
+                const tr = document.createElement('tr');
+                tr.id = `ref-row-${row.drum}-${row.shaft}`;
+                
+                tr.innerHTML = `
+                    <td style="font-family:var(--font-mono); color:var(--text-muted);">${idx + 1}</td>
+                    <td style="font-weight:700; color:var(--color-teal);">${row.tpm}</td>
+                    <td style="font-family:var(--font-mono); color:var(--color-cyan); font-weight:600;">${row.drum}</td>
+                    <td style="font-family:var(--font-mono); color:#fca5a5; font-weight:600;">${row.shaft}</td>
+                    <td style="font-family:var(--font-mono); color:var(--text-secondary); font-weight:600;">${ratio.toFixed(4)}</td>
+                    <td style="font-family:var(--font-mono); color:var(--color-emerald);">${calcTpm.toFixed(1)}</td>
+                `;
+                
+                tr.style.cursor = 'pointer';
+                tr.addEventListener('click', () => {
+                    document.getElementById('tpmInput').value = row.tpm;
+                    document.getElementById('tpmSlider').value = row.tpm;
+                    calculate();
+                    selectCombination(row.drum, row.shaft, calcTpm, ratio);
+                });
+                
+                tbody.appendChild(tr);
+            });
+            
+            highlightMatchingReferenceRows();
+        }
+
+        function filterReferenceTable() {
+            const val = document.getElementById('tableSearch').value;
+            renderReferenceTable(val);
+        }
+
+        // Toast notifications (disabled)
+        function showToast(message, isError = false) {}
+    </script>
+
+</body>
+</html>

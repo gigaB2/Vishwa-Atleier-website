@@ -1,0 +1,1947 @@
+/* Shared CSS styling for the Vishwa Fashions Sidebar */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@600&display=swap');
+
+:root {
+  --sidebar-w: 272px;
+  --sidebar-collapsed-w: 68px;
+}
+
+/* Loading states to prevent flashing of unstyled content */
+/* Dark Mode Overrides for Sidebar */
+.dark-mode .vf-sidebar {
+  background: #0a0a0a !important;
+  border-right: 1px solid #27272a !important;
+}
+.dark-mode .vf-sb-header {
+  border-bottom: 1px solid #27272a !important;
+}
+.dark-mode .vf-sb-link, 
+.dark-mode .vf-sb-folder {
+  color: #a1a1aa !important;
+}
+.dark-mode .vf-sb-link:hover, 
+.dark-mode .vf-sb-folder:hover {
+  background: rgba(124, 58, 237, 0.08) !important;
+  color: #a78bfa !important;
+}
+.dark-mode .vf-sb-link.active {
+  background: rgba(124, 58, 237, 0.12) !important;
+  color: #a78bfa !important;
+}
+.dark-mode .vf-sb-toggle {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+.dark-mode .vf-sb-toggle svg {
+  color: #f4f4f5 !important;
+  stroke: currentColor !important;
+}
+.dark-mode .vf-sb-toggle svg line,
+.dark-mode .vf-sb-toggle svg path,
+.dark-mode .vf-sb-toggle svg polyline {
+  stroke: currentColor !important;
+}
+.dark-mode .vf-sb-chevron {
+  color: #71717a !important;
+}
+.dark-mode .vf-sb-folder:hover .vf-sb-chevron {
+  color: #a78bfa !important;
+}
+.dark-mode .vf-sb-folder[aria-expanded="true"] .vf-sb-chevron {
+  color: #a78bfa !important;
+}
+.dark-mode .vf-sb-nav::-webkit-scrollbar-thumb {
+  background: #27272a !important;
+}
+.dark-mode .vf-sb-folder {
+  color: #a1a1aa !important;
+}
+
+.nav-tabs, .tabs, .vf-top-tab-hidden, .vf-perm-hidden { display: none !important; }
+@media (max-width: 1024px) {
+  /* Page section tabs stay available when sidebar is a drawer */
+  .tabs:not(.vf-top-tab-hidden) {
+    display: flex !important;
+  }
+}
+.vf-sidebar, .vf-sidebar * { box-sizing: border-box; }
+
+body {
+  margin-left: var(--sidebar-w) !important;
+  width: calc(100% - var(--sidebar-w)) !important;
+  box-sizing: border-box !important;
+  transition: margin-left 0.2s ease, width 0.2s ease;
+  will-change: margin-left, width;
+}
+
+.vf-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-w);
+  height: 100vh;
+  height: 100dvh;
+  background: #ffffff;
+  border-right: 1px solid #e8e7f1;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.2s ease;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  -webkit-font-smoothing: antialiased;
+  will-change: width;
+  contain: layout style;
+}
+
+.vf-sb-header {
+  padding: 1.35rem 1.25rem 1rem;
+  border-bottom: 1px solid #e8e7f1;
+  flex-shrink: 0;
+}
+
+.vf-sb-brand {
+  font-family: 'Space Grotesk', -apple-system, sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-decoration: none;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.vf-sb-subtitle {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: #8b8fa3 !important;
+  display: block;
+}
+
+.vf-sb-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.vf-sb-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vf-sb-user-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.vf-sb-user-name {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vf-sb-user-role {
+  font-size: 10px !important;
+  color: #10b981 !important;
+  font-weight: 500 !important;
+}
+
+.dark-mode .vf-sb-user-badge {
+  background: rgba(167, 139, 250, 0.08) !important;
+  border-color: rgba(167, 139, 250, 0.2) !important;
+}
+
+.dark-mode .vf-sb-user-name {
+  color: #f1f5f9 !important;
+}
+
+.vf-sb-mode-selector {
+  display: flex !important;
+  background: rgba(139, 92, 246, 0.08) !important;
+  padding: 3px !important;
+  border-radius: 10px !important;
+  margin-bottom: 0.85rem !important;
+  gap: 3px !important;
+  border: 1px solid rgba(139, 92, 246, 0.12) !important;
+}
+
+.vf-sb-mode-btn {
+  flex: 1 !important;
+  padding: 0.4rem 0.5rem !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  border-radius: 7px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  text-align: center !important;
+  box-shadow: none !important;
+  min-height: 0 !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+}
+
+.vf-sb-mode-btn:hover {
+  color: #7c3aed !important;
+  background: rgba(139, 92, 246, 0.06) !important;
+}
+
+.vf-sb-mode-btn.active {
+  background: #ffffff !important;
+  color: #7c3aed !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.dark-mode .vf-sb-mode-selector {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: #27272a !important;
+}
+
+.dark-mode .vf-sb-mode-btn {
+  color: #a1a1aa !important;
+}
+
+.dark-mode .vf-sb-mode-btn.active {
+  background: #18181b !important;
+  color: #a78bfa !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+.vf-sb-nav {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 0.75rem 0.65rem 1.5rem !important;
+  -webkit-overflow-scrolling: touch;
+}
+.vf-sb-nav::-webkit-scrollbar { width: 4px; }
+.vf-sb-nav::-webkit-scrollbar-track { background: transparent; }
+.vf-sb-nav::-webkit-scrollbar-thumb { background: #e8e7f1; border-radius: 4px; }
+
+.vf-sb-label {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color: #8b8fa3 !important;
+  padding: 0.85rem 0.5rem 0.35rem;
+  display: block;
+}
+
+.vf-sb-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #334155 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  letter-spacing: normal !important;
+  transition: background 0.15s ease-out, color 0.15s ease-out;
+  position: relative;
+  white-space: nowrap;
+}
+
+.vf-sb-link:hover {
+  background: rgba(139, 92, 246, 0.06);
+  color: #7c3aed !important;
+}
+
+.vf-sb-link:active {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.vf-sb-link.active {
+  background: rgba(139, 92, 246, 0.09);
+  color: #7c3aed !important;
+  font-weight: 600 !important;
+}
+
+.vf-sb-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  background: #7c3aed;
+  border-radius: 0 3px 3px 0;
+}
+
+.vf-sb-link.child {
+  padding-left: 1.6rem;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.vf-sb-link.grandchild {
+  padding-left: 2.6rem;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.vf-sb-folder.child {
+  padding-left: 1.6rem;
+}
+
+.vf-sb-folder {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: none !important;
+  border: none !important;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  color: #334155 !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  letter-spacing: normal !important;
+  transition: background 0.15s ease-out, color 0.15s ease-out;
+  white-space: nowrap;
+  box-shadow: none !important;
+  transform: none !important;
+  overflow: visible !important;
+}
+
+.vf-sb-folder::before, .vf-sb-folder::after {
+  display: none !important;
+  content: none !important;
+}
+
+.vf-sb-folder:hover {
+  background: rgba(139, 92, 246, 0.06) !important;
+  color: #7c3aed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.vf-sb-folder:active {
+  background: rgba(139, 92, 246, 0.1) !important;
+  transform: none !important;
+}
+
+.vf-sb-chevron {
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  color: #94a3b8;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.vf-sb-folder:hover .vf-sb-chevron { color: #7c3aed; }
+.vf-sb-folder[aria-expanded="true"] .vf-sb-chevron {
+  transform: rotate(90deg);
+  color: #7c3aed;
+}
+
+.vf-sb-accordion-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.vf-sb-accordion-wrapper.open {
+  grid-template-rows: 1fr;
+}
+
+.vf-sb-accordion-inner {
+  overflow: hidden;
+}
+
+.vf-sb-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px !important;
+  flex-shrink: 0;
+}
+
+.vf-sb-icon-sm { width: 22px; height: 22px; }
+.vf-sb-icon-purple { background: rgba(139, 92, 246, 0.08); color: #7c3aed; }
+.vf-sb-icon-pink   { background: rgba(236, 72, 153, 0.08); color: #db2777; }
+.vf-sb-icon-orange { background: rgba(249, 115, 22, 0.08); color: #ea580c; }
+.vf-sb-icon-green  { background: rgba(16, 185, 129, 0.08); color: #059669; }
+.vf-sb-icon-blue   { background: rgba(59, 130, 246, 0.08); color: #2563eb; }
+.vf-sb-icon-red    { background: rgba(239, 68, 68, 0.08); color: #dc2626; }
+
+.vf-sb-toggle {
+  position: fixed;
+  top: 1.15rem;
+  left: 1rem;
+  z-index: 10001;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border-radius: 10px;
+  background: #fff !important;
+  border: 1px solid #e8e7f1 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+  color: #1a1a2e !important;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transform: none !important;
+  overflow: visible !important;
+  flex-shrink: 0 !important;
+}
+
+.vf-sb-toggle::before, .vf-sb-toggle::after {
+  display: none !important;
+  content: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: none !important;
+}
+
+.vf-sb-toggle:hover {
+  transform: none !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+}
+
+.vf-sb-toggle:active {
+  transform: none !important;
+}
+
+.vf-sb-toggle svg {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+  color: #1a1a2e !important;
+  stroke: currentColor !important;
+  fill: none !important;
+  pointer-events: none;
+}
+
+.vf-sb-toggle svg line,
+.vf-sb-toggle svg path,
+.vf-sb-toggle svg polyline {
+  stroke: currentColor !important;
+  stroke-width: 2 !important;
+  fill: none !important;
+}
+.vf-sb-overlay { 
+  display: block; 
+  position: fixed; 
+  inset: 0; 
+  background: rgba(15, 15, 26, 0.45); 
+  z-index: 9999; 
+  opacity: 0; 
+  pointer-events: none; 
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1); 
+  will-change: opacity;
+  -webkit-tap-highlight-color: transparent;
+}
+.vf-sb-overlay.visible { 
+  opacity: 1; 
+  pointer-events: auto; 
+}
+
+/* Employee timeline modal sits above sidebar toggle */
+#timeline-modal {
+  z-index: 100010 !important;
+}
+body.timeline-modal-open {
+  overflow: hidden !important;
+}
+body.timeline-modal-open .vf-sb-toggle {
+  display: none !important;
+}
+
+/* Drawer navigation for tablet + phone so content has full width */
+@media (max-width: 1024px) {
+  .vf-sidebar {
+    transform: translate3d(-100%, 0, 0) !important;
+    width: 280px !important;
+    max-width: 85vw !important;
+    z-index: 100002 !important;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    box-shadow: 8px 0 32px rgba(0,0,0,0.18) !important;
+  }
+  .vf-sidebar.open {
+    transform: translate3d(0, 0, 0) !important;
+  }
+  /* When drawer is open, move toggle to top-right so it does not cover the brand title */
+  .vf-sidebar.open + .vf-sb-toggle {
+    left: auto !important;
+    right: 0.75rem !important;
+  }
+  .vf-sidebar.open .vf-sb-header {
+    padding-right: 0.75rem !important;
+  }
+  .vf-sidebar.open .vf-sb-brand {
+    padding-right: 0.25rem !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+  .vf-sb-toggle {
+    display: flex !important;
+    top: max(0.75rem, env(safe-area-inset-top, 0px)) !important;
+    left: max(0.75rem, env(safe-area-inset-left, 0px)) !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    z-index: 100003 !important;
+    touch-action: manipulation !important;
+  }
+  .dark-mode .vf-sb-toggle {
+    background: #18181b !important;
+    border-color: #27272a !important;
+  }
+  body {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding-top: max(4.25rem, calc(3.5rem + env(safe-area-inset-top, 0px))) !important;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px)) !important;
+  }
+
+  /* Ensure text and chevrons show on tablet/mobile even if html is collapsed */
+  html.vf-sidebar-collapsed .brand-full { display: block !important; }
+  html.vf-sidebar-collapsed .brand-mini { display: none !important; }
+  html.vf-sidebar-collapsed .vf-sb-subtitle,
+  html.vf-sidebar-collapsed .vf-sb-fy-wrapper,
+  html.vf-sidebar-collapsed .vf-sb-chevron,
+  html.vf-sidebar-collapsed .vf-sb-label,
+  html.vf-sidebar-collapsed .vf-sb-collapse-text {
+    display: block !important;
+  }
+  html.vf-sidebar-collapsed .vf-sb-link,
+  html.vf-sidebar-collapsed .vf-sb-folder {
+    font-size: 13px !important;
+    gap: 0.6rem !important;
+    justify-content: flex-start !important;
+    padding: 0.6rem 0.75rem !important;
+    min-height: 44px !important;
+  }
+  html.vf-sidebar-collapsed .vf-sb-link.child,
+  html.vf-sidebar-collapsed .vf-sb-folder.child {
+    padding-left: 1.6rem !important;
+  }
+  html.vf-sidebar-collapsed .vf-sb-link.grandchild {
+    padding-left: 2.6rem !important;
+  }
+  html.vf-sidebar-collapsed .vf-sb-header {
+    padding: 1.35rem 1.25rem 1rem !important;
+    align-items: flex-start !important;
+  }
+  html.vf-sidebar-collapsed .vf-sb-footer {
+    display: none !important;
+  }
+  .vf-sb-footer {
+    display: none !important;
+  }
+}
+
+/* Desktop Sidebar Collapsible Styles */
+html.vf-sidebar-collapsed {
+  --sidebar-w: var(--sidebar-collapsed-w);
+}
+
+/* Hide brand full name, subtitle, dropdown/labels, and user info text when collapsed */
+html.vf-sidebar-collapsed .brand-full,
+html.vf-sidebar-collapsed .vf-sb-subtitle,
+html.vf-sidebar-collapsed .vf-sb-fy-wrapper,
+html.vf-sidebar-collapsed .vf-sb-chevron,
+html.vf-sidebar-collapsed .vf-sb-label,
+html.vf-sidebar-collapsed .vf-sb-collapse-text,
+html.vf-sidebar-collapsed .vf-sb-user-info,
+html.vf-sidebar-collapsed .vf-sb-logout-btn {
+  display: none !important;
+}
+
+html.vf-sidebar-collapsed .vf-sb-user-badge {
+  justify-content: center !important;
+  padding: 0.4rem 0 !important;
+  margin-top: 0.5rem !important;
+  border: none !important;
+  background: transparent !important;
+  width: 100% !important;
+}
+
+/* Force all accordion folders to collapse when sidebar is collapsed */
+html.vf-sidebar-collapsed .vf-sb-accordion-wrapper {
+  grid-template-rows: 0fr !important;
+}
+
+/* Show brand mini monogram when collapsed */
+.brand-mini {
+  display: none;
+}
+html.vf-sidebar-collapsed .brand-mini {
+  display: block;
+  font-size: 20px;
+  text-align: center;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
+/* Adjust header padding when collapsed */
+html.vf-sidebar-collapsed .vf-sb-header {
+  padding: 1.35rem 0.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Adjust links and folders when collapsed: hide text & center icons */
+html.vf-sidebar-collapsed .vf-sb-link,
+html.vf-sidebar-collapsed .vf-sb-folder {
+  font-size: 0 !important;
+  gap: 0 !important;
+  justify-content: center;
+  padding: 0.5rem 0 !important;
+}
+
+/* Center all icon types */
+html.vf-sidebar-collapsed .vf-sb-icon {
+  margin: 0 !important;
+}
+
+/* Remove indentation for nested links when collapsed */
+html.vf-sidebar-collapsed .vf-sb-link.child,
+html.vf-sidebar-collapsed .vf-sb-link.grandchild,
+html.vf-sidebar-collapsed .vf-sb-folder.child {
+  padding-left: 0 !important;
+}
+
+/* Collapsed Footer & Button Styles */
+.vf-sb-footer {
+  padding: 0.75rem 0.65rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.dark-mode .vf-sb-footer {
+  border-top: 1px solid #27272a !important;
+  background: #0a0a0a !important;
+}
+html.vf-sidebar-collapsed .vf-sb-footer {
+  padding: 0.75rem 0.5rem;
+}
+.vf-sb-collapse-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  padding: 0.5rem 0.65rem !important;
+  width: 100% !important;
+  min-height: 38px !important;
+  height: 38px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 8px !important;
+  color: #8b8fa3 !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease-out !important;
+  box-shadow: none !important;
+}
+html.vf-sidebar-collapsed .vf-sb-collapse-btn {
+  justify-content: center !important;
+  padding: 0.5rem 0 !important;
+}
+.vf-sb-collapse-btn:hover {
+  background: rgba(139, 92, 246, 0.08) !important;
+  color: #7c3aed !important;
+}
+.dark-mode .vf-sb-collapse-btn {
+  color: #a1a1aa !important;
+}
+.dark-mode .vf-sb-collapse-btn:hover {
+  background: rgba(124, 58, 237, 0.12) !important;
+  color: #a78bfa !important;
+}
+.vf-sb-collapse-icon {
+  width: 16px !important;
+  height: 16px !important;
+  color: inherit !important;
+  transition: transform 0.2s ease !important;
+  flex-shrink: 0 !important;
+}
+html.vf-sidebar-collapsed .vf-sb-collapse-icon {
+  transform: rotate(180deg) !important;
+}
+
+/* Mode Selector Styles */
+.vf-sb-mode-selector {
+  display: flex;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 3px;
+  border-radius: 10px;
+  margin: 0.5rem 0.75rem 1rem 0.75rem;
+  border: 1px solid var(--border);
+  position: relative;
+}
+.dark-mode .vf-sb-mode-selector {
+  background: rgba(255, 255, 255, 0.03);
+}
+.vf-sb-mode-btn {
+  flex: 1;
+  text-align: center;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+.vf-sb-mode-btn.active {
+  color: var(--accent) !important;
+  background: var(--surface) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.dark-mode .vf-sb-mode-btn.active {
+  color: #a78bfa !important;
+  background: #18181b !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.vf-sb-mode-btn:hover:not(.active) {
+  color: var(--fg);
+}
+html.vf-sidebar-collapsed .vf-sb-mode-selector {
+  display: none !important;
+}
+.dark-mode #vfSidebarFYSelect {
+  background-color: var(--surface) !important;
+  color: var(--fg) !important;
+  border-color: var(--border) !important;
+  color-scheme: dark !important;
+}
+.dark-mode #vfSidebarFYSelect option {
+  background-color: var(--surface) !important;
+  color: var(--fg) !important;
+}
+
+/* --- Global Typography Standardization & Clickable Card Triggers --- */
+body, button, input, select, textarea, table, td, th {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+h1, h2, h3, h4, h5, h6, .font-display, [style*="font-family: var(--font-display)"] {
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+code, pre, .monospace, [style*="font-family: monospace"], [style*="font-family:monospace"] {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* Clickable triggers styling (Machine, Beam, Design, etc. numbers that open a card modal) */
+.clickable-trigger, 
+.design-link,
+[onclick^="window.showGlobalBeamCard"],
+[onclick^="showGlobalBeamCard"],
+:not(tr)[onclick^="openMachineDetailsModal"],
+#rb-beam-no {
+  color: #8b5cf6 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  font-weight: 700 !important;
+  font-family: inherit !important;
+  transition: all 0.2s ease !important;
+  border-bottom: none !important;
+}
+
+#toast-container *,
+.toast-container *,
+.toast * {
+  color: #ffffff !important;
+}
+
+[onclick^="window.showGlobalMachineCard"],
+[onclick^="showGlobalMachineCard"] {
+  color: #8b5cf6 !important;
+  text-decoration: underline !important;
+  text-decoration-style: dashed !important;
+  text-underline-offset: 3px !important;
+  cursor: pointer !important;
+  font-weight: 700 !important;
+  font-family: inherit !important;
+  transition: all 0.2s ease !important;
+  border-bottom: none !important;
+}
+
+.dark-mode .clickable-trigger, 
+.dark-mode .design-link,
+.dark-mode [onclick^="window.showGlobalBeamCard"],
+.dark-mode [onclick^="showGlobalBeamCard"],
+.dark-mode :not(tr)[onclick^="openMachineDetailsModal"],
+.dark-mode #rb-beam-no {
+  color: #a78bfa !important;
+}
+
+.dark-mode [onclick^="window.showGlobalMachineCard"],
+.dark-mode [onclick^="showGlobalMachineCard"] {
+  color: #a78bfa !important;
+}
+
+.clickable-trigger:hover,
+.design-link:hover,
+[onclick^="window.showGlobalBeamCard"]:hover,
+[onclick^="showGlobalBeamCard"]:hover,
+:not(tr)[onclick^="openMachineDetailsModal"]:hover,
+#rb-beam-no:hover {
+  color: #ec4899 !important;
+  text-decoration: none !important;
+  opacity: 0.95 !important;
+  border-bottom: none !important;
+}
+
+[onclick^="window.showGlobalMachineCard"]:hover,
+[onclick^="showGlobalMachineCard"]:hover {
+  color: #ec4899 !important;
+  text-decoration-style: solid !important;
+  opacity: 0.95 !important;
+  border-bottom: none !important;
+}
+
+.dark-mode .clickable-trigger:hover, 
+.dark-mode .design-link:hover,
+.dark-mode [onclick^="window.showGlobalBeamCard"]:hover,
+.dark-mode [onclick^="showGlobalBeamCard"]:hover,
+.dark-mode :not(tr)[onclick^="openMachineDetailsModal"]:hover,
+.dark-mode #rb-beam-no:hover {
+  color: #f472b6 !important;
+}
+
+.dark-mode [onclick^="window.showGlobalMachineCard"]:hover,
+.dark-mode [onclick^="showGlobalMachineCard"]:hover {
+  color: #f472b6 !important;
+}
+
+/* ==========================================================================
+   GLOBAL TABLET + MOBILE RESPONSIVENESS & TOUCH OPTIMIZATIONS
+   Keep table display as table; scroll only inside wrappers (no letter-stack headers)
+   ========================================================================== */
+@media (max-width: 1024px) {
+  html, body {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+  }
+
+  .container,
+  .main-content,
+  .content-wrapper,
+  .app-container {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .table-responsive,
+  .table-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    margin-bottom: 1rem !important;
+    display: block !important;
+  }
+
+  /* Do NOT set display:block on table — that collapses columns into vertical text */
+  :not(#root *) table {
+    width: max-content !important;
+    min-width: 100% !important;
+    display: table !important;
+  }
+
+  :not(#root *) th,
+  :not(#root *) td {
+    white-space: nowrap !important;
+    word-break: normal !important;
+  }
+
+  :not(#root *) input[type="text"],
+  :not(#root *) input[type="number"],
+  :not(#root *) input[type="date"],
+  :not(#root *) input[type="month"],
+  :not(#root *) input[type="password"],
+  :not(#root *) input[type="email"],
+  :not(#root *) input[type="search"],
+  :not(#root *) select,
+  :not(#root *) textarea {
+    font-size: 16px !important;
+    min-height: 44px !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    width: 100%;
+    box-sizing: border-box !important;
+  }
+
+  input[type="date"],
+  input[type="month"] {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-left: 0.55rem !important;
+    padding-right: 0.4rem !important;
+  }
+
+  input[type="date"]::-webkit-datetime-edit,
+  input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+  input[type="month"]::-webkit-datetime-edit,
+  input[type="month"]::-webkit-datetime-edit-fields-wrapper {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="month"]::-webkit-calendar-picker-indicator {
+    flex-shrink: 0;
+    margin-left: 0.15rem;
+    cursor: pointer;
+  }
+
+  .form-group:has(input[type="date"]),
+  .form-group:has(input[type="month"]),
+  .input-group:has(input[type="date"]),
+  .input-group:has(input[type="month"]),
+  label:has(+ input[type="date"]),
+  label:has(+ input[type="month"]),
+  .filter-bar .form-group:has(input[type="date"]),
+  .filter-bar .form-group:has(input[type="month"]),
+  .form-inline .form-group:has(input[type="date"]),
+  .form-inline .form-group:has(input[type="month"]),
+  .form-inline-scroll .form-group:has(input[type="date"]),
+  .form-inline-scroll .form-group:has(input[type="month"]),
+  .form-grid .form-group:has(input[type="date"]),
+  .form-grid .form-group:has(input[type="month"]),
+  .analytics-date-filters .form-group,
+  .stock-filter-bar .form-group:has(input[type="date"]),
+  .stock-filter-bar .form-group:has(input[type="month"]),
+  .karigar-filters .form-group:has(input[type="date"]),
+  .karigar-filters .form-group:has(input[type="month"]),
+  .modal-content .form-group:has(input[type="date"]),
+  .modal-content .form-group:has(input[type="month"]),
+  .modal .form-group:has(input[type="date"]),
+  .modal .form-group:has(input[type="month"]),
+  .modal-body .form-group:has(input[type="date"]),
+  .modal-body .form-group:has(input[type="month"]) {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Native date fields clip internal overflow; custom month/date panels must stay visible */
+  .form-group:has(> input[type="date"]),
+  .input-group:has(> input[type="date"]) {
+    overflow: hidden;
+  }
+
+  .form-group:has(.vf-month-picker),
+  .input-group:has(.vf-month-picker),
+  .karigar-filters .form-group:has(.vf-month-picker),
+  .form-group:has(.vf-date-picker),
+  .input-group:has(.vf-date-picker),
+  .karigar-filters .form-group:has(.vf-date-picker) {
+    overflow: visible !important;
+  }
+
+  /* Date/month fields in multi-column layouts → full row so pickers stay in card */
+  .form-inline .form-group:has(input[type="date"]),
+  .form-inline .form-group:has(input[type="month"]),
+  .form-inline-scroll .form-group:has(input[type="date"]),
+  .form-inline-scroll .form-group:has(input[type="month"]),
+  .filter-bar .form-group:has(input[type="date"]),
+  .filter-bar .form-group:has(input[type="month"]),
+  .form-grid .form-group:has(input[type="date"]),
+  .form-grid .form-group:has(input[type="month"]),
+  .analytics-date-filters .form-group:has(input[type="date"]),
+  .analytics-date-filters .form-group:has(input[type="month"]),
+  .stock-filter-bar .form-group:has(input[type="date"]),
+  .stock-filter-bar .form-group:has(input[type="month"]),
+  .karigar-filters .form-group:has(input[type="date"]),
+  .karigar-filters .form-group:has(input[type="month"]),
+  .search-bar .form-group:has(input[type="date"]),
+  .search-bar .form-group:has(input[type="month"]),
+  .search-filters .form-group:has(input[type="date"]),
+  .search-filters .form-group:has(input[type="month"]),
+  .controls-panel .form-group:has(input[type="date"]),
+  .controls-panel .form-group:has(input[type="month"]),
+  .warp-filter-grid .form-group:has(input[type="date"]),
+  .warp-filter-grid .form-group:has(input[type="month"]),
+  .ob-filter-grid .form-group:has(input[type="date"]),
+  .ob-filter-grid .form-group:has(input[type="month"]),
+  .ledger-v2-filters .form-group:has(input[type="date"]),
+  .ledger-v2-filters .form-group:has(input[type="month"]) {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  .form-group[style*="min-width"]:has(input[type="date"]),
+  .form-group[style*="min-width"]:has(input[type="month"]),
+  .input-group[style*="min-width"]:has(input[type="date"]),
+  .input-group[style*="min-width"]:has(input[type="month"]) {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  button, .btn, input[type="button"], input[type="submit"] {
+    min-height: 44px !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 1rem !important;
+  }
+
+  /* span-N on a 1/2-col grid creates extra tracks and crushes siblings */
+  .form-grid > [style*="grid-column: span"],
+  .form-grid > [style*="grid-column:span"] {
+    grid-column: 1 / -1 !important;
+    min-width: 0 !important;
+  }
+
+  .form-group,
+  .input-group {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .modal-dialog,
+  .modal-content,
+  .custom-modal,
+  .modal,
+  [class*="modal-card"] {
+    width: calc(100vw - 24px) !important;
+    max-width: 100% !important;
+    margin: 12px auto !important;
+    max-height: calc(100dvh - 24px) !important;
+    overflow-y: auto !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .tabs:not(.vf-top-tab-hidden),
+  .tab-bar,
+  .tab-header,
+  .detail-tabs,
+  div[role="tablist"] {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: 100% !important;
+    gap: 0.5rem !important;
+    padding-bottom: 4px !important;
+  }
+
+  .vf-sb-toggle {
+    top: 0.65rem !important;
+    left: 0.65rem !important;
+  }
+}
+
+/* Hide sidebar and floating toggle buttons during print/PDF export */
+@media print {
+  .vf-sidebar,
+  .vf-sb-toggle,
+  #vfSbToggle,
+  .vf-sidebar-overlay,
+  .vf-sb-header,
+  .vf-sb-topbar,
+  .vf-sb-date-picker-wrap,
+  .vf-sb-user-card,
+  .vf-sb-badge-chip,
+  .no-print {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+}
+
+/* ==========================================================================
+   GLOBAL LAYOUT COLLAPSE — common grid / header patterns across all modules
+   Scoped to tablet + phone so desktop is untouched.
+   ========================================================================== */
+@media (max-width: 1024px) {
+  /* Common stat / dashboard / summary grids → 2 columns */
+  :not(#root *) .stats-grid,
+  :not(#root *) .dashboard-grid,
+  :not(#root *) .summary-grid,
+  :not(#root *) .summary-row,
+  :not(#root *) .cards-grid,
+  :not(#root *) .stat-cards,
+  :not(#root *) .kpi-grid,
+  :not(#root *) .metrics-grid,
+  :not(#root *) .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 1rem !important;
+  }
+
+  /* Multi-column inline grids commonly used for filters/summaries.
+     repeat(3..8, ...) or explicit 3+ track lists get capped to 2 cols. */
+  :not(#root *) [style*="grid-template-columns: repeat(3"],
+  :not(#root *) [style*="grid-template-columns: repeat(4"],
+  :not(#root *) [style*="grid-template-columns: repeat(5"],
+  :not(#root *) [style*="grid-template-columns: repeat(6"],
+  :not(#root *) [style*="grid-template-columns: repeat(7"],
+  :not(#root *) [style*="grid-template-columns: repeat(8"],
+  :not(#root *) [style*="grid-template-columns:repeat(3"],
+  :not(#root *) [style*="grid-template-columns:repeat(4"],
+  :not(#root *) [style*="grid-template-columns:repeat(5"],
+  :not(#root *) [style*="grid-template-columns:repeat(6"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Tailwind-style responsive grids that stayed multi-col */
+  :not(#root *) .grid.grid-cols-3,
+  :not(#root *) .grid.grid-cols-4,
+  :not(#root *) .grid.grid-cols-5,
+  :not(#root *) .grid.grid-cols-6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  :not(#root *) .stats-grid,
+  :not(#root *) .dashboard-grid,
+  :not(#root *) .summary-grid,
+  :not(#root *) .summary-row,
+  :not(#root *) .cards-grid,
+  :not(#root *) .stat-cards,
+  :not(#root *) .kpi-grid,
+  :not(#root *) .metrics-grid,
+  :not(#root *) .overview-grid,
+  :not(#root *) [style*="grid-template-columns: repeat(3"],
+  :not(#root *) [style*="grid-template-columns: repeat(4"],
+  :not(#root *) [style*="grid-template-columns: repeat(5"],
+  :not(#root *) [style*="grid-template-columns: repeat(6"],
+  :not(#root *) [style*="grid-template-columns: repeat(7"],
+  :not(#root *) [style*="grid-template-columns: repeat(8"],
+  :not(#root *) [style*="grid-template-columns:repeat(3"],
+  :not(#root *) [style*="grid-template-columns:repeat(4"],
+  :not(#root *) [style*="grid-template-columns:repeat(5"],
+  :not(#root *) [style*="grid-template-columns:repeat(6"],
+  :not(#root *) .grid.grid-cols-2,
+  :not(#root *) .grid.grid-cols-3,
+  :not(#root *) .grid.grid-cols-4,
+  :not(#root *) .grid.grid-cols-5,
+  :not(#root *) .grid.grid-cols-6 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* Phone: keep small paired stats / KPI summaries side by side */
+  :not(#root *) .stats-grid.keep-two,
+  :not(#root *) .dashboard-grid.keep-two,
+  :not(#root *) .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* ==========================================================================
+   GLOBAL FILTER / DROPDOWN CONTAINMENT
+   Keeps custom option menus inside the field width on tablet + phone.
+   ========================================================================== */
+.dropdown-list,
+.custom-dropdown-menu,
+.vf-filter-dd-list {
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
+
+.input-group,
+.form-group,
+.select-input-wrapper,
+.custom-dropdown-container,
+.vf-filter-dd {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+.dropdown-item,
+.custom-dropdown-item,
+.vf-filter-dd-list .dropdown-item {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  color: var(--fg, #0f172a);
+  cursor: pointer;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.vf-filter-dd-list .dropdown-item:hover {
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.vf-filter-dd-list .dropdown-item.selected {
+  background: rgba(139, 92, 246, 0.16);
+  color: var(--accent, #7c3aed);
+  font-weight: 600;
+}
+
+.vf-filter-dd-list .dropdown-item.is-disabled {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
+
+.vf-filter-dd {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.vf-filter-dd-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-height: 38px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  background: var(--surface, #fff);
+  color: var(--fg, #0f172a);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.vf-filter-dd-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vf-filter-dd-btn::after {
+  content: "▾";
+  flex-shrink: 0;
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
+.vf-filter-dd-btn:focus {
+  outline: none;
+  border-color: var(--accent, #8b5cf6);
+}
+
+.vf-filter-dd-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  z-index: 10050;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--surface, #fff);
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+}
+
+@media (max-width: 1024px) {
+  .vf-filter-dd-list {
+    /* width/left applied inline by placeListInView; keep text from forcing growth */
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+}
+
+.dark-mode .vf-filter-dd-btn,
+.dark-mode .vf-filter-dd-list {
+  background: var(--surface, #18181b);
+  border-color: var(--border, #27272a);
+  color: var(--fg, #f4f4f5);
+}
+
+@media (max-width: 1024px) {
+  .search-bar,
+  .search-filters,
+  .controls-panel,
+  .warp-filter-grid,
+  .ob-filter-grid,
+  .ledger-v2-filters {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .search-bar select,
+  .search-filters select,
+  select.select-control,
+  select[id*="filter"],
+  select[id*="Filter"],
+  select[id*="group-by"],
+  select[id*="sort"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .search-bar input[type="date"],
+  .search-filters input[type="date"],
+  .controls-panel input[type="date"],
+  .warp-filter-grid input[type="date"],
+  .ob-filter-grid input[type="date"],
+  .ledger-v2-filters input[type="date"],
+  .analytics-date-filters input[type="date"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* ==========================================================================
+   GLOBAL DATE / MONTH INPUT CONTAINMENT — all modules
+   Native date/month controls need min-width:0; native month popups ignore CSS —
+   those are replaced by .vf-month-picker in sidebar.js.
+   ========================================================================== */
+input[type="date"],
+input[type="month"] {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="month"]::-webkit-datetime-edit,
+input[type="month"]::-webkit-datetime-edit-fields-wrapper {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator {
+  flex-shrink: 0;
+  margin-left: 0.15rem;
+  cursor: pointer;
+}
+
+.form-group:has(input[type="date"]),
+.form-group:has(input[type="month"]),
+.input-group:has(input[type="date"]),
+.input-group:has(input[type="month"]),
+.card .form-group:has(input[type="date"]),
+.card .form-group:has(input[type="month"]),
+.card .input-group:has(input[type="date"]),
+.card .input-group:has(input[type="month"]) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Custom month picker — replaces native month calendar that overflows cards */
+.vf-month-picker {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.vf-month-picker > input[type="month"] {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.vf-month-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  line-height: 1.2;
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  background: var(--surface, #fff);
+  color: var(--fg, #0f172a);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.vf-month-btn:focus {
+  outline: none;
+  border-color: var(--accent, #8b5cf6);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+}
+
+.vf-month-btn-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vf-month-btn::after {
+  content: "▾";
+  flex-shrink: 0;
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
+.vf-month-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  z-index: 10060;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  background: var(--surface, #fff);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+}
+
+.vf-month-picker.open .vf-month-panel {
+  display: block;
+}
+
+.vf-month-year-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.vf-month-year-row button {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: color-mix(in srgb, var(--fg, #0f172a) 4%, transparent);
+  color: var(--fg, #0f172a);
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.vf-month-year-label {
+  flex: 1 1 auto;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--fg, #0f172a);
+}
+
+.vf-month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.vf-month-grid button {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0.45rem 0.25rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--fg, #0f172a) 4%, transparent);
+  color: var(--fg, #0f172a);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.vf-month-grid button.is-selected {
+  background: var(--accent, #8b5cf6);
+  color: #fff;
+  border-color: var(--accent, #8b5cf6);
+}
+
+.vf-month-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+
+.vf-month-actions button {
+  background: none;
+  border: none;
+  color: var(--accent, #8b5cf6);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.35rem 0;
+}
+
+.dark-mode .vf-month-btn,
+.dark-mode .vf-month-panel {
+  background: var(--surface, #18181b);
+  border-color: var(--border, #27272a);
+  color: var(--fg, #f4f4f5);
+}
+
+.dark-mode .vf-month-year-row button,
+.dark-mode .vf-month-grid button {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border, #27272a);
+  color: var(--fg, #f4f4f5);
+}
+
+/* Custom date picker — replaces native calendar that overflows cards on phone */
+.vf-date-picker {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.vf-date-picker > input[type="date"] {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.vf-date-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  line-height: 1.2;
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  background: var(--surface, #fff);
+  color: var(--fg, #0f172a);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.vf-date-btn:focus {
+  outline: none;
+  border-color: var(--accent, #8b5cf6);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+}
+
+.vf-date-btn-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vf-date-btn::after {
+  content: "📅";
+  flex-shrink: 0;
+  opacity: 0.75;
+  font-size: 0.85rem;
+}
+
+.vf-date-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 10070;
+  width: 100%;
+  min-width: min(100%, 17.5rem);
+  max-width: min(20rem, calc(100vw - 1.5rem));
+  box-sizing: border-box;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  background: var(--surface, #fff);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+}
+
+.vf-date-picker.open .vf-date-panel {
+  display: block;
+}
+
+.vf-date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+}
+
+.vf-date-nav button {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: color-mix(in srgb, var(--fg, #0f172a) 4%, transparent);
+  color: var(--fg, #0f172a);
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.vf-date-nav-label {
+  flex: 1 1 auto;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--fg, #0f172a);
+  min-width: 0;
+}
+
+.vf-date-weekdays,
+.vf-date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.2rem;
+}
+
+.vf-date-weekdays span {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--muted, #64748b);
+  text-transform: uppercase;
+  padding: 0.25rem 0;
+}
+
+.vf-date-grid button {
+  min-width: 0;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fg, #0f172a);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.vf-date-grid button.is-other {
+  opacity: 0.35;
+}
+
+.vf-date-grid button.is-today {
+  border-color: color-mix(in srgb, var(--accent, #8b5cf6) 45%, transparent);
+}
+
+.vf-date-grid button.is-selected {
+  background: var(--accent, #8b5cf6);
+  color: #fff;
+  border-color: var(--accent, #8b5cf6);
+}
+
+.vf-date-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+
+.vf-date-actions button {
+  background: none;
+  border: none;
+  color: var(--accent, #8b5cf6);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.35rem 0;
+}
+
+.dark-mode .vf-date-btn,
+.dark-mode .vf-date-panel {
+  background: var(--surface, #18181b);
+  border-color: var(--border, #27272a);
+  color: var(--fg, #f4f4f5);
+}
+
+.dark-mode .vf-date-nav button {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border, #27272a);
+  color: var(--fg, #f4f4f5);
+}
+
+.form-group:has(.vf-date-picker),
+.input-group:has(.vf-date-picker),
+.karigar-filters .form-group:has(.vf-date-picker) {
+  overflow: visible !important;
+}
+
+@media (max-width: 1024px) {
+  .vf-month-btn,
+  .vf-date-btn {
+    min-height: 44px;
+    font-size: 16px !important;
+  }
+
+  .vf-month-panel,
+  .vf-date-panel {
+    max-width: min(100%, calc(100vw - 1.5rem));
+  }
+
+  /* Side-by-side from/to date rows → stack on tablet/phone */
+  div:has(> input[type="date"] + input[type="date"]),
+  div:has(> .vf-date-picker + .vf-date-picker),
+  div:has(> .form-group:has(.vf-date-picker) + .form-group:has(.vf-date-picker)),
+  div:has(> .input-group:has(.vf-date-picker) + .input-group:has(.vf-date-picker)) {
+    grid-template-columns: minmax(0, 1fr) !important;
+    display: grid !important;
+    gap: 0.65rem !important;
+  }
+
+  /* Never clip custom date/month panels inside cards/filters */
+  .form-group:has(.vf-date-picker),
+  .form-group:has(.vf-month-picker),
+  .input-group:has(.vf-date-picker),
+  .input-group:has(.vf-month-picker),
+  .card .form-group:has(.vf-date-picker),
+  .card .form-group:has(.vf-month-picker),
+  .filter-bar .form-group:has(.vf-date-picker),
+  .filter-bar .form-group:has(.vf-month-picker),
+  .modal-content .form-group:has(.vf-date-picker),
+  .modal-content .form-group:has(.vf-month-picker) {
+    overflow: visible !important;
+  }
+}
+
+@media (max-width: 640px) {
+  input[type="date"],
+  input[type="month"] {
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+
+  .vf-date-panel {
+    position: fixed;
+    left: max(0.75rem, env(safe-area-inset-left, 0px)) !important;
+    right: max(0.75rem, env(safe-area-inset-right, 0px)) !important;
+    top: auto;
+    bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    z-index: 100080;
+  }
+}
+
+/* ==========================================================================
+   MOBILE & TABLET UI/UX AUDIT ENHANCEMENTS (Apple HIG & WCAG Compliance)
+   ========================================================================== */
+@media (max-width: 1024px) {
+  /* 1. Prevent forced iOS Safari auto-zoom by ensuring 16px minimum font-size */
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="month"],
+  input[type="search"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  select,
+  textarea,
+  .vf-filter-dd-btn {
+    font-size: 16px !important;
+    min-height: 44px !important;
+    touch-action: manipulation;
+  }
+
+  /* 2. Apple HIG & Android Material Touch Target Ergonomics (Minimum 48x48px hit area) */
+  .btn,
+  .btn-action,
+  .table-action-btn,
+  .action-btn,
+  .save-btn,
+  .submit-btn,
+  .pagination button,
+  .icon-btn,
+  .vf-filter-dd-btn,
+  .auth-tab-btn,
+  button:not(.vf-sb-mode-btn):not(.vf-sb-logout-btn):not(.vf-sb-toggle),
+  button[class*="btn"]:not(.vf-sb-mode-btn),
+  a[class*="btn"] {
+    min-height: 48px !important;
+    min-width: 44px !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    font-size: 15px !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:active,
+  .btn:active,
+  .save-btn:active,
+  .submit-btn:active {
+    transform: scale(0.97) !important;
+  }
+
+  /* 3. Safe Area Modal & Content Bottom Padding */
+  .modal-dialog,
+  .modal-content,
+  .custom-modal,
+  .modal {
+    margin-bottom: max(16px, env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* 4. Phone & Tablet Responsive Button & Action Row Layouts */
+@media (max-width: 640px) {
+  .save-btn,
+  .submit-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  div[style*="display: flex"][style*="justify-content: flex-end"] {
+    flex-direction: column-reverse !important;
+    width: 100% !important;
+    gap: 0.75rem !important;
+  }
+
+  div[style*="display: flex"][style*="justify-content: flex-end"] button {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+}
+
+/* 4. Touch Smooth Scrolling for Wide Mobile Data Tables */
+@media (max-width: 768px) {
+  .table-responsive,
+  .table-container,
+  .table-wrapper,
+  div[style*="overflow-x: auto"] {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+/* Zero-compression push test */

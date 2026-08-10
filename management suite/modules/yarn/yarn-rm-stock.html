@@ -1,0 +1,1962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="../../assets/supabase-client.js"></script>
+
+  <script>
+    (function() {
+      const isDark = localStorage.getItem('vishwa_fashions_theme') === 'true' || 
+                     (localStorage.getItem('vishwa_fashions_theme') === null && true);
+      if (isDark) {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
+      const isCollapsed = localStorage.getItem('vf_sidebar_collapsed') === 'true';
+      if (isCollapsed) {
+        document.documentElement.classList.add('vf-sidebar-collapsed');
+      }
+    })();
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yarn RM Stock Book — Vishwa Fashions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../sidebar.css">
+  <script src="../../sidebar.js" defer></script>
+  
+  <style>
+    :root {
+      --bg: #f8f7fc;
+      --surface: #ffffff;
+      --fg: #1a1a2e;
+      --muted: #8b8fa3;
+      --border: #e8e7f1;
+      --accent: #8b5cf6;
+      --accent2: #ec4899;
+      --accent3: #f97316;
+      --error: #ef4444;
+      --success: #10b981;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius: 16px;
+      --container: 100%;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+      --primary-gradient: linear-gradient(135deg, var(--accent), var(--accent2));
+    }
+
+    body.dark-mode, .dark-mode {
+      --bg: #000000;
+      --surface: #0a0a0a;
+      --fg: #ffffff;
+      --muted: #a1a1aa;
+      --border: #27272a;
+      --accent: #7c3aed;
+      --accent-light: #a78bfa;
+      --accent-dark: #5b21b6;
+      --accent2: #ec4899;
+      --accent3: #f97316;
+      --error: #ef4444;
+      --success: #10b981;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Main Container */
+    .rm-container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem 1.5rem;
+      width: 100%;
+    }
+
+    /* Page Header */
+    .rm-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .rm-header-info h1 {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 700;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.35rem;
+    }
+
+    .rm-header-info p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .rm-header-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      min-height: 44px;
+    }
+
+    .btn-primary {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+    }
+    .btn-primary:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      color: var(--fg);
+    }
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+      border: 1.5px solid rgba(239, 68, 68, 0.3);
+    }
+    .btn-danger:hover {
+      background: var(--error);
+      color: #fff;
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 1024px) {
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+      .filter-card {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.65rem !important;
+        padding: 0.85rem !important;
+        align-items: stretch !important;
+      }
+      .filter-options {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.65rem !important;
+        width: 100% !important;
+      }
+      .search-box, .filter-options .form-control {
+        width: 100% !important;
+      }
+      .quality-summary {
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+    }
+    @media (max-width: 640px) {
+      .metrics-grid { grid-template-columns: 1fr; }
+    }
+
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.25rem;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--primary-gradient);
+      opacity: 0.8;
+    }
+
+    .metric-card.success-card::before {
+      background: var(--success);
+    }
+    .metric-card.danger-card::before {
+      background: var(--error);
+    }
+    .metric-card.gr-card::before {
+      background: var(--accent3);
+    }
+
+    .metric-title {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-val {
+      font-family: var(--font-display);
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: var(--fg);
+      line-height: 1.2;
+    }
+
+    .metric-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.4rem;
+      font-family: var(--font-mono);
+    }
+
+    /* Filter & Search Bar */
+    .filter-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.85rem 1.25rem;
+      margin-bottom: 1.75rem;
+      box-shadow: var(--shadow-sm);
+      display: grid;
+      grid-template-columns: 2fr repeat(4, 1fr);
+      gap: 0.65rem;
+      align-items: center;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 0.55rem 0.85rem;
+      box-sizing: border-box;
+      height: 42px;
+      width: 100%;
+    }
+
+    .search-box input {
+      border: none;
+      background: transparent;
+      outline: none;
+      color: var(--fg);
+      font-size: 0.88rem;
+      width: 100%;
+    }
+
+    .filter-options {
+      display: contents;
+    }
+
+    .filter-options .form-control {
+      width: 100%;
+      height: 42px;
+      padding: 0.35rem 0.85rem;
+      box-sizing: border-box;
+    }
+
+    .form-control {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      color: var(--fg);
+      border-radius: 10px;
+      padding: 0.45rem 0.85rem;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    input[type="date"].form-control {
+      color-scheme: dark light;
+      position: relative;
+      z-index: 5;
+      padding: 0.35rem 0.65rem;
+      height: 42px;
+      line-height: 1;
+      font-family: inherit;
+    }
+
+    .form-control:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
+    }
+
+    /* Quality Stock Sections */
+    .quality-group {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      margin-bottom: 1.75rem;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .quality-group.is-completed {
+      opacity: 0.72;
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(0, 0, 0, 0.02);
+    }
+    .quality-group.is-completed:hover {
+      opacity: 0.95;
+    }
+
+    .quality-header {
+      padding: 1.25rem 1.5rem;
+      background: rgba(139, 92, 246, 0.04);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .quality-title-area {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .quality-title {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--fg);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-primary {
+      background: rgba(139, 92, 246, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .badge-success {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--error);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .quality-summary {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+
+    .qs-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .qs-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .qs-val {
+      font-size: 0.95rem;
+      font-family: var(--font-mono);
+    }
+
+    .qs-val strong {
+      font-weight: 700;
+    }
+
+    /* Lot / Challan Rows */
+    .lot-block {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .lot-block:last-child {
+      border-bottom: none;
+    }
+
+    .lot-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .lot-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .lot-name {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--fg);
+    }
+
+    .lot-subinfo {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .lot-subinfo span {
+      margin-right: 0.75rem;
+    }
+
+    /* Box Matrix / Grid */
+    .box-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      margin-top: 0.75rem;
+    }
+
+    .box-item {
+      width: 72px;
+      height: 72px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+    }
+
+    .box-item:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+      z-index: 100;
+    }
+
+    /* Box States */
+    .box-item.available {
+      background: rgba(16, 185, 129, 0.06);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: var(--fg);
+    }
+
+    .box-item.available:hover {
+      border-color: var(--success);
+      background: rgba(16, 185, 129, 0.12);
+    }
+
+    .box-item.issued {
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: var(--error);
+    }
+
+    .box-item.issued .box-num {
+      color: var(--error);
+      font-weight: 700;
+    }
+
+    .box-item.gr {
+      background: rgba(249, 115, 22, 0.1);
+      border-color: rgba(249, 115, 22, 0.45);
+      color: var(--accent3);
+    }
+
+    .box-item.gr .box-num {
+      color: var(--accent3);
+      font-weight: 700;
+    }
+
+    .box-item.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .box-num {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .box-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      position: absolute;
+      top: 6px;
+      right: 6px;
+    }
+
+    .box-item.available .box-status-dot {
+      background: var(--success);
+    }
+
+    .box-item.issued .box-status-dot {
+      background: var(--error);
+      box-shadow: 0 0 6px var(--error);
+    }
+
+    .box-item.gr .box-status-dot {
+      background: var(--accent3);
+      box-shadow: 0 0 6px var(--accent3);
+    }
+
+    .box-weight {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .box-issued-date {
+      font-size: 0.65rem;
+      color: var(--error);
+      font-weight: 500;
+      margin-top: 1px;
+    }
+
+    .box-item.gr .box-issued-date {
+      color: var(--accent3);
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(5px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      padding: 1rem;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 780px;
+      box-shadow: var(--shadow-lg);
+      overflow: visible !important;
+      transform: translateY(15px);
+      transition: transform 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 100000;
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h3 {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--fg); }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow: visible !important;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    .form-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--fg);
+    }
+
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      background: rgba(0, 0, 0, 0.02);
+    }
+
+    /* Tooltip / Details Popover */
+    .box-tooltip {
+      position: absolute;
+      bottom: 110%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--fg);
+      color: var(--bg);
+      padding: 0.4rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      z-index: 9999;
+      box-shadow: var(--shadow-md);
+    }
+
+    .box-item:hover .box-tooltip {
+      opacity: 1;
+    }
+    /* Context Menu for Lots */
+    .context-menu {
+      position: fixed;
+      z-index: 999999;
+      background: var(--surface, #1e293b);
+      border: 1px solid var(--border, #334155);
+      border-radius: var(--radius-md, 8px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      padding: 0.35rem 0;
+      min-width: 150px;
+      display: none;
+    }
+    .context-menu-item {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .context-menu-item:hover {
+      background: rgba(139, 92, 246, 0.1);
+      color: var(--accent);
+    }
+    .context-menu-item.danger:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Main Workspace Canvas -->
+  <div class="rm-container">
+    
+    <!-- Top Header -->
+    <div class="rm-header">
+      <div class="rm-header-info">
+        <h1>Yarn RM Stock Book</h1>
+        <p>Raw material stock ledger — Track incoming challans & box-level yarn issuance</p>
+      </div>
+      <div class="rm-header-actions">
+        <button class="btn btn-secondary" type="button" onclick="openGRModal()" style="border-color: var(--accent3); color: var(--accent3)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h10a8 8 0 0 1 8 8v2M3 10l6 6M3 10l6-6"/></svg>
+          GR
+        </button>
+        <button class="btn btn-secondary" onclick="openIssueModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Issue Boxes
+        </button>
+        <button class="btn btn-primary" onclick="openChallanModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Incoming Challan
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary KPI Metric Cards -->
+    <div class="metrics-grid">
+      <div class="metric-card success-card">
+        <div class="metric-title">Available Stock (Kg)</div>
+        <div class="metric-val" id="kpi-avail-weight-val">0.00 kg</div>
+        <div class="metric-sub" id="kpi-avail-boxes-sub">0 available boxes</div>
+      </div>
+      <div class="metric-card gr-card">
+        <div class="metric-title">GR (Kg)</div>
+        <div class="metric-val" id="kpi-gr-weight-val" style="color: var(--accent3);">0.00 kg</div>
+        <div class="metric-sub" id="kpi-gr-boxes-sub">0 GR boxes</div>
+      </div>
+      <div class="metric-card danger-card">
+        <div class="metric-title">Used (Kg)</div>
+        <div class="metric-val" id="kpi-used-weight-val" style="color: var(--error);">0.00 kg</div>
+        <div class="metric-sub" id="kpi-used-boxes-sub">0 issued/used boxes</div>
+      </div>
+      <div class="metric-card primary-card">
+        <div class="metric-title">Received Stock (Kg)</div>
+        <div class="metric-val" id="kpi-total-weight-val">0.00 kg</div>
+        <div class="metric-sub" id="kpi-total-boxes-sub">0 total boxes received</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">Active Yarn Qualities</div>
+        <div class="metric-val" id="kpi-qualities-count">0</div>
+        <div class="metric-sub" id="kpi-lots-count">0 active lots</div>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-card">
+      <div class="search-box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="search-input" placeholder="Search by quality, lot #, box #, challan or supplier..." oninput="renderStockBook()">
+      </div>
+      <div class="filter-options">
+        <input type="date" class="form-control" id="date-filter" onchange="renderStockBook()" title="Filter by Receive / Issue / GR Date">
+        <select class="form-control" id="status-filter" onchange="renderStockBook()">
+          <option value="all">All Boxes Status</option>
+          <option value="available">Available Only</option>
+          <option value="issued">Issued Only</option>
+          <option value="gr">GR (Returned) Only</option>
+        </select>
+        <select class="form-control" id="item-type-filter" onchange="renderStockBook()">
+          <option value="all">All Item Types</option>
+        </select>
+        <select class="form-control" id="quality-filter" onchange="renderStockBook()">
+          <option value="all">All Qualities</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Stock Ledger Groups -->
+    <div id="stock-groups-container">
+      <!-- Dynamic Quality & Lot Cards render here -->
+    </div>
+
+  </div>
+
+  <!-- MODAL 1: Incoming Challan -->
+  <div class="modal-overlay" id="modal-challan">
+    <div class="modal-card" style="max-width: 720px;">
+      <div class="modal-header">
+        <h3 id="modal-challan-title">📥 Add New Incoming Yarn Challan</h3>
+        <button class="modal-close" onclick="closeModal('modal-challan')">&times;</button>
+      </div>
+      <form id="form-challan" onsubmit="handleSaveChallan(event)">
+        <input type="hidden" id="editing-lot-id" value="">
+        <div class="modal-body">
+          <div class="form-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 1.25rem;">
+            <div class="form-group">
+              <label>Item (Yarn Type) *</label>
+              <select class="form-control" id="c-item-type" onchange="populateQualityDropdownByItemType(this.value)" required>
+                <option value="">-- Select Item --</option>
+                <option value="Polyester">Polyester</option>
+                <option value="Nylon">Nylon</option>
+                <option value="Viscose">Viscose</option>
+                <option value="Cotton">Cotton</option>
+                <option value="Silk">Silk</option>
+                <option value="Linen">Linen</option>
+                <option value="Wool">Wool</option>
+                <option value="Acrylic">Acrylic</option>
+                <option value="Blend">Blend</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Yarn Quality *</label>
+              <select class="form-control" id="c-quality" onchange="handleQualitySelection(this.value)" required>
+                <option value="">-- Select Quality --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Yarn Code</label>
+              <select class="form-control" id="c-code" onchange="handleYarnSpecFilter('code', this.value)">
+                <option value="">-- Select Code --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Color</label>
+              <select class="form-control" id="c-color" onchange="handleYarnSpecFilter('color', this.value)">
+                <option value="">-- Select Color --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Lot Number *</label>
+              <input type="text" class="form-control" id="c-lot" placeholder="e.g. LOT-4092" required>
+            </div>
+            <div class="form-group">
+              <label>Challan No. *</label>
+              <input type="text" class="form-control" id="c-challan" placeholder="e.g. CH-9921" required>
+            </div>
+            <div class="form-group">
+              <label>Supplier / Mill *</label>
+              <select class="form-control" id="c-supplier" required>
+                <option value="">-- Select Supplier / Mill --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Receiving Date *</label>
+              <input type="date" class="form-control" id="c-date" required>
+            </div>
+          </div>
+
+          <div style="border-top: 1px solid var(--border); padding-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <label style="font-weight: 700; font-size: 0.95rem;">Box Entry Details</label>
+              <button type="button" class="btn btn-secondary" onclick="addChallanBoxRow()" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; min-height: 32px;">+ Add Box Row</button>
+            </div>
+            <div style="max-height: 220px; overflow-y: auto; border: 1.5px solid var(--border); border-radius: 10px; padding: 0.5rem; background: var(--bg);">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                  <tr style="text-align: left; border-bottom: 1px solid var(--border); color: var(--muted);">
+                    <th style="padding: 0.4rem;">Box # *</th>
+                    <th style="padding: 0.4rem;">Net Wt (Kg) *</th>
+                    <th style="padding: 0.4rem; text-align: center; width: 40px;">Remove</th>
+                  </tr>
+                </thead>
+                <tbody id="challan-box-rows-container">
+                  <!-- Dynamic Rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-challan')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Challan & Register Boxes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Issue Boxes -->
+  <div class="modal-overlay" id="modal-issue">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Issue Yarn Boxes</h3>
+        <button class="modal-close" onclick="closeModal('modal-issue')">&times;</button>
+      </div>
+      <form id="form-issue" onsubmit="handleSaveIssue(event)">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Selected Boxes for Issue</label>
+              <input type="text" class="form-control" id="issue-box-list" readonly placeholder="Click on boxes in the stock view to select...">
+            </div>
+            <div class="form-group">
+              <label>Issue Date *</label>
+              <input type="date" class="form-control" id="issue-date" required>
+            </div>
+            <div class="form-group">
+              <label>Issued To *</label>
+              <select class="form-control" id="issue-to" required>
+                <option value="">-- Select Department --</option>
+                <option value="TFO">TFO</option>
+                <option value="Doubler">Doubler</option>
+                <option value="Covering">Covering</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label>Remarks / Issue Slip No.</label>
+              <input type="text" class="form-control" id="issue-remarks" placeholder="Optional notes...">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-issue')">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="background: var(--error)">Confirm & Issue Boxes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Goods Return (GR) -->
+  <div class="modal-overlay" id="modal-gr">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🔄 GR (Goods Return)</h3>
+        <button class="modal-close" type="button" onclick="closeModal('modal-gr')">&times;</button>
+      </div>
+      <form id="form-gr" onsubmit="handleSaveGR(event)">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Selected Boxes for GR *</label>
+              <input type="text" class="form-control" id="gr-box-list" readonly placeholder="Click on boxes in the stock view to select...">
+            </div>
+            <div class="form-group">
+              <label>GR Return Date *</label>
+              <input type="date" class="form-control" id="gr-date" required>
+            </div>
+            <div class="form-group">
+              <label>Reason / Remarks</label>
+              <input type="text" class="form-control" id="gr-remarks" placeholder="e.g. Returned to mill / supplier...">
+            </div>
+          </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-gr')">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="background: var(--accent3)">Confirm GR</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Custom Context Menu for Lot Right-Click (Edit / Delete) -->
+  <div class="context-menu" id="lot-context-menu">
+    <div class="context-menu-item" onclick="editContextLot()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Edit Lot
+    </div>
+    <div class="context-menu-item danger" onclick="deleteContextLot()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      Delete Lot
+    </div>
+  </div>
+
+  <script>
+    // LocalStorage Key
+    const STORAGE_KEY = 'vishwa_yarn_rm_stock_data';
+
+    // State
+    let stockData = [];
+    let selectedBoxes = []; // Array of { lotId, boxId }
+
+    // Initial Data Seed if empty
+    function initSeedData() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          let data = JSON.parse(stored);
+          if (Array.isArray(data)) {
+            // Purge demo/sample lots ('LOT-8072-01' and 'LOT-30C-02') if present from previous sessions
+            data = data.filter(item => item.id !== 'LOT-8072-01' && item.id !== 'LOT-30C-02' && item.quality !== '80/72 Polyester DTY' && item.quality !== '30s Combed Cotton');
+          } else {
+            data = [];
+          }
+          stockData = data;
+          saveStockData();
+          return;
+        } catch(e) {
+          console.error('Error loading stock data:', e);
+        }
+      }
+
+      // Default empty stock array (no demo/sample data)
+      stockData = [];
+      saveStockData();
+    }
+
+    function saveStockData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stockData));
+    }
+
+    let boxRowCount = 0;
+
+    function getStoredYarnQualities() {
+      try {
+        return JSON.parse(localStorage.getItem('yarn-qualities') || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function updateYarnSpecDropdowns(changedField = '') {
+      const itemTypeEl = document.getElementById('c-item-type');
+      const qualityEl = document.getElementById('c-quality');
+      const codeEl = document.getElementById('c-code');
+      const colorEl = document.getElementById('c-color');
+
+      const rawQualities = getStoredYarnQualities();
+
+      const selType = itemTypeEl ? itemTypeEl.value : '';
+      const selQuality = qualityEl ? qualityEl.value : '';
+      const selCode = codeEl ? codeEl.value : '';
+      const selColor = colorEl ? colorEl.value : '';
+
+      // Filter raw qualities according to currently selected criteria
+      const filtered = rawQualities.filter(q => {
+        const qType = q.type || 'Polyester';
+        const qQual = q.quality || q.name || '';
+        const qCode = q.code || '';
+        const qColor = q.color || '';
+
+        if (selType && qType !== selType) return false;
+        if (selQuality && qQual !== selQuality) return false;
+        if (selCode && qCode !== selCode) return false;
+        if (selColor && qColor !== selColor) return false;
+        return true;
+      });
+
+      // Update Item Type options if not the changed field
+      if (changedField !== 'itemType' && itemTypeEl) {
+        const availTypes = [...new Set(rawQualities.filter(q => {
+          const qQual = q.quality || q.name || '';
+          if (selQuality && qQual !== selQuality) return false;
+          if (selCode && (q.code || '') !== selCode) return false;
+          if (selColor && (q.color || '') !== selColor) return false;
+          return true;
+        }).map(q => q.type || 'Polyester'))];
+      }
+
+      // Update Yarn Quality options
+      if (changedField !== 'quality' && qualityEl) {
+        const currentVal = qualityEl.value;
+        qualityEl.innerHTML = '<option value="">-- Select Quality --</option>';
+        const validQualities = rawQualities.filter(q => {
+          const qType = q.type || 'Polyester';
+          if (selType && qType !== selType) return false;
+          if (selCode && (q.code || '') !== selCode) return false;
+          if (selColor && (q.color || '') !== selColor) return false;
+          return true;
+        });
+
+        const qualityMap = new Map();
+        validQualities.forEach(q => {
+          const label = q.quality ? (q.color ? `${q.quality} (${q.color})` : q.quality) : q.name || 'Unnamed Quality';
+          const val = q.quality || q.name || '';
+          if (val && !qualityMap.has(val)) qualityMap.set(val, label);
+        });
+
+        qualityMap.forEach((label, val) => {
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = label;
+          qualityEl.appendChild(opt);
+        });
+
+        if ([...qualityMap.keys()].includes(currentVal)) {
+          qualityEl.value = currentVal;
+        } else if (qualityMap.size === 1) {
+          qualityEl.value = [...qualityMap.keys()][0];
+        }
+      }
+
+      // Update Yarn Code options
+      if (changedField !== 'code' && codeEl) {
+        const currentVal = codeEl.value;
+        codeEl.innerHTML = '<option value="">-- Select Code --</option>';
+        const validCodes = [...new Set(rawQualities.filter(q => {
+          const qType = q.type || 'Polyester';
+          const qQual = q.quality || q.name || '';
+          if (selType && qType !== selType) return false;
+          if (selQuality && qQual !== selQuality) return false;
+          if (selColor && (q.color || '') !== selColor) return false;
+          return true;
+        }).map(q => q.code).filter(Boolean))];
+
+        validCodes.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = c;
+          codeEl.appendChild(opt);
+        });
+
+        if (validCodes.includes(currentVal)) {
+          codeEl.value = currentVal;
+        } else if (validCodes.length === 1) {
+          codeEl.value = validCodes[0];
+        }
+      }
+
+      // Update Color options
+      if (changedField !== 'color' && colorEl) {
+        const currentVal = colorEl.value;
+        colorEl.innerHTML = '<option value="">-- Select Color --</option>';
+        const validColors = [...new Set(rawQualities.filter(q => {
+          const qType = q.type || 'Polyester';
+          const qQual = q.quality || q.name || '';
+          if (selType && qType !== selType) return false;
+          if (selQuality && qQual !== selQuality) return false;
+          if (selCode && (q.code || '') !== selCode) return false;
+          return true;
+        }).map(q => q.color).filter(Boolean))];
+
+        validColors.forEach(col => {
+          const opt = document.createElement('option');
+          opt.value = col;
+          opt.textContent = col;
+          colorEl.appendChild(opt);
+        });
+
+        if (validColors.includes(currentVal)) {
+          colorEl.value = currentVal;
+        } else if (validColors.length === 1) {
+          colorEl.value = validColors[0];
+        }
+      }
+    }
+
+    function populateQualityDropdownByItemType(itemType = '') {
+      updateYarnSpecDropdowns('itemType');
+    }
+
+    function handleQualitySelection(qualityName = '') {
+      updateYarnSpecDropdowns('quality');
+    }
+
+    function handleYarnSpecFilter(field = '', val = '') {
+      updateYarnSpecDropdowns(field);
+    }
+
+    function populateSupplierDropdown() {
+      const sSelect = document.getElementById('c-supplier');
+      if (!sSelect) return;
+      sSelect.innerHTML = '<option value="">-- Select Supplier / Mill --</option>';
+
+      let rawSuppliers = [];
+      try {
+        rawSuppliers = JSON.parse(localStorage.getItem('yarn-suppliers') || '[]');
+      } catch (e) {
+        rawSuppliers = [];
+      }
+
+      const supplierNames = [...new Set(rawSuppliers.map(s => typeof s === 'string' ? s : (s.name || s.supplier || '')).filter(Boolean))];
+      
+      if (supplierNames.length === 0) {
+        // Fallback default list if no suppliers stored yet
+        const defaults = ['Reliance Industries Ltd', 'Vardhman Textiles', 'Wellknown Polyesters', 'Sanathan Textiles'];
+        defaults.forEach(sup => {
+          const opt = document.createElement('option');
+          opt.value = sup;
+          opt.textContent = sup;
+          sSelect.appendChild(opt);
+        });
+      } else {
+        supplierNames.forEach(sup => {
+          const opt = document.createElement('option');
+          opt.value = sup;
+          opt.textContent = sup;
+          sSelect.appendChild(opt);
+        });
+      }
+    }
+
+    // Context Menu Handlers for Lots
+    let contextLotId = null;
+
+    function handleLotContextMenu(e, lotId) {
+      const evt = e || window.event;
+      if (evt) {
+        if (evt.preventDefault) evt.preventDefault();
+        if (evt.stopPropagation) evt.stopPropagation();
+        evt.returnValue = false;
+      }
+      
+      contextLotId = lotId;
+      let menu = document.getElementById('lot-context-menu');
+      if (!menu) return false;
+
+      // Move menu to body if not already
+      if (menu.parentElement !== document.body) {
+        document.body.appendChild(menu);
+      }
+
+      menu.style.display = 'block';
+
+      let x = evt ? (evt.clientX || evt.pageX) : 100;
+      let y = evt ? (evt.clientY || evt.pageY) : 100;
+
+      const winW = window.innerWidth || document.documentElement.clientWidth;
+      const winH = window.innerHeight || document.documentElement.clientHeight;
+      
+      if (x + 160 > winW) x = winW - 170;
+      if (y + 100 > winH) y = winH - 110;
+
+      menu.style.left = `${Math.max(10, x)}px`;
+      menu.style.top = `${Math.max(10, y)}px`;
+
+      return false;
+    }
+
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('lot-context-menu');
+      if (menu && !menu.contains(e.target)) {
+        menu.style.display = 'none';
+      }
+    });
+    
+    document.addEventListener('contextmenu', (e) => {
+      // Hide menu if right click outside a lot-block or quality-header
+      if (!e.target.closest('.lot-block') && !e.target.closest('.quality-header')) {
+        const menu = document.getElementById('lot-context-menu');
+        if (menu) menu.style.display = 'none';
+      }
+    });
+
+    function triggerEditLot(lotId) {
+      contextLotId = lotId;
+      editContextLot();
+    }
+
+    function triggerDeleteLot(lotId) {
+      contextLotId = lotId;
+      deleteContextLot();
+    }
+
+    function editContextLot() {
+      const menu = document.getElementById('lot-context-menu');
+      if (menu) menu.style.display = 'none';
+
+      if (!contextLotId) return;
+      const lot = stockData.find(l => l.id === contextLotId);
+      if (!lot) return;
+
+      document.getElementById('editing-lot-id').value = lot.id;
+      document.getElementById('modal-challan-title').textContent = '✏️ Edit Yarn Lot / Challan';
+      
+      if (lot.itemType) document.getElementById('c-item-type').value = lot.itemType;
+      populateQualityDropdownByItemType(lot.itemType || '');
+      populateSupplierDropdown();
+
+      if (lot.quality) document.getElementById('c-quality').value = lot.quality;
+      handleQualitySelection(lot.quality || '');
+      if (lot.code) document.getElementById('c-code').value = lot.code;
+      if (lot.color) document.getElementById('c-color').value = lot.color;
+
+      document.getElementById('c-lot').value = lot.lotNumber || '';
+      document.getElementById('c-challan').value = lot.challanNo || '';
+      if (lot.supplier) document.getElementById('c-supplier').value = lot.supplier;
+      document.getElementById('c-date').value = lot.receiveDate || new Date().toISOString().split('T')[0];
+
+      // Populate box rows
+      document.getElementById('challan-box-rows-container').innerHTML = '';
+      boxRowCount = 0;
+      if (lot.boxes && lot.boxes.length > 0) {
+        lot.boxes.forEach(b => {
+          addChallanBoxRow(b.id, b.weight);
+        });
+      } else {
+        addChallanBoxRow();
+      }
+
+      document.getElementById('modal-challan').classList.add('active');
+    }
+
+    function deleteContextLot() {
+      const menu = document.getElementById('lot-context-menu');
+      if (menu) menu.style.display = 'none';
+
+      if (!contextLotId) return;
+      const lot = stockData.find(l => l.id === contextLotId);
+      if (!lot) return;
+
+      if (confirm(`Are you sure you want to delete Lot "${lot.lotNumber}" (${lot.quality})?\n\nThis action cannot be undone.`)) {
+        stockData = stockData.filter(l => l.id !== contextLotId);
+        saveStockData();
+        renderStockBook();
+      }
+    }
+
+    // Modal Handlers
+    function openChallanModal() {
+      document.getElementById('editing-lot-id').value = '';
+      document.getElementById('modal-challan-title').textContent = '📥 Add New Incoming Yarn Challan';
+      document.getElementById('c-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('form-challan').reset();
+      populateQualityDropdownByItemType('');
+      populateSupplierDropdown();
+      document.getElementById('challan-box-rows-container').innerHTML = '';
+      boxRowCount = 0;
+      // Add initial 3 box rows default
+      for (let i = 1; i <= 3; i++) {
+        addChallanBoxRow();
+      }
+      document.getElementById('modal-challan').classList.add('active');
+    }
+
+    function addChallanBoxRow(boxNum = '', weight = '') {
+      boxRowCount++;
+      const rowId = `box-row-${boxRowCount}`;
+      const defaultBoxNum = boxNum || `B${boxRowCount}`;
+      
+      const tr = document.createElement('tr');
+      tr.id = rowId;
+      tr.style.borderBottom = '1px solid var(--border)';
+      tr.innerHTML = `
+        <td style="padding: 0.35rem;"><input type="text" class="form-control row-box-num" value="${defaultBoxNum}" style="padding: 0.3rem 0.5rem; font-size: 0.85rem;" required></td>
+        <td style="padding: 0.35rem;"><input type="number" step="0.01" class="form-control row-weight" value="${weight}" placeholder="e.g. 50.0" style="padding: 0.3rem 0.5rem; font-size: 0.85rem;" required></td>
+        <td style="padding: 0.35rem; text-align: center;">
+          <button type="button" onclick="removeChallanBoxRow('${rowId}')" style="background: transparent; border: none; color: var(--error); cursor: pointer; font-weight: bold; font-size: 1.1rem;">&times;</button>
+        </td>
+      `;
+      document.getElementById('challan-box-rows-container').appendChild(tr);
+    }
+
+    function removeChallanBoxRow(id) {
+      const row = document.getElementById(id);
+      if (row) row.remove();
+    }
+
+    function autoFillBoxWeights(val) {
+      const weightInputs = document.querySelectorAll('#challan-box-rows-container .row-weight');
+      weightInputs.forEach(input => {
+        if (!input.value) input.value = val;
+      });
+    }
+
+    function openIssueModal() {
+      if (selectedBoxes.length === 0) {
+        alert('Please click on one or more available boxes to select them for issuance first.');
+        return;
+      }
+      document.getElementById('issue-date').value = new Date().toISOString().split('T')[0];
+      updateIssueBoxDisplay();
+      document.getElementById('modal-issue').classList.add('active');
+    }
+
+    function updateIssueBoxDisplay() {
+      const boxNames = selectedBoxes.map(b => {
+        const lot = stockData.find(l => l.id === b.lotId);
+        return lot ? `${lot.quality} [${lot.lotNumber} -> ${b.boxId}]` : b.boxId;
+      });
+      document.getElementById('issue-box-list').value = boxNames.join(', ');
+    }
+
+    function openGRModal() {
+      if (selectedBoxes.length === 0) {
+        alert('Please click on one or more available boxes to select them for GR return first.');
+        return;
+      }
+      document.getElementById('gr-date').value = new Date().toISOString().split('T')[0];
+      updateGRBoxDisplay();
+      document.getElementById('modal-gr').classList.add('active');
+    }
+
+    function updateGRBoxDisplay() {
+      const boxNames = selectedBoxes.map(b => {
+        const lot = stockData.find(l => l.id === b.lotId);
+        return lot ? `${lot.quality} [${lot.lotNumber} -> ${b.boxId}]` : b.boxId;
+      });
+      document.getElementById('gr-box-list').value = boxNames.join(', ');
+    }
+
+    function handleSaveGR(e) {
+      e.preventDefault();
+      const grDate = document.getElementById('gr-date').value;
+      const remarks = document.getElementById('gr-remarks').value.trim();
+
+      selectedBoxes.forEach(item => {
+        const lot = stockData.find(l => l.id === item.lotId);
+        if (lot) {
+          const box = lot.boxes.find(b => b.id === item.boxId);
+          if (box) {
+            box.status = 'gr';
+            box.grDate = grDate;
+            box.grRemarks = remarks;
+          }
+        }
+      });
+
+      selectedBoxes = [];
+      saveStockData();
+      closeModal('modal-gr');
+      document.getElementById('form-gr').reset();
+      renderStockBook();
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    // Dynamic Select/Toggle Box
+    function toggleBoxSelection(lotId, boxId, status) {
+      if (status === 'issued') {
+        const lot = stockData.find(l => l.id === lotId);
+        const box = lot ? lot.boxes.find(b => b.id === boxId) : null;
+        if (box) {
+          const issuedInfo = box.issuedTo ? ` to ${box.issuedTo}` : '';
+          const dateInfo = box.issueDate ? ` on ${formatDateDisplay(box.issueDate)}` : '';
+          if (confirm(`Box ${box.id} of ${lot ? lot.quality : ''} (${lot ? lot.lotNumber : ''}) was issued${issuedInfo}${dateInfo}.\n\nDo you want to revert this box back to in stock (AVAILABLE)?`)) {
+            box.status = 'available';
+            box.issueDate = null;
+            box.issuedTo = null;
+            // Also remove from selectedBoxes if it was selected
+            const selIdx = selectedBoxes.findIndex(b => b.lotId === lotId && b.boxId === boxId);
+            if (selIdx >= 0) selectedBoxes.splice(selIdx, 1);
+            saveStockData();
+            renderStockBook();
+          }
+        }
+        return;
+      }
+
+      if (status === 'gr') {
+        const lot = stockData.find(l => l.id === lotId);
+        const box = lot ? lot.boxes.find(b => b.id === boxId) : null;
+        if (box) {
+          if (confirm(`Box ${box.id} of ${lot.quality} (${lot.lotNumber}) is marked as GR on ${formatDateDisplay(box.grDate)}.\n\nDo you want to re-open/return this box to AVAILABLE stock?`)) {
+            box.status = 'available';
+            box.grDate = null;
+            box.grRemarks = null;
+            const selIdx = selectedBoxes.findIndex(b => b.lotId === lotId && b.boxId === boxId);
+            if (selIdx >= 0) selectedBoxes.splice(selIdx, 1);
+            saveStockData();
+            renderStockBook();
+          }
+        }
+        return;
+      }
+
+      const index = selectedBoxes.findIndex(b => b.lotId === lotId && b.boxId === boxId);
+      if (index >= 0) {
+        selectedBoxes.splice(index, 1);
+      } else {
+        selectedBoxes.push({ lotId, boxId });
+      }
+
+      renderStockBook();
+    }
+
+    // Form Save Handlers
+    function handleSaveChallan(e) {
+      e.preventDefault();
+      const editingLotId = document.getElementById('editing-lot-id').value;
+      const itemType = document.getElementById('c-item-type').value.trim();
+      const quality = document.getElementById('c-quality').value.trim();
+      const code = document.getElementById('c-code') ? document.getElementById('c-code').value.trim() : '';
+      const color = document.getElementById('c-color') ? document.getElementById('c-color').value.trim() : '';
+      const lotNumber = document.getElementById('c-lot').value.trim();
+      const challanNo = document.getElementById('c-challan').value.trim();
+      const supplier = document.getElementById('c-supplier').value.trim();
+      const receiveDate = document.getElementById('c-date').value;
+
+      if (!quality) {
+        alert('Please select a Yarn Quality.');
+        return;
+      }
+
+      const rows = document.querySelectorAll('#challan-box-rows-container tr');
+      if (rows.length === 0) {
+        alert('Please add at least one box entry for this challan.');
+        return;
+      }
+
+      const existingLot = editingLotId ? stockData.find(l => l.id === editingLotId) : null;
+      const existingBoxesMap = existingLot ? new Map(existingLot.boxes.map(b => [b.id, b])) : new Map();
+
+      const boxes = [];
+      let totalWtSum = 0;
+
+      rows.forEach(tr => {
+        const boxNum = tr.querySelector('.row-box-num').value.trim();
+        const weight = parseFloat(tr.querySelector('.row-weight').value) || 0;
+
+        if (boxNum && weight > 0) {
+          const oldBox = existingBoxesMap.get(boxNum) || {};
+          boxes.push({
+            id: boxNum,
+            weight: weight,
+            status: oldBox.status || 'available',
+            issueDate: oldBox.issueDate || null,
+            issuedTo: oldBox.issuedTo || null,
+            grDate: oldBox.grDate || null,
+            grRemarks: oldBox.grRemarks || null
+          });
+          totalWtSum += weight;
+        }
+      });
+
+      if (boxes.length === 0) {
+        alert('Please fill valid Box Number and Weight for at least one box.');
+        return;
+      }
+
+      const avgBoxWeight = totalWtSum / boxes.length;
+
+      if (existingLot) {
+        existingLot.itemType = itemType;
+        existingLot.quality = quality;
+        existingLot.code = code;
+        existingLot.color = color;
+        existingLot.lotNumber = lotNumber;
+        existingLot.challanNo = challanNo;
+        existingLot.supplier = supplier;
+        existingLot.receiveDate = receiveDate;
+        existingLot.boxWeight = avgBoxWeight;
+        existingLot.boxes = boxes;
+      } else {
+        const newLot = {
+          id: `LOT-${Date.now()}`,
+          itemType,
+          quality,
+          code,
+          color,
+          lotNumber,
+          challanNo,
+          supplier,
+          receiveDate,
+          boxWeight: avgBoxWeight,
+          boxes
+        };
+        stockData.unshift(newLot);
+      }
+
+      saveStockData();
+      closeModal('modal-challan');
+      renderStockBook();
+    }
+
+    function handleSaveIssue(e) {
+      e.preventDefault();
+      const issueDate = document.getElementById('issue-date').value;
+      const issuedTo = document.getElementById('issue-to').value.trim();
+
+      selectedBoxes.forEach(item => {
+        const lot = stockData.find(l => l.id === item.lotId);
+        if (lot) {
+          const box = lot.boxes.find(b => b.id === item.boxId);
+          if (box) {
+            box.status = 'issued';
+            box.issueDate = issueDate;
+            box.issuedTo = issuedTo;
+          }
+        }
+      });
+
+      selectedBoxes = [];
+      saveStockData();
+      closeModal('modal-issue');
+      document.getElementById('form-issue').reset();
+      renderStockBook();
+    }
+
+    // Render Function
+    function formatDateDisplay(dStr) {
+      if (!dStr) return '';
+      const parts = dStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+      return dStr;
+    }
+
+    function renderStockBook() {
+      const rawSearch = document.getElementById('search-input').value.toLowerCase().trim();
+      const searchTerms = rawSearch ? rawSearch.split(',').map(s => s.trim()).filter(Boolean) : [];
+      const statusFilter = document.getElementById('status-filter').value;
+      const qualityFilter = document.getElementById('quality-filter').value;
+      const itemTypeFilter = document.getElementById('item-type-filter') ? document.getElementById('item-type-filter').value : 'all';
+      const dateFilter = document.getElementById('date-filter').value;
+
+      const container = document.getElementById('stock-groups-container');
+      container.innerHTML = '';
+
+      // Populate Item Types Filter dropdown dynamically from RM Qualities (yarn-qualities)
+      const storedQualities = getStoredYarnQualities();
+      const rawTypes = storedQualities.map(q => q.type || q.itemType).filter(Boolean);
+      const stockTypes = stockData.map(l => l.itemType).filter(Boolean);
+      const defaultTypes = [
+        'Polyester', 'Nylon', 'Viscose', 'Cotton', 'Silk', 
+        'Linen', 'Wool', 'Acrylic', 'Blend'
+      ];
+      
+      const itemTypesSet = new Set([...rawTypes, ...stockTypes, ...defaultTypes]);
+      const itemTypeSelect = document.getElementById('item-type-filter');
+      if (itemTypeSelect) {
+        const currentTypeVal = itemTypeSelect.value;
+        itemTypeSelect.innerHTML = '<option value="all">All Item Types</option>';
+        itemTypesSet.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t;
+          opt.textContent = t;
+          if (t === currentTypeVal) opt.selected = true;
+          itemTypeSelect.appendChild(opt);
+        });
+      }
+
+      // Populate Qualities Filter dropdown if needed
+      const qualitiesSet = new Set([...stockData.map(l => l.quality), ...storedQualities.map(q => q.quality)].filter(Boolean));
+      const qualityFilterSelect = document.getElementById('quality-filter');
+      const currentQVal = qualityFilterSelect.value;
+      qualityFilterSelect.innerHTML = '<option value="all">All Qualities</option>';
+      qualitiesSet.forEach(q => {
+        const opt = document.createElement('option');
+        opt.value = q;
+        opt.textContent = q;
+        if (q === currentQVal) opt.selected = true;
+        qualityFilterSelect.appendChild(opt);
+      });
+
+      // Compute KPI Aggregates
+      let totalBoxesCount = 0;
+      let totalBoxesWeight = 0;
+      let availBoxesCount = 0;
+      let availBoxesWeight = 0;
+      let issuedBoxesCount = 0;
+      let issuedBoxesWeight = 0;
+      let grBoxesCount = 0;
+      let grBoxesWeight = 0;
+      let activeLotsCount = 0;
+
+      // Group stock by Yarn Quality + Code + Color so each container has 1 distinct Code & Color
+      const grouped = {};
+
+      stockData.forEach(lot => {
+        // Apply Search Filters (support comma-separated multi-search)
+        const matchesSearch = searchTerms.length === 0 || searchTerms.some(term => {
+          return (lot.itemType || '').toLowerCase().includes(term) ||
+                 (lot.quality || '').toLowerCase().includes(term) ||
+                 (lot.code || '').toLowerCase().includes(term) ||
+                 (lot.color || '').toLowerCase().includes(term) ||
+                 (lot.lotNumber || '').toLowerCase().includes(term) ||
+                 (lot.challanNo || '').toLowerCase().includes(term) ||
+                 (lot.supplier || '').toLowerCase().includes(term) ||
+                 lot.boxes.some(b => b.id.toLowerCase().includes(term) || b.id.toLowerCase() === term);
+        });
+
+        const matchesItemType = (itemTypeFilter === 'all' || lot.itemType === itemTypeFilter);
+        const matchesQuality = (qualityFilter === 'all' || lot.quality === qualityFilter);
+
+        const matchesDate = !dateFilter || 
+          lot.receiveDate === dateFilter ||
+          lot.boxes.some(b => b.issueDate === dateFilter || b.grDate === dateFilter);
+
+        if (!matchesSearch || !matchesItemType || !matchesQuality || !matchesDate) return;
+
+        activeLotsCount++;
+
+        const groupKey = `${lot.quality || ''}___${lot.code || ''}___${lot.color || ''}`;
+
+        if (!grouped[groupKey]) {
+          grouped[groupKey] = [];
+        }
+        grouped[groupKey].push(lot);
+
+        lot.boxes.forEach(box => {
+          totalBoxesCount++;
+          totalBoxesWeight += (box.weight || lot.boxWeight || 0);
+          if (box.status === 'issued') {
+            issuedBoxesCount++;
+            issuedBoxesWeight += (box.weight || lot.boxWeight || 0);
+          } else if (box.status === 'gr') {
+            grBoxesCount++;
+            grBoxesWeight += (box.weight || lot.boxWeight || 0);
+          } else {
+            availBoxesCount++;
+            availBoxesWeight += (box.weight || lot.boxWeight || 0);
+          }
+        });
+      });
+
+      // Update KPI UI
+      const kpiAvailWeightVal = document.getElementById('kpi-avail-weight-val');
+      if (kpiAvailWeightVal) kpiAvailWeightVal.textContent = `${availBoxesWeight.toFixed(2)} kg`;
+
+      const kpiAvailBoxesSub = document.getElementById('kpi-avail-boxes-sub');
+      if (kpiAvailBoxesSub) kpiAvailBoxesSub.textContent = `${availBoxesCount} available boxes`;
+
+      const kpiGrWeightVal = document.getElementById('kpi-gr-weight-val');
+      if (kpiGrWeightVal) kpiGrWeightVal.textContent = `${grBoxesWeight.toFixed(2)} kg`;
+
+      const kpiGrBoxesSub = document.getElementById('kpi-gr-boxes-sub');
+      if (kpiGrBoxesSub) kpiGrBoxesSub.textContent = `${grBoxesCount} GR boxes`;
+
+      const kpiUsedWeightVal = document.getElementById('kpi-used-weight-val');
+      if (kpiUsedWeightVal) kpiUsedWeightVal.textContent = `${issuedBoxesWeight.toFixed(2)} kg`;
+
+      const kpiUsedBoxesSub = document.getElementById('kpi-used-boxes-sub');
+      if (kpiUsedBoxesSub) kpiUsedBoxesSub.textContent = `${issuedBoxesCount} issued/used boxes`;
+
+      const kpiTotalWeightVal = document.getElementById('kpi-total-weight-val');
+      if (kpiTotalWeightVal) kpiTotalWeightVal.textContent = `${totalBoxesWeight.toFixed(2)} kg`;
+
+      const kpiTotalBoxesSub = document.getElementById('kpi-total-boxes-sub');
+      if (kpiTotalBoxesSub) kpiTotalBoxesSub.textContent = `${totalBoxesCount} total boxes received`;
+
+      const kpiQualitiesCount = document.getElementById('kpi-qualities-count');
+      if (kpiQualitiesCount) kpiQualitiesCount.textContent = Object.keys(grouped).length;
+
+      const kpiLotsCount = document.getElementById('kpi-lots-count');
+      if (kpiLotsCount) kpiLotsCount.textContent = `${activeLotsCount} active lots`;
+
+      if (Object.keys(grouped).length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 4rem 1rem; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius)">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 0.5rem; opacity: 0.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <p>No yarn stock records match your criteria.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Sort quality groups so active qualities appear on top and completed qualities stack at the bottom
+      const sortedQualityNames = Object.keys(grouped).sort((aName, bName) => {
+        const aLots = grouped[aName];
+        const bLots = grouped[bName];
+        const aAvail = aLots.reduce((sum, l) => sum + l.boxes.filter(b => b.status === 'available').length, 0);
+        const bAvail = bLots.reduce((sum, l) => sum + l.boxes.filter(b => b.status === 'available').length, 0);
+        if (aAvail > 0 && bAvail === 0) return -1;
+        if (aAvail === 0 && bAvail > 0) return 1;
+        return 0;
+      });
+
+      // Build Quality HTML Blocks
+      sortedQualityNames.forEach(groupKey => {
+        const lots = grouped[groupKey];
+        const qualityName = lots[0] ? lots[0].quality : groupKey.split('___')[0];
+
+        let qAvailBoxes = 0;
+        let qTotalBoxes = 0;
+        let qAvailWeight = 0;
+        let qIssuedWeight = 0;
+        let qGrWeight = 0;
+
+        lots.forEach(l => {
+          l.boxes.forEach(b => {
+            qTotalBoxes++;
+            const w = (b.weight || l.boxWeight || 0);
+            if (b.status === 'available') {
+              qAvailBoxes++;
+              qAvailWeight += w;
+            } else if (b.status === 'issued') {
+              qIssuedWeight += w;
+            } else if (b.status === 'gr') {
+              qGrWeight += w;
+            }
+          });
+        });
+
+        const isCompleted = qAvailBoxes === 0 && qTotalBoxes > 0;
+        const groupEl = document.createElement('div');
+        groupEl.className = `quality-group ${isCompleted ? 'is-completed' : ''}`;
+
+        let lotsHtml = '';
+
+        lots.forEach(lot => {
+          // Filter boxes by status, date, and search terms
+          const isBoxSpecificSearch = searchTerms.some(term => 
+            lot.boxes.some(b => b.id.toLowerCase().includes(term))
+          );
+
+          const filteredBoxes = lot.boxes.filter(b => {
+            if (statusFilter === 'available' && b.status !== 'available') return false;
+            if (statusFilter === 'issued' && b.status !== 'issued') return false;
+            if (statusFilter === 'gr' && b.status !== 'gr') return false;
+
+            if (dateFilter) {
+              const matchesLotReceiveDate = (lot.receiveDate === dateFilter);
+              const matchesBoxDate = (b.issueDate === dateFilter || b.grDate === dateFilter);
+              if (!matchesLotReceiveDate && !matchesBoxDate) return false;
+            }
+
+            if (isBoxSpecificSearch && searchTerms.length > 0) {
+              const matchesLotOrMeta = searchTerms.some(t => 
+                lot.quality.toLowerCase().includes(t) ||
+                lot.lotNumber.toLowerCase().includes(t) ||
+                lot.challanNo.toLowerCase().includes(t) ||
+                lot.supplier.toLowerCase().includes(t)
+              );
+              if (!matchesLotOrMeta) {
+                return searchTerms.some(t => b.id.toLowerCase().includes(t));
+              }
+            }
+            return true;
+          });
+
+          let boxesGridHtml = '';
+          filteredBoxes.forEach(box => {
+            const isSelected = selectedBoxes.some(sb => sb.lotId === lot.id && sb.boxId === box.id);
+            const boxClass = `${box.status} ${isSelected ? 'selected' : ''}`;
+            const bw = (box.weight || lot.boxWeight || 0).toFixed(1);
+
+            const tooltipText = box.status === 'issued' 
+              ? `Issued to: ${box.issuedTo || 'Unknown'} on ${formatDateDisplay(box.issueDate)}`
+              : (box.status === 'gr'
+                ? `GR (Returned) on ${formatDateDisplay(box.grDate)} ${box.grRemarks ? `(${box.grRemarks})` : ''}`
+                : `Net Weight: ${bw} kg ${box.cones ? `(${box.cones} cones)` : ''} (Click to Select)`);
+
+            const dateLabel = box.status === 'issued' 
+              ? formatDateDisplay(box.issueDate) 
+              : (box.status === 'gr' ? formatDateDisplay(box.grDate) : '');
+
+            boxesGridHtml += `
+              <div class="box-item ${boxClass}" onclick="toggleBoxSelection('${lot.id}', '${box.id}', '${box.status}')">
+                <span class="box-status-dot"></span>
+                <span class="box-num">${box.id}</span>
+                <span class="box-weight">${bw} kg</span>
+                ${dateLabel ? `<span class="box-issued-date">${dateLabel}</span>` : ''}
+                <div class="box-tooltip">${tooltipText}</div>
+              </div>
+            `;
+          });
+
+          lotsHtml += `
+            <div class="lot-block" oncontextmenu="handleLotContextMenu(event, '${lot.id}')" title="Right-click to Edit or Delete this Lot">
+              <div class="lot-meta">
+                <div class="lot-info">
+                  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span class="lot-name">Lot: ${lot.lotNumber}</span>
+                    <span class="badge badge-primary">Challan: ${lot.challanNo}</span>
+                  </div>
+                  <div class="lot-subinfo" style="margin-top: 0.35rem;">
+                    <span>Mill: <strong>${lot.supplier}</strong></span>
+                    <span>Received: <strong>${formatDateDisplay(lot.receiveDate)}</strong></span>
+                  </div>
+                </div>
+              </div>
+              <div class="box-grid">
+                ${boxesGridHtml || '<p style="color: var(--muted); font-size: 0.85rem">No boxes match current filter.</p>'}
+              </div>
+            </div>
+          `;
+        });
+
+        const firstLotWithMeta = lots.find(l => l.itemType || l.code || l.color) || lots[0] || {};
+        let qItemType = firstLotWithMeta.itemType || '';
+        if (!qItemType) {
+          const storedQualities = getStoredYarnQualities();
+          const foundQ = storedQualities.find(q => q.quality === qualityName);
+          if (foundQ) qItemType = foundQ.type || foundQ.itemType || '';
+        }
+        const qCode = firstLotWithMeta.code || '';
+        const qColor = firstLotWithMeta.color || '';
+
+        const statusBadgeHtml = isCompleted
+          ? `<span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.12); color: var(--error); border-color: rgba(239, 68, 68, 0.3);">✓ COMPLETED (0 Available)</span>`
+          : `<span class="badge badge-success">${qAvailBoxes} / ${qTotalBoxes} Boxes Available</span>`;
+
+        groupEl.innerHTML = `
+          <div class="quality-header" oncontextmenu="handleLotContextMenu(event, '${lots[0] ? lots[0].id : ''}')">
+            <div class="quality-title-area" style="flex-wrap: wrap;">
+              <span class="quality-title">${qualityName}</span>
+              ${qItemType ? `<span class="badge" style="background: rgba(139, 92, 246, 0.12); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.3);">${qItemType}</span>` : ''}
+              ${qCode ? `<span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">Code: ${qCode}</span>` : ''}
+              ${qColor ? `<span class="badge" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">Color: ${qColor}</span>` : ''}
+              ${statusBadgeHtml}
+            </div>
+            <div class="quality-summary">
+              <div class="qs-item">
+                <span class="qs-label">Available Stock</span>
+                <span class="qs-val" style="color: var(--success);"><strong>${qAvailWeight.toFixed(2)} kg</strong></span>
+              </div>
+              <div class="qs-item">
+                <span class="qs-label">GR</span>
+                <span class="qs-val" style="color: var(--accent3);"><strong>${qGrWeight.toFixed(2)} kg</strong></span>
+              </div>
+              <div class="qs-item">
+                <span class="qs-label">Used</span>
+                <span class="qs-val" style="color: var(--error);"><strong>${qIssuedWeight.toFixed(2)} kg</strong></span>
+              </div>
+            </div>
+          </div>
+          <div class="quality-lots">
+            ${lotsHtml}
+          </div>
+        `;
+
+        container.appendChild(groupEl);
+      });
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+      initSeedData();
+      renderStockBook();
+    });
+  </script>
+</body>
+</html>

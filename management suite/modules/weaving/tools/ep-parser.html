@@ -1,0 +1,3555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="../../../assets/supabase-client.js"></script>
+
+
+  <script>
+    (function() {
+      /* clear check disabled */
+      const isDark = localStorage.getItem('vishwa_fashions_theme') === 'true' || 
+                     (localStorage.getItem('vishwa_fashions_theme') === null && true);
+      if (isDark) {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
+      const isCollapsed = localStorage.getItem('vf_sidebar_collapsed') === 'true';
+      if (isCollapsed) {
+        document.documentElement.classList.add('vf-sidebar-collapsed');
+      }
+    })();
+  </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Bonas .EP Jacquard Visual Parser</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f8f7fc;
+            --surface: #ffffff;
+            --surface-hover: #f1f0f7;
+            --fg: #1a1a2e;
+            --muted: #8b8fa3;
+            --border: #e8e7f1;
+            --accent: #8b5cf6;
+            --accent-glow: rgba(139, 92, 246, 0.05);
+            --accent2: #ec4899;
+            --accent3: #f97316;
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.05);
+            --font-display: 'Space Grotesk', -apple-system, sans-serif;
+            --font-body: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'Fira Code', monospace;
+            --matrix-lift: #000000;
+            --matrix-drop: #ffffff;
+        }
+
+        body.dark-mode, .dark-mode {
+            --bg: #07070c;
+            --surface: #0e0e16;
+            --surface-hover: #151522;
+            --fg: #f3f4f6;
+            --muted: #9ca3af;
+            --border: #25253d;
+            --accent: #7c3aed;
+            --accent-glow: rgba(124, 58, 237, 0.15);
+            --accent2: #ec4899;
+            --matrix-lift: #ffffff;
+            --matrix-drop: #000000;
+            --accent3: #f97316;
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.15);
+        }
+
+        /* Dark Mode for Inputs, Textareas, and Dropdowns */
+        .dark-mode input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent),
+        .dark-mode textarea:not(.bg-transparent),
+        .dark-mode select:not(.bg-transparent),
+        .dark-mode .input-field {
+            background-color: var(--surface) !important;
+            color: var(--fg) !important;
+            border-color: var(--border) !important;
+        }
+
+        .dark-mode input,
+        .dark-mode select,
+        .dark-mode textarea,
+        .dark-mode .input-field {
+            color-scheme: dark !important;
+        }
+
+        .dark-mode select option {
+            background-color: #0e0e16 !important;
+            color: var(--fg) !important;
+        }
+
+        .dark-mode input::placeholder,
+        .dark-mode textarea::placeholder {
+            color: var(--muted) !important;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.06) 0px, transparent 50%);
+            color: var(--fg);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            height: 100vh;
+            padding: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: 2.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 0.95rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 650px 1fr;
+            gap: 2.5rem;
+            flex: 1;
+        }
+
+        @media (max-width: 1400px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .ep-left-panel,
+        .ep-right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        .ep-right-panel {
+            min-height: 0;
+        }
+
+        .ep-matrix-card {
+            display: flex;
+            flex-direction: column;
+            min-height: 800px;
+        }
+
+        .ep-controls {
+            margin-top: 1rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ep-controls-selects {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .ep-control-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            align-items: flex-start;
+            min-width: 0;
+        }
+
+        .ep-drop-full { display: inline; }
+        .ep-drop-short { display: none; }
+
+        /* Phone / tablet — balanced layout */
+        @media (max-width: 1024px) {
+            body {
+                height: auto !important;
+                min-height: 100vh;
+                padding: 1rem !important;
+                padding-top: 0.85rem !important;
+                gap: 1.15rem !important;
+                overflow-x: clip;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+                padding-bottom: 1rem;
+                width: 100%;
+                max-width: 100%;
+            }
+
+            h1 {
+                font-size: 1.35rem !important;
+                line-height: 1.2 !important;
+                max-width: 100%;
+            }
+
+            .subtitle {
+                font-size: 0.8rem !important;
+                line-height: 1.4;
+                max-width: 100%;
+            }
+
+            .dashboard-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 1.15rem !important;
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+            }
+
+            .ep-left-panel,
+            .ep-right-panel {
+                gap: 1.15rem !important;
+                width: 100%;
+                max-width: 100%;
+            }
+
+            /* Show matrix sooner on phone — after load + specs */
+            .ep-right-panel {
+                order: 2;
+            }
+
+            .card {
+                padding: 1.1rem !important;
+                border-radius: 16px;
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                box-sizing: border-box;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            }
+
+            .card-title {
+                font-size: 0.85rem !important;
+                letter-spacing: 0.04em;
+                flex-wrap: wrap;
+                gap: 0.4rem;
+                align-items: flex-start;
+            }
+
+            .dropbox {
+                padding: 1.5rem 1rem !important;
+            }
+
+            .dropbox p {
+                font-size: 0.82rem;
+                line-height: 1.45;
+                max-width: 22rem;
+            }
+
+            .ep-drop-full { display: none !important; }
+            .ep-drop-short { display: inline !important; }
+
+            .spec-row {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 0.35rem;
+                padding: 0.75rem 0.85rem !important;
+            }
+
+            .spec-val {
+                word-break: break-word;
+                max-width: 100%;
+            }
+
+            .ep-matrix-card {
+                min-height: 0 !important;
+            }
+
+            .canvas-container {
+                min-height: 280px !important;
+                height: 52vh;
+                max-height: 420px;
+                width: 100%;
+            }
+
+            .ep-controls {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 0.85rem !important;
+            }
+
+            .ep-controls-selects {
+                flex-direction: column !important;
+                width: 100%;
+                gap: 0.75rem !important;
+            }
+
+            .ep-control-field {
+                width: 100%;
+            }
+
+            .ep-control-field select,
+            .ep-controls .btn,
+            .ep-controls .btn-group .btn {
+                width: 100%;
+                min-height: 44px;
+                font-size: 16px !important;
+                box-sizing: border-box;
+            }
+
+            .ep-controls .btn-group {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                width: 100%;
+                gap: 0.5rem;
+            }
+
+            .ep-controls .btn-group .btn-primary {
+                grid-column: 1 / -1;
+            }
+
+            .vf-filter-dd {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            .vf-filter-dd-btn {
+                width: 100% !important;
+                min-height: 44px;
+                font-size: 16px !important;
+                box-sizing: border-box;
+            }
+
+            .vf-filter-dd-list {
+                left: 0 !important;
+                right: 0 !important;
+                width: 100% !important;
+            }
+
+            .table-container {
+                max-width: 100%;
+                -webkit-overflow-scrolling: touch;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+            }
+
+            #picks-table {
+                min-width: 560px;
+            }
+
+            .legend-bar {
+                gap: 0.75rem !important;
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (min-width: 641px) and (max-width: 1024px) {
+            h1 {
+                font-size: 1.65rem !important;
+            }
+
+            .canvas-container {
+                min-height: 360px !important;
+                height: 48vh;
+                max-height: 520px;
+            }
+
+            .ep-controls-selects {
+                flex-direction: row !important;
+            }
+
+            .ep-control-field {
+                flex: 1 1 calc(50% - 0.5rem);
+                min-width: 200px;
+            }
+
+            .ep-drop-short { display: none !important; }
+            .ep-drop-full { display: inline !important; }
+
+            .spec-row {
+                flex-direction: row !important;
+                align-items: center !important;
+            }
+        }
+
+        /* Card Container */
+        .card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            border-color: rgba(139, 92, 246, 0.25);
+            box-shadow: 0 8px 40px rgba(139, 92, 246, 0.05);
+        }
+
+        .card-title {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--fg);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Drag & Drop Area */
+        .dropbox {
+            border: 2px dashed var(--border);
+            border-radius: 14px;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s, background-color 0.3s, transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        .dropbox:hover {
+            border-color: var(--accent);
+            background: rgba(139, 92, 246, 0.02);
+            transform: translateY(-2px);
+        }
+
+        .dropbox.dragover {
+            border-color: var(--accent2);
+            background: rgba(236, 72, 153, 0.06);
+        }
+
+        .dropbox svg {
+            width: 44px;
+            height: 44px;
+            color: var(--accent);
+        }
+
+        .dropbox p {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .dropbox strong {
+            color: var(--fg);
+        }
+
+        /* Spec Rows */
+        .specs-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .spec-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.7rem 0.9rem;
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .spec-key {
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .spec-val {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: var(--fg);
+        }
+
+        .spec-val.highlight {
+            color: var(--accent2);
+        }
+
+        /* Textile Translation Card & Terminology */
+        .translation-box {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .textile-badge {
+            background-color: rgba(139, 92, 246, 0.15);
+            border: 1px solid var(--accent);
+            color: #c084fc;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .explain-item {
+            padding: 0.75rem;
+            border-left: 3px solid var(--accent);
+            background: rgba(255, 255, 255, 0.01);
+            border-radius: 0 6px 6px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .explain-item.weft {
+            border-left-color: var(--accent2);
+        }
+
+        .explain-item.structure {
+            border-left-color: var(--success);
+        }
+
+        .explain-header {
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .explain-desc {
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        /* Canvas Grid Explorer */
+        .canvas-container {
+            position: relative;
+            background: #040406;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: grab;
+            min-height: 720px;
+            flex: 1;
+        }
+
+        .canvas-container:active {
+            cursor: grabbing;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            image-rendering: pixelated;
+        }
+
+        .canvas-tooltip {
+            position: absolute;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.8rem;
+            pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            z-index: 100;
+            display: none;
+            color: var(--fg);
+            line-height: 1.4;
+        }
+        .dark-mode .canvas-tooltip {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border-color: var(--accent);
+        }
+
+        .canvas-tooltip strong {
+            color: var(--accent2);
+        }
+
+        /* Binary Hex Viewer */
+        .hex-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            background: #06060a;
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+            line-height: 1.5;
+        }
+
+        .hex-offsets {
+            color: var(--accent2);
+        }
+
+        .hex-bytes {
+            color: var(--fg);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .hex-byte {
+            padding: 0 0.1rem;
+            border-radius: 3px;
+            cursor: help;
+        }
+
+        .hex-byte.magic { background: rgba(139, 92, 246, 0.25); border-bottom: 2px solid var(--accent); }
+        .hex-byte.name { background: rgba(236, 72, 153, 0.25); border-bottom: 2px solid var(--accent2); }
+        .hex-byte.reserved { background: rgba(156, 163, 175, 0.1); border-bottom: 2px solid var(--muted); }
+        .hex-byte.hooks { background: rgba(16, 185, 129, 0.25); border-bottom: 2px solid var(--success); }
+
+        /* Hex Legend */
+        .hex-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .hex-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .hex-legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        /* Timeline and Tables */
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface);
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--bg);
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            color: var(--muted);
+            border-bottom: 1.5px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 0.65rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:hover td {
+            background-color: var(--surface-hover);
+        }
+
+        /* Feeder Indicators */
+        .feeder-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-weight: 600;
+        }
+
+        .feeder-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* Layout Controls buttons */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            background-color: var(--surface-hover);
+            color: var(--fg);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            font-family: var(--font-body);
+            transition: background-color 0.2s, border-color 0.2s, transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border: none;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .legend-bar {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--muted);
+            padding: 0.5rem;
+            background: rgba(255,255,255,0.01);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .input-field {
+            background-color: var(--surface);
+            color: var(--fg);
+            border: 1px solid var(--border);
+            padding: 0.45rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-family: var(--font-body);
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .input-field:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+
+        .input-field:disabled,
+        .dark-mode .input-field:disabled {
+            background-color: rgba(0, 0, 0, 0.04) !important;
+            color: var(--muted) !important;
+            cursor: not-allowed !important;
+            opacity: 0.75;
+            border-style: dashed !important;
+        }
+
+        .label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+
+        .jala-section-card {
+            animation: jalaCardSlideIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            transition: all 0.15s ease, opacity 0.25s ease;
+            box-sizing: border-box;
+        }
+        @keyframes jalaCardSlideIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.9) translateY(12px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+    </style>
+
+
+
+  <!-- Vishwa Fashions Moving Background System Styles -->
+  <style id="vf-moving-background-styles">
+    .mesh-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: -50;
+      overflow: hidden;
+      pointer-events: none;
+      transition: background 0.4s ease;
+    }
+    .mesh-orb {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .orb-purple {
+      top: -10%;
+      left: -10%;
+      width: 55%;
+      height: 55%;
+      filter: blur(130px);
+    }
+    .orb-pink {
+      bottom: -15%;
+      right: -10%;
+      width: 60%;
+      height: 60%;
+      filter: blur(150px);
+      animation-delay: 2s !important;
+    }
+    .orb-orange {
+      top: 35%;
+      right: 20%;
+      width: 45%;
+      height: 45%;
+      filter: blur(120px);
+      animation-delay: 4s !important;
+    }
+    
+    .mesh-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: 
+        linear-gradient(rgba(139, 92, 246, 0.012) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139, 92, 246, 0.012) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+
+    /* Mesh Background Variables & Animations */
+    :root {
+      --mesh-bg-gradient: linear-gradient(135deg, #f8f7fc 0%, #faf5ff 50%, #f0f4ff 100%);
+      --orb-opacity-1: 0.05;
+      --orb-opacity-2: 0.04;
+      --orb-opacity-3: 0.03;
+    }
+    .dark-mode {
+      --mesh-bg-gradient: #000000;
+      --orb-opacity-1: 0.12;
+      --orb-opacity-2: 0.08;
+      --orb-opacity-3: 0.05;
+    }
+    @keyframes pulse-slow {
+      0%, 100% {
+        transform: scale(1) translate(0px, 0px);
+      }
+      50% {
+        transform: scale(1.08) translate(15px, -15px);
+      }
+    }
+    .animate-pulse-slow {
+      animation: pulse-slow 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+  <link rel="stylesheet" href="../../../sidebar.css">
+  <script src="../../../sidebar.js" defer></script>
+</head>
+<body>
+
+  <!-- Background Gradients Mesh (Ethereal Vibe matching design.md) -->
+  <div class="mesh-container" style="background: var(--mesh-bg-gradient)">
+    <!-- Accent Purple glow top-left -->
+    <div class="mesh-orb orb-purple animate-pulse-slow" style="background-color: var(--accent); opacity: var(--orb-opacity-1);"></div>
+    <!-- Accent2 Pink glow bottom-right -->
+    <div class="mesh-orb orb-pink animate-pulse-slow" style="background-color: var(--accent2); opacity: var(--orb-opacity-2);"></div>
+    <!-- Accent3 Orange glow middle-left -->
+    <div class="mesh-orb orb-orange animate-pulse-slow" style="background-color: var(--accent3); opacity: var(--orb-opacity-3);"></div>
+    
+    <!-- Subtle Grid overlay -->
+    <div class="mesh-grid"></div>
+  </div>
+
+
+<!-- VF Sidebar -->
+<!-- End VF Sidebar -->
+
+
+
+
+
+
+
+
+
+
+    <header>
+        <div>
+            <h1>Bonas .EP Visual Jacquard Parser</h1>
+            <div class="subtitle">Unified Binary Parser, Textile Decoder & Design Matrix Explorer</div>
+        </div>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- LEFT PANEL: File loader, specs, textile mapping -->
+        <div class="ep-left-panel">
+            
+            <!-- File loader -->
+            <div class="card">
+                <div class="card-title">Load EP File</div>
+                <div id="drop-box" class="dropbox">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <p>
+                        <span class="ep-drop-full">Drag &amp; Drop a <strong>.ep</strong> or <strong>image (PNG, JPG, BMP, SVG)</strong> here or click to browse</span>
+                        <span class="ep-drop-short">Tap to load a <strong>.ep</strong> or image file</span>
+                    </p>
+                    <input type="file" id="file-picker" accept=".ep,.png,.jpg,.jpeg,.gif,.bmp,.svg" style="display: none;">
+                </div>
+            </div>
+
+            <!-- Loom specs -->
+            <div class="card">
+                <div class="card-title">Textile Specifications</div>
+                <div class="specs-group">
+                    <div class="spec-row">
+                        <span class="spec-key">File Name / Design Code</span>
+                        <span id="spec-name" class="spec-val">—</span>
+                    </div>
+                    <div class="spec-row">
+                        <span class="spec-key">Jacquard Size (Hooks)</span>
+                        <span id="spec-hooks" class="spec-val highlight">—</span>
+                    </div>
+                    <div class="spec-row">
+                        <span class="spec-key">Fabric Length (Picks)</span>
+                        <span id="spec-picks" class="spec-val highlight">—</span>
+                    </div>
+                    <div class="spec-row">
+                        <span class="spec-key">Active Feeders (Colors)</span>
+                        <span id="spec-feeders" class="spec-val">—</span>
+                    </div>
+                    <div class="spec-row">
+                        <span class="spec-key">Max Warp Float Length</span>
+                        <span id="spec-warp-float" class="spec-val">—</span>
+                    </div>
+                    <div class="spec-row">
+                        <span class="spec-key">Max Weft Float Length</span>
+                        <span id="spec-weft-float" class="spec-val">—</span>
+                    </div>
+                    <div class="spec-row">
+                        <span class="spec-key">Peak Jacquard Draw</span>
+                        <span id="spec-peak-draw" class="spec-val">—</span>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- Textile Decoder Panel -->
+            <div class="card">
+                <div class="card-title">Textile Interpretation</div>
+                <div class="translation-box" id="translation-box">
+                    <div style="color: var(--muted); font-size: 0.9rem; text-align: center; padding: 1rem;">
+                        Load an EP file to parse textile properties
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: Canvas grid explorer, hex viewer, picks list -->
+        <div class="ep-right-panel">
+            
+            <!-- Weave Matrix Canvas Explorer -->
+            <div class="card ep-matrix-card">
+                <div class="card-title">
+                    <span>Weave Design Matrix Explorer</span>
+                    <span id="canvas-status" style="font-size:0.85rem; color:var(--muted); font-weight:normal;">No file loaded</span>
+                </div>
+                
+                <div class="canvas-container" id="canvas-container">
+                    <canvas id="weave-canvas"></canvas>
+                    <div class="canvas-tooltip" id="canvas-tooltip"></div>
+                </div>
+
+                <div class="legend-bar" style="flex-wrap: wrap;">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <div style="width:12px; height:12px; border-radius:3px; background:var(--matrix-lift); border:1px solid var(--border);"></div>
+                        <span>Warp Lift</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <div style="width:12px; height:12px; border-radius:3px; background:var(--matrix-drop); border:1px solid var(--border);"></div>
+                        <span>Warp Drop</span>
+                    </div>
+
+                </div>
+
+                <div class="ep-controls controls">
+                    <div class="ep-controls-selects">
+                        <div class="ep-control-field">
+                            <label style="font-size: 0.75rem; color: var(--muted); font-weight: 600;">VISUAL MODE</label>
+                            <select id="select-view-mode" class="btn" style="background-color: var(--surface-hover); border: 1px solid var(--border); color: var(--fg); padding: 0.4rem 0.8rem; border-radius: 8px;">
+                                <option value="raw">Raw Hook Matrix</option>
+                                <option value="fabric">Fabric Simulation (Face)</option>
+                                <option value="fabric-back">Fabric Simulation (Back)</option>
+                            </select>
+                        </div>
+                        <div class="ep-control-field">
+                            <label style="font-size: 0.75rem; color: var(--muted); font-weight: 600;">HARNESS MODE</label>
+                            <select id="select-harness-mode" class="btn" style="background-color: var(--surface-hover); border: 1px solid var(--border); color: var(--fg); padding: 0.4rem 0.8rem; border-radius: 8px;">
+                                <option value="flat">Straight-Draw (Flat 1:1)</option>
+                                <option value="interleaved-even">Interleaved 1:1 (Even=Face, Odd=Binding)</option>
+                                <option value="interleaved-odd">Interleaved 1:1 (Odd=Face, Even=Binding)</option>
+                            </select>
+                        </div>
+                        <div class="ep-control-field">
+                            <label style="font-size: 0.75rem; color: var(--muted); font-weight: 600;">MATRIX VIEW</label>
+                            <select id="select-matrix-view" class="btn" style="background-color: var(--surface-hover); border: 1px solid var(--border); color: var(--fg); padding: 0.4rem 0.8rem; border-radius: 8px;">
+                                <option value="raw">Design Matrix (Hooks Capacity)</option>
+                                <option value="jala">Full Jala Harness Layout (Expanded Repeats)</option>
+                            </select>
+                        </div>
+
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn" id="btn-zoom-in">＋</button>
+                        <button class="btn" id="btn-zoom-out">－</button>
+                        <button class="btn" id="btn-fit">Fit Matrix ⛶</button>
+                        <button class="btn btn-primary" id="btn-export-matrix" disabled>Export PNG Weave</button>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- Pick Timeline -->
+            <div class="card" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                <div class="card-title">Weft Shuttle Timeline (Pick-by-Pick)</div>
+                <div class="table-container" style="overflow-y: auto; flex: 1; min-height: 0;">
+                    <table id="picks-table">
+                        <thead>
+                            <tr>
+                                <th>Pick (Weft insertion)</th>
+                                <th>Weft Feeder (Color)</th>
+                                <th>Active Ends (Lifts)</th>
+                                <th>Lifting Density</th>
+                            </tr>
+                        </thead>
+                        <tbody id="picks-tbody">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--muted); padding: 2rem;">
+                                    Timeline will populate when an EP file is loaded
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const dropBox = document.getElementById('drop-box');
+        const filePicker = document.getElementById('file-picker');
+        const specName = document.getElementById('spec-name');
+        const specHooks = document.getElementById('spec-hooks');
+        const specPicks = document.getElementById('spec-picks');
+        const specFeeders = document.getElementById('spec-feeders');
+        const specWarpFloat = document.getElementById('spec-warp-float');
+        const specWeftFloat = document.getElementById('spec-weft-float');
+        const specPeakDraw = document.getElementById('spec-peak-draw');
+        
+        const translationBox = document.getElementById('translation-box');
+        const picksTbody = document.getElementById('picks-tbody');
+        
+        const canvasContainer = document.getElementById('canvas-container');
+        let canvas = document.getElementById('weave-canvas');
+        const tooltip = document.getElementById('canvas-tooltip');
+        const canvasStatus = document.getElementById('canvas-status');
+        
+        const btnZoomIn = document.getElementById('btn-zoom-in');
+        const btnZoomOut = document.getElementById('btn-zoom-out');
+        const btnFit = document.getElementById('btn-fit');
+        const btnExportMatrix = document.getElementById('btn-export-matrix');
+        const btnToggleRenderer = document.getElementById('btn-toggle-renderer');
+        let useGPU = true;
+
+        const selectViewMode = document.getElementById('select-view-mode');
+        const selectHarnessMode = document.getElementById('select-harness-mode');
+        const selectMatrixView = document.getElementById('select-matrix-view');
+
+        let ctx = canvas.getContext('2d');
+        let gl = null;
+        let glProgram = null;
+        let glPositionBuffer = null;
+        let glWeaveTexture = null;
+        let glFeederTexture = null;
+
+        // State Variables
+        let parsedData = null;
+        let offscreenChunks = [];
+        let scale = 4;
+        let panX = 10;
+        let panY = 10;
+        let isDragging = false;
+        let startX = 0, startY = 0;
+
+        let highlightedFeeder = null;
+        let isolatedFeeder = null;
+        let blinkState = true;
+        let blinkInterval = null;
+
+        function toggleHighlightFeeder(feeder) {
+            feeder = Number(feeder);
+            if (highlightedFeeder === feeder) {
+                highlightedFeeder = null;
+            } else {
+                highlightedFeeder = feeder;
+            }
+            if (highlightedFeeder !== null) {
+                if (!blinkInterval) {
+                    blinkInterval = setInterval(() => {
+                        blinkState = !blinkState;
+                        offscreenChunks = [];
+                        drawWeave();
+                    }, 400);
+                }
+            } else {
+                if (blinkInterval) {
+                    clearInterval(blinkInterval);
+                    blinkInterval = null;
+                }
+                blinkState = true;
+            }
+            if (parsedData) {
+                renderTextileInterpretation(
+                    parsedData.hooksCount,
+                    parsedData.picksCount,
+                    parsedData.weaveTypeStr,
+                    parsedData.weftRepeatStr,
+                    parsedData.averageDensity,
+                    parsedData.weftCounts
+                );
+            }
+            offscreenChunks = [];
+            drawWeave();
+        }
+
+        function toggleIsolateFeeder(feeder) {
+            feeder = Number(feeder);
+            if (isolatedFeeder === feeder) {
+                isolatedFeeder = null;
+            } else {
+                isolatedFeeder = feeder;
+            }
+            if (parsedData) {
+                renderTextileInterpretation(
+                    parsedData.hooksCount,
+                    parsedData.picksCount,
+                    parsedData.weaveTypeStr,
+                    parsedData.weftRepeatStr,
+                    parsedData.averageDensity,
+                    parsedData.weftCounts
+                );
+            }
+            offscreenChunks = [];
+            drawWeave();
+        }
+
+        function getWarpColors() {
+            const isDark = document.body.classList.contains('dark-mode') || document.documentElement.classList.contains('dark-mode');
+            return {
+                lift: isDark ? '#ffffff' : '#000000',
+                drop: isDark ? '#000000' : '#ffffff',
+                bg: isDark ? '#000000' : '#ffffff',
+                grid: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
+                rawBgRGB: isDark ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 },
+                rawFgRGB: isDark ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0, b: 0 }
+            };
+        }
+        const feederColors = {
+            1: '#ec4899', // Pink
+            2: '#f97316', // Orange
+            3: '#3b82f6', // Blue
+            4: '#10b981', // Green
+            5: '#a855f7', // Purple
+            6: '#eab308', // Yellow
+            7: '#06b6d4', // Cyan
+            8: '#f43f5e', // Rose
+            255: '#4b5563', // Grey (Ground/Loom Control)
+            'default': '#6b7280' // Grey
+        };
+
+        // Listeners
+        dropBox.addEventListener('click', () => filePicker.click());
+        filePicker.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) parseFile(file);
+        });
+
+        dropBox.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropBox.classList.add('dragover');
+        });
+
+        dropBox.addEventListener('dragleave', () => {
+            dropBox.classList.remove('dragover');
+        });
+
+        dropBox.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropBox.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) parseFile(file);
+        });
+
+        // View Mode selectors
+        selectViewMode.addEventListener('change', () => {
+            resetViewport();
+            offscreenChunks = [];
+            drawWeave();
+        });
+        if (selectMatrixView) {
+            selectMatrixView.addEventListener('change', () => {
+                resetViewport();
+                offscreenChunks = [];
+                drawWeave();
+            });
+        }
+        selectHarnessMode.addEventListener('change', () => {
+            resetViewport();
+            offscreenChunks = [];
+            drawWeave();
+            if (parsedData) {
+                renderTextileInterpretation(
+                    parsedData.hooksCount,
+                    parsedData.picksCount,
+                    parsedData.weaveTypeStr,
+                    parsedData.weftRepeatStr,
+                    parsedData.averageDensity,
+                    parsedData.weftCounts
+                );
+            }
+        });
+
+        window.addEventListener('themeChanged', () => {
+            offscreenChunks = [];
+            drawWeave();
+        });
+
+        ['input-reed-density', 'input-weft-density', 'input-ends-adjustment'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', () => {
+                    offscreenChunks = [];
+                    drawWeave();
+                });
+            }
+        });
+
+        // Fetch default workspace file on startup if available
+        function updateParserEpiOptions() {
+            const densityVal = document.getElementById('input-reed-density')?.value;
+            if (!densityVal) return;
+            const density = parseInt(densityVal, 10) || 0;
+            const epiSelect = document.getElementById('input-epi-option');
+            if (!epiSelect) return;
+            
+            const previousValue = epiSelect.value;
+            epiSelect.innerHTML = '';
+            
+            if (density <= 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'Enter Reed Density first';
+                epiSelect.appendChild(opt);
+                updateParserStockportReed();
+                return;
+            }
+            
+            const divisors = [1, 2, 4, 8];
+            divisors.forEach(div => {
+                if (density % div === 0) {
+                    const reedVal = density / div;
+                    const val = `${reedVal}*${div}`;
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = val;
+                    epiSelect.appendChild(opt);
+                }
+            });
+            
+            if (previousValue && Array.from(epiSelect.options).some(o => o.value === previousValue)) {
+                epiSelect.value = previousValue;
+            } else if (epiSelect.options.length > 0) {
+                epiSelect.selectedIndex = 0;
+            }
+            
+            updateParserStockportReed();
+        }
+
+        function updateParserStockportReed() {
+            const epiSelect = document.getElementById('input-epi-option');
+            const stockportInput = document.getElementById('input-stockport-reed');
+            if (!epiSelect || !stockportInput) return;
+            
+            const val = epiSelect.value;
+            if (!val) {
+                stockportInput.value = '';
+                return;
+            }
+            const parts = val.split('*');
+            const reedVal = parseFloat(parts[0]) || 0;
+            stockportInput.value = reedVal * 2;
+        }
+
+        function applyLockedMode(meta) {
+            const dropBox = document.getElementById('drop-box');
+            if (dropBox) {
+                dropBox.style.pointerEvents = 'none';
+                dropBox.style.opacity = '0.5';
+                dropBox.style.cursor = 'default';
+                const lockBadge = document.createElement('div');
+                lockBadge.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.03);border-radius:12px;font-size:0.85rem;font-weight:600;color:var(--muted);z-index:2;gap:0.35rem;';
+                lockBadge.innerHTML = '🔒 View-Only (locked from Design Library)';
+                dropBox.style.position = 'relative';
+                dropBox.appendChild(lockBadge);
+            }
+
+            const header = document.querySelector('header div');
+            if (header) {
+                const badge = document.createElement('span');
+                badge.style.cssText = 'display:inline-flex;align-items:center;gap:0.3rem;margin-left:0.75rem;padding:0.2rem 0.5rem;border-radius:6px;background:rgba(239,68,68,0.1);color:#ef4444;font-size:0.7rem;font-weight:600;border:1px solid rgba(239,68,68,0.2);';
+                badge.textContent = '🔒 Load EP File Locked';
+                header.appendChild(badge);
+            }
+        }
+
+        function applyJalaFromMeta() {
+            // Jala settings removed
+        }
+
+        function processEpData(epData, epName, locked, meta) {
+            try {
+                let bytes;
+                if (typeof epData === 'string') {
+                    if (epData.startsWith('data:')) {
+                        const base64Data = epData.split(',')[1] || epData;
+                        const binaryString = atob(base64Data);
+                        const len = binaryString.length;
+                        bytes = new Uint8Array(len);
+                        for (let i = 0; i < len; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+                    } else if (epData.startsWith(';') || epData.includes('FORMAT:') || epData.includes('TOTAL_HOOKS:')) {
+                        const encoder = new TextEncoder();
+                        bytes = encoder.encode(epData);
+                    } else {
+                        try {
+                            const binaryString = atob(epData.trim());
+                            const len = binaryString.length;
+                            bytes = new Uint8Array(len);
+                            for (let i = 0; i < len; i++) {
+                                bytes[i] = binaryString.charCodeAt(i);
+                            }
+                        } catch (err) {
+                            const encoder = new TextEncoder();
+                            bytes = encoder.encode(epData);
+                        }
+                    }
+                } else if (epData instanceof ArrayBuffer) {
+                    bytes = new Uint8Array(epData);
+                } else if (epData instanceof Uint8Array) {
+                    bytes = epData;
+                }
+                metaData = meta || null;
+                processBuffer(bytes.buffer, epName);
+                if (locked) {
+                    // Apply jala first, then lock UI so the change event works
+                    applyJalaFromMeta();
+                    setTimeout(function() { applyLockedMode(metaData); }, 150);
+                }
+                return true;
+            } catch (e) {
+                console.error("Error loading EP file:", e);
+                return false;
+            }
+        }
+
+        function loadPendingFromIDB(retries, callback) {
+            try {
+                var r = indexedDB.open('VishwaFashionsDB', 1);
+                r.onupgradeneeded = function (e) { var d = e.target.result; if (!d.objectStoreNames.contains('designs')) d.createObjectStore('designs'); };
+                r.onsuccess = function (e) {
+                    var d = e.target.result;
+                    var t = d.transaction('designs', 'readonly');
+                    var g = t.objectStore('designs').get('pending-ep-export');
+                    g.onsuccess = function () {
+                        var data = g.result;
+                        if (data) {
+                            var clearTx = d.transaction('designs', 'readwrite');
+                            clearTx.objectStore('designs').delete('pending-ep-export');
+                            callback(data);
+                        } else if (retries > 0) {
+                            setTimeout(function () { loadPendingFromIDB(retries - 1, callback); }, 100);
+                        } else {
+                            callback(null);
+                        }
+                    };
+                    g.onerror = function () { callback(null); };
+                };
+                r.onerror = function () { callback(null); };
+            } catch (x) { callback(null); }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadPendingFromIDB(30, function (pendingData) {
+                if (pendingData) {
+                    var meta = { 
+                        jalaType: pendingData.jalaType || '', 
+                        designCode: pendingData.designCode || '', 
+                        hooksCount: pendingData.hooksCount, 
+                        ends: pendingData.ends, 
+                        reed: pendingData.reed, 
+                        picksCount: pendingData.picksCount, 
+                        jacquardType: pendingData.jacquardType,
+                        designId: pendingData.designId,
+                        variantIndex: pendingData.variantIndex
+                    };
+                    processEpData(pendingData.data, pendingData.name || 'imported_card.ep', pendingData.locked, meta);
+                    return;
+                }
+
+                var isLocked = localStorage.getItem('ep-parser-locked') === 'true' || sessionStorage.getItem('ep-parser-locked') === 'true';
+                var pendingEp = localStorage.getItem('pending-ep-file') || sessionStorage.getItem('pending-ep-file');
+                var pendingName = localStorage.getItem('pending-ep-filename') || sessionStorage.getItem('pending-ep-filename') || 'imported_card.ep';
+                localStorage.removeItem('ep-parser-locked');
+                localStorage.removeItem('pending-ep-file');
+                localStorage.removeItem('pending-ep-filename');
+                sessionStorage.removeItem('ep-parser-locked');
+                sessionStorage.removeItem('pending-ep-file');
+                sessionStorage.removeItem('pending-ep-filename');
+
+                if (pendingEp && processEpData(pendingEp, pendingName, isLocked)) return;
+
+                if (window.location.protocol !== 'file:') {
+                    fetch('./v10d4744.ep')
+                        .then(function (res) { if (!res.ok) throw new Error(); return res.arrayBuffer(); })
+                        .then(function (buf) { processBuffer(buf, 'v10d4744.ep'); })
+                        .catch(function () {});
+                }
+            });
+        });
+
+        function parseFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'ep') {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    processBuffer(e.target.result, file.name);
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg'].includes(ext)) {
+                processImageFile(file);
+            } else {
+                alert('Unsupported file format. Please load a valid Bonas .ep file or standard image (PNG, JPG, BMP, SVG)!');
+            }
+        }
+
+        function processImageFile(file) {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = function() {
+                const width = img.width;
+                const height = img.height;
+                if (width > 4000 || height > 4000) {
+                    alert("Image dimensions are too large for real-time textile parsing. Max supported size is 4000x4000.");
+                    URL.revokeObjectURL(url);
+                    return;
+                }
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(img, 0, 0);
+                const imgData = tempCtx.getImageData(0, 0, width, height);
+                const data = imgData.data;
+
+                const colorMap = {};
+                const colorCounts = {};
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i+1];
+                    const b = data[i+2];
+                    const a = data[i+3];
+                    if (a < 50) continue;
+                    const hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+                    colorMap[hex] = {r, g, b};
+                    colorCounts[hex] = (colorCounts[hex] || 0) + 1;
+                }
+
+                const sortedColors = Object.keys(colorCounts).sort((a, b) => colorCounts[b] - colorCounts[a]);
+                const colorToFeeder = {};
+                const feederToColorMap = {};
+                
+                if (sortedColors.length > 0) {
+                    const bgHex = sortedColors[0];
+                    colorToFeeder[bgHex] = 255;
+                    feederToColorMap[255] = bgHex;
+                    
+                    for (let idx = 1; idx < Math.min(sortedColors.length, 9); idx++) {
+                        const hex = sortedColors[idx];
+                        colorToFeeder[hex] = idx;
+                        feederToColorMap[idx] = hex;
+                    }
+                }
+
+                const hooksCount = width;
+                const picksCount = height;
+                const hookBytes = Math.ceil(hooksCount / 8);
+                const rowWidth = hookBytes + 4;
+
+                const rows = [];
+                const weftSequence = new Uint8Array(picksCount);
+                const weftCounts = {};
+
+                let maxWarpFloat = 0;
+                let maxWeftFloat = 0;
+                let totalLifts = 0;
+                let maxLiftsInRow = 0;
+
+                for (let y = 0; y < picksCount; y++) {
+                    const rowBytes = new Uint8Array(hookBytes + 1);
+                    let rowLifts = 0;
+                    const rowColorCounts = {};
+
+                    for (let x = 0; x < hooksCount; x++) {
+                        const pixelIdx = (y * hooksCount + x) * 4;
+                        const r = data[pixelIdx];
+                        const g = data[pixelIdx + 1];
+                        const b = data[pixelIdx + 2];
+                        const a = data[pixelIdx + 3];
+                        if (a < 50) continue;
+                        const hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+                        rowColorCounts[hex] = (rowColorCounts[hex] || 0) + 1;
+                    }
+
+                    let dominantColor = sortedColors[0] || "#ffffff";
+                    let maxCount = 0;
+                    for (const color in rowColorCounts) {
+                        if (rowColorCounts[color] > maxCount) {
+                            dominantColor = color;
+                            maxCount = rowColorCounts[color];
+                        }
+                    }
+                    const rowFeeder = colorToFeeder[dominantColor] || 255;
+                    weftSequence[y] = rowFeeder;
+                    weftCounts[rowFeeder] = (weftCounts[rowFeeder] || 0) + 1;
+
+                    let currentWarpFloat = 0;
+                    let currentWeftFloat = 0;
+                    for (let x = 0; x < hooksCount; x++) {
+                        const pixelIdx = (y * hooksCount + x) * 4;
+                        const r = data[pixelIdx];
+                        const g = data[pixelIdx + 1];
+                        const b = data[pixelIdx + 2];
+                        const a = data[pixelIdx + 3];
+                        
+                        let lift = 0;
+                        if (a >= 50) {
+                            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+                            lift = lum < 127 ? 1 : 0;
+                        }
+
+                        if (lift === 1) {
+                            const byteIdx = Math.floor(x / 8);
+                            const bitIdx = 7 - (x % 8);
+                            rowBytes[byteIdx] |= (1 << bitIdx);
+                            rowLifts++;
+                            totalLifts++;
+                            
+                            currentWarpFloat++;
+                            if (currentWarpFloat > maxWarpFloat) maxWarpFloat = currentWarpFloat;
+                            currentWeftFloat = 0;
+                        } else {
+                            currentWeftFloat++;
+                            if (currentWeftFloat > maxWeftFloat) maxWeftFloat = currentWeftFloat;
+                            currentWarpFloat = 0;
+                        }
+                    }
+                    
+                    rowBytes[hookBytes] = rowFeeder;
+                    rows.push(rowBytes);
+                    if (rowLifts > maxLiftsInRow) maxLiftsInRow = rowLifts;
+                }
+
+                for (const feeder in feederToColorMap) {
+                    feederColors[feeder] = feederToColorMap[feeder];
+                }
+
+                specName.textContent = file.name.replace(/\.[^/.]+$/, "");
+                specHooks.textContent = `${hooksCount} Hooks`;
+                specPicks.textContent = `${picksCount} Picks (Weft Rows)`;
+                specFeeders.textContent = `${Object.keys(weftCounts).length} Shuttle Colors`;
+                specWarpFloat.textContent = `${maxWarpFloat} picks consecutive`;
+                specWeftFloat.textContent = `${maxWeftFloat} ends consecutive`;
+                specPeakDraw.textContent = `${maxLiftsInRow} hooks (${((maxLiftsInRow / hooksCount) * 100).toFixed(1)}% load)`;
+
+                const averageDensity = ((totalLifts / (hooksCount * picksCount)) * 100).toFixed(1);
+                const repeatPattern = detectRepeatSequence(weftSequence);
+                let weftRepeatStr = repeatPattern.length > 1
+                    ? `Active repeat [${repeatPattern.join(' → ')}] (Length: ${repeatPattern.length})`
+                    : `Constant weft (Feeder ${repeatPattern[0]})`;
+
+                let weaveTypeStr = "Imported Image Pattern";
+                if (averageDensity > 45 && averageDensity < 55) {
+                    weaveTypeStr = "Balanced Structure (approx. 50% lift)";
+                } else if (averageDensity >= 55) {
+                    weaveTypeStr = "Warp-Faced Structure (High lift density)";
+                } else {
+                    weaveTypeStr = "Weft-Faced Structure (Low lift density)";
+                }
+
+                renderTextileInterpretation(hooksCount, picksCount, weaveTypeStr, weftRepeatStr, averageDensity, weftCounts);
+
+                const machineHooksEl = document.getElementById('input-machine-hooks');
+                if (machineHooksEl) machineHooksEl.value = hooksCount;
+                const controlledEndsEl = document.getElementById('input-controlled-ends');
+                if (controlledEndsEl) controlledEndsEl.value = hooksCount;
+
+                parsedData = {
+                    filename: file.name,
+                    designName: file.name.replace(/\.[^/.]+$/, ""),
+                    blocks: 0,
+                    hooksCount,
+                    picksCount,
+                    rowWidth,
+                    hookBytes,
+                    rows,
+                    weftSequence,
+                    weftCounts,
+                    maxWarpFloat,
+                    maxWeftFloat,
+                    isHorizSymmetric: false,
+                    isVertSymmetric: false,
+                    maxLiftsInRow,
+                    horizRepeats: 1,
+                    vertRepeats: 1,
+                    weaveTypeStr,
+                    weftRepeatStr,
+                    averageDensity
+                };
+
+                offscreenChunks = [];
+                resetViewport();
+                drawWeave();
+                renderPicksTable();
+                recalculateJalaDetails();
+
+                btnExportMatrix.disabled = false;
+                canvasStatus.textContent = `Loaded image: ${file.name} (${width}x${height})`;
+
+                URL.revokeObjectURL(url);
+            };
+            img.onerror = function() {
+                alert("Failed to load or parse image file.");
+                URL.revokeObjectURL(url);
+            };
+        }
+
+        // Bit-count lookup table for fast bit counting in a byte
+        const BIT_COUNT = new Uint8Array(256);
+        for (let i = 0; i < 256; i++) {
+            let count = 0;
+            let temp = i;
+            while (temp > 0) {
+                if (temp & 1) count++;
+                temp >>= 1;
+            }
+            BIT_COUNT[i] = count;
+        }
+
+        // Timeline pagination/lazy rendering state
+        let currentTimelinePicks = 100;
+
+        function renderPicksTable(append = false) {
+            if (!parsedData) return;
+            const picks = parsedData.picksCount;
+            const tableHTMLs = [];
+            
+            const startY = append ? currentTimelinePicks : 0;
+            const endY = Math.min(picks, append ? currentTimelinePicks + 500 : 100);
+            
+            for (let y = startY; y < endY; y++) {
+                const row = parsedData.rows[y];
+                const feeder = row[parsedData.hookBytes] || 0;
+                const feederColor = feederColors[feeder] || feederColors['default'];
+                const feederLabel = feeder === 255 ? 'Ground / Loom Control (255)' : `Feeder ${feeder}`;
+
+                // Design lift count using lookup table
+                let designLiftCount = 0;
+                for (let b = 0; b < parsedData.hookBytes; b++) {
+                    designLiftCount += BIT_COUNT[row[b]];
+                }
+
+                const liftPct = parsedData.hooksCount > 0 ? ((designLiftCount / parsedData.hooksCount) * 100).toFixed(1) : "0.0";
+
+                tableHTMLs.push(`
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-weight: 500;">Pick ${picks - y}</td>
+                        <td>
+                            <div class="feeder-badge">
+                                <div class="feeder-dot" style="background-color: ${feederColor};"></div>
+                                <span>${feederLabel}</span>
+                            </div>
+                        </td>
+                        <td style="font-family: var(--font-mono);">${designLiftCount} ends</td>
+                        <td style="font-family: var(--font-mono); color: var(--accent2); font-weight: 600;">${liftPct}%</td>
+                    </tr>
+                `);
+            }
+
+            if (append) {
+                const lmRow = document.getElementById('load-more-row');
+                if (lmRow) lmRow.remove();
+                
+                picksTbody.insertAdjacentHTML('beforeend', tableHTMLs.join(''));
+                currentTimelinePicks = endY;
+            } else {
+                picksTbody.innerHTML = tableHTMLs.join('');
+                currentTimelinePicks = endY;
+            }
+
+            if (currentTimelinePicks < picks) {
+                picksTbody.insertAdjacentHTML('beforeend', `
+                    <tr id="load-more-row">
+                        <td colspan="4" style="text-align: center; padding: 1rem;">
+                            <button class="btn btn-primary" onclick="renderPicksTable(true)" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 6px;">Load More picks (${picks - currentTimelinePicks} remaining)</button>
+                        </td>
+                    </tr>
+                `);
+            }
+        }
+
+        // Auto-detect repeating sequence from feeder array
+        function detectRepeatSequence(feeders) {
+            let start = 0;
+            while (start < feeders.length && feeders[start] === feeders[0]) {
+                start++;
+            }
+            if (start >= feeders.length) return [feeders[0] || 0];
+            
+            const activeFeeders = feeders.slice(start);
+            const n = activeFeeders.length;
+            
+            for (let L = 1; L <= Math.min(16, n / 4); L++) {
+                let matchCount = 0;
+                let mismatches = 0;
+                for (let i = 0; i < n - L; i++) {
+                    if (activeFeeders[i] === activeFeeders[i + L]) {
+                        matchCount++;
+                    } else {
+                        mismatches++;
+                    }
+                }
+                if (matchCount / (matchCount + mismatches) > 0.98) {
+                    const seqs = {};
+                    for (let i = 0; i <= n - L; i += L) {
+                        const seq = activeFeeders.slice(i, i + L).join(',');
+                        seqs[seq] = (seqs[seq] || 0) + 1;
+                    }
+                    let bestSeq = Object.keys(seqs)[0];
+                    let maxCount = seqs[bestSeq];
+                    for (let seq in seqs) {
+                        if (seqs[seq] > maxCount) {
+                            bestSeq = seq;
+                            maxCount = seqs[seq];
+                        }
+                    }
+                    return bestSeq.split(',').map(Number);
+                }
+            }
+            return [...new Set(activeFeeders)].slice(0, 8);
+        }
+
+        var metaData = null;
+        let currentJalaSections = [
+            { id: 'default_ls', type: 'left-selvedge', name: 'Left Selvedge', hooks: 40, repeats: 1, whpd: 1, epd: 2 },
+            { id: 'default_lb', type: 'left-border', name: 'Left Border', hooks: 120, repeats: 1, whpd: 1, epd: 2 },
+            { id: 'default_body', type: 'body', name: 'Body', hooks: 1024, repeats: 1, whpd: 1, epd: 2 },
+            { id: 'default_rb', type: 'right-border', name: 'Right Border', hooks: 120, repeats: 1, whpd: 1, epd: 2 },
+            { id: 'default_rs', type: 'right-selvedge', name: 'Right Selvedge', hooks: 40, repeats: 1, whpd: 1, epd: 2 },
+            { id: 'default_unallocated', type: 'empty-hooks', name: 'Unallocated Hooks', hooks: 0, repeats: 1, whpd: 1, epd: 2 }
+        ];
+
+        function processBuffer(arrayBuffer, filename) {
+            const data = new Uint8Array(arrayBuffer);
+            
+            // Auto-detect Text vs Binary EP format
+            let isText = false;
+            if (data.length > 0) {
+                let sampleStr = "";
+                const sampleLen = Math.min(data.length, 200);
+                for (let i = 0; i < sampleLen; i++) {
+                    sampleStr += String.fromCharCode(data[i]);
+                }
+                if (sampleStr.startsWith(";") || sampleStr.includes("FORMAT:") || sampleStr.includes("TOTAL_HOOKS:") || sampleStr.includes("ROW_")) {
+                    isText = true;
+                }
+            }
+
+            let blocks = 1;
+            let designName = filename.replace(/\.[^/.]+$/, "");
+            let hooksCount = 0;
+            let picksCount = 0;
+            let hookBytes = 0;
+            let rowWidth = 0;
+            const rows = [];
+            const weftSequence = [];
+            const weftCounts = {};
+            let plainWeaveCount = 0;
+            let totalLifts = 0;
+
+            if (isText) {
+                const textDecoder = new TextDecoder('utf-8');
+                const text = textDecoder.decode(data);
+                const lines = text.split(/\r?\n/);
+                const rowBitStrings = [];
+
+                for (let line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || trimmed.startsWith(';')) continue;
+                    if (trimmed.startsWith('TOTAL_HOOKS:')) {
+                        hooksCount = parseInt(trimmed.split(':')[1].trim(), 10) || 0;
+                    } else if (trimmed.startsWith('ROWS:')) {
+                        picksCount = parseInt(trimmed.split(':')[1].trim(), 10) || 0;
+                    } else if (trimmed.startsWith('ROW_') || (trimmed.includes(':') && trimmed.includes('ROW'))) {
+                        const parts = trimmed.split(':');
+                        if (parts.length >= 2) {
+                            rowBitStrings.push(parts[1].trim());
+                        }
+                    }
+                }
+
+                if (rowBitStrings.length > 0 && picksCount === 0) {
+                    picksCount = rowBitStrings.length;
+                }
+                if (rowBitStrings.length > 0 && hooksCount === 0) {
+                    hooksCount = rowBitStrings[0].length;
+                }
+                if (picksCount === 0) picksCount = rowBitStrings.length || 1;
+                if (hooksCount === 0) hooksCount = (rowBitStrings[0] && rowBitStrings[0].length) || 2688;
+
+                hookBytes = Math.ceil(hooksCount / 8);
+                rowWidth = hookBytes + 4;
+
+                for (let y = 0; y < picksCount; y++) {
+                    const bitStr = rowBitStrings[y] || "";
+                    const rowSlice = new Uint8Array(rowWidth);
+                    let liftCount = 0;
+
+                    for (let b = 0; b < hookBytes; b++) {
+                        let byteVal = 0;
+                        for (let bitIdx = 0; bitIdx < 8; bitIdx++) {
+                            const bitPos = b * 8 + bitIdx;
+                            const isLift = bitPos < bitStr.length ? (bitStr[bitPos] === '1') : false;
+                            byteVal = (byteVal << 1) | (isLift ? 1 : 0);
+                        }
+                        rowSlice[b] = byteVal;
+                        liftCount += BIT_COUNT[byteVal];
+                    }
+                    totalLifts += liftCount;
+                    rowSlice[hookBytes] = 1;
+                    rows.push(rowSlice);
+
+                    weftSequence.push(1);
+                    weftCounts[1] = (weftCounts[1] || 0) + 1;
+                }
+            } else {
+                // Binary Bonas EP Header
+                blocks = data[0] | (data[1] << 8);
+
+                let headerName = "";
+                for (let i = 6; i < 14; i++) {
+                    if (data[i] === 0) break;
+                    headerName += String.fromCharCode(data[i]);
+                }
+                if (headerName.trim()) designName = headerName.trim();
+
+                hooksCount = data[32] | (data[33] << 8);
+                hookBytes = Math.ceil(hooksCount / 8);
+                rowWidth = hookBytes + 4;
+                picksCount = data[3] | (data[4] << 8);
+
+                for (let y = 0; y < picksCount; y++) {
+                    const start = 38 + y * rowWidth;
+                    if (start + rowWidth > data.length) break;
+                    const rowSlice = data.slice(start, start + rowWidth);
+                    rows.push(rowSlice);
+
+                    let liftCount = 0;
+                    for (let b = 0; b < hookBytes; b++) {
+                        const byteVal = rowSlice[b];
+                        if (byteVal === 0xAA || byteVal === 0x55) {
+                            plainWeaveCount++;
+                        }
+                        liftCount += BIT_COUNT[byteVal];
+                    }
+                    totalLifts += liftCount;
+
+                    let feeder = rowSlice[hookBytes] || 0;
+                    if (feeder === 255) {
+                        feeder = 1;
+                    }
+                    weftSequence.push(feeder);
+                    weftCounts[feeder] = (weftCounts[feeder] || 0) + 1;
+                }
+            }
+
+            // Calculate float lengths and symmetry
+            let maxWarpFloat = 0;
+            let maxWeftFloat = 0;
+            let maxLiftsInRow = 0;
+            let minLiftsInRow = hooksCount;
+            
+            // Warp float analysis (vertical runs of 1s) - Optimized run checks
+            const warpRuns = new Array(hooksCount).fill(0);
+            for (let y = 0; y < picksCount; y++) {
+                const rowSlice = rows[y];
+                let rowLifts = 0;
+                let x = 0;
+                for (let b = 0; b < hookBytes; b++) {
+                    const byteVal = rowSlice[b];
+                    if (byteVal === 0) {
+                        warpRuns[x] = 0; warpRuns[x+1] = 0; warpRuns[x+2] = 0; warpRuns[x+3] = 0;
+                        warpRuns[x+4] = 0; warpRuns[x+5] = 0; warpRuns[x+6] = 0; warpRuns[x+7] = 0;
+                        x += 8;
+                        continue;
+                    }
+                    for (let bitIdx = 7; bitIdx >= 0; bitIdx--) {
+                        if (x >= hooksCount) break;
+                        const lift = (byteVal >> bitIdx) & 1;
+                        if (lift === 1) {
+                            warpRuns[x]++;
+                            if (warpRuns[x] > maxWarpFloat) {
+                                maxWarpFloat = warpRuns[x];
+                            }
+                            rowLifts++;
+                        } else {
+                            warpRuns[x] = 0;
+                        }
+                        x++;
+                    }
+                }
+                if (rowLifts > maxLiftsInRow) maxLiftsInRow = rowLifts;
+                if (rowLifts < minLiftsInRow) minLiftsInRow = rowLifts;
+            }
+
+            // Weft float analysis (horizontal runs of 0s) - Optimized run checks
+            for (let y = 0; y < picksCount; y++) {
+                const rowSlice = rows[y];
+                let currentRun = 0;
+                let x = 0;
+                for (let b = 0; b < hookBytes; b++) {
+                    const byteVal = rowSlice[b];
+                    if (byteVal === 255) {
+                        currentRun = 0;
+                        x += 8;
+                        continue;
+                    }
+                    for (let bitIdx = 7; bitIdx >= 0; bitIdx--) {
+                        if (x >= hooksCount) break;
+                        const lift = (byteVal >> bitIdx) & 1;
+                        if (lift === 0) {
+                            currentRun++;
+                            if (currentRun > maxWeftFloat) {
+                                maxWeftFloat = currentRun;
+                            }
+                        } else {
+                            currentRun = 0;
+                        }
+                        x++;
+                    }
+                }
+            }
+
+            // Horizontal Symmetry Check - Optimized using precomputed masks and byte alignment
+            let isHorizSymmetric = true;
+            const halfHooks = Math.floor(hooksCount / 2);
+            const symLookups = [];
+            for (let x = 0; x < halfHooks; x++) {
+                const x2 = hooksCount - 1 - x;
+                symLookups.push({
+                    b1: Math.floor(x / 8),
+                    mask1: 1 << (7 - (x % 8)),
+                    b2: Math.floor(x2 / 8),
+                    mask2: 1 << (7 - (x2 % 8))
+                });
+            }
+
+            for (let y = 0; y < picksCount; y++) {
+                const rowSlice = rows[y];
+                for (let i = 0; i < halfHooks; i++) {
+                    const l = symLookups[i];
+                    if (((rowSlice[l.b1] & l.mask1) !== 0) !== ((rowSlice[l.b2] & l.mask2) !== 0)) {
+                        isHorizSymmetric = false;
+                        break;
+                    }
+                }
+                if (!isHorizSymmetric) break;
+            }
+
+            // Vertical Symmetry Check - 100x Speedup using full byte equality checks
+            let isVertSymmetric = true;
+            const fullHookBytes = Math.floor(hooksCount / 8);
+            const remainingBits = hooksCount % 8;
+            const lastByteMask = remainingBits > 0 ? (0xFF << (8 - remainingBits)) & 0xFF : 0;
+
+            for (let y = 0; y < Math.floor(picksCount / 2); y++) {
+                const y2 = picksCount - 1 - y;
+                const row1 = rows[y];
+                const row2 = rows[y2];
+                let rowMatch = true;
+                for (let b = 0; b < fullHookBytes; b++) {
+                    if (row1[b] !== row2[b]) {
+                        rowMatch = false;
+                        break;
+                    }
+                }
+                if (rowMatch && remainingBits > 0) {
+                    if ((row1[fullHookBytes] & lastByteMask) !== (row2[fullHookBytes] & lastByteMask)) {
+                        rowMatch = false;
+                    }
+                }
+                if (!rowMatch) {
+                    isVertSymmetric = false;
+                    break;
+                }
+            }
+
+            // Horizontal Design Repeats Check - Optimized using fail-fast sampling
+            let horizRepeats = 1;
+            const sampleY = [];
+            const sampleCount = Math.min(15, picksCount);
+            for (let i = 0; i < sampleCount; i++) {
+                sampleY.push(Math.floor((i * picksCount) / sampleCount));
+            }
+
+            for (let P = 1; P <= Math.floor(hooksCount / 2); P++) {
+                if (hooksCount % P !== 0) continue;
+                
+                const x2Map = [];
+                for (let x = 0; x < hooksCount - P; x++) {
+                    x2Map.push({
+                        b1: Math.floor(x / 8),
+                        mask1: 1 << (7 - (x % 8)),
+                        b2: Math.floor((x + P) / 8),
+                        mask2: 1 << (7 - ((x + P) % 8))
+                    });
+                }
+
+                let isPeriod = true;
+                for (let y of sampleY) {
+                    const rowSlice = rows[y];
+                    for (let i = 0; i < x2Map.length; i++) {
+                        const m = x2Map[i];
+                        if (((rowSlice[m.b1] & m.mask1) !== 0) !== ((rowSlice[m.b2] & m.mask2) !== 0)) {
+                            isPeriod = false;
+                            break;
+                        }
+                    }
+                    if (!isPeriod) break;
+                }
+                
+                if (isPeriod) {
+                    for (let y = 0; y < picksCount; y++) {
+                        if (sampleY.includes(y)) continue;
+                        const rowSlice = rows[y];
+                        for (let i = 0; i < x2Map.length; i++) {
+                            const m = x2Map[i];
+                            if (((rowSlice[m.b1] & m.mask1) !== 0) !== ((rowSlice[m.b2] & m.mask2) !== 0)) {
+                                isPeriod = false;
+                                break;
+                            }
+                        }
+                        if (!isPeriod) break;
+                    }
+                }
+                
+                if (isPeriod) {
+                    horizRepeats = hooksCount / P;
+                    break;
+                }
+            }
+
+            // Vertical Design Repeats Check - Optimized using fail-fast sampling
+            let vertRepeats = 1;
+            for (let P = 1; P <= Math.floor(picksCount / 2); P++) {
+                if (picksCount % P !== 0) continue;
+                
+                let isPeriod = true;
+                const vertSampleCount = Math.min(15, Math.floor((picksCount - P) / 2) + 1);
+                const vertSamples = [];
+                for (let i = 0; i < vertSampleCount; i++) {
+                    vertSamples.push(Math.floor((i * (picksCount - P)) / vertSampleCount));
+                }
+                
+                for (let y of vertSamples) {
+                    const row1 = rows[y];
+                    const row2 = rows[y + P];
+                    let match = true;
+                    for (let b = 0; b < hookBytes; b++) {
+                        if (row1[b] !== row2[b]) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (!match) {
+                        isPeriod = false;
+                        break;
+                    }
+                }
+                
+                if (isPeriod) {
+                    for (let y = 0; y < picksCount - P; y++) {
+                        if (vertSamples.includes(y)) continue;
+                        const row1 = rows[y];
+                        const row2 = rows[y + P];
+                        let match = true;
+                        for (let b = 0; b < hookBytes; b++) {
+                            if (row1[b] !== row2[b]) {
+                                match = false;
+                                break;
+                            }
+                        }
+                        if (!match) {
+                            isPeriod = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (isPeriod) {
+                    vertRepeats = picksCount / P;
+                    break;
+                }
+            }
+
+            // Saree Jala and Layout Analysis
+            const transitionCounts = [];
+            const columnPeriods = [];
+
+            // Helper to get column period - Optimized with precomputed masks and fail-fast
+            const getColPeriod = (colX) => {
+                const byteIdx = Math.floor(colX / 8);
+                const bitIdx = 7 - (colX % 8);
+                const mask = 1 << bitIdx;
+
+                for (let period of [2, 4, 8]) {
+                    if (period > picksCount) continue;
+                    let isPeriod = true;
+                    const targetLifts = [];
+                    for (let t = 0; t < period; t++) {
+                        targetLifts.push((rows[t][byteIdx] & mask) !== 0 ? 1 : 0);
+                    }
+                    for (let y = period; y < picksCount; y++) {
+                        const lift1 = (rows[y][byteIdx] & mask) !== 0 ? 1 : 0;
+                        const lift2 = targetLifts[y % period];
+                        if (lift1 !== lift2) {
+                            isPeriod = false;
+                            break;
+                        }
+                    }
+                    if (isPeriod) return period;
+                }
+                // Check if it's constant
+                let isConst = true;
+                const firstVal = (rows[0][byteIdx] & mask) !== 0 ? 1 : 0;
+                for (let y = 1; y < picksCount; y++) {
+                    const valY = (rows[y][byteIdx] & mask) !== 0 ? 1 : 0;
+                    if (valY !== firstVal) {
+                        isConst = false;
+                        break;
+                    }
+                }
+                if (isConst) return 1;
+                return 0;
+            };
+
+            for (let x = 0; x < hooksCount; x++) {
+                let transitions = 0;
+                let lastLift = -1;
+                const byteIdx = Math.floor(x / 8);
+                const bitIdx = 7 - (x % 8);
+                const mask = 1 << bitIdx;
+                for (let y = 0; y < picksCount; y++) {
+                    const lift = (rows[y][byteIdx] & mask) !== 0 ? 1 : 0;
+                    if (lastLift !== -1 && lift !== lastLift) transitions++;
+                    lastLift = lift;
+                }
+                transitionCounts.push(transitions);
+                columnPeriods.push(getColPeriod(x));
+            }
+
+            // 1. Left Selvedge (Kinara)
+            let leftSelvedgeEnds = 0;
+            let leftSelvedgeWeave = "None";
+            for (let x = 0; x < Math.min(48, Math.floor(hooksCount / 10)); x++) {
+                const p = columnPeriods[x];
+                if (p === 1 || p === 2 || p === 4) {
+                    leftSelvedgeEnds++;
+                } else {
+                    break;
+                }
+            }
+            if (leftSelvedgeEnds > 0) {
+                const p = columnPeriods[0];
+                if (p === 2) leftSelvedgeWeave = "Plain 1/1";
+                else if (p === 4) leftSelvedgeWeave = "Panama 2/2";
+                else if (p === 1) leftSelvedgeWeave = "Stripe/Rib";
+                else leftSelvedgeWeave = "Rib 3/1";
+            }
+
+            // 2. Right Selvedge (Kinara)
+            let rightSelvedgeEnds = 0;
+            let rightSelvedgeWeave = "None";
+            for (let x = hooksCount - 1; x >= Math.max(hooksCount - 48, Math.floor(9 * hooksCount / 10)); x--) {
+                const p = columnPeriods[x];
+                if (p === 1 || p === 2 || p === 4) {
+                    rightSelvedgeEnds++;
+                } else {
+                    break;
+                }
+            }
+            if (rightSelvedgeEnds > 0) {
+                const p = columnPeriods[hooksCount - 1];
+                if (p === 2) rightSelvedgeWeave = "Plain 1/1";
+                else if (p === 4) rightSelvedgeWeave = "Panama 2/2";
+                else if (p === 1) rightSelvedgeWeave = "Stripe/Rib";
+                else rightSelvedgeWeave = "Rib 3/1";
+            }
+
+            // 3. Body Motif Repeat Detector (in central region)
+            let bestP = 0;
+            let bestPScore = 0;
+            const centralStart = Math.floor(hooksCount / 3);
+            const centralEnd = Math.floor(2 * hooksCount / 3);
+            
+            for (let P = 16; P <= Math.min(320, Math.floor(hooksCount / 4)); P++) {
+                let matches = 0;
+                let total = 0;
+                const stepY = Math.max(1, Math.floor(picksCount / 30));
+                for (let y = 0; y < picksCount; y += stepY) {
+                    const row = rows[y];
+                    for (let x = centralStart; x < centralEnd - P; x++) {
+                        const b1 = Math.floor(x / 8);
+                        const bit1 = 7 - (x % 8);
+                        const l1 = (row[b1] >> bit1) & 1;
+                        
+                        const b2 = Math.floor((x + P) / 8);
+                        const bit2 = 7 - ((x + P) % 8);
+                        const l2 = (row[b2] >> bit2) & 1;
+                        
+                        if (l1 === l2) matches++;
+                        total++;
+                    }
+                }
+                const score = matches / total;
+                if (score > 0.88 && score > bestPScore) {
+                    bestPScore = score;
+                    bestP = P;
+                }
+            }
+
+            // Segment border vs body boundaries
+            let bodyStart = leftSelvedgeEnds;
+            if (bestP > 0) {
+                for (let x = centralStart; x >= leftSelvedgeEnds; x--) {
+                    let colMatches = 0;
+                    let colTotal = 0;
+                    for (let y = 0; y < picksCount; y += Math.max(1, Math.floor(picksCount / 15))) {
+                        const row = rows[y];
+                        const b1 = Math.floor(x / 8);
+                        const bit1 = 7 - (x % 8);
+                        const l1 = (row[b1] >> bit1) & 1;
+                        
+                        const b2 = Math.floor((x + bestP) / 8);
+                        const bit2 = 7 - ((x + bestP) % 8);
+                        const l2 = (row[b2] >> bit2) & 1;
+                        
+                        if (l1 === l2) colMatches++;
+                        colTotal++;
+                    }
+                    if (colMatches / colTotal < 0.75) {
+                        bodyStart = x + 1;
+                        break;
+                    }
+                }
+            }
+
+            let bodyEnd = hooksCount - rightSelvedgeEnds - 1;
+            if (bestP > 0) {
+                for (let x = centralEnd; x < hooksCount - rightSelvedgeEnds; x++) {
+                    let colMatches = 0;
+                    let colTotal = 0;
+                    for (let y = 0; y < picksCount; y += Math.max(1, Math.floor(picksCount / 15))) {
+                        const row = rows[y];
+                        const b1 = Math.floor(x / 8);
+                        const bit1 = 7 - (x % 8);
+                        const l1 = (row[b1] >> bit1) & 1;
+                        
+                        const b2 = Math.floor((x - bestP) / 8);
+                        const bit2 = 7 - ((x - bestP) % 8);
+                        const l2 = (row[b2] >> bit2) & 1;
+                        
+                        if (l1 === l2) colMatches++;
+                        colTotal++;
+                    }
+                    if (colMatches / colTotal < 0.75) {
+                        bodyEnd = x - 1;
+                        break;
+                    }
+                }
+            }
+
+            if (bestP === 0) {
+                let centralSum = 0;
+                for (let x = centralStart; x < centralEnd; x++) {
+                    centralSum += transitionCounts[x];
+                }
+                const centralAvg = centralSum / (centralEnd - centralStart);
+                
+                for (let x = leftSelvedgeEnds; x < centralStart; x++) {
+                    if (Math.abs(transitionCounts[x] - centralAvg) > centralAvg * 0.4) {
+                        bodyStart = x;
+                    }
+                }
+                for (let x = hooksCount - rightSelvedgeEnds - 1; x > centralEnd; x--) {
+                    if (Math.abs(transitionCounts[x] - centralAvg) > centralAvg * 0.4) {
+                        bodyEnd = x;
+                    }
+                }
+            }
+
+            const leftBorder = Math.max(0, bodyStart - leftSelvedgeEnds);
+            const rightBorder = Math.max(0, hooksCount - rightSelvedgeEnds - 1 - bodyEnd);
+            const body = Math.max(0, hooksCount - leftSelvedgeEnds - rightSelvedgeEnds - leftBorder - rightBorder);
+
+            // Saree Vertical Section Segmentation (Weft sections)
+            const W_weft = Math.max(10, Math.floor(picksCount / 20));
+            const pickDensities = [];
+            for (let y = 0; y < picksCount; y++) {
+                let lifts = 0;
+                const row = rows[y];
+                for (let b = 0; b < hookBytes; b++) {
+                    lifts += BIT_COUNT[row[b]];
+                }
+                pickDensities.push(lifts / hooksCount);
+            }
+
+            const rollingMean = [];
+            const rollingStd = [];
+            for (let y = 0; y < picksCount; y++) {
+                const start = Math.max(0, y - Math.floor(W_weft / 2));
+                const end = Math.min(picksCount, y + Math.floor(W_weft / 2));
+                let sum = 0;
+                for (let i = start; i < end; i++) sum += pickDensities[i];
+                const mean = sum / (end - start);
+                
+                let variance = 0;
+                for (let i = start; i < end; i++) variance += Math.pow(pickDensities[i] - mean, 2);
+                const std = Math.sqrt(variance / (end - start));
+                
+                rollingMean.push(mean);
+                rollingStd.push(std);
+            }
+
+            const rawClasses = [];
+            for (let y = 0; y < picksCount; y++) {
+                const mean = rollingMean[y];
+                const std = rollingStd[y];
+                if (mean < 0.05) rawClasses.push("lead");
+                else if (std < 0.035) rawClasses.push("blouse");
+                else if (mean > 0.38 || std > 0.085) rawClasses.push("pallu");
+                else rawClasses.push("body");
+            }
+
+            const smoothClasses = [];
+            for (let y = 0; y < picksCount; y++) {
+                const start = Math.max(0, y - Math.floor(W_weft / 2));
+                const end = Math.min(picksCount, y + Math.floor(W_weft / 2));
+                const votes = {};
+                for (let i = start; i < end; i++) {
+                    const c = rawClasses[i];
+                    votes[c] = (votes[c] || 0) + 1;
+                }
+                let winner = "body";
+                let maxVotes = 0;
+                for (let c in votes) {
+                    if (votes[c] > maxVotes) {
+                        maxVotes = votes[c];
+                        winner = c;
+                    }
+                }
+                smoothClasses.push(winner);
+            }
+
+            let palluPicks = 0;
+            let bodyPicks = 0;
+            let blousePicks = 0;
+            let leadPicks = 0;
+            for (let y = 0; y < picksCount; y++) {
+                const c = smoothClasses[y];
+                if (c === "pallu") palluPicks++;
+                else if (c === "body") bodyPicks++;
+                else if (c === "blouse") blousePicks++;
+                else if (c === "lead") leadPicks++;
+            }
+
+            // Fallback: if no distinct segments, assign all picks to Body
+            if (palluPicks === 0 && blousePicks === 0 && leadPicks === 0) {
+                bodyPicks = picksCount;
+            }
+
+            // Auto-fill only Jacquard capacity from EP file; rest entered manually
+            const machineHooksEl = document.getElementById('input-machine-hooks');
+            if (machineHooksEl) machineHooksEl.value = hooksCount;
+
+            // Update specs
+            specName.textContent = designName;
+            specHooks.textContent = `${hooksCount} Hooks`;
+            specPicks.textContent = `${picksCount} Picks (Weft Rows)`;
+            specFeeders.textContent = `${Object.keys(weftCounts).length} Shuttle Colors`;
+            specWarpFloat.textContent = `${maxWarpFloat} picks consecutive`;
+            specWeftFloat.textContent = `${maxWeftFloat} ends consecutive`;
+            specPeakDraw.textContent = `${maxLiftsInRow} hooks (${((maxLiftsInRow / hooksCount) * 100).toFixed(1)}% load)`;
+
+            // Textile Interpretation Calculations
+            const averageDensity = ((totalLifts / (hooksCount * picksCount)) * 100).toFixed(1);
+            
+            // Deduce weft repeat sequence
+            const repeatPattern = detectRepeatSequence(weftSequence);
+            let weftRepeatStr = repeatPattern.length > 1
+                ? `Active repeat [${repeatPattern.join(' → ')}] (Length: ${repeatPattern.length})`
+                : `Constant weft (Feeder ${repeatPattern[0]})`;
+
+            // Deduce weave type
+            let weaveTypeStr = "Jacquard Pattern (Variable Interlacement)";
+            const plainWeaveRatio = plainWeaveCount / (hookBytes * picksCount);
+            if (picksCount === 1) {
+                leftSelvedgeEnds = 0;
+                leftSelvedgeWeave = "None";
+                rightSelvedgeEnds = 0;
+                rightSelvedgeWeave = "None";
+                weaveTypeStr = "Jacquard Loom Card Mask (Cast-Out Configuration)";
+                weftRepeatStr = "Single Pick Card Mask";
+            } else if (plainWeaveRatio > 0.8) {
+                weaveTypeStr = "Plain Weave (1/1 tabby structure: alternating lift/drop grids)";
+            } else if (averageDensity > 45 && averageDensity < 55) {
+                weaveTypeStr = "Balanced Weave (approx. 50% warp-faced and 50% weft-faced floats)";
+            } else if (averageDensity >= 55) {
+                weaveTypeStr = "Warp-Faced Satin/Twill (high warp lift percentage; warp color dominates front face)";
+            } else {
+                weaveTypeStr = "Weft-Faced Satin/Twill (low warp lift percentage; weft color dominates front face)";
+            }
+
+            renderTextileInterpretation(hooksCount, picksCount, weaveTypeStr, weftRepeatStr, averageDensity, weftCounts);
+
+            parsedData = {
+                filename,
+                designName,
+                blocks,
+                hooksCount,
+                picksCount,
+                rowWidth,
+                hookBytes,
+                rows,
+                weftSequence,
+                weftCounts,
+                maxWarpFloat,
+                maxWeftFloat,
+                isHorizSymmetric,
+                isVertSymmetric,
+                maxLiftsInRow,
+                horizRepeats,
+                vertRepeats,
+                weaveTypeStr,
+                weftRepeatStr,
+                averageDensity,
+                leftSelvedgeEnds,
+                leftSelvedgeWeave,
+                leftBorder,
+                body,
+                bestP,
+                rightBorder,
+                rightSelvedgeEnds,
+                rightSelvedgeWeave,
+                palluPicks,
+                bodyPicks,
+                blousePicks,
+                leadPicks
+            };
+
+            // Jala layout will update when user clicks Apply Settings
+
+            // Enable action buttons
+            btnExportMatrix.disabled = false;
+            canvasStatus.textContent = `${designName} · ${hooksCount} Warp Ends x ${picksCount} Picks`;
+
+            resetViewport();
+            offscreenChunks = [];
+            drawWeave();
+            recalculateJalaDetails();
+            renderPicksTable();
+
+            // Lock container height to match loaded textile interpretation
+            requestAnimationFrame(() => {
+                const leftPanel = document.querySelector('.dashboard-grid > div:first-child');
+                const grid = document.querySelector('.dashboard-grid');
+                if (leftPanel && grid) {
+                    const gap = parseFloat(getComputedStyle(leftPanel).gap) || 32;
+                    const cards = [...leftPanel.children];
+                    const naturalH = cards.reduce((sum, c) => sum + c.offsetHeight, 0) + (cards.length - 1) * gap;
+                    grid.style.flex = 'none';
+                    grid.style.height = naturalH + 'px';
+                }
+            });
+        }
+
+        function renderTextileInterpretation(hooks, picks, weaveType, weftRepeat, density, weftCounts) {
+            translationBox.innerHTML = `
+                <div class="explain-item structure">
+                    <div class="explain-header">
+                        <span>Weave Interlacement Structure</span>
+                        <span class="textile-badge">Weave Type</span>
+                    </div>
+                    <div class="explain-desc" style="font-weight: 500; color: var(--fg); margin-bottom: 0.25rem;">
+                        ${weaveType}
+                    </div>
+                    <div class="explain-desc">
+                        The pattern grid defines where warp threads float on the surface. Average lift density is <strong>${density}%</strong>, meaning ${density}% of the fabric surface shows warp color, and ${(100-density).toFixed(1)}% shows weft color.
+                    </div>
+                </div>
+
+                <div class="explain-item weft">
+                    <div class="explain-header">
+                        <span>Weft Pick & Insertion Sequence</span>
+                        <span class="textile-badge">Shuttle Plan</span>
+                    </div>
+                    <div class="explain-desc" style="font-weight: 500; color: var(--fg); margin-bottom: 0.25rem;">
+                        Weft Shuttle Repeat: ${weftRepeat}
+                    </div>
+                    <div class="explain-desc">
+                        Weft color breakdown for shuttle feeders:
+                        <div style="margin-top:0.75rem; display:flex; flex-direction:column; gap:0.5rem;">
+                        ${Object.keys(weftCounts).map(feeder => {
+                            const count = weftCounts[feeder];
+                            const defaultColor = feederColors[feeder] || feederColors['default'];
+                            return `
+                                <div style="display:flex; align-items:center; gap:0.5rem; background:rgba(255,255,255,0.02); padding:0.3rem 0.5rem; border-radius:6px; border:1px solid var(--border);">
+                                    <div style="width:20px; height:20px; border-radius:4px; background-color:${defaultColor}; border:1px solid var(--border); flex-shrink:0;"></div>
+                                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><strong>${Number(feeder) === 255 ? 'Ground' : `Feeder ${feeder}`}</strong>: ${count} picks (${((count/picks)*100).toFixed(1)}%)</span>
+                                </div>
+                            `;
+                        }).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function recalculateJalaDetails(e) {
+            // Jala calculation details removed
+            if (parsedData) renderPicksTable(false);
+        }
+
+        function getMatrixWidth() {
+            if (!parsedData) return 0;
+            const harnessMode = selectHarnessMode?.value || 'flat';
+            let baseWidth = parsedData.hooksCount;
+            if (harnessMode !== 'flat') {
+                baseWidth = Math.floor(parsedData.hooksCount / 2);
+            }
+            return baseWidth;
+        }
+
+        function getSectionHook(x_sec, sectionSize, whpd, repeats, repeatType, sectionAdj = 0) {
+            const singleEnds = sectionSize * whpd;
+            const totalEnds = Math.round(singleEnds * repeats) + sectionAdj;
+            if (totalEnds <= 0 || x_sec < 0 || x_sec >= totalEnds) return -1;
+
+            const standardEnds = Math.round(singleEnds * repeats);
+            let checkSec = x_sec;
+            if (checkSec >= standardEnds) {
+                checkSec = standardEnds - 1;
+            }
+
+            const repIndex = Math.floor(checkSec / singleEnds);
+            const offset = checkSec % singleEnds;
+            
+            let hookIdx = Math.floor(offset / whpd);
+            if (hookIdx >= sectionSize) hookIdx = sectionSize - 1;
+
+            if (repeatType === 'mirror') {
+                hookIdx = sectionSize - 1 - hookIdx;
+            } else if (repeatType === 'alternate-mirror') {
+                if (repIndex % 2 === 1) {
+                    hookIdx = sectionSize - 1 - hookIdx;
+                }
+            }
+            return hookIdx;
+        }
+
+        function physColToDesign(x_phys) {
+            const endsAdjustment = parseInt(document.getElementById('input-ends-adjustment')?.value) || 0;
+            const leftAdj = Math.floor(endsAdjustment / 2);
+            const rightAdj = endsAdjustment - leftAdj;
+            const harnessMode = selectHarnessMode?.value || 'flat';
+            
+            let curr = 0;
+            let hookOffset = 0;
+            
+            for (let i = 0; i < currentJalaSections.length; i++) {
+                const sec = currentJalaSections[i];
+                if (sec.type === 'empty-hooks') continue;
+                
+                let adjHooks = sec.hooks || 0;
+                if (harnessMode !== 'flat') {
+                    adjHooks = Math.floor(adjHooks / 2);
+                }
+                
+                let adjVal = 0;
+                if (sec.type === 'left-selvedge') adjVal = leftAdj;
+                else if (sec.type === 'right-selvedge') adjVal = rightAdj;
+                
+                const secEnds = Math.round(adjHooks * (sec.whpd || 1) * (sec.repeats || 1)) + adjVal;
+                
+                if (x_phys < curr + secEnds) {
+                    const secType = (sec.type === 'left-selvedge' || sec.type === 'left-border') ? 'straight' : 
+                                    (sec.type === 'right-selvedge' || sec.type === 'right-border') ? 'mirror' : 'straight';
+                    
+                    const hookIdx = getSectionHook(x_phys - curr, adjHooks, sec.whpd || 1, sec.repeats || 1, secType, adjVal);
+                    return hookOffset + hookIdx;
+                }
+                curr += secEnds;
+                hookOffset += adjHooks;
+            }
+            
+            return hookOffset; // fallback
+        }
+
+        // Canvas Rendering viewport
+        function resetViewport() {
+            if (!parsedData) return;
+            const matrixWidth = getMatrixWidth();
+            const { picksCount } = parsedData;
+            const containerWidth = canvasContainer.clientWidth;
+            const containerHeight = canvasContainer.clientHeight;
+            
+            // scale fits screen width
+            scale = (containerWidth - 40) / matrixWidth;
+            
+            if (picksCount <= 10) {
+                scale = Math.max(scale, 0.2);
+                const targetPickHeight = Math.max(32, Math.floor((containerHeight - 80) / picksCount));
+                panY = Math.floor((containerHeight - (picksCount * targetPickHeight)) / 2);
+                if (panY < 20) panY = 20;
+            } else {
+                const scaleToFitHeight = (containerHeight - 40) / picksCount;
+                if (picksCount * scale > containerHeight) {
+                    scale = scaleToFitHeight;
+                }
+                panY = Math.floor((containerHeight - (picksCount * scale)) / 2);
+                if (panY < 20) panY = 20;
+            }
+            
+            if (scale > 15) scale = 15;
+            if (scale < 0.01) scale = 0.01;
+            
+            panX = Math.floor((containerWidth - (matrixWidth * scale)) / 2);
+            
+            canvas.width = containerWidth;
+            canvas.height = containerHeight;
+        }
+
+        const CHUNK_HEIGHT = 8000;
+
+        function preRenderMatrix() {
+            if (!parsedData) return;
+            const { hooksCount, picksCount, rows, hookBytes, weftSequence } = parsedData;
+            const viewMode = selectViewMode?.value || 'raw';
+            const harnessMode = selectHarnessMode?.value || 'flat';
+            const matrixWidth = getMatrixWidth();
+            if (matrixWidth <= 0) return;
+            const showFull = document.getElementById('select-matrix-view')?.value === 'jala';
+
+            offscreenChunks = [];
+
+            // Pre-parse colors to rgb
+            const parsedColors = {};
+            for (const f in feederColors) {
+                const cHex = feederColors[f].replace('#', '');
+                parsedColors[f] = {
+                    r: parseInt(cHex.substring(0, 2), 16),
+                    g: parseInt(cHex.substring(2, 4), 16),
+                    b: parseInt(cHex.substring(4, 6), 16)
+                };
+            }
+            const defaultCol = parsedColors['default'] || { r: 107, g: 114, b: 128 };
+            const colors = getWarpColors();
+            const rawBg = colors.rawBgRGB;
+            const rawFg = colors.rawFgRGB;
+
+            const colToDesignMap = new Int32Array(matrixWidth);
+            for (let x = 0; x < matrixWidth; x++) {
+                colToDesignMap[x] = showFull ? physColToDesign(x) : x;
+            }
+
+            for (let chunkY = 0; chunkY < picksCount; chunkY += CHUNK_HEIGHT) {
+                const currentChunkHeight = Math.min(CHUNK_HEIGHT, picksCount - chunkY);
+                const chunkCanvas = document.createElement('canvas');
+                chunkCanvas.width = matrixWidth;
+                chunkCanvas.height = currentChunkHeight;
+                const chunkCtx = chunkCanvas.getContext('2d');
+                const imgData = chunkCtx.createImageData(matrixWidth, currentChunkHeight);
+
+                for (let y = 0; y < currentChunkHeight; y++) {
+                    const globalY = chunkY + y;
+                    const rowData = rows[globalY];
+                    const feeder = weftSequence[globalY] || 0;
+                    const fColor = parsedColors[feeder] || defaultCol;
+
+                    for (let x = 0; x < matrixWidth; x++) {
+                        const h_design = colToDesignMap[x];
+                        let h = h_design;
+                        if (harnessMode === 'interleaved-even') {
+                            h = 2 * h_design;
+                        } else if (harnessMode === 'interleaved-odd') {
+                            h = 2 * h_design + 1;
+                        }
+
+                        if (hooksCount > 0) {
+                            h = h % hooksCount;
+                        }
+
+                        const idx = (y * matrixWidth + x) * 4;
+
+                        let lift = 0;
+                        if (rowData) {
+                            const byteIdx = Math.floor(h / 8);
+                            const bitIdx = 7 - (h % 8);
+                            lift = (rowData[byteIdx] >> bitIdx) & 1;
+                        }
+
+                        let r = 0, g = 0, b = 0;
+                        if (viewMode === 'raw') {
+                            if (lift === 1) {
+                                r = rawFg.r; g = rawFg.g; b = rawFg.b;
+                            } else {
+                                r = rawBg.r; g = rawBg.g; b = rawBg.b;
+                            }
+                            if (isolatedFeeder !== null) {
+                                if (feeder !== isolatedFeeder) {
+                                    r = Math.floor(r * 0.15);
+                                    g = Math.floor(g * 0.15);
+                                    b = Math.floor(b * 0.15);
+                                }
+                            }
+                        } else {
+                            const warpOnTop = (viewMode === 'fabric' && lift === 1) || (viewMode === 'fabric-back' && lift === 0);
+                            if (warpOnTop) {
+                                if (harnessMode === 'flat') {
+                                    r = 229; g = 229; b = 229;
+                                } else {
+                                    if (h % 2 === 0) {
+                                        const faceIdx = h / 2;
+                                        if (faceIdx % 2 === 0) { r = 252; g = 165; b = 165; }
+                                        else { r = 134; g = 239; b = 172; }
+                                    } else {
+                                        r = 156; g = 156; b = 156;
+                                    }
+                                }
+                                if (isolatedFeeder !== null) {
+                                    r = Math.floor(r * 0.15);
+                                    g = Math.floor(g * 0.15);
+                                    b = Math.floor(b * 0.15);
+                                }
+                            } else {
+                                if (isolatedFeeder !== null && feeder !== isolatedFeeder) {
+                                    r = Math.floor(fColor.r * 0.05);
+                                    g = Math.floor(fColor.g * 0.05);
+                                    b = Math.floor(fColor.b * 0.05);
+                                } else if (highlightedFeeder !== null && feeder === highlightedFeeder) {
+                                    if (blinkState) {
+                                        r = 251; g = 191; b = 36;
+                                    } else {
+                                        r = fColor.r; g = fColor.g; b = fColor.b;
+                                    }
+                                } else {
+                                    r = fColor.r; g = fColor.g; b = fColor.b;
+                                }
+                            }
+                        }
+
+                        imgData.data[idx] = r;
+                        imgData.data[idx + 1] = g;
+                        imgData.data[idx + 2] = b;
+                        imgData.data[idx + 3] = 255;
+                    }
+                }
+                chunkCtx.putImageData(imgData, 0, 0);
+                offscreenChunks.push({
+                    canvas: chunkCanvas,
+                    yOffset: chunkY,
+                    height: currentChunkHeight
+                });
+            }
+        }
+
+        function drawScaledImage(ctx, x, y, w, h, smooth) {
+            ctx.imageSmoothingEnabled = smooth;
+            ctx.mozImageSmoothingEnabled = smooth;
+            ctx.webkitImageSmoothingEnabled = smooth;
+            ctx.msImageSmoothingEnabled = smooth;
+            
+            if (smooth) {
+                ctx.imageSmoothingQuality = 'high';
+            }
+
+            if (!parsedData || offscreenChunks.length === 0) return;
+
+            const scaleY = h / parsedData.picksCount;
+
+            offscreenChunks.forEach(chunk => {
+                const chunkDrawY = Math.round(y + chunk.yOffset * scaleY);
+                const nextChunkDrawY = Math.round(y + (chunk.yOffset + chunk.height) * scaleY);
+                const chunkDrawH = Math.max(1, nextChunkDrawY - chunkDrawY);
+                if (w > 0 && chunkDrawH > 0) {
+                    ctx.drawImage(chunk.canvas, x, chunkDrawY, w, chunkDrawH);
+                }
+            });
+        }
+
+        function drawWeave() {
+            if (!parsedData) return;
+            if (offscreenChunks.length === 0) {
+                preRenderMatrix();
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const matrixWidth = getMatrixWidth();
+            const { picksCount } = parsedData;
+
+            // Background color
+            const colors = getWarpColors();
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const useDensitySim = true;
+            const epi = parseFloat(document.getElementById('input-reed-density')?.value) || 80;
+            const ppi = parseFloat(document.getElementById('input-weft-density')?.value) || 70;
+            const aspectY = useDensitySim ? (epi / ppi) : 1.0;
+
+            const scaleX = scale;
+            const scaleY = scale * aspectY;
+
+            // Automatically switch between smooth bilinear rendering (when zoomed out to prevent aliasing)
+            // and crisp nearest-neighbor rendering (when zoomed in to keep thread/pixel cells sharp).
+            const smoothingEnabled = true;
+            const smoothDraw = smoothingEnabled && (scale < 1.0);
+
+            const drawDirect = (scale >= 4.0);
+            if (drawDirect) {
+                const colToDesignMap = new Int32Array(matrixWidth);
+                const showFull = document.getElementById('select-matrix-view')?.value === 'jala';
+                for (let x = 0; x < matrixWidth; x++) {
+                    colToDesignMap[x] = showFull ? physColToDesign(x) : x;
+                }
+
+                const startCol = Math.max(0, Math.floor(-panX / scaleX));
+                const endCol = Math.min(matrixWidth - 1, Math.floor((canvas.width - panX) / scaleX));
+                const startRow = Math.max(0, Math.floor(-panY / scaleY));
+                const endRow = Math.min(picksCount - 1, Math.floor((canvas.height - panY) / scaleY));
+
+                const viewMode = selectViewMode?.value || 'raw';
+                const harnessMode = selectHarnessMode?.value || 'flat';
+                const { hooksCount, rows, weftSequence } = parsedData;
+
+                for (let y = startRow; y <= endRow; y++) {
+                    const rowData = rows[y];
+                    const feeder = weftSequence[y] || 0;
+                    const fColor = feederColors[feeder] || '#6b7280';
+                    const rowScreenY = Math.round(panY + y * scaleY);
+                    const nextRowScreenY = Math.round(panY + (y + 1) * scaleY);
+                    const cellH = nextRowScreenY - rowScreenY;
+
+                    for (let x = startCol; x <= endCol; x++) {
+                        const h_design = colToDesignMap[x];
+                        let h = h_design;
+                        if (harnessMode === 'interleaved-even') {
+                            h = 2 * h_design;
+                        } else if (harnessMode === 'interleaved-odd') {
+                            h = 2 * h_design + 1;
+                        }
+                        if (hooksCount > 0) {
+                            h = h % hooksCount;
+                        }
+
+                        let lift = 0;
+                        if (rowData) {
+                            const byteIdx = Math.floor(h / 8);
+                            const bitIdx = 7 - (h % 8);
+                            lift = (rowData[byteIdx] >> bitIdx) & 1;
+                        }
+
+                        let color = '#101017';
+                        if (viewMode === 'raw') {
+                            color = (lift === 1) ? colors.lift : colors.drop;
+                            if (isolatedFeeder !== null && feeder !== isolatedFeeder) {
+                                const isDark = document.body.classList.contains('dark-mode') || document.documentElement.classList.contains('dark-mode');
+                                color = (lift === 1)
+                                    ? (isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)')
+                                    : (isDark ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)');
+                            }
+                        } else {
+                            const warpOnTop = (viewMode === 'fabric' && lift === 1) || (viewMode === 'fabric-back' && lift === 0);
+                            if (warpOnTop) {
+                                if (harnessMode === 'flat') {
+                                    color = '#e5e5e5';
+                                } else {
+                                    if (h % 2 === 0) {
+                                        const faceIdx = h / 2;
+                                        color = (faceIdx % 2 === 0) ? '#fca5a5' : '#86efac';
+                                    } else {
+                                        color = '#9c9c9c';
+                                    }
+                                }
+                                if (isolatedFeeder !== null) {
+                                    color = 'rgba(156, 156, 156, 0.15)';
+                                }
+                            } else {
+                                if (isolatedFeeder !== null && feeder !== isolatedFeeder) {
+                                    color = 'rgba(0,0,0,0.1)';
+                                } else if (highlightedFeeder !== null && feeder === highlightedFeeder) {
+                                    color = blinkState ? '#fbbf24' : fColor;
+                                } else {
+                                    color = fColor;
+                                }
+                            }
+                        }
+
+                        const colScreenX = Math.round(panX + x * scaleX);
+                        const nextColScreenX = Math.round(panX + (x + 1) * scaleX);
+                        const cellW = nextColScreenX - colScreenX;
+
+                        ctx.fillStyle = color;
+                        ctx.fillRect(colScreenX, rowScreenY, cellW, cellH);
+                    }
+                }
+            } else {
+                const drawH = (picksCount <= 10) ? Math.max(32, Math.round(picksCount * 32)) : Math.max(1, Math.round(picksCount * scaleY));
+                drawScaledImage(
+                    ctx, 
+                    Math.round(panX), 
+                    Math.round(panY), 
+                    Math.round(matrixWidth * scaleX), 
+                    drawH,
+                    smoothDraw
+                );
+            }
+
+            // Grid lines
+            if (scale >= 4) {
+                ctx.strokeStyle = colors.grid;
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                for (let x = 0; x <= matrixWidth; x++) {
+                    const lineX = panX + x * scaleX;
+                    if (lineX >= 0 && lineX <= canvas.width) {
+                        ctx.moveTo(lineX, panY);
+                        ctx.lineTo(lineX, panY + picksCount * scaleY);
+                    }
+                }
+                for (let y = 0; y <= picksCount; y++) {
+                    const lineY = panY + y * scaleY;
+                    if (lineY >= 0 && lineY <= canvas.height) {
+                        ctx.moveTo(panX, lineY);
+                        ctx.lineTo(panX + matrixWidth * scaleX, lineY);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            // Draw Jala Boundary separators and Repeat Lines
+            const showFull = document.getElementById('select-matrix-view')?.value === 'jala';
+            const getSecForDraw = (type) => currentJalaSections.find(s => s.type === type) || { hooks: 0, repeats: 1, whpd: 1 };
+            const secLS = getSecForDraw('left-selvedge');
+            const secLB = getSecForDraw('left-border');
+            const secBody = getSecForDraw('body');
+            const secRB = getSecForDraw('right-border');
+            const secRS = getSecForDraw('right-selvedge');
+
+            const leftSelvedgeVal = secLS.hooks;
+            const leftBorderVal = secLB.hooks;
+            const bodyVal = secBody.hooks;
+            const rightBorderVal = secRB.hooks;
+            const rightSelvedgeVal = secRS.hooks;
+
+            let adjLSel = leftSelvedgeVal;
+            let adjLBor = leftBorderVal;
+            let adjBdy = bodyVal;
+            let adjRBor = rightBorderVal;
+            let adjRSel = rightSelvedgeVal;
+
+            const harnessMode = selectHarnessMode?.value || 'flat';
+            if (harnessMode !== 'flat') {
+                adjLSel = Math.floor(leftSelvedgeVal / 2);
+                adjLBor = Math.floor(leftBorderVal / 2);
+                adjBdy = Math.floor(bodyVal / 2);
+                adjRBor = Math.floor(rightBorderVal / 2);
+                adjRSel = Math.floor(rightSelvedgeVal / 2);
+            }
+
+            // Boundaries and repeat drawing logic removed
+        }
+
+        // Canvas pan & zoom handlers
+        canvasContainer.addEventListener('mousedown', (e) => {
+            if (!parsedData) return;
+            isDragging = true;
+            startX = e.clientX - panX;
+            startY = e.clientY - panY;
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        canvasContainer.addEventListener('mousemove', (e) => {
+            if (!parsedData) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const useDensitySim = true;
+            const epi = parseFloat(document.getElementById('input-reed-density')?.value) || 80;
+            const ppi = parseFloat(document.getElementById('input-weft-density')?.value) || 70;
+            const aspectY = useDensitySim ? (epi / ppi) : 1.0;
+
+            const scaleX = scale;
+            const scaleY = scale * aspectY;
+
+            if (isDragging) {
+                panX = e.clientX - startX;
+                panY = e.clientY - startY;
+                drawWeave();
+            }
+
+            const matrixWidth = getMatrixWidth();
+            const cellX = Math.floor((mouseX - panX) / scaleX);
+            const cellY = Math.floor((mouseY - panY) / scaleY);
+
+            if (cellX >= 0 && cellX < matrixWidth && cellY >= 0 && cellY < parsedData.picksCount) {
+                const rowData = parsedData.rows[cellY];
+                const viewMode = selectViewMode?.value || 'raw';
+                const harnessMode = selectHarnessMode?.value || 'flat';
+                const showFull = document.getElementById('select-matrix-view')?.value === 'jala';
+
+                let h_design = cellX;
+                if (showFull) {
+                    h_design = physColToDesign(cellX);
+                }
+
+                let h = h_design;
+                if (harnessMode === 'interleaved-even') {
+                    h = 2 * h_design;
+                } else if (harnessMode === 'interleaved-odd') {
+                    h = 2 * h_design + 1;
+                }
+
+                if (h >= parsedData.hooksCount) return;
+
+                const byteIdx = Math.floor(h / 8);
+                const bitIdx = 7 - (h % 8);
+                const lift = (rowData[byteIdx] >> bitIdx) & 1;
+                const feeder = rowData[parsedData.hookBytes] || 0;
+
+                const shuttleLabel = feeder === 255 ? 'Ground / Loom Control (255)' : `Feeder ${feeder}`;
+
+                let visibilityStr = "";
+                if (viewMode === 'raw') {
+                    visibilityStr = lift === 1 ? 'Warp Lifted' : 'Warp Dropped';
+                } else {
+                    const warpOnTop = (viewMode === 'fabric' && lift === 1) || (viewMode === 'fabric-back' && lift === 0);
+                    if (warpOnTop) {
+                        if (harnessMode === 'flat') {
+                            visibilityStr = 'Warp visible';
+                        } else {
+                            visibilityStr = (h % 2 === 0) ? `Face Warp visible (${(h/2)%2===0 ? 'Color 1' : 'Color 2'})` : 'Binding Warp visible';
+                        }
+                    } else {
+                        visibilityStr = `Weft visible (${shuttleLabel})`;
+                    }
+                }
+
+                const getSecForHover = (type) => currentJalaSections.find(s => s.type === type) || { hooks: 0, repeats: 1, whpd: 1 };
+                const secLS = getSecForHover('left-selvedge');
+                const secLB = getSecForHover('left-border');
+                const secBody = getSecForHover('body');
+                const secRB = getSecForHover('right-border');
+                const secRS = getSecForHover('right-selvedge');
+
+                const lSel = secLS.hooks;
+                const lBor = secLB.hooks;
+                const bdy = secBody.hooks;
+                const rBor = secRB.hooks;
+                const rSel = secRS.hooks;
+
+                let sectionName = "Idle / Unallocated";
+                let repeatNumText = "";
+
+                if (showFull) {
+                    let adjLSel = harnessMode !== 'flat' ? Math.floor(lSel / 2) : lSel;
+                    let adjLBor = harnessMode !== 'flat' ? Math.floor(lBor / 2) : lBor;
+                    let adjBdy = harnessMode !== 'flat' ? Math.floor(bdy / 2) : bdy;
+                    let adjRBor = harnessMode !== 'flat' ? Math.floor(rBor / 2) : rBor;
+                    let adjRSel = harnessMode !== 'flat' ? Math.floor(rSel / 2) : rSel;
+
+                    const tLSelReps = secLS.repeats;
+                    const tLBorReps = secLB.repeats;
+                    const tBdyReps = secBody.repeats;
+                    const tRBorReps = secRB.repeats;
+                    const tRSelReps = secRS.repeats;
+
+                    const tLSelWhpd = secLS.whpd;
+                    const tLBorWhpd = secLB.whpd;
+                    const tBdyWhpd = secBody.whpd;
+                    const tRBorWhpd = secRB.whpd;
+                    const tRSelWhpd = secRS.whpd;
+
+                    const leftSelEnds = adjLSel * tLSelWhpd * tLSelReps;
+                    const leftBorEnds = adjLBor * tLBorWhpd * tLBorReps;
+                    const bodyEnds = adjBdy * tBdyWhpd * tBdyReps;
+                    const rightBorEnds = adjRBor * tRBorWhpd * tRBorReps;
+                    const rightSelEnds = adjRSel * tRSelWhpd * tRSelReps;
+
+                    const lSelSingle = adjLSel * tLSelWhpd;
+                    const lBorSingle = adjLBor * tLBorWhpd;
+                    const bdySingle = adjBdy * tBdyWhpd;
+                    const rBorSingle = adjRBor * tRBorWhpd;
+                    const rSelSingle = adjRSel * tRSelWhpd;
+
+                    if (cellX < leftSelEnds) {
+                        sectionName = "Left Selvedge (Kinara)";
+                        const repIndex = lSelSingle > 0 ? Math.floor(cellX / lSelSingle) + 1 : 1;
+                        if (tLSelReps > 1) repeatNumText = ` (Repeat ${repIndex} of ${Math.ceil(tLSelReps)})`;
+                    } else if (cellX < leftSelEnds + leftBorEnds) {
+                        sectionName = "Left Border (Zari)";
+                        const repIndex = lBorSingle > 0 ? Math.floor((cellX - leftSelEnds) / lBorSingle) + 1 : 1;
+                        if (tLBorReps > 1) repeatNumText = ` (Repeat ${repIndex} of ${Math.ceil(tLBorReps)})`;
+                    } else if (cellX < leftSelEnds + leftBorEnds + bodyEnds) {
+                        sectionName = "Saree Body (Ground)";
+                        const repIndex = bdySingle > 0 ? Math.floor((cellX - (leftSelEnds + leftBorEnds)) / bdySingle) + 1 : 1;
+                        repeatNumText = ` (Repeat ${repIndex} of ${Math.ceil(tBdyReps)})`;
+                    } else if (cellX < leftSelEnds + leftBorEnds + bodyEnds + rightBorEnds) {
+                        sectionName = "Right Border (Zari)";
+                        const repIndex = rBorSingle > 0 ? Math.floor((cellX - (leftSelEnds + leftBorEnds + bodyEnds)) / rBorSingle) + 1 : 1;
+                        if (tRBorReps > 1) repeatNumText = ` (Repeat ${repIndex} of ${Math.ceil(tRBorReps)})`;
+                    } else {
+                        sectionName = "Right Selvedge (Kinara)";
+                        const repIndex = rSelSingle > 0 ? Math.floor((cellX - (leftSelEnds + leftBorEnds + bodyEnds + rightBorEnds)) / rSelSingle) + 1 : 1;
+                        if (tRSelReps > 1) repeatNumText = ` (Repeat ${repIndex} of ${Math.ceil(tRSelReps)})`;
+                    }
+                } else {
+                    if (h < lSel) {
+                        sectionName = "Left Selvedge (Kinara)";
+                    } else if (h < lSel + lBor) {
+                        sectionName = "Left Border (Zari)";
+                    } else if (h < lSel + lBor + bdy) {
+                        sectionName = "Saree Body (Ground)";
+                    } else if (h < lSel + lBor + bdy + rBor) {
+                        sectionName = "Right Border (Zari)";
+                    } else if (h < lSel + lBor + bdy + rBor + rSel) {
+                        sectionName = "Right Selvedge (Kinara)";
+                    }
+                }
+
+                let epdInfo = "";
+                if (showFull) {
+                    let epd = 2;
+                    let whpd = 1;
+                    let matchedSecType = '';
+                    if (sectionName.startsWith("Left Selvedge")) matchedSecType = 'left-selvedge';
+                    else if (sectionName.startsWith("Left Border")) matchedSecType = 'left-border';
+                    else if (sectionName.startsWith("Saree Body")) matchedSecType = 'body';
+                    else if (sectionName.startsWith("Right Border")) matchedSecType = 'right-border';
+                    else if (sectionName.startsWith("Right Selvedge")) matchedSecType = 'right-selvedge';
+                    
+                    if (matchedSecType) {
+                        const sec = currentJalaSections.find(function(s) { return s.type === matchedSecType; });
+                        if (sec) {
+                            epd = sec.epd || 2;
+                            whpd = sec.whpd || 1;
+                        }
+                    }
+                    
+                    epdInfo = `<br><strong>Ends/Dent:</strong> ${epd} | <strong>Hooks/Dent:</strong> ${whpd}`;
+                }
+
+                tooltip.style.display = 'block';
+                tooltip.style.left = `${mouseX + 15}px`;
+                tooltip.style.top = `${mouseY + 15}px`;
+                tooltip.innerHTML = `
+                    <strong>Design Column (X):</strong> ${h_design + 1}<br>
+                    <strong>Weft Pick (Y):</strong> Pick ${parsedData.picksCount - cellY}<br>
+                    <strong>Warp Lift State:</strong> ${lift === 1 ? 'LIFT (1)' : 'DROP (0)'}<br>
+                    <strong>Active Shuttle:</strong> ${shuttleLabel}<br>
+                    <strong>Surface Visibility:</strong> ${visibilityStr}
+                `;
+            } else {
+                tooltip.style.display = 'none';
+            }
+        });
+
+        canvasContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (!parsedData) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const useDensitySim = true;
+            const epi = parseFloat(document.getElementById('input-reed-density')?.value) || 80;
+            const ppi = parseFloat(document.getElementById('input-weft-density')?.value) || 70;
+            const aspectY = useDensitySim ? (epi / ppi) : 1.0;
+
+            const cellX = (mouseX - panX) / scale;
+            const cellY = (mouseY - panY) / (scale * aspectY);
+
+            const zoomFactor = 1.25;
+            let nextScale = scale;
+            if (e.deltaY < 0) {
+                nextScale = scale * zoomFactor;
+                if (nextScale >= 1.0) {
+                    nextScale = Math.round(nextScale);
+                    if (nextScale <= scale) nextScale = Math.ceil(scale + 0.1);
+                }
+            } else {
+                nextScale = scale / zoomFactor;
+                if (nextScale >= 1.0) {
+                    nextScale = Math.round(nextScale);
+                    if (nextScale >= scale) nextScale = Math.floor(scale - 0.1);
+                }
+            }
+            
+            if (nextScale < 0.01) nextScale = 0.01;
+            if (nextScale > 40) nextScale = 40;
+
+            scale = nextScale;
+            panX = mouseX - cellX * scale;
+            panY = mouseY - cellY * (scale * aspectY);
+
+            drawWeave();
+        });
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            if (parsedData) {
+                resetViewport();
+                drawWeave();
+            }
+        });
+
+        btnZoomIn.addEventListener('click', () => { 
+            let nextScale = scale * 1.25;
+            if (nextScale >= 1.0) {
+                nextScale = Math.round(nextScale);
+                if (nextScale <= scale) nextScale = Math.ceil(scale + 0.1);
+            }
+            scale = Math.min(40, nextScale); 
+            drawWeave(); 
+        });
+        btnZoomOut.addEventListener('click', () => { 
+            let nextScale = scale / 1.25;
+            if (nextScale >= 1.0) {
+                nextScale = Math.round(nextScale);
+                if (nextScale >= scale) nextScale = Math.floor(scale - 0.1);
+            }
+            scale = Math.max(0.01, nextScale); 
+            drawWeave(); 
+        });
+        btnFit.addEventListener('click', () => { resetViewport(); drawWeave(); });
+
+        btnExportMatrix.addEventListener('click', () => {
+            if (!parsedData) return;
+
+            const matrixWidth = getMatrixWidth();
+            const harnessMode = selectHarnessMode?.value || 'flat';
+            const viewMode = selectViewMode?.value || 'raw';
+            const showFull = document.getElementById('select-matrix-view')?.value === 'jala';
+
+            // Limit canvas size to 16 megapixels to prevent browser memory allocation crashes
+            let scaleFactor = 1.0;
+            const maxArea = 16 * 1024 * 1024; // 16 Megapixels (standard safe browser limit)
+            const currentArea = matrixWidth * parsedData.picksCount;
+            if (currentArea > maxArea) {
+                scaleFactor = Math.sqrt(maxArea / currentArea);
+            }
+
+            const outW = Math.max(1, Math.floor(matrixWidth * scaleFactor));
+            const outH = Math.max(1, Math.floor(parsedData.picksCount * scaleFactor));
+
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = outW;
+            exportCanvas.height = outH;
+            const exportCtx = exportCanvas.getContext('2d');
+            if (!exportCtx) {
+                alert("Could not allocate export canvas. Try reducing the Jala layout dimensions.");
+                return;
+            }
+            const imgData = exportCtx.createImageData(outW, outH);
+
+            // Pre-fill image data with opaque theme background color (instead of transparent)
+            const bgR = viewMode === 'raw' ? 20 : 16;
+            const bgG = viewMode === 'raw' ? 20 : 16;
+            const bgB = viewMode === 'raw' ? 25 : 23;
+            for (let i = 0; i < imgData.data.length; i += 4) {
+                imgData.data[i] = bgR;
+                imgData.data[i + 1] = bgG;
+                imgData.data[i + 2] = bgB;
+                imgData.data[i + 3] = 255;
+            }
+
+            // Draw to canvas with scaling support
+            for (let outY = 0; outY < outH; outY++) {
+                const y = Math.floor(outY / scaleFactor);
+                const row = parsedData.rows[y];
+                const feeder = parsedData.weftSequence[y] || 0;
+                const feederColor = feederColors[feeder] || feederColors['default'];
+                
+                // Parse hex color to rgb
+                let rVal = 0, gVal = 0, bVal = 0;
+                if (viewMode !== 'raw') {
+                    const cHex = feederColor.replace('#', '');
+                    rVal = parseInt(cHex.substring(0, 2), 16);
+                    gVal = parseInt(cHex.substring(2, 4), 16);
+                    bVal = parseInt(cHex.substring(4, 6), 16);
+                }
+
+                for (let outX = 0; outX < outW; outX++) {
+                    const x = Math.floor(outX / scaleFactor);
+
+                    let h_design = x;
+                    if (showFull) {
+                        h_design = physColToDesign(x);
+                    }
+
+                    let h = h_design;
+                    if (harnessMode === 'interleaved-even') {
+                        h = 2 * h_design;
+                    } else if (harnessMode === 'interleaved-odd') {
+                        h = 2 * h_design + 1;
+                    }
+
+                    if (h >= parsedData.hooksCount) {
+                        continue;
+                    }
+
+                    const byteIdx = Math.floor(h / 8);
+                    const bitIdx = 7 - (h % 8);
+                    const lift = (row[byteIdx] >> bitIdx) & 1;
+
+                    const idx = (outY * outW + outX) * 4;
+                    let r = 0, g = 0, b = 0;
+                    
+                    if (viewMode === 'raw') {
+                        const val = lift === 1 ? 255 : 0;
+                        r = g = b = val;
+                    } else {
+                        const warpOnTop = (viewMode === 'fabric' && lift === 1) || (viewMode === 'fabric-back' && lift === 0);
+                        if (warpOnTop) {
+                            if (harnessMode === 'flat') {
+                                r = g = b = 229; // off-white
+                            } else {
+                                if (h % 2 === 0) {
+                                    const faceIdx = h / 2;
+                                    if (faceIdx % 2 === 0) { r = 252; g = 165; b = 165; } // color 1
+                                    else { r = 134; g = 239; b = 172; } // color 2
+                                } else {
+                                    r = g = b = 156; // grey
+                                }
+                            }
+                        } else {
+                            r = rVal; g = gVal; b = bVal;
+                        }
+                    }
+
+                    imgData.data[idx] = r;
+                    imgData.data[idx + 1] = g;
+                    imgData.data[idx + 2] = b;
+                    imgData.data[idx + 3] = 255;
+                }
+            }
+            exportCtx.putImageData(imgData, 0, 0);
+
+            // Dynamically compress image to be under 2MB (2 * 1024 * 1024 bytes)
+            function exportAsJpeg(quality) {
+                exportCanvas.toBlob(function(blob) {
+                    if (!blob) {
+                        alert("Could not generate export image.");
+                        return;
+                    }
+                    // If file exceeds 2MB and quality can be reduced further, recurse
+                    if (blob.size > 2 * 1024 * 1024 && quality > 0.15) {
+                        exportAsJpeg(quality - 0.1);
+                        return;
+                    }
+
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    const scaleInfo = scaleFactor < 0.99 ? `_scaled_${Math.round(scaleFactor*100)}` : '';
+                    const viewLabel = showFull ? 'jala_layout' : 'jacquard_card';
+                    link.download = `${parsedData.designName}_${viewLabel}_${viewMode}${scaleInfo}.jpg`;
+                    link.href = url;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                }, 'image/jpeg', quality);
+            }
+
+            exportAsJpeg(0.8);
+        });
+
+
+
+        // Recalculate event listeners removed
+    </script>
+
+
+
+  <!-- Compact Top-Right Theme Toggle Button -->
+  <div style="position: fixed; top: 1.25rem; right: 1.5rem; z-index: 10002; display: none;">
+    <button onclick="toggleTheme()" class="hover-scale" id="theme-toggle" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.875rem; border-radius: 0.75rem; border: 1px solid var(--border); background: var(--surface); color: var(--fg); font-family: var(--font-body), sans-serif; font-size: 0.75rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: all 0.2s;">
+      <i class="ri-moon-line text-sm text-accent" id="theme-toggle-icon"></i>
+      <span id="theme-toggle-text">Dark Mode</span>
+    </button>
+  </div>
+  <style>
+    .hover-scale:hover {
+      transform: scale(1.05);
+    }
+    .hover-scale:active {
+      transform: scale(0.98);
+    }
+  </style>
+
+
+  <script id="vishwa-theme-manager-js">
+    function toggleTheme() {
+      const isDark = !document.body.classList.contains('dark-mode');
+      applyTheme(isDark);
+      // Dispatch custom event for React components
+      window.dispatchEvent(new CustomEvent('themeChanged', { detail: { isDark } }));
+    }
+
+    function applyTheme(isDark) {
+      if (isDark) {
+        document.documentElement.classList.add('dark-mode');
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('vishwa_fashions_theme', 'true');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('vishwa_fashions_theme', 'false');
+      }
+      
+      const icon = document.getElementById('theme-toggle-icon');
+      const text = document.getElementById('theme-toggle-text');
+      if (icon) {
+        icon.className = isDark ? 'ri-sun-line text-sm text-accent' : 'ri-moon-line text-sm text-accent';
+      }
+      if (text) {
+        text.innerText = isDark ? 'Light Mode' : 'Dark Mode';
+      }
+    }
+
+    (function() {
+      const isDark = localStorage.getItem('vishwa_fashions_theme') === 'true' || 
+                     (localStorage.getItem('vishwa_fashions_theme') === null && true);
+      applyTheme(isDark);
+    })();
+  </script>
+
+</body>
+</html>
