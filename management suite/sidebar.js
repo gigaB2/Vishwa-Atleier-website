@@ -1039,8 +1039,10 @@
         toggleBtn.classList.toggle('open', open);
         toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
         overlay.classList.toggle('visible', open);
-        if (window.innerWidth <= 1024) {
-          document.body.style.overflow = open ? 'hidden' : '';
+        if (open && window.innerWidth <= 1024) {
+          document.body.style.overflow = 'hidden';
+        } else {
+          document.body.style.overflow = '';
         }
       };
       toggleBtn.addEventListener('click', function () {
@@ -1071,6 +1073,15 @@
           }
         }
       }, { passive: true });
+
+      // Clean up drawer states if window is resized above tablet breakpoint
+      window.addEventListener('resize', function() {
+        if (window.innerWidth > 1024) {
+          if (sidebar.classList.contains('open') || toggleBtn.classList.contains('open') || overlay.classList.contains('visible')) {
+            setDrawerOpen(false);
+          }
+        }
+      });
     }
 
     // Set titles on links/folders for collapsed state tooltip

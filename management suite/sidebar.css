@@ -540,6 +540,7 @@ body.timeline-modal-open .vf-sb-toggle {
   }
   body {
     margin-left: 0 !important;
+    width: 100% !important;
     padding-top: max(4.25rem, calc(3.5rem + env(safe-area-inset-top, 0px))) !important;
     padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px)) !important;
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px)) !important;
@@ -1943,5 +1944,4 @@ input[type="month"]::-webkit-calendar-picker-indicator {
     -webkit-overflow-scrolling: touch;
   }
 }
-
-
+/* Zero-compression push test */
