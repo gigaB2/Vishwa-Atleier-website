@@ -1935,13 +1935,32 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   }
 }
 
-/* 4. Touch Smooth Scrolling for Wide Mobile Data Tables */
+/* 4. Touch Smooth Scrolling & iOS WebKit Performance Enhancements */
 @media (max-width: 768px) {
   .table-responsive,
   .table-container,
   .table-wrapper,
   div[style*="overflow-x: auto"] {
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  button, 
+  a, 
+  .vf-sb-link, 
+  .vf-sb-folder, 
+  .vf-sb-mode-btn, 
+  .vf-sb-toggle {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .vf-sidebar, 
+  .vf-drawer, 
+  .modal-content {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
   }
 }
-/* Zero-compression push test */
+

@@ -4045,17 +4045,22 @@
       enhanceNativeMonthInputs();
       enhanceNativeDateInputs();
 
-      // Catch dynamically injected elements / modals via efficient MutationObserver
+      // Catch dynamically injected elements / modals via debounced MutationObserver
       try {
+        let moTimer = null;
         const mo = new MutationObserver(() => {
           if (document.documentElement.dataset.vfNoEnhance === 'true' || 
               (document.body && document.body.dataset.vfNoEnhance === 'true')) {
             return;
           }
-          enhanceClickables();
-          enhanceNativeMonthInputs();
-          enhanceNativeDateInputs();
-          enhanceNativeFilterSelects();
+          if (moTimer) return;
+          moTimer = requestAnimationFrame(() => {
+            moTimer = null;
+            enhanceClickables();
+            enhanceNativeMonthInputs();
+            enhanceNativeDateInputs();
+            enhanceNativeFilterSelects();
+          });
         });
         mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
       } catch (_) { /* ignore */ }
