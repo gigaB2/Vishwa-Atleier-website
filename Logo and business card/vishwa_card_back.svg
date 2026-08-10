@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1050 600" width="1050" height="600">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,700;1,400&amp;family=Hanken+Grotesk:wght@400;600;700&amp;display=swap');
+      .bg { fill: #f9f9f9; }
+      .brand-vishwa { font-family: 'Bodoni Moda', serif; font-weight: 800; font-size: 32px; fill: #1A1A1A; }
+      .brand-atelier { font-family: 'Bodoni Moda', serif; font-weight: 400; font-style: italic; font-size: 32px; fill: #5F5E5B; }
+      .tagline-sub { font-family: 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 15px; fill: #C5A059; letter-spacing: 2px; text-transform: uppercase; }
+      
+      .gold-border { stroke: #C5A059; stroke-width: 3; }
+      .divider { stroke: #E5E5E5; stroke-width: 2; }
+      .gold-accent { stroke: #C5A059; stroke-width: 4; }
+      
+      .sec-title { font-family: 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 14.5px; fill: #C5A059; letter-spacing: 2px; text-transform: uppercase; }
+      
+      .m-name { font-family: 'Bodoni Moda', serif; font-weight: 700; font-size: 25px; fill: #1A1A1A; }
+      .m-role { font-family: 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 13.5px; fill: #C5A059; letter-spacing: 1.5px; }
+      .m-contact { font-family: 'Hanken Grotesk', sans-serif; font-weight: 600; font-size: 16.5px; fill: #1A1A1A; }
+
+      .company-name { font-family: 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 15.5px; fill: #1A1A1A; }
+      .company-sub { font-family: 'Hanken Grotesk', sans-serif; font-weight: 400; font-size: 14px; fill: #5F5E5B; }
+
+      .footer-label { font-family: 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 13.5px; fill: #5F5E5B; letter-spacing: 1.8px; text-transform: uppercase; }
+      .footer-val { font-family: 'Hanken Grotesk', sans-serif; font-weight: 600; font-size: 16px; fill: #1A1A1A; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect class="bg" width="100%" height="100%" />
+
+  <g transform="translate(45, 28)">
+    <!-- Header -->
+    <g transform="translate(0, 0)">
+      <text y="24">
+        <tspan class="brand-vishwa">VISHWA</tspan>
+        <tspan class="brand-atelier" dx="8">ATELIER</tspan>
+      </text>
+      <text x="960" y="22" class="tagline-sub" text-anchor="end">DIRECTORS &amp; PROPRIETORS</text>
+      <line x1="0" y1="36" x2="960" y2="36" class="gold-border" />
+    </g>
+
+    <!-- SECTION 1: 3 DIRECTORS -->
+    <g transform="translate(0, 54)">
+      <!-- Leader 1 -->
+      <g transform="translate(0, 0)">
+        <line x1="0" y1="0" x2="0" y2="92" class="gold-accent" />
+        <g transform="translate(14, 0)">
+          <text y="18" class="m-name">Vishwa Sheth</text>
+          <text y="38" class="m-role">PROPRIETOR</text>
+          <text y="64" class="m-contact">vishwa@vishwafashions.com</text>
+          <text y="86" class="m-contact">+91 93137 72824</text>
+        </g>
+      </g>
+
+      <!-- Leader 2 -->
+      <g transform="translate(325, 0)">
+        <line x1="0" y1="0" x2="0" y2="92" class="gold-accent" />
+        <g transform="translate(14, 0)">
+          <text y="18" class="m-name">Rajiv Sheth</text>
+          <text y="38" class="m-role">MANAGING DIRECTOR</text>
+          <text y="64" class="m-contact">rajiv@vishwafashions.com</text>
+          <text y="86" class="m-contact">+91 99747 50009</text>
+        </g>
+      </g>
+
+      <!-- Leader 3 -->
+      <g transform="translate(650, 0)">
+        <line x1="0" y1="0" x2="0" y2="92" class="gold-accent" />
+        <g transform="translate(14, 0)">
+          <text y="18" class="m-name">Manisha Sheth</text>
+          <text y="38" class="m-role">PROPRIETOR</text>
+          <text y="64" class="m-contact" style="font-size: 15px;">manishasheth512@gmail.com</text>
+          <text y="86" class="m-contact">+91 97129 91204</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- SECTION 2: GROUP MANUFACTURING ENTITIES -->
+    <g transform="translate(0, 180)">
+      <line x1="0" y1="0" x2="960" y2="0" class="divider" />
+      <text y="22" class="sec-title">GROUP MANUFACTURING ENTITIES &amp; MILLS</text>
+      
+      <g transform="translate(0, 44)">
+        <g transform="translate(0, 0)">
+          <text class="company-name">1. Vishwa Fashions Pvt Ltd</text>
+          <text y="20" class="company-sub">Trading &amp; B2B Wholesale</text>
+        </g>
+
+        <g transform="translate(325, 0)">
+          <text class="company-name">2. Vishwa Fab Weave Pvt Ltd</text>
+          <text y="20" class="company-sub">Yarn Twisting, 2-Ply &amp; 3-Ply</text>
+        </g>
+
+        <g transform="translate(650, 0)">
+          <text class="company-name">3. Lucky Spintex</text>
+          <text y="20" class="company-sub">Zari Metallic Covering</text>
+        </g>
+
+        <g transform="translate(0, 60)">
+          <text class="company-name">4. Mandhruv Fab Weave</text>
+          <text y="20" class="company-sub">Jacquard Rapier &amp; Airjet</text>
+        </g>
+
+        <g transform="translate(325, 60)">
+          <text class="company-name">5. Manisha Fashion</text>
+          <text y="20" class="company-sub">Fashion Sarees &amp; Apparel</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- SECTION 3: ADDRESSES & DIGITAL ATELIER -->
+    <g transform="translate(0, 332)">
+      <line x1="0" y1="0" x2="960" y2="0" class="gold-border" />
+
+      <g transform="translate(0, 24)">
+        <!-- Mill HQ -->
+        <g transform="translate(0, 0)">
+          <text class="footer-label">INDUSTRIAL MILL HEADQUARTERS</text>
+          <text y="22" class="footer-val">Plot No: 7414, 7414/2 &amp; 6711, Road 67, GIDC Sachin, Surat, Gujarat</text>
+        </g>
+
+        <!-- Vesu Showroom -->
+        <g transform="translate(0, 64)">
+          <text class="footer-label">FLAGSHIP SHOWROOM &amp; SHOP ADDRESS</text>
+          <text y="22" class="footer-val">No 16, Central Bazzar, Someshwara Enclave, Vesu, Surat, Gujarat 395007</text>
+        </g>
+      </g>
+
+      <g transform="translate(960, 24)" text-anchor="end">
+        <text class="footer-label">DIGITAL ATELIER</text>
+        <text y="22" class="footer-val">www.vishwaatelier.com</text>
+      </g>
+    </g>
+  </g>
+</svg>

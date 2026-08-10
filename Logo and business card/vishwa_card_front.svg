@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1050 600" width="1050" height="600">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,700;1,400&amp;display=swap');
+      .bg { fill: #f9f9f9; }
+      .gold-line { fill: #C5A059; }
+      .brand-text { font-family: 'Bodoni Moda', serif; font-size: 87px; letter-spacing: -1.5px; }
+      .vishwa { font-weight: 700; fill: #000000; }
+      .atelier { font-weight: 400; font-style: italic; fill: #5f5e5b; }
+    </style>
+  </defs>
+
+  <!-- Business Card Background -->
+  <rect class="bg" width="100%" height="100%" />
+
+  <!-- Logo perfectly centered on the card (1050x600 canvas) -->
+  <g transform="translate(525, 300)">
+    <text y="20" class="brand-text" text-anchor="middle">
+      <tspan class="vishwa">VISHWA</tspan>
+      <tspan class="atelier" dx="28">ATELIER</tspan>
+    </text>
+    
+    <!-- Gold Line Accent perfectly centered below text -->
+    <rect x="-46" y="55" width="92" height="4" class="gold-line" />
+  </g>
+</svg>
