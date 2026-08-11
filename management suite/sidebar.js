@@ -2381,43 +2381,74 @@
         }
       });
 
-      // Fallback implicit cycle if no explicit load event
-      if (cycles.length === 0 && (loadingEvents.length > 0 || beamLogs.length > 0)) {
-        const firstDate = (loadingEvents[0] && loadingEvents[0].date) || (beamLogs[0] && beamLogs[0].productionDate) || beam.createdAt || '2026-01-01';
-        const mNum = (loadingEvents[0] && loadingEvents[0].machineNumber) || (beamLogs[0] && beamLogs[0].machineNumber) || '1';
-        const mach = getMachineFromEvent(`Machine ${mNum}`) || { id: String(mNum), name: String(mNum) };
+      // Fallback & Auto-Discovery of Cycles for machines with loading events or production logs
+      loadingEvents.forEach(le => {
+        const leMNum = le.machineNumber || (le.machine ? le.machine.name : '');
+        if (!leMNum) return;
+        const leDate = le.date || beam.createdAt || '2026-01-01';
+        const exists = cycles.some(c => matchMachine(leMNum, c.machine) && (leDate >= c.startDate && (!c.endDate || c.endDate === '9999-12-31' || leDate <= c.endDate)));
+        if (!exists) {
+          const mach = getMachineFromEvent(`Machine ${leMNum}`) || { id: String(leMNum), name: String(leMNum) };
+          cycles.push({
+            machine: mach,
+            startEvent: { date: leDate, event: `Beam Assigned / Setup on Machine ${mach.name}`, type: 'machine', historyIndex: 900 },
+            startDate: leDate,
+            endDate: null,
+            setupEvents: [],
+            logs: [],
+            cutEvents: []
+          });
+          cycles.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+        }
+      });
 
-        cycles.push({
-          machine: mach,
-          startEvent: { date: firstDate, event: `Beam Loaded on Machine ${mach.name}`, type: 'machine', historyIndex: 1 },
-          startDate: firstDate,
-          endDate: null,
-          setupEvents: [],
-          logs: [],
-          cutEvents: []
-        });
-      }
+      beamLogs.forEach(log => {
+        const logMNum = log.machineNumber;
+        if (!logMNum) return;
+        const logDate = log.productionDate || log.pissingDate || log.date || beam.createdAt || '2026-01-01';
+        const exists = cycles.some(c => matchMachine(logMNum, c.machine) && (logDate >= c.startDate && (!c.endDate || c.endDate === '9999-12-31' || logDate <= c.endDate)));
+        if (!exists) {
+          const mach = getMachineFromEvent(`Machine ${logMNum}`) || { id: String(logMNum), name: String(logMNum) };
+          cycles.push({
+            machine: mach,
+            startEvent: { date: logDate, event: `Production Cycle on Machine ${mach.name}`, type: 'machine', historyIndex: 901 },
+            startDate: logDate,
+            endDate: null,
+            setupEvents: [],
+            logs: [],
+            cutEvents: []
+          });
+          cycles.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+        }
+      });
+
+      // Ensure cycles are strictly sorted in chronological order
+      cycles.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
 
       // Assign end dates and collect all events in each cycle (cuts, unloads, completion & setup items)
       cycles.forEach((cycle, cIdx) => {
         const nextCycle = cycles[cIdx + 1];
         const startIdx = historyEvents.indexOf(cycle.startEvent);
-        const endIdx = nextCycle ? historyEvents.indexOf(nextCycle.startEvent) : historyEvents.length;
+        const endIdx = (nextCycle && historyEvents.indexOf(nextCycle.startEvent) !== -1)
+          ? historyEvents.indexOf(nextCycle.startEvent)
+          : historyEvents.length;
 
-        for (let i = startIdx + 1; i < endIdx; i++) {
-          const hItem = historyEvents[i];
-          const evt = (hItem.event || '').toLowerCase();
-          const isCut = evt.includes('cut off') || evt.includes('unloaded') || evt.includes('completed') || evt.includes('complete') || evt.includes('removed');
-          if (isCut) {
-            cycle.cutEvents.push(hItem);
-            if (!cycle.endDate) {
-              cycle.endDate = hItem.date;
+        if (startIdx !== -1) {
+          for (let i = startIdx + 1; i < endIdx; i++) {
+            const hItem = historyEvents[i];
+            const evt = (hItem.event || '').toLowerCase();
+            const isCut = evt.includes('cut off') || evt.includes('unloaded') || evt.includes('completed') || evt.includes('complete') || evt.includes('removed');
+            if (isCut) {
+              cycle.cutEvents.push(hItem);
+              if (!cycle.endDate) {
+                cycle.endDate = hItem.date;
+              }
+            } else {
+              cycle.setupEvents.push(hItem);
             }
-          } else {
-            cycle.setupEvents.push(hItem);
           }
         }
-        if (nextCycle && (!cycle.endDate || cycle.endDate === '9999-12-31')) {
+        if (nextCycle && (!cycle.endDate || cycle.endDate === '9999-12-31' || cycle.endDate > nextCycle.startDate)) {
           cycle.endDate = nextCycle.startDate;
         }
         if (!cycle.endDate) cycle.endDate = '9999-12-31';
