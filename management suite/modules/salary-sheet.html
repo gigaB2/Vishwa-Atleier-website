@@ -6230,7 +6230,7 @@
                         </div>
                     </div>
 
-                    <div style="margin-bottom: 1.25rem; border-top: 1px solid var(--border); padding-top: 1.25rem;"
+                    <div style="margin-bottom: 1.25rem; border-top: 1px solid var(--border); padding-top: 1.25rem; position: relative;"
                         id="bl-beam-link-container">
                         <label
                             style="display: block; font-size: 0.7rem; font-weight: 700; color: var(--muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-display);">Select
@@ -6241,7 +6241,18 @@
                             <input type="radio" name="bl-beam-selection" id="bl-sel-custom" value="custom"
                                 onchange="toggleBeamSelectionSource(this.value)">
                         </div>
-                        <select id="bl-beam-select" onchange="onBeamSelectChange(this.value)" style="width: 100%;">
+                        <div style="position: relative;" id="bl-beam-search-wrapper">
+                            <input type="text" id="bl-beam-search" style="width: 100%; padding-right: 2rem;"
+                                placeholder="Type to search beam #, quality, color, status..." autocomplete="off"
+                                onfocus="showBlBeamDropdown()" oninput="filterBlBeamDropdown()">
+                            <span
+                                style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); font-size: 0.7rem;">🔍</span>
+                            <div id="bl-beam-dropdown"
+                                style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 10050; background: var(--surface); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-lg); max-height: 220px; overflow-y: auto; overflow-x: hidden; padding: 6px;">
+                                <!-- Dynamically populated list -->
+                            </div>
+                        </div>
+                        <select id="bl-beam-select" onchange="onBeamSelectChange(this.value)" style="display: none;">
                             <!-- Populated dynamically -->
                         </select>
                     </div>
@@ -10866,7 +10877,125 @@
             if (dropdown && container && !container.contains(e.target)) {
                 dropdown.style.display = 'none';
             }
+
+            const beamWrapper = document.getElementById('bl-beam-search-wrapper');
+            const beamDropdown = document.getElementById('bl-beam-dropdown');
+            if (beamDropdown && beamWrapper && !beamWrapper.contains(e.target)) {
+                beamDropdown.style.display = 'none';
+            }
         });
+
+        function showBlBeamDropdown() {
+            filterBlBeamDropdown();
+            const dropdown = document.getElementById('bl-beam-dropdown');
+            if (dropdown) dropdown.style.display = 'block';
+        }
+
+        function filterBlBeamDropdown() {
+            const input = document.getElementById('bl-beam-search');
+            const dropdown = document.getElementById('bl-beam-dropdown');
+            if (!input || !dropdown) return;
+
+            const query = input.value.trim().toLowerCase();
+            const allBeams = typeof getStoredBeams === 'function' ? getStoredBeams() : [];
+
+            const machineSelect = document.getElementById('bl-machine');
+            const selectedMachine = machineSelect ? machineSelect.value.trim() : '';
+            const selectedBeamNumber = document.getElementById('bl-beam-no') ? document.getElementById('bl-beam-no').value.trim() : '';
+
+            // Filter beams (includes Completed, On Loom, Available, Limbo)
+            const filteredBeams = allBeams.filter(b => {
+                const bNumStr = String(b.beamNumber || '').toLowerCase();
+                const quality = String(b.quality || '').toLowerCase();
+                const color = String(b.color || '').toLowerCase();
+                const status = String(b.status || '').toLowerCase();
+
+                const matchesQuery = !query || bNumStr.includes(query) || quality.includes(query) || color.includes(query) || status.includes(query);
+                if (!matchesQuery) return false;
+
+                // If machine selected, exclude beams on OTHER looms unless it's currently selected
+                const beamMachine = (b.machineNumber || b.machine || b.loom || '').toString().trim();
+                if (selectedMachine && status === 'on loom' && beamMachine && beamMachine !== selectedMachine && bNumStr !== selectedBeamNumber.toLowerCase()) {
+                    return false;
+                }
+                return true;
+            });
+
+            dropdown.innerHTML = '';
+            if (filteredBeams.length === 0) {
+                dropdown.innerHTML = '<div style="padding: 0.75rem 1rem; color: var(--muted); font-size: 0.8rem; font-style: italic; text-align: center;">No beams found matching search</div>';
+                return;
+            }
+
+            filteredBeams.forEach(b => {
+                const item = document.createElement('div');
+                item.className = 'bl-beam-item';
+                item.style.cssText = 'padding: 0.55rem 0.85rem; border-radius: 8px; cursor: pointer; font-size: 0.82rem; transition: background 0.15s ease; color: var(--fg); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.04);';
+                
+                const statusLower = (b.status || 'available').toLowerCase();
+                let badgeBg = 'rgba(16, 185, 129, 0.15)';
+                let badgeColor = '#10b981';
+                if (statusLower === 'completed') {
+                    badgeBg = 'rgba(59, 130, 246, 0.15)';
+                    badgeColor = '#3b82f6';
+                } else if (statusLower === 'on loom') {
+                    badgeBg = 'rgba(245, 158, 11, 0.15)';
+                    badgeColor = '#f59e0b';
+                } else if (statusLower === 'limbo' || statusLower === 'unassigned') {
+                    badgeBg = 'rgba(239, 68, 68, 0.15)';
+                    badgeColor = '#ef4444';
+                }
+
+                const statusTag = `<span style="font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; text-transform: uppercase; letter-spacing: 0.03em;">${b.status || 'Available'}</span>`;
+
+                item.innerHTML = `
+                    <div>
+                        <strong style="color: var(--fg);">Beam #${b.beamNumber}</strong>
+                        <span style="font-size: 0.75rem; color: var(--muted); margin-left: 0.35rem;">(${b.quality || 'N/A'}${b.color ? ' - ' + b.color : ''}, ${b.meters || 0}m)</span>
+                    </div>
+                    ${statusTag}
+                `;
+
+                item.addEventListener('mouseenter', () => {
+                    item.style.background = 'rgba(255,255,255,0.07)';
+                });
+                item.addEventListener('mouseleave', () => {
+                    item.style.background = 'transparent';
+                });
+
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectBlBeamItem(b);
+                });
+
+                dropdown.appendChild(item);
+            });
+        }
+
+        function selectBlBeamItem(b) {
+            const input = document.getElementById('bl-beam-search');
+            const selectEl = document.getElementById('bl-beam-select');
+            const dropdown = document.getElementById('bl-beam-dropdown');
+
+            if (input) {
+                input.value = `Beam #${b.beamNumber} [${b.status || 'Available'}] (${b.quality || 'N/A'}${b.color ? ' - ' + b.color : ''}, ${b.meters || 0}m)`;
+            }
+
+            if (selectEl) {
+                let opt = Array.from(selectEl.options).find(o => o.value === b.id);
+                if (!opt) {
+                    opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = `Beam #${b.beamNumber} [${b.status || 'Available'}]`;
+                    selectEl.appendChild(opt);
+                }
+                selectEl.value = b.id;
+            }
+
+            if (dropdown) dropdown.style.display = 'none';
+
+            onBeamSelectChange(b.id);
+        }
 
         function openAddBeamLoadingModal() {
             pushUndoState();
@@ -10894,6 +11023,10 @@
             const previewContainer = document.getElementById('bl-card-image-preview-container');
             if (previewImg) { previewImg.src = ''; previewImg.style.display = 'none'; }
             if (previewContainer) previewContainer.style.display = 'flex';
+
+            // Reset beam search input
+            const searchInput = document.getElementById('bl-beam-search');
+            if (searchInput) searchInput.value = '';
 
             // Link selection
             document.getElementById('bl-sel-active').checked = true;
@@ -10923,7 +11056,7 @@
                 }
             }
 
-            // Populate Active Beams list (only On Loom and Available beams, not Completed)
+            // Populate Active Beams list (including Completed, On Loom, Available, Limbo)
             populateActiveBeamsDropdown('');
 
             document.getElementById('bl-modal-overlay').style.display = 'flex';
@@ -10940,25 +11073,24 @@
 
         function populateActiveBeamsDropdown(selectedBeamNumber = '') {
             const selectEl = document.getElementById('bl-beam-select');
-            if (!selectEl) return '';
+            const searchInput = document.getElementById('bl-beam-search');
+            const allBeams = getStoredBeams();
+            const beamNumStr = selectedBeamNumber ? String(selectedBeamNumber).trim() : '';
+
+            if (selectEl) {
+                selectEl.innerHTML = '<option value="" disabled style="background: var(--surface); color: var(--muted);">-- Select Active Beam --</option>';
+            }
 
             const machineSelect = document.getElementById('bl-machine');
             const selectedMachine = machineSelect ? machineSelect.value.trim() : '';
 
-            selectEl.innerHTML = '<option value="" disabled style="background: var(--surface); color: var(--muted);">-- Select Active Beam --</option>';
-            const allBeams = getStoredBeams();
-            const beamNumStr = selectedBeamNumber ? String(selectedBeamNumber).trim() : '';
-
-            // Filter active beams:
-            // Available beams OR the beam on the selected machine (exclude beams on OTHER looms)
+            // Filter beams (Includes completed, on loom, available, limbo)
             const activeBeams = allBeams.filter(b => {
                 const s = (b.status || '').trim().toLowerCase();
-                if (s === 'completed') return false;
-
                 const beamMachine = (b.machineNumber || b.machine || b.loom || '').toString().trim();
                 const bNumStr = String(b.beamNumber).trim();
 
-                // If a machine is selected, exclude beams on OTHER looms
+                // If a machine is selected, exclude beams on OTHER looms unless it's currently selected
                 if (selectedMachine && s === 'on loom' && beamMachine && beamMachine !== selectedMachine && bNumStr !== beamNumStr) {
                     return false;
                 }
@@ -10966,42 +11098,40 @@
             });
 
             let matchedId = '';
+            let matchedBeam = null;
 
             activeBeams.forEach(b => {
-                const opt = document.createElement('option');
-                opt.value = b.id;
-                const statusTag = b.status ? ` [${b.status}]` : '';
-                opt.textContent = `Beam #${b.beamNumber}${statusTag} (${b.quality || 'N/A'}${b.color ? ' - ' + b.color : ''}, ${b.meters || 0}m)`;
-                opt.style.background = 'var(--surface)';
-                opt.style.color = 'var(--fg)';
-                if (beamNumStr && String(b.beamNumber).trim() === beamNumStr) {
-                    opt.selected = true;
-                    matchedId = b.id;
+                if (selectEl) {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    const statusTag = b.status ? ` [${b.status}]` : '';
+                    opt.textContent = `Beam #${b.beamNumber}${statusTag} (${b.quality || 'N/A'}${b.color ? ' - ' + b.color : ''}, ${b.meters || 0}m)`;
+                    opt.style.background = 'var(--surface)';
+                    opt.style.color = 'var(--fg)';
+                    if (beamNumStr && String(b.beamNumber).trim() === beamNumStr) {
+                        opt.selected = true;
+                        matchedId = b.id;
+                        matchedBeam = b;
+                    }
+                    selectEl.appendChild(opt);
                 }
-                selectEl.appendChild(opt);
             });
 
             // If editing and selectedBeamNumber provided but wasn't in activeBeams
             if (beamNumStr && !matchedId) {
                 const foundInAll = allBeams.find(b => String(b.beamNumber).trim() === beamNumStr);
-                const opt = document.createElement('option');
                 if (foundInAll) {
-                    opt.value = foundInAll.id;
-                    opt.textContent = `Beam #${foundInAll.beamNumber} [${foundInAll.status || 'Completed'}] (${foundInAll.quality || 'N/A'}${foundInAll.color ? ' - ' + foundInAll.color : ''}, ${foundInAll.meters || 0}m)`;
                     matchedId = foundInAll.id;
-                } else {
-                    opt.value = 'custom-' + beamNumStr;
-                    opt.textContent = `Beam #${beamNumStr} (Current)`;
-                    matchedId = 'custom-' + beamNumStr;
+                    matchedBeam = foundInAll;
                 }
-                opt.selected = true;
-                opt.style.background = 'var(--surface)';
-                opt.style.color = 'var(--fg)';
-                selectEl.appendChild(opt);
             }
 
-            if (!matchedId && selectEl.options.length > 0) {
-                selectEl.options[0].selected = true;
+            if (searchInput) {
+                if (matchedBeam) {
+                    searchInput.value = `Beam #${matchedBeam.beamNumber} [${matchedBeam.status || 'Available'}] (${matchedBeam.quality || 'N/A'}${matchedBeam.color ? ' - ' + matchedBeam.color : ''}, ${matchedBeam.meters || 0}m)`;
+                } else if (!beamNumStr) {
+                    searchInput.value = '';
+                }
             }
 
             return matchedId;
