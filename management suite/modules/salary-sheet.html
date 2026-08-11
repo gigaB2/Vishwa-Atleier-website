@@ -6230,39 +6230,25 @@
                         </div>
                     </div>
 
-                    <div style="margin-bottom: 1.25rem; border-top: 1px solid var(--border); padding-top: 1.25rem; position: relative;"
-                        id="bl-beam-link-container">
-                        <label
-                            style="display: block; font-size: 0.7rem; font-weight: 700; color: var(--muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-display);">Select
-                            Inventory Beam</label>
-                        <div style="display: none;">
-                            <input type="radio" name="bl-beam-selection" id="bl-sel-active" value="active" checked
-                                onchange="toggleBeamSelectionSource(this.value)">
-                            <input type="radio" name="bl-beam-selection" id="bl-sel-custom" value="custom"
-                                onchange="toggleBeamSelectionSource(this.value)">
-                        </div>
+                    <div class="bl-form-row-2" style="border-top: 1px solid var(--border); padding-top: 1.25rem; margin-top: 0.5rem;">
                         <div style="position: relative;" id="bl-beam-search-wrapper">
-                            <input type="text" id="bl-beam-search" style="width: 100%; padding-right: 2rem;"
-                                placeholder="Type to search beam #, quality, color, status..." autocomplete="off"
-                                onfocus="showBlBeamDropdown()" oninput="filterBlBeamDropdown()">
-                            <span
-                                style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); font-size: 0.7rem;">🔍</span>
+                            <label
+                                style="display: block; font-size: 0.7rem; font-weight: 700; color: var(--muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-display);">Beam
+                                Number</label>
+                            <div style="position: relative;">
+                                <input type="text" id="bl-beam-no" required style="width: 100%; padding-right: 2rem;"
+                                    placeholder="Type beam # or search inventory..." autocomplete="off"
+                                    onfocus="showBlBeamDropdown()" oninput="filterBlBeamDropdown()">
+                                <span
+                                    style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); font-size: 0.7rem;">🔍</span>
+                            </div>
                             <div id="bl-beam-dropdown"
                                 style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 10050; background: var(--surface); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-lg); max-height: 220px; overflow-y: auto; overflow-x: hidden; padding: 6px;">
                                 <!-- Dynamically populated list -->
                             </div>
-                        </div>
-                        <select id="bl-beam-select" onchange="onBeamSelectChange(this.value)" style="display: none;">
-                            <!-- Populated dynamically -->
-                        </select>
-                    </div>
-
-                    <div class="bl-form-row-2">
-                        <div>
-                            <label
-                                style="display: block; font-size: 0.7rem; font-weight: 700; color: var(--muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-display);">Beam
-                                Number</label>
-                            <input type="text" id="bl-beam-no" required style="width: 100%;" placeholder="e.g. 101">
+                            <select id="bl-beam-select" onchange="onBeamSelectChange(this.value)" style="display: none;">
+                                <!-- Populated dynamically -->
+                            </select>
                         </div>
                         <div>
                             <label
@@ -10892,7 +10878,7 @@
         }
 
         function filterBlBeamDropdown() {
-            const input = document.getElementById('bl-beam-search');
+            const input = document.getElementById('bl-beam-no');
             const dropdown = document.getElementById('bl-beam-dropdown');
             if (!input || !dropdown) return;
 
@@ -10973,12 +10959,12 @@
         }
 
         function selectBlBeamItem(b) {
-            const input = document.getElementById('bl-beam-search');
+            const input = document.getElementById('bl-beam-no');
             const selectEl = document.getElementById('bl-beam-select');
             const dropdown = document.getElementById('bl-beam-dropdown');
 
             if (input) {
-                input.value = `Beam #${b.beamNumber} [${b.status || 'Available'}] (${b.quality || 'N/A'}${b.color ? ' - ' + b.color : ''}, ${b.meters || 0}m)`;
+                input.value = b.beamNumber || '';
             }
 
             if (selectEl) {
@@ -11024,14 +11010,6 @@
             if (previewImg) { previewImg.src = ''; previewImg.style.display = 'none'; }
             if (previewContainer) previewContainer.style.display = 'flex';
 
-            // Reset beam search input
-            const searchInput = document.getElementById('bl-beam-search');
-            if (searchInput) searchInput.value = '';
-
-            // Link selection
-            document.getElementById('bl-sel-active').checked = true;
-            toggleBeamSelectionSource('active');
-
             // Populate Machines list matching app style
             const machineSelect = document.getElementById('bl-machine');
             machineSelect.innerHTML = '<option value="" disabled selected style="background: var(--surface); color: var(--muted);">Select Machine</option>';
@@ -11073,7 +11051,7 @@
 
         function populateActiveBeamsDropdown(selectedBeamNumber = '') {
             const selectEl = document.getElementById('bl-beam-select');
-            const searchInput = document.getElementById('bl-beam-search');
+            const beamNoInput = document.getElementById('bl-beam-no');
             const allBeams = getStoredBeams();
             const beamNumStr = selectedBeamNumber ? String(selectedBeamNumber).trim() : '';
 
@@ -11126,12 +11104,8 @@
                 }
             }
 
-            if (searchInput) {
-                if (matchedBeam) {
-                    searchInput.value = `Beam #${matchedBeam.beamNumber} [${matchedBeam.status || 'Available'}] (${matchedBeam.quality || 'N/A'}${matchedBeam.color ? ' - ' + matchedBeam.color : ''}, ${matchedBeam.meters || 0}m)`;
-                } else if (!beamNumStr) {
-                    searchInput.value = '';
-                }
+            if (beamNoInput && beamNumStr) {
+                beamNoInput.value = beamNumStr;
             }
 
             return matchedId;
