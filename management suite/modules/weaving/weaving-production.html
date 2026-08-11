@@ -4352,7 +4352,15 @@
             populateConfigDropdowns(machine);
 
             const storedBeams = getStoredBeams();
-            const machineBeams = storedBeams.filter(b => b.machineNumber == machine.name && b.status === 'On Loom');
+            const machineBeams = storedBeams.filter(b => {
+                const st = String(b.status || '').toLowerCase().trim();
+                const bM = String(b.machineNumber || '').toLowerCase().replace(/^machine\s+/i, '').trim();
+                const mName = String(machine.name || '').toLowerCase().replace(/^machine\s+/i, '').trim();
+                const mId = String(machine.id || '').toLowerCase().trim();
+                const sameMach = (bM !== '' && (bM === mName || bM === mId));
+                const isOnLoom = (st === 'on loom' || st === 'on machine' || st === 'running' || st === 'active') || sameMach;
+                return sameMach && isOnLoom && st !== 'completed' && st !== 'exhausted';
+            });
             
             // Primary Beam is explicitly beamType === 'PRIMARY' or default first beam on loom
             let primaryBeam = machineBeams.find(b => (b.beamType || 'PRIMARY') === 'PRIMARY');
@@ -4450,19 +4458,7 @@
         }
 
         function removeLastUnload(hist) {
-            const cleanHist = [...hist];
-            let lastUnloadIdx = -1;
-            for (let i = cleanHist.length - 1; i >= 0; i--) {
-                const e = (cleanHist[i].event || '').toLowerCase();
-                if (e.includes('unloaded') || e.includes('removed')) {
-                    lastUnloadIdx = i;
-                    break;
-                }
-            }
-            if (lastUnloadIdx !== -1) {
-                cleanHist.splice(lastUnloadIdx, 1);
-            }
-            return cleanHist;
+            return [...(hist || [])];
         }
 
         function assignBeamToMachine(beamNo, machineName, targetBeamType = 'PRIMARY') {
@@ -4520,6 +4516,13 @@
                 pushToUndo();
                 beam.machineNumber = machineName;
                 beam.status = 'On Loom';
+                const todayStr = getTodayDate();
+                const mDisp = machineName.toString().toLowerCase().includes('machine') ? machineName : `Machine ${machineName}`;
+                beam.history = [...(beam.history || []), {
+                    date: todayStr,
+                    event: `${targetBeamType === 'SECONDARY' ? 'Secondary Beam Loaded' : 'Beam Loaded'} on ${mDisp}`,
+                    type: 'machine'
+                }];
                 localStorage.setItem('warp-beams', JSON.stringify(storedBeams));
                 window.dispatchEvent(new StorageEvent('storage', { key: 'warp-beams' }));
                 updateRunningBeamUI(document.getElementById('search-machine').value);
@@ -4559,41 +4562,19 @@
 
             const handleCutConfirm = ({ date: cutDate, reason: cutReason, decisionBy: cutDecisionBy }) => {
                 const hist = beam.history || [];
-                let lastLoadIdx = -1;
-                for (let i = hist.length - 1; i >= 0; i--) {
-                    const e = (hist[i].event || '').toLowerCase();
-                    if (e.includes('loaded on') || e.includes('pissing on') || e.includes('jala piecing') || e.includes('beam loaded')) {
-                        lastLoadIdx = i;
-                        break;
-                    }
-                }
-
-                let hasProduction = false;
-                if (lastLoadIdx !== -1) {
-                    const loadDate = hist[lastLoadIdx].date;
-                    hasProduction = state.productionLogs.some(l => 
-                        l.beamNumber === beam.beamNumber && 
-                        String(l.machineNumber) === String(machineId) && 
-                        l.productionDate >= loadDate
-                    );
-                }
 
                 pushToUndo();
-                if (!hasProduction && lastLoadIdx !== -1) {
-                    beam.history = hist.filter((_, idx) => idx !== lastLoadIdx);
-                } else {
-                    let eventText = `${targetBeamType} Beam unloaded from ${mDisp} (Reason: ${cutReason})`;
-                    if (cutDecisionBy) {
-                        eventText += ` [Decision By: ${cutDecisionBy}]`;
-                    }
-                    beam.history = [...hist, {
-                        date: cutDate,
-                        event: eventText,
-                        type: 'machine',
-                        reason: cutReason,
-                        decisionBy: cutDecisionBy
-                    }];
+                let eventText = `${targetBeamType} Beam unloaded from ${mDisp} (Reason: ${cutReason})`;
+                if (cutDecisionBy) {
+                    eventText += ` [Decision By: ${cutDecisionBy}]`;
                 }
+                beam.history = [...hist, {
+                    date: cutDate,
+                    event: eventText,
+                    type: 'machine',
+                    reason: cutReason,
+                    decisionBy: cutDecisionBy
+                }];
 
                 beam.machineNumber = null;
                 beam.status = 'Available';
@@ -4680,29 +4661,6 @@
         }
 
         function renderAll() {
-            // Cleanup: Permanently remove legacy "Machine removed" history entries that are no longer needed
-            const storedBeams = getStoredBeams();
-            let hasChanged = false;
-            const cleanedBeams = storedBeams.map(b => {
-                const originalHistory = b.history || [];
-                const newHistory = originalHistory.filter(h => {
-                    const e = (h.event || '').toLowerCase();
-                    if (e.includes('was removed') || e.includes('returned to available')) return false;
-                    return true;
-                });
-                
-                if (newHistory.length !== originalHistory.length) {
-                    hasChanged = true;
-                    return { ...b, history: newHistory };
-                }
-                return b;
-            });
-
-            if (hasChanged) {
-                localStorage.setItem('warp-beams', JSON.stringify(cleanedBeams));
-                window.dispatchEvent(new Event('storage'));
-            }
-
             applyFilters();
             updateMachineDropdowns();
             updateWorkerDropdowns();
@@ -4713,6 +4671,9 @@
                 renderAnalytics();
             }
         }
+
+        window.addEventListener('storage', () => { try { renderAll(); } catch(e){} });
+        window.addEventListener('warp-beams-updated', () => { try { renderAll(); } catch(e){} });
 
         window.foldingDateSortState = ''; // '', 'asc', 'desc'
         window.toggleFoldingDateSort = function() {

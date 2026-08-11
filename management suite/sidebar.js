@@ -1,4 +1,4 @@
-(function() {
+(function () {
   // 1. Get rootPath from script tag src attribute to handle subdirectories
   const scriptTag = document.querySelector('script[src$="sidebar.js"]');
   const src = scriptTag ? scriptTag.getAttribute('src') : 'sidebar.js';
@@ -14,18 +14,18 @@
     try {
       const cfgRaw = localStorage.getItem('vf_auth_config');
       if (cfgRaw) config = Object.assign(config, JSON.parse(cfgRaw));
-    } catch(e) {}
+    } catch (e) { }
 
     let session = null;
     try {
       const sessRaw = localStorage.getItem('vf_session');
       if (sessRaw) session = JSON.parse(sessRaw);
-    } catch(e) {}
+    } catch (e) { }
 
     if (config.access_mode === 'require_login') {
       if (!session) {
-        try { document.documentElement.style.display = 'none'; } catch(e) {}
-        try { localStorage.removeItem('vf_session'); } catch(e) {}
+        try { document.documentElement.style.display = 'none'; } catch (e) { }
+        try { localStorage.removeItem('vf_session'); } catch (e) { }
         const loginUrl = rootPath ? (rootPath + 'index.html') : 'index.html';
         window.location.replace(loginUrl);
         return;
@@ -35,7 +35,7 @@
     // Strict Admin Guard for Settings page
     if (pageName === 'settings.html' || pageName === 'settings' || rawPath.endsWith('/settings')) {
       if (!session || session.role !== 'admin') {
-        try { document.documentElement.style.display = 'none'; } catch(e) {}
+        try { document.documentElement.style.display = 'none'; } catch (e) { }
         const loginUrl = rootPath ? (rootPath + 'index.html') : 'index.html';
         window.location.replace(loginUrl);
       }
@@ -55,7 +55,7 @@
   }
 
   // --- Global Permission Helpers ---
-  window.vfHasAccess = function(permKey) {
+  window.vfHasAccess = function (permKey) {
     const sessRaw = localStorage.getItem('vf_session');
     if (!sessRaw) return true;
     try {
@@ -64,10 +64,10 @@
       const perms = sess.permissions || {};
       const val = perms[permKey];
       return val === 'edit' || val === 'full' || val === 'view';
-    } catch(e) { return true; }
+    } catch (e) { return true; }
   };
 
-  window.vfCanEdit = function(permKey) {
+  window.vfCanEdit = function (permKey) {
     const sessRaw = localStorage.getItem('vf_session');
     if (!sessRaw) return true;
     try {
@@ -76,10 +76,10 @@
       const perms = sess.permissions || {};
       const val = perms[permKey];
       return val === 'edit' || val === 'full';
-    } catch(e) { return true; }
+    } catch (e) { return true; }
   };
 
-  window.vfIsViewOnly = function(permKey) {
+  window.vfIsViewOnly = function (permKey) {
     const sessRaw = localStorage.getItem('vf_session');
     if (!sessRaw) return false;
     try {
@@ -88,11 +88,11 @@
       const perms = sess.permissions || {};
       const val = perms[permKey];
       return val === 'view';
-    } catch(e) { return false; }
+    } catch (e) { return false; }
   };
 
   // --- Per-User Theme Management ---
-  window._vfGetUserThemeKey = function() {
+  window._vfGetUserThemeKey = function () {
     let userKey = 'default';
     try {
       const sessRaw = localStorage.getItem('vf_session');
@@ -106,11 +106,11 @@
         const savedUser = localStorage.getItem('vf_user_name');
         if (savedUser) userKey = savedUser.toString().toLowerCase().trim();
       }
-    } catch(e) {}
+    } catch (e) { }
     return 'vishwa_fashions_theme_' + userKey;
   };
 
-  window._vfGetTheme = function() {
+  window._vfGetTheme = function () {
     const userThemeKey = window._vfGetUserThemeKey();
     const val = localStorage.getItem(userThemeKey);
     if (val !== null) return val === 'true';
@@ -119,7 +119,7 @@
     return true; // Default dark
   };
 
-  window._vfSetTheme = function(isDark) {
+  window._vfSetTheme = function (isDark) {
     const userThemeKey = window._vfGetUserThemeKey();
     localStorage.setItem(userThemeKey, isDark ? 'true' : 'false');
     localStorage.setItem('vishwa_fashions_theme', isDark ? 'true' : 'false');
@@ -134,7 +134,7 @@
   };
 
   // Immediate theme application on script load
-  (function() {
+  (function () {
     const isDark = window._vfGetTheme();
     if (isDark) {
       document.documentElement.classList.add('dark-mode');
@@ -500,7 +500,7 @@
   }
 
   // 6. Global helper functions accessed by inline onclicks
-  window._vfToggleFolder = function(btn) {
+  window._vfToggleFolder = function (btn) {
     if (document.documentElement.classList.contains('vf-sidebar-collapsed') && window.innerWidth > 768) {
       window._vfToggleSidebarCollapse();
       return;
@@ -520,7 +520,7 @@
     }
   };
 
-  window._vfSetSidebarMode = function(mode) {
+  window._vfSetSidebarMode = function (mode) {
     localStorage.setItem('vishwa_fashions_sidebar_mode', mode);
     const yarnBtn = document.getElementById('vfModeYarnBtn');
     const weavingBtn = document.getElementById('vfModeWeavingBtn');
@@ -534,7 +534,7 @@
       }
     }
     const items = document.querySelectorAll('#vfSidebar [data-mode]');
-    items.forEach(function(item) {
+    items.forEach(function (item) {
       if (item.classList.contains('vf-perm-hidden')) {
         item.style.setProperty('display', 'none', 'important');
         return;
@@ -551,7 +551,7 @@
     updateSidebarIdentity();
   };
 
-  window._vfToggleSidebarCollapse = function() {
+  window._vfToggleSidebarCollapse = function () {
     const html = document.documentElement;
     const isCollapsed = html.classList.toggle('vf-sidebar-collapsed');
     localStorage.setItem('vf_sidebar_collapsed', isCollapsed ? 'true' : 'false');
@@ -585,7 +585,7 @@
     }
   }
 
-  window._vfLogout = function() {
+  window._vfLogout = function () {
     try {
       if (window.VishwaSupabase && typeof window.VishwaSupabase.signOut === 'function') {
         window.VishwaSupabase.signOut();
@@ -594,7 +594,7 @@
       localStorage.removeItem('vf_user_name');
       localStorage.removeItem('vf_supabase_token');
       localStorage.removeItem('vf_supabase_session');
-    } catch(e) {}
+    } catch (e) { }
     window.location.href = rootPath ? (rootPath + 'index.html') : 'index.html';
   };
 
@@ -684,11 +684,11 @@
     const sessRaw = localStorage.getItem('vf_session');
     if (!sessRaw) return;
     let activeSession = null;
-    try { activeSession = JSON.parse(sessRaw); } catch(e) {}
+    try { activeSession = JSON.parse(sessRaw); } catch (e) { }
     if (!activeSession || activeSession.role === 'admin' || !activeSession.permissions) return;
 
     const currentPath = window.location.pathname.toLowerCase().split('/').pop().split('?')[0];
-    
+
     // Find current perm key for this page
     let currentPageKey = null;
     if (typeof permKeyMap !== 'undefined') {
@@ -705,7 +705,7 @@
     const isViewOnly = window.vfIsViewOnly(currentPageKey);
     if (isViewOnly) {
       document.body.classList.add('vf-view-only-mode');
-      
+
       // Inject CSS for View Only mode if not already present
       if (!document.getElementById('vf-view-only-styles')) {
         const style = document.createElement('style');
@@ -760,7 +760,7 @@
     try {
       const sessRaw = localStorage.getItem('vf_session');
       if (sessRaw) activeSession = JSON.parse(sessRaw);
-    } catch(e) {}
+    } catch (e) { }
 
     let displayEmail = activeSession ? activeSession.email : null;
     if (!displayEmail && activeSession) {
@@ -777,7 +777,7 @@
               displayEmail = list[0].email;
             }
           }
-        } catch(e) {}
+        } catch (e) { }
         if (!displayEmail) {
           try {
             const cfgRaw = localStorage.getItem('vf_auth_config');
@@ -785,7 +785,7 @@
               const cfg = JSON.parse(cfgRaw);
               if (cfg.admin_email) displayEmail = cfg.admin_email;
             }
-          } catch(e) {}
+          } catch (e) { }
         }
         if (!displayEmail && activeSession.role === 'admin') {
           displayEmail = 'admin@vishwafashions.com';
@@ -795,7 +795,7 @@
         activeSession.email = displayEmail;
         if (activeSession.name === 'Master Admin') activeSession.name = displayEmail;
         if (activeSession.username === 'Master Admin') activeSession.username = displayEmail;
-        try { localStorage.setItem('vf_session', JSON.stringify(activeSession)); } catch(e) {}
+        try { localStorage.setItem('vf_session', JSON.stringify(activeSession)); } catch (e) { }
       }
     }
 
@@ -841,13 +841,13 @@
       // 1. Hide restricted links permanently with .vf-perm-hidden
       document.querySelectorAll('.vf-sb-link').forEach(link => {
         const href = (link.getAttribute('href') || '').toLowerCase();
-        
+
         Object.keys(permKeyMap).forEach(key => {
           if (perms[key] === 'none' || perms[key] === false) {
             const target = permKeyMap[key].toLowerCase();
-            if (href.includes(target) || 
-               (key === 'costing-sheet' && (href.includes('weaving-costing') || href.includes('yarn-costing'))) ||
-               (key === 'dispatch' && href.includes('dispatch'))) {
+            if (href.includes(target) ||
+              (key === 'costing-sheet' && (href.includes('weaving-costing') || href.includes('yarn-costing'))) ||
+              (key === 'dispatch' && href.includes('dispatch'))) {
               link.classList.add('vf-perm-hidden');
               link.style.setProperty('display', 'none', 'important');
             }
@@ -944,7 +944,7 @@
       const years = new Set();
       const currentFY = getFinancialYearForDate(new Date().toISOString().slice(0, 10));
       if (currentFY) years.add(currentFY);
-      
+
       try {
         const orders = JSON.parse(localStorage.getItem('yarn-orders') || '[]');
         orders.forEach(o => {
@@ -959,8 +959,8 @@
             }
           });
         });
-      } catch(e) { console.warn('Error parsing yarn-orders for FY:', e); }
-      
+      } catch (e) { console.warn('Error parsing yarn-orders for FY:', e); }
+
       try {
         const issues = JSON.parse(localStorage.getItem('yarn-issues') || '[]');
         issues.forEach(i => {
@@ -969,8 +969,8 @@
             if (fy) years.add(fy);
           }
         });
-      } catch(e) { console.warn('Error parsing yarn-issues for FY:', e); }
-      
+      } catch (e) { console.warn('Error parsing yarn-issues for FY:', e); }
+
       try {
         const warpIssues = JSON.parse(localStorage.getItem('warp-issues') || '[]');
         warpIssues.forEach(i => {
@@ -979,7 +979,7 @@
             if (fy) years.add(fy);
           }
         });
-      } catch(e) { console.warn('Error parsing warp-issues for FY:', e); }
+      } catch (e) { console.warn('Error parsing warp-issues for FY:', e); }
 
       try {
         for (let i = 0; i < localStorage.length; i++) {
@@ -996,23 +996,23 @@
             }
           }
         }
-      } catch(e) { console.warn('Error parsing todo stores for FY:', e); }
+      } catch (e) { console.warn('Error parsing todo stores for FY:', e); }
 
       const sortedYears = Array.from(years).sort().reverse();
-      select.innerHTML = '<option value="All">All Years</option>' + 
+      select.innerHTML = '<option value="All">All Years</option>' +
         sortedYears.map(fy => `<option value="${fy}">FY ${fy}</option>`).join('');
-      
+
       const defaultFY = currentFY || 'All';
       select.value = defaultFY;
       localStorage.setItem('vishwa_fashions_selected_fy', defaultFY);
-      
+
       // Dispatch immediately on load so pages pick up the default FY
       if (window.FYEngine && window.FYEngine.autoCarryForward) {
         window.FYEngine.autoCarryForward(defaultFY);
       }
       window.dispatchEvent(new CustomEvent('fyChanged', { detail: { fy: defaultFY } }));
 
-      select.addEventListener('change', function() {
+      select.addEventListener('change', function () {
         const selVal = select.value;
         localStorage.setItem('vishwa_fashions_selected_fy', selVal);
         if (window.FYEngine && window.FYEngine.autoCarryForward) {
@@ -1041,7 +1041,7 @@
       toggleBtn.addEventListener('click', function () {
         setDrawerOpen(!sidebar.classList.contains('open'));
       });
-      
+
       overlay.addEventListener('click', function () {
         setDrawerOpen(false);
       });
@@ -1049,14 +1049,14 @@
       // Swipe to close on mobile
       let touchStartX = 0;
       let touchStartY = 0;
-      sidebar.addEventListener('touchstart', function(e) {
+      sidebar.addEventListener('touchstart', function (e) {
         if (e.touches.length === 1) {
           touchStartX = e.touches[0].clientX;
           touchStartY = e.touches[0].clientY;
         }
       }, { passive: true });
 
-      sidebar.addEventListener('touchend', function(e) {
+      sidebar.addEventListener('touchend', function (e) {
         if (e.changedTouches.length === 1 && sidebar.classList.contains('open')) {
           const deltaX = e.changedTouches[0].clientX - touchStartX;
           const deltaY = Math.abs(e.changedTouches[0].clientY - touchStartY);
@@ -1068,7 +1068,7 @@
       }, { passive: true });
 
       // Clean up drawer states if window is resized above tablet breakpoint
-      window.addEventListener('resize', function() {
+      window.addEventListener('resize', function () {
         if (window.innerWidth > 1024) {
           if (sidebar.classList.contains('open') || toggleBtn.classList.contains('open') || overlay.classList.contains('visible')) {
             setDrawerOpen(false);
@@ -1078,7 +1078,7 @@
     }
 
     // Set titles on links/folders for collapsed state tooltip
-    document.querySelectorAll('.vf-sb-link, .vf-sb-folder').forEach(function(el) {
+    document.querySelectorAll('.vf-sb-link, .vf-sb-folder').forEach(function (el) {
       let text = el.innerText || el.textContent;
       text = text.replace(/[\n\r]/g, '').trim();
       if (text && !el.getAttribute('title')) {
@@ -1134,10 +1134,10 @@
     document.querySelectorAll('.vf-sb-link').forEach(link => {
       const hrefAttr = link.getAttribute('href');
       if (!hrefAttr) return;
-      
+
       const [hrefPath, hrefQuery] = hrefAttr.split('?');
       const linkPathName = hrefPath.split('/').pop();
-      
+
       if (linkPathName === currentPath) {
         let score = 1;
         if (hrefQuery && currentSearch) {
@@ -1173,39 +1173,39 @@
 
   // Intercept links to trigger loading transition before page unload
   function initLinkTransitionListeners() {
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
       const link = e.target.closest('a');
       if (!link) return;
-      
+
       const href = link.getAttribute('href');
       if (!href) return;
-      
+
       if (href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:') || link.getAttribute('target') === '_blank') {
         return;
       }
-      
+
       if (e.ctrlKey || e.shiftKey || e.metaKey || e.altKey) {
         return;
       }
-      
+
       try {
         const linkUrl = new URL(link.href, window.location.href);
         if (linkUrl.origin !== window.location.origin) {
           return;
         }
-        
+
         if (linkUrl.pathname === window.location.pathname && linkUrl.search === window.location.search && linkUrl.hash === window.location.hash) {
           return;
         }
-        
+
         e.preventDefault();
         window.location.href = link.href;
-      } catch (err) {}
+      } catch (err) { }
     });
   }
 
   // Listen to bfcache restore
-  window.addEventListener('pageshow', function(event) {
+  window.addEventListener('pageshow', function (event) {
     if (event.persisted) {
       document.body.classList.add('vf-loaded');
       document.documentElement.classList.add('vf-loaded');
@@ -1420,7 +1420,7 @@
     `;
     document.head.appendChild(toastStyle);
   })();
-  window.showToast = function(message, type = 'info', title = '') {
+  window.showToast = function (message, type = 'info', title = '') {
     let container = document.getElementById('toast-container');
     if (!container) {
       container = document.createElement('div');
@@ -1471,7 +1471,7 @@
     }, 5000);
   };
 
-  window.showConfirmToast = function(message, onConfirm, onCancel, title = 'Confirm Action') {
+  window.showConfirmToast = function (message, onConfirm, onCancel, title = 'Confirm Action') {
     let container = document.getElementById('toast-container');
     if (!container) {
       container = document.createElement('div');
@@ -1513,7 +1513,7 @@
 
     toast.querySelector('.cancel-btn').addEventListener('click', () => {
       closeToast();
-     if (typeof onCancel === 'function') onCancel();
+      if (typeof onCancel === 'function') onCancel();
     });
 
     toast.querySelector('.close').addEventListener('click', () => {
@@ -1524,10 +1524,62 @@
     container.appendChild(toast);
   };
 
-  window.openCutBeamModal = function(options) {
+  window.openCutBeamModal = function (options) {
     const { beamNumber, machineName, beamType, onConfirm } = options || {};
     const today = new Date().toISOString().substring(0, 10);
     const mDisp = machineName ? (String(machineName).toLowerCase().includes('machine') ? machineName : `Machine ${machineName}`) : 'Machine';
+
+    // Calculate Max Date Limit (Tomorrow)
+    const tomorrowObj = new Date();
+    tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+    const tomorrowStr = tomorrowObj.toISOString().substring(0, 10);
+
+    // Calculate Min Date Limit (Last Production Date or Load Date for this beam)
+    let lastProdDate = null;
+    if (beamNumber) {
+      try {
+        const prodLogs = JSON.parse(localStorage.getItem('production-logs') || '[]');
+        prodLogs.forEach(l => {
+          if (String(l.beamNumber).trim() === String(beamNumber).trim()) {
+            const pDate = l.productionDate || l.pissingDate || l.date;
+            if (pDate && (!lastProdDate || pDate > lastProdDate)) {
+              lastProdDate = pDate;
+            }
+          }
+        });
+      } catch (e) { }
+
+      if (!lastProdDate) {
+        try {
+          const allBeams = JSON.parse(localStorage.getItem('warp-beams') || '[]');
+          const targetB = allBeams.find(b => String(b.beamNumber).trim() === String(beamNumber).trim());
+          if (targetB && Array.isArray(targetB.history)) {
+            for (let i = targetB.history.length - 1; i >= 0; i--) {
+              const h = targetB.history[i];
+              const e = (h.event || '').toLowerCase();
+              if (e.includes('loaded') || e.includes('piecing') || e.includes('pissing')) {
+                lastProdDate = h.date;
+                break;
+              }
+            }
+            if (!lastProdDate && targetB.createdAt) {
+              lastProdDate = targetB.createdAt;
+            }
+          }
+        } catch (e) { }
+      }
+    }
+
+    const formatDateDDMMYYYY = (dateStr) => {
+      if (!dateStr) return '—';
+      const parts = dateStr.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+      return dateStr;
+    };
+
+    const formattedLastProdDate = lastProdDate ? formatDateDDMMYYYY(lastProdDate) : 'None';
 
     const overlay = document.createElement('div');
     overlay.id = 'cut-beam-modal-overlay';
@@ -1542,11 +1594,14 @@
         <p style="margin: 0 0 1.25rem 0; font-size: 0.85rem; color: var(--muted, #94a3b8); line-height: 1.4;">
           Unloading beam from <strong>${mDisp}</strong>. Please enter the cut date and reason for cut.
         </p>
-        
-        <form class="cut-beam-form">
+          <form class="cut-beam-form">
           <div style="margin-bottom: 1rem;">
             <label style="display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted, #94a3b8); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem;">Date of Cut</label>
-            <input type="date" class="cut-beam-date-input" value="${today}" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border, #334155); background: rgba(0,0,0,0.2); color: var(--fg, #f8fafc); font-size: 0.9rem; outline: none; box-sizing: border-box;">
+            <input type="date" class="cut-beam-date-input" value="${today}" min="${lastProdDate || ''}" max="${tomorrowStr}" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border, #334155); background: rgba(0,0,0,0.2); color: var(--fg, #f8fafc); font-size: 0.9rem; outline: none; box-sizing: border-box; color-scheme: dark;">
+            <div style="font-size: 0.75rem; color: var(--muted, #94a3b8); margin-top: 0.35rem; font-weight: 600;">
+              Last Production Date: <span style="color: var(--fg, #f8fafc); font-weight: 700;">${formattedLastProdDate}</span>
+            </div>
+            <div class="cut-beam-date-warning" style="display: none; font-size: 0.72rem; color: #ef4444; font-weight: 700; margin-top: 0.35rem; background: rgba(239, 68, 68, 0.1); padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.3);"></div>
           </div>
           
           <div style="margin-bottom: 1rem;">
@@ -1578,6 +1633,36 @@
 
     const presetSelect = overlay.querySelector('.cut-beam-reason-preset');
     const customInput = overlay.querySelector('.cut-beam-reason-custom');
+    const dateInputEl = overlay.querySelector('.cut-beam-date-input');
+    const warningEl = overlay.querySelector('.cut-beam-date-warning');
+
+    const validateDateInput = () => {
+      const val = dateInputEl.value;
+      if (!val) return;
+      const isTooEarly = lastProdDate && val < lastProdDate;
+      const isTooLate = val > tomorrowStr;
+
+      if (isTooEarly || isTooLate) {
+        dateInputEl.style.background = 'rgba(148, 163, 184, 0.25)';
+        dateInputEl.style.color = '#94a3b8';
+        dateInputEl.style.borderColor = '#ef4444';
+        if (warningEl) {
+          warningEl.style.display = 'block';
+          warningEl.textContent = isTooEarly 
+            ? `⚠️ Date ${formatDateDDMMYYYY(val)} is before last production date (${formattedLastProdDate}) [Greyed Out / Unselectable]` 
+            : `⚠️ Date ${formatDateDDMMYYYY(val)} is after tomorrow (${formatDateDDMMYYYY(tomorrowStr)}) [Greyed Out / Unselectable]`;
+        }
+      } else {
+        dateInputEl.style.background = 'rgba(0,0,0,0.2)';
+        dateInputEl.style.color = 'var(--fg, #f8fafc)';
+        dateInputEl.style.borderColor = 'var(--border, #334155)';
+        if (warningEl) warningEl.style.display = 'none';
+      }
+    };
+
+    dateInputEl.addEventListener('input', validateDateInput);
+    dateInputEl.addEventListener('change', validateDateInput);
+
     presetSelect.addEventListener('change', () => {
       if (presetSelect.value === 'Other') {
         customInput.style.display = 'block';
@@ -1600,6 +1685,27 @@
     overlay.querySelector('.cut-beam-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const cutDate = overlay.querySelector('.cut-beam-date-input').value || today;
+      if (lastProdDate && cutDate < lastProdDate) {
+        const minDisp = formatDateDDMMYYYY(lastProdDate);
+        const cutDisp = formatDateDDMMYYYY(cutDate);
+        if (typeof window.showToast === 'function') {
+          window.showToast(`Invalid Date! Date of cut (${cutDisp}) cannot be before last production date (${minDisp}).`, 'error');
+        } else {
+          alert(`Invalid Date! Date of cut (${cutDisp}) cannot be before last production date (${minDisp}).`);
+        }
+        return;
+      }
+      if (cutDate > tomorrowStr) {
+        const maxDisp = formatDateDDMMYYYY(tomorrowStr);
+        const cutDisp = formatDateDDMMYYYY(cutDate);
+        if (typeof window.showToast === 'function') {
+          window.showToast(`Invalid Date! Date of cut (${cutDisp}) cannot be after tomorrow's date (${maxDisp}).`, 'error');
+        } else {
+          alert(`Invalid Date! Date of cut (${cutDisp}) cannot be after tomorrow's date (${maxDisp}).`);
+        }
+        return;
+      }
+
       let reason = presetSelect.value;
       if (reason === 'Other') {
         reason = customInput.value.trim() || 'Unspecified';
@@ -1612,25 +1718,27 @@
     });
   };
 
-
-  // Inject style to allow selection inside tables
+  // Inject style to allow selection inside tables and enforce date picker greyed-out disabled styling
   const styleEl = document.createElement('style');
   styleEl.textContent = `
     td, th, td *, th * {
       user-select: text !important;
       -webkit-user-select: text !important;
     }
+    input[type="date"] {
+      color-scheme: dark;
+    }
   `;
   document.head.appendChild(styleEl);
 
   // Allow copying table cell text under the mouse cursor when pressing Ctrl+C
-  document.addEventListener('keydown', function(e) {
+  document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
       const selection = window.getSelection().toString();
       if (!selection) {
         // No active text selection. Check if focusing on input/textarea
         if (document.activeElement && (
-          document.activeElement.tagName === 'INPUT' || 
+          document.activeElement.tagName === 'INPUT' ||
           document.activeElement.tagName === 'TEXTAREA' ||
           document.activeElement.isContentEditable
         )) {
@@ -1643,10 +1751,10 @@
           const hoveredEl = document.querySelectorAll(':hover');
           const lastHovered = hoveredEl[hoveredEl.length - 1];
           if (lastHovered && (
-            lastHovered.tagName === 'BUTTON' || 
-            lastHovered.tagName === 'INPUT' || 
-            lastHovered.tagName === 'SELECT' || 
-            lastHovered.closest('button') || 
+            lastHovered.tagName === 'BUTTON' ||
+            lastHovered.tagName === 'INPUT' ||
+            lastHovered.tagName === 'SELECT' ||
+            lastHovered.closest('button') ||
             lastHovered.closest('a')
           )) {
             return;
@@ -1671,7 +1779,7 @@
   });
 
   // Dynamic formatter for Rs and kg to 1 decimal place
-  (function() {
+  (function () {
     function formatToOneDecimal(numStr) {
       const cleanNumStr = numStr.replace(/,/g, '');
       const num = parseFloat(cleanNumStr);
@@ -1684,7 +1792,7 @@
 
     function formatText(text) {
       let changed = false;
-      
+
       // Pattern 1: currency symbol / text followed by a number (including commas)
       const newText1 = text.replace(/(₹|Rs\.?|rs\.?)\s*((?:\d{1,3}(?:,\d{2,3})+|\d+)(?:\.\d+)?)/gi, (match, prefix, num) => {
         changed = true;
@@ -1692,13 +1800,13 @@
         if (/Rs\.?/i.test(prefix)) cleanPrefix = 'Rs.';
         return cleanPrefix + ' ' + formatToOneDecimal(num);
       });
-      
+
       // Pattern 2: number followed by weight unit (including commas)
       const newText2 = newText1.replace(/((?:\d{1,3}(?:,\d{2,3})+|\d+)(?:\.\d+)?)\s*(kg|Kg|KG|kgs|Kgs)\b/gi, (match, num, suffix) => {
         changed = true;
         return formatToOneDecimal(num) + ' ' + suffix;
       });
-      
+
       return { text: newText2, changed: newText1 !== text || newText2 !== newText1 };
     }
 
@@ -1767,12 +1875,12 @@
 })();
 
 // Global Beam Card Modal Implementation
-(function() {
-    const styleId = 'global-beamcard-modal-styles';
-    if (!document.getElementById(styleId)) {
-        const styleEl = document.createElement('style');
-        styleEl.id = styleId;
-        styleEl.innerHTML = `
+(function () {
+  const styleId = 'global-beamcard-modal-styles';
+  if (!document.getElementById(styleId)) {
+    const styleEl = document.createElement('style');
+    styleEl.id = styleId;
+    styleEl.innerHTML = `
             .gbc-modal-overlay {
                 display: none;
                 align-items: center;
@@ -1916,311 +2024,633 @@
             }
             /* End gbc-modal timeline */
         `;
-        document.head.appendChild(styleEl);
+    document.head.appendChild(styleEl);
+  }
+
+  // Auto-purge Beam 101 from stored data if present
+  (function purgeBeam101() {
+    try {
+      const beams = JSON.parse(localStorage.getItem('warp-beams') || '[]');
+      const newBeams = beams.filter(b => String(b.beamNumber) !== '101' && String(b.id) !== 'b101');
+      if (newBeams.length !== beams.length) {
+        localStorage.setItem('warp-beams', JSON.stringify(newBeams));
+      }
+
+      const loadings = JSON.parse(localStorage.getItem('warp-beam-loadings') || '[]');
+      const newLoadings = loadings.filter(bl => String(bl.beamNumber) !== '101');
+      if (newLoadings.length !== loadings.length) {
+        localStorage.setItem('warp-beam-loadings', JSON.stringify(newLoadings));
+      }
+
+      const logs = JSON.parse(localStorage.getItem('productionLogs') || '[]');
+      const newLogs = logs.filter(l => String(l.beamNumber) !== '101');
+      if (newLogs.length !== logs.length) {
+        localStorage.setItem('productionLogs', JSON.stringify(newLogs));
+      }
+    } catch (e) { }
+  })();
+
+  const sampleBeamsFallback = [
+    { id: "b102", beamNumber: "102", quality: "Organza 50D", code: "OG-02", color: "Blush Pink", ends: 8400, meters: 1800, status: "On Loom", machineNumber: "2", createdAt: "2026-06-21", warpingPerson: "Mahesh Patel", history: [{ date: "2026-06-21", event: "Warped by Mahesh Patel", type: "warp" }, { date: "2026-06-26", event: "Jala Piecing by Suresh on Machine 2", type: "machine" }] },
+    { id: "b103", beamNumber: "103", quality: "Brocade Jacquard", code: "BJ-03", color: "Gold White", ends: 10200, meters: 1200, status: "On Loom", machineNumber: "3", createdAt: "2026-06-22", warpingPerson: "Ramesh Kumar", history: [{ date: "2026-06-22", event: "Warped by Ramesh Kumar", type: "warp" }, { date: "2026-06-27", event: "Jala Piecing by Mahesh on Machine 3", type: "machine" }] },
+    { id: "b104", beamNumber: "104", quality: "Taffeta 75D", code: "TF-04", color: "Emerald Green", ends: 9000, meters: 2000, status: "On Loom", machineNumber: "4", createdAt: "2026-06-23", warpingPerson: "Ramesh Kumar", history: [{ date: "2026-06-23", event: "Warped by Ramesh Kumar", type: "warp" }, { date: "2026-06-28", event: "Jala Piecing by Mahesh on Machine 4", type: "machine" }] },
+    { id: "b105", beamNumber: "105", quality: "Cotton Satin 60S", code: "CS-05", color: "Maroon", ends: 7200, meters: 1500, status: "Available", machineNumber: null, createdAt: "2026-06-29", warpingPerson: "Ramesh Kumar", history: [{ date: "2026-06-29", event: "Warped by Ramesh Kumar", type: "warp" }] }
+  ];
+
+  const sampleBeamLoadingsFallback = [];
+
+  function getBeamDetailsStr(beam, eventDate, productionLogs) {
+    if (!beam) return '';
+    const q = beam.quality || '';
+    const code = beam.code || '';
+    const color = beam.color || '';
+    const ends = beam.ends ? `${beam.ends}E` : '';
+    let usedMeters = 0;
+    if (productionLogs && productionLogs.length > 0) {
+      usedMeters = productionLogs
+        .filter(l => String(l.beamNumber) === String(beam.beamNumber))
+        .reduce((sum, l) => sum + (parseFloat(l.totalMeters) || 0), 0);
+    }
+    const remainingMeters = (beam.meters || 0) - usedMeters;
+    const metersStr = `${Math.round(remainingMeters)}/${beam.meters || 0}m`;
+    const parts = [q, (code && color) ? `${code} / ${color}` : (code || color), ends, metersStr].filter(Boolean);
+    return `(${parts.join(' | ')})`;
+  }
+
+  window.revertLastBeamMove = function (beamId) {
+    if (!beamId) return;
+    let allBeams = [];
+    try {
+      const storedStr = localStorage.getItem('warp-beams');
+      if (storedStr) {
+        allBeams = JSON.parse(storedStr);
+      }
+      if (!allBeams || allBeams.length === 0) {
+        if (typeof window.state !== 'undefined' && Array.isArray(window.state.beams) && window.state.beams.length > 0) {
+          allBeams = window.state.beams;
+        } else if (typeof sampleBeamsFallback !== 'undefined') {
+          allBeams = sampleBeamsFallback;
+        }
+      }
+    } catch (e) { }
+
+    const bIdx = allBeams.findIndex(b => String(b.id) === String(beamId) || String(b.beamNumber) === String(beamId));
+    if (bIdx === -1) {
+      alert('Beam not found.');
+      return;
     }
 
-    // Auto-purge Beam 101 from stored data if present
-    (function purgeBeam101() {
-        try {
-            const beams = JSON.parse(localStorage.getItem('warp-beams') || '[]');
-            const newBeams = beams.filter(b => String(b.beamNumber) !== '101' && String(b.id) !== 'b101');
-            if (newBeams.length !== beams.length) {
-                localStorage.setItem('warp-beams', JSON.stringify(newBeams));
-            }
-
-            const loadings = JSON.parse(localStorage.getItem('warp-beam-loadings') || '[]');
-            const newLoadings = loadings.filter(bl => String(bl.beamNumber) !== '101');
-            if (newLoadings.length !== loadings.length) {
-                localStorage.setItem('warp-beam-loadings', JSON.stringify(newLoadings));
-            }
-
-            const logs = JSON.parse(localStorage.getItem('productionLogs') || '[]');
-            const newLogs = logs.filter(l => String(l.beamNumber) !== '101');
-            if (newLogs.length !== logs.length) {
-                localStorage.setItem('productionLogs', JSON.stringify(newLogs));
-            }
-        } catch(e) {}
-    })();
-
-    const sampleBeamsFallback = [
-        { id: "b102", beamNumber: "102", quality: "Organza 50D", code: "OG-02", color: "Blush Pink", ends: 8400, meters: 1800, status: "On Loom", machineNumber: "2", createdAt: "2026-06-21", warpingPerson: "Mahesh Patel", history: [{ date: "2026-06-21", event: "Warped by Mahesh Patel", type: "warp" }, { date: "2026-06-26", event: "Jala Piecing by Suresh on Machine 2", type: "machine" }] },
-        { id: "b103", beamNumber: "103", quality: "Brocade Jacquard", code: "BJ-03", color: "Gold White", ends: 10200, meters: 1200, status: "On Loom", machineNumber: "3", createdAt: "2026-06-22", warpingPerson: "Ramesh Kumar", history: [{ date: "2026-06-22", event: "Warped by Ramesh Kumar", type: "warp" }, { date: "2026-06-27", event: "Jala Piecing by Mahesh on Machine 3", type: "machine" }] },
-        { id: "b104", beamNumber: "104", quality: "Taffeta 75D", code: "TF-04", color: "Emerald Green", ends: 9000, meters: 2000, status: "On Loom", machineNumber: "4", createdAt: "2026-06-23", warpingPerson: "Ramesh Kumar", history: [{ date: "2026-06-23", event: "Warped by Ramesh Kumar", type: "warp" }, { date: "2026-06-28", event: "Jala Piecing by Mahesh on Machine 4", type: "machine" }] },
-        { id: "b105", beamNumber: "105", quality: "Cotton Satin 60S", code: "CS-05", color: "Maroon", ends: 7200, meters: 1500, status: "Available", machineNumber: null, createdAt: "2026-06-29", warpingPerson: "Ramesh Kumar", history: [{ date: "2026-06-29", event: "Warped by Ramesh Kumar", type: "warp" }] }
-    ];
-
-    const sampleBeamLoadingsFallback = [];
-
-    function getBeamDetailsStr(beam, eventDate, productionLogs) {
-        if (!beam) return '';
-        const q = beam.quality || '';
-        const code = beam.code || '';
-        const color = beam.color || '';
-        const ends = beam.ends ? `${beam.ends}E` : '';
-        let usedMeters = 0;
-        if (productionLogs && productionLogs.length > 0) {
-            usedMeters = productionLogs
-                .filter(l => String(l.beamNumber) === String(beam.beamNumber))
-                .reduce((sum, l) => sum + (parseFloat(l.totalMeters) || 0), 0);
-        }
-        const remainingMeters = (beam.meters || 0) - usedMeters;
-        const metersStr = `${Math.round(remainingMeters)}/${beam.meters || 0}m`;
-        const parts = [q, (code && color) ? `${code} / ${color}` : (code || color), ends, metersStr].filter(Boolean);
-        return `(${parts.join(' | ')})`;
+    const beam = allBeams[bIdx];
+    const history = beam.history || [];
+    if (history.length === 0) {
+      if (typeof window.showToast === 'function') window.showToast('No moves to revert in timeline.', 'error');
+      else alert('No moves to revert in timeline.');
+      return;
     }
 
-    window.showGlobalBeamCard = function(beamNumber) {
-        if (!beamNumber) return;
-        
-        let beamsList = [];
-        try {
-            beamsList = JSON.parse(localStorage.getItem('warp-beams') || '[]');
-        } catch(e) {}
-        if (!beamsList) {
-            beamsList = [];
+    const lastEventObj = history[history.length - 1];
+    const lastEventText = (lastEventObj.event || '').toLowerCase();
+    if (lastEventText.includes('manufactured') || lastEventText.includes('created') || lastEventText.includes('warped')) {
+      if (typeof window.showToast === 'function') window.showToast('Cannot revert beam creation/warping origin move.', 'warning');
+      else alert('Cannot revert beam creation/warping origin move.');
+      return;
+    }
+
+    const confirmMsg = `Are you sure you want to cancel and revert this move?\n\n"${lastEventObj.event || 'Last Event'}"`;
+    if (!confirm(confirmMsg)) return;
+
+    // Remove the last move
+    const poppedEvent = history.pop();
+    beam.history = history;
+
+    // Recalculate status and machineNumber from remaining history
+    let newStatus = 'Available';
+    let newMachine = null;
+
+    for (let i = history.length - 1; i >= 0; i--) {
+      const h = history[i];
+      const e = (h.event || '').toLowerCase();
+      if (e.includes('cut off') || e.includes('unloaded') || e.includes('removed') || e.includes('completed') || e.includes('complete')) {
+        if (e.includes('completed') || e.includes('complete')) {
+          newStatus = 'Completed';
+          newMachine = null;
+        } else {
+          newStatus = 'Available';
+          newMachine = null;
+        }
+        break;
+      } else if (e.includes('loaded') || e.includes('assigned') || e.includes('jala piecing') || e.includes('pissing')) {
+        newStatus = 'On Loom';
+        const machObj = typeof getMachineFromEvent === 'function' ? getMachineFromEvent(h.event) : null;
+        if (machObj && machObj.name) {
+          newMachine = machObj.name;
+        } else {
+          let mMatch = (h.event || '').match(/(?:machine|loom|on|from)\s+(?:machine\s+)?([^\s\]\)]+)/i);
+          if (mMatch && mMatch[1] && mMatch[1].toLowerCase() !== 'machine') {
+            newMachine = mMatch[1].trim();
+          } else {
+            newMachine = beam.machineNumber;
+          }
+        }
+        break;
+      }
+    }
+
+    if (newStatus === 'On Loom' && (!newMachine || String(newMachine).trim() === '')) {
+      // Safety fallback: if status is On Loom but machine is invalid/empty, revert to Available to prevent beam from disappearing
+      newStatus = 'Available';
+      newMachine = null;
+    }
+
+    beam.status = newStatus;
+    beam.machineNumber = newMachine;
+    if (newStatus !== 'Completed') {
+      beam.completedAt = null;
+    }
+
+    allBeams[bIdx] = beam;
+    localStorage.setItem('warp-beams', JSON.stringify(allBeams));
+
+    // If popped event was a load move, clean up associated beam loadings
+    const poppedText = (poppedEvent.event || '').toLowerCase();
+    if (poppedText.includes('loaded') || poppedText.includes('jala piecing') || poppedText.includes('pissing')) {
+      try {
+        let loadings = JSON.parse(localStorage.getItem('warp-beam-loadings') || '[]');
+        const cleanLoadings = loadings.filter(bl => String(bl.beamNumber) !== String(beam.beamNumber) || bl.date !== poppedEvent.date);
+        localStorage.setItem('warp-beam-loadings', JSON.stringify(cleanLoadings));
+      } catch (e) { }
+    }
+
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('warp-beams-updated'));
+
+    if (window.state && Array.isArray(window.state.beams)) {
+      const sIdx = window.state.beams.findIndex(b => String(b.id) === String(beamId) || String(b.beamNumber) === String(beamId));
+      if (sIdx !== -1) window.state.beams[sIdx] = beam;
+    }
+
+    if (typeof window.showToast === 'function') {
+      window.showToast(`Cancelled move: "${poppedEvent.event}"`, 'info');
+    } else {
+      alert(`Cancelled move: "${poppedEvent.event}"`);
+    }
+
+    // Refresh UI
+    if (typeof window.renderAll === 'function') {
+      try { window.renderAll(); } catch (e) { }
+    }
+    if (typeof window.renderStock === 'function') {
+      try { window.renderStock(); } catch (e) { }
+    }
+    if (typeof window.openBeamModal === 'function') {
+      try { window.openBeamModal(beam.id || beam.beamNumber); } catch (e) { }
+    }
+  };
+
+  window.showGlobalBeamCard = function (beamNumber) {
+    if (!beamNumber) return;
+
+    let beamsList = [];
+    try {
+      beamsList = JSON.parse(localStorage.getItem('warp-beams') || '[]');
+    } catch (e) { }
+    if (!beamsList) {
+      beamsList = [];
+    }
+
+    const beam = beamsList.find(b => String(b.beamNumber) === String(beamNumber));
+    if (!beam) {
+      alert(`Beam #${beamNumber} not found in inventory.`);
+      return;
+    }
+
+    let productionLogs = [];
+    try {
+      productionLogs = JSON.parse(localStorage.getItem('productionLogs') || '[]');
+    } catch (e) { }
+
+    let beamLoadings = [];
+    try {
+      beamLoadings = JSON.parse(localStorage.getItem('warp-beam-loadings') || '[]');
+    } catch (e) { }
+    if (!beamLoadings || !beamLoadings.length) {
+      beamLoadings = sampleBeamLoadingsFallback;
+    }
+
+    let machines = [];
+    try {
+      machines = JSON.parse(localStorage.getItem('machines') || '[]');
+    } catch (e) { }
+
+    const beamLogs = productionLogs.filter(l => String(l.beamNumber) === String(beam.beamNumber));
+
+    const getBeamTimeline = (beam) => {
+      if (!beam) return [];
+
+      const beamNumStr = String(beam.beamNumber);
+
+      const beamLogs = (productionLogs || []).filter(l => String(l.beamNumber) === beamNumStr);
+      const loadingsList = (beamLoadings || []).filter(bl => String(bl.beamNumber) === beamNumStr);
+
+      // 1. Structured derived setup events from Beam Loading module
+      const loadingEvents = [];
+      loadingsList.forEach(bl => {
+        const roles = [];
+        if (bl.piecein) roles.push({ role: 'Piece In', worker: bl.piecein });
+        if (bl.drawingIn) roles.push({ role: 'Drawing In', worker: bl.drawingIn });
+        if (bl.fani) roles.push({ role: 'Fani (Reed)', worker: bl.fani });
+        if (bl.dropPinJog) roles.push({ role: 'Drop pin/Jog', worker: bl.dropPinJog });
+
+        if (roles.length === 0) {
+          roles.push({ role: 'Beam Loading', worker: bl.workerName || 'Worker' });
         }
 
-        const beam = beamsList.find(b => String(b.beamNumber) === String(beamNumber));
-        if (!beam) {
-            alert(`Beam #${beamNumber} not found in inventory.`);
-            return;
-        }
+        const mNameStr = String(bl.machineNumber || '');
+        const mDisp = mNameStr ? (mNameStr.toLowerCase().includes('machine') ? mNameStr : `Machine ${mNameStr}`) : 'Machine';
 
-        let productionLogs = [];
-        try {
-            productionLogs = JSON.parse(localStorage.getItem('productionLogs') || '[]');
-        } catch(e) {}
+        roles.forEach(r => {
+          loadingEvents.push({
+            date: bl.date,
+            event: `${r.role} by ${r.worker} on ${mDisp}`,
+            type: 'beam-loading',
+            category: 'derived',
+            machineNumber: bl.machineNumber
+          });
+        });
+      });
 
-        let beamLoadings = [];
-        try {
-            beamLoadings = JSON.parse(localStorage.getItem('warp-beam-loadings') || '[]');
-        } catch(e) {}
-        if (!beamLoadings || !beamLoadings.length) {
-            beamLoadings = sampleBeamLoadingsFallback;
-        }
+      // 2. Format history events (Beam Creation, Beam Loaded, Beam Cut Off)
+      const historyEvents = (beam.history || [])
+        .map((h, idx) => ({ ...h, historyIndex: idx, category: 'history', type: h.type || 'system' }))
+        .filter(h => {
+          const e = (h.event || '').toLowerCase();
+          if (e.includes('sync from production sheet')) return false;
+          return true;
+        })
+        .map(h => {
+          let event = h.event || '';
+          if (event === 'Beam Created' || event === 'Beam manufactured') {
+            event = `Beam manufactured by ${beam.warpingPerson || 'Unknown'}`;
+          }
 
-        let machines = [];
-        try {
-            machines = JSON.parse(localStorage.getItem('machines') || '[]');
-        } catch(e) {}
+          const metaParts = [];
+          if (h.reason && !event.toLowerCase().includes(h.reason.toLowerCase())) {
+            metaParts.push(`Reason: ${h.reason}`);
+          }
+          if (h.decisionBy && !event.toLowerCase().includes(h.decisionBy.toLowerCase())) {
+            metaParts.push(`Decision By: ${h.decisionBy}`);
+          }
 
-        const beamLogs = productionLogs.filter(l => String(l.beamNumber) === String(beam.beamNumber));
-
-        const getBeamTimeline = (beam) => {
-            if (!beam) return [];
-
-            const events = [];
-
-            // 1. Beam history events
-            (beam.history || []).forEach((h, idx) => {
-                const e = (h.event || '').toLowerCase();
-                if (e.includes('sync from production') || e.includes('returned to available')) return;
-                
-                let displayEvent = h.event;
-                if (displayEvent === 'Beam Created' || displayEvent === 'Beam manufactured') {
-                    displayEvent = `Beam manufactured by ${beam.warpingPerson || 'Unknown'}`;
-                }
-                if ((h.reason || h.decisionBy || (displayEvent && displayEvent.toLowerCase().includes('reason:'))) && !displayEvent.toLowerCase().includes('beam cut off')) {
-                    const reasonStr = h.reason ? `Reason: ${h.reason}` : '';
-                    const decStr = h.decisionBy ? `Decision By: ${h.decisionBy}` : '';
-                    const metaStr = [reasonStr, decStr].filter(Boolean).join(' | ');
-                    if (metaStr && !displayEvent.includes(metaStr)) {
-                        displayEvent = `Beam Cut Off: ${displayEvent}${displayEvent.includes('(') ? '' : ` (${metaStr})`}`;
-                    }
-                }
-
-                const isCut = e.includes('cut off') || e.includes('unloaded') || e.includes('cut from') || e.includes('completed');
-
-                events.push({
-                    date: h.date,
-                    event: displayEvent,
-                    type: isCut ? 'machine' : (h.type || 'system'),
-                    category: 'history',
-                    historyIndex: idx
-                });
-            });
-
-            // 2. Beam loading records
-            (beamLoadings || [])
-                .filter(bl => String(bl.beamNumber) === String(beam.beamNumber))
-                .forEach(bl => {
-                    let roleLabel = '';
-                    let workerName = '';
-                    if (bl.piecein) { roleLabel = 'Piece In'; workerName = bl.piecein; }
-                    else if (bl.drawingIn) { roleLabel = 'Drawing In'; workerName = bl.drawingIn; }
-                    else if (bl.fani) { roleLabel = 'Fani (Reed)'; workerName = bl.fani; }
-                    else if (bl.dropPinJog) { roleLabel = 'Drop pin/Jog'; workerName = bl.dropPinJog; }
-
-                    const mDisp = bl.machineNumber ? (String(bl.machineNumber).toLowerCase().includes('machine') ? bl.machineNumber : `Machine ${bl.machineNumber}`) : 'Machine';
-                    const exists = events.some(e => e.date === bl.date && e.event.includes(workerName) && e.event.includes(roleLabel));
-                    if (!exists) {
-                        events.push({
-                            date: bl.date,
-                            event: `${roleLabel} by ${workerName} on ${mDisp}`,
-                            type: 'beam-loading',
-                            category: 'derived'
-                        });
-                    }
-                });
-
-            // 3. Production Details grouping
-            if (beamLogs.length > 0) {
-                const logsByMachine = new Map();
-                beamLogs.forEach(l => {
-                    const mKey = String(l.machineNumber || 'Unknown').trim();
-                    if (!logsByMachine.has(mKey)) logsByMachine.set(mKey, []);
-                    logsByMachine.get(mKey).push(l);
-                });
-
-                logsByMachine.forEach((mLogs, mKey) => {
-                    mLogs.sort((a, b) => (a.productionDate || '').localeCompare(b.productionDate || ''));
-                    const firstProdDate = mLogs[0].productionDate;
-                    const subTotalMeters = mLogs.reduce((acc, l) => acc + (parseFloat(l.totalMeters) || 0), 0);
-                    const uniqueTakas = {};
-                    mLogs.forEach(l => {
-                        if (l.takaSerial && l.takaSerial !== 'Pending') {
-                            uniqueTakas[l.takaSerial] = parseFloat(l.takaWeight) || 0;
-                        }
-                    });
-                    const subTotalWeight = Object.values(uniqueTakas).reduce((acc, w) => acc + w, 0);
-
-                    const mDisp = mKey.toLowerCase().includes('machine') ? mKey : `Machine ${mKey}`;
-
-                    events.push({
-                        date: firstProdDate,
-                        event: `Production Details for ${mDisp}`,
-                        type: 'production',
-                        category: 'derived',
-                        details: {
-                            machineNumber: mKey,
-                            logs: mLogs.map(l => ({
-                                productionDate: l.productionDate,
-                                foldingDate: l.foldingDate,
-                                takaSerial: l.takaSerial || 'Pending',
-                                meters: parseFloat(l.totalMeters) || 0,
-                                weight: parseFloat(l.takaWeight) || 0
-                            })),
-                            subTotalMeters,
-                            subTotalWeight
-                        }
-                    });
-                });
+          if (metaParts.length > 0) {
+            const metaStr = metaParts.join(' | ');
+            if (!event.includes(metaStr)) {
+              if (event.includes('(')) {
+                event = `${event.slice(0, -1)} | ${metaStr})`;
+              } else {
+                event = `${event} (${metaStr})`;
+              }
             }
+          }
+          return { ...h, event };
+        });
 
-            // Deduplicate exact duplicate events
-            const uniqueEvents = [];
-            const seenKeys = new Set();
-            events.forEach(item => {
-                const key = `${item.date}_${item.event}`;
-                if (!seenKeys.has(key)) {
-                    seenKeys.add(key);
-                    uniqueEvents.push(item);
-                }
-            });
+      const normMach = s => String(s || '').toLowerCase().replace(/^machine\s*/i, '').trim();
 
-            // Sort strictly chronologically by date with logical lifecycle ranking
-            const getRank = (item) => {
-                const evt = (item.event || '').toLowerCase();
-                const type = item.type;
+      const matchMachine = (mNum, mach) => {
+        if (!mNum || !mach) return false;
+        const target = normMach(mNum);
+        const mId = normMach(mach.id);
+        const mName = normMach(mach.name);
+        if (target === mId || target === mName) return true;
 
-                // 1. Manufacturing / Creation / Warping
-                if (evt.includes('manufactured') || evt.includes('manufacture') || evt.includes('created') || evt.includes('warped') || evt.includes('warping') || type === 'warp') return 1;
+        const allMachines = JSON.parse(localStorage.getItem('machines') || '[]');
+        const found = allMachines.find(m => normMach(m.id) === target || normMach(m.name) === target);
+        if (found) {
+          const fId = normMach(found.id);
+          const fName = normMach(found.name);
+          return fId === mId || fName === mId || fId === mName || fName === mName;
+        }
+        return false;
+      };
 
-                // 2. Beam Loaded on Machine
-                if ((evt.includes('beam loaded') || evt.includes('loaded on') || evt.includes('assigned to')) && !evt.includes('unloaded') && !evt.includes('cut off') && !evt.includes('cut from')) return 2;
-                
-                // 3. Setup / Preparation details (Piece In, Piecing, Pissing, Pass-In, Drawing In, Fani, Drop Pin)
-                if ((evt.includes('piece in') || evt.includes('piece-in') || evt.includes('piecing') || evt.includes('pissing') || evt.includes('pass in') || evt.includes('pass-in') || evt.includes('drawing in') || evt.includes('fani') || evt.includes('reed') || evt.includes('drop pin') || evt.includes('jog') || evt.includes('jala') || type === 'beam-loading') && !evt.includes('unloaded') && !evt.includes('cut off')) return 3;
-                
-                // 4. Production Details
-                if (type === 'production' || evt.includes('production details') || evt.includes('production started') || evt.includes('woven')) return 4;
+      // Helper to extract machine object or name from event text
+      const getMachineFromEvent = (eventStr) => {
+        if (!eventStr) return null;
+        const lower = eventStr.toLowerCase();
+        const allMachines = JSON.parse(localStorage.getItem('machines') || '[]');
+        const sortedMachines = [...allMachines].sort((a, b) => (b.name || '').length - (a.name || '').length);
+        for (const m of sortedMachines) {
+          const mNameEscaped = String(m.name).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const mIdEscaped = String(m.id).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const regex1 = new RegExp(`(?:machine|loom|no\\.?|on|from|completed on|unloaded from)\\s*(?:machine\\s+)?(?:\\b${mNameEscaped}\\b|\\b${mIdEscaped}\\b)`, 'i');
+          const regex2 = new RegExp(`(?:\\b${mNameEscaped}\\b|\\b${mIdEscaped}\\b)`, 'i');
+          if (regex1.test(lower) || regex2.test(lower)) {
+            return m;
+          }
+        }
+        const match = lower.match(/(?:machine|loom|no\.?)\s*(\w+)/i);
+        if (match) {
+          const found = allMachines.find(m => normMach(m.id) === normMach(match[1]) || normMach(m.name) === normMach(match[1]));
+          return found || { id: match[1], name: match[1] };
+        }
+        return null;
+      };
 
-                // 5. Unloaded / Cut off / Completed / Removed
-                if (evt.includes('unloaded') || evt.includes('cut off') || evt.includes('cut from') || evt.includes('completed') || evt.includes('removed')) return 5;
-                
-                return 3;
-            };
+      // 3. Separate history into pre-cycle events (Creation/Warping) and cycles
+      const preCycleEvents = [];
+      const cycles = [];
 
-            uniqueEvents.sort((a, b) => {
-                const dateComp = (a.date || '').localeCompare(b.date || '');
-                if (dateComp !== 0) return dateComp;
-                return getRank(a) - getRank(b);
-            });
+      historyEvents.forEach(item => {
+        const evt = (item.event || '').toLowerCase();
+        const isManufacturing = evt.includes('manufactured') || evt.includes('manufacture') || evt.includes('created') || evt.includes('warped') || evt.includes('warping') || item.type === 'warp';
+        const isLoad = (evt.includes('beam loaded') || evt.includes('loaded on') || evt.includes('assigned to') || evt.includes('jala piecing') || evt.includes('pissing')) && !evt.includes('unloaded') && !evt.includes('cut off') && !evt.includes('cut from');
 
-            // Filter out consecutive duplicate cut events (cut events without any preceding load/setup/production)
-            const cleanedEvents = [];
-            let hasActiveLoad = false;
-            uniqueEvents.forEach(item => {
-                const evt = (item.event || '').toLowerCase();
-                const type = item.type;
+        if (isManufacturing) {
+          preCycleEvents.push(item);
+        } else if (isLoad) {
+          const mach = getMachineFromEvent(item.event) || { id: 'Unknown', name: 'Unknown' };
+          cycles.push({
+            machine: mach,
+            startEvent: item,
+            startDate: item.date,
+            endDate: null,
+            setupEvents: [],
+            logs: [],
+            cutEvents: []
+          });
+        }
+      });
 
-                const isManufacturing = evt.includes('manufactured') || evt.includes('manufacture') || evt.includes('created') || evt.includes('warped') || evt.includes('warping') || type === 'warp';
-                const isLoadOrSetup = evt.includes('beam loaded') || evt.includes('loaded on') || evt.includes('assigned to') || evt.includes('piece in') || evt.includes('piece-in') || evt.includes('piecing') || evt.includes('pissing') || evt.includes('pass in') || evt.includes('pass-in') || evt.includes('drawing in') || evt.includes('fani') || evt.includes('drop pin') || type === 'beam-loading';
-                const isProduction = type === 'production' || evt.includes('production details') || evt.includes('production started');
-                const isCutOrUnload = evt.includes('unloaded') || evt.includes('cut off') || evt.includes('cut from') || evt.includes('completed') || evt.includes('removed');
+      // Fallback implicit cycle if no explicit load event
+      if (cycles.length === 0 && (loadingEvents.length > 0 || beamLogs.length > 0)) {
+        const firstDate = (loadingEvents[0] && loadingEvents[0].date) || (beamLogs[0] && beamLogs[0].productionDate) || beam.createdAt || '2026-01-01';
+        const mNum = (loadingEvents[0] && loadingEvents[0].machineNumber) || (beamLogs[0] && beamLogs[0].machineNumber) || '1';
+        const mach = getMachineFromEvent(`Machine ${mNum}`) || { id: String(mNum), name: String(mNum) };
 
-                if (isManufacturing) {
-                    cleanedEvents.push(item);
-                } else if (isLoadOrSetup || isProduction) {
-                    hasActiveLoad = true;
-                    cleanedEvents.push(item);
-                } else if (isCutOrUnload) {
-                    if (hasActiveLoad) {
-                        cleanedEvents.push(item);
-                        hasActiveLoad = false;
-                    }
-                } else {
-                    cleanedEvents.push(item);
-                }
-            });
+        cycles.push({
+          machine: mach,
+          startEvent: { date: firstDate, event: `Beam Loaded on Machine ${mach.name}`, type: 'machine', historyIndex: 1 },
+          startDate: firstDate,
+          endDate: null,
+          setupEvents: [],
+          logs: [],
+          cutEvents: []
+        });
+      }
 
-            // Final sort by rank to ensure production precedes unload on same date
-            cleanedEvents.sort((a, b) => {
-                const dateComp = (a.date || '').localeCompare(b.date || '');
-                if (dateComp !== 0) return dateComp;
-                const rankComp = getRank(a) - getRank(b);
-                if (rankComp !== 0) return rankComp;
-                const idxA = a.historyIndex !== undefined ? a.historyIndex : 500;
-                const idxB = b.historyIndex !== undefined ? b.historyIndex : 500;
-                return idxA - idxB;
-            });
+      // Assign end dates and collect all events in each cycle (cuts, unloads, completion & setup items)
+      cycles.forEach((cycle, cIdx) => {
+        const nextCycle = cycles[cIdx + 1];
+        const startIdx = historyEvents.indexOf(cycle.startEvent);
+        const endIdx = nextCycle ? historyEvents.indexOf(nextCycle.startEvent) : historyEvents.length;
 
-            return cleanedEvents;
-        };
+        for (let i = startIdx + 1; i < endIdx; i++) {
+          const hItem = historyEvents[i];
+          const evt = (hItem.event || '').toLowerCase();
+          const isCut = evt.includes('cut off') || evt.includes('unloaded') || evt.includes('completed') || evt.includes('complete') || evt.includes('removed');
+          if (isCut) {
+            cycle.cutEvents.push(hItem);
+            if (!cycle.endDate) {
+              cycle.endDate = hItem.date;
+            }
+          } else {
+            cycle.setupEvents.push(hItem);
+          }
+        }
+        if (nextCycle && (!cycle.endDate || cycle.endDate === '9999-12-31')) {
+          cycle.endDate = nextCycle.startDate;
+        }
+        if (!cycle.endDate) cycle.endDate = '9999-12-31';
+      });
 
-        const beamUsed = beamLogs.reduce((acc, log) => acc + (parseFloat(log.totalMeters) || 0), 0);
-        const beamRemaining = (parseFloat(beam.meters) || 0) - beamUsed;
-        const beamShortagePercent = beam.meters > 0 ? (beamRemaining / beam.meters) * 100 : 0;
-        const isCompleted = beam.status === 'Completed';
+      // Assign setup events to cycles
+      loadingEvents.forEach(le => {
+        const leMNum = le.machineNumber || (le.machine ? le.machine.name : '');
 
-        const formatDate = (dateStr) => {
-            if (!dateStr || dateStr === '9999-12-31') return '';
-            try {
-                const parts = String(dateStr).split('T')[0].split('-');
-                if (parts.length === 3) {
-                    const d = new Date(parts[0], parts[1]-1, parts[2]);
-                    if (!isNaN(d.getTime())) {
-                        const day = String(d.getDate()).padStart(2, '0');
-                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                        const month = months[d.getMonth()];
-                        const year = d.getFullYear();
-                        return `${day} ${month} ${year}`;
-                    }
-                }
-            } catch(e) {}
-            return dateStr;
-        };
+        let matchedCycle = [...cycles].reverse().find(cycle => {
+          const sameMachine = matchMachine(leMNum, cycle.machine);
+          return sameMachine && le.date >= cycle.startDate && le.date <= cycle.endDate;
+        });
 
-        let overlay = document.getElementById('global-beamcard-overlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'global-beamcard-overlay';
-            overlay.className = 'gbc-modal-overlay';
-            overlay.onclick = () => { overlay.style.display = 'none'; };
-            document.body.appendChild(overlay);
+        if (!matchedCycle && leMNum) {
+          const sameMachineCycles = cycles.filter(cycle => matchMachine(leMNum, cycle.machine));
+          if (sameMachineCycles.length > 0) {
+            matchedCycle = sameMachineCycles.find(c => le.date >= c.startDate) || sameMachineCycles[sameMachineCycles.length - 1];
+          }
         }
 
-        overlay.innerHTML = `
+        if (!matchedCycle && !leMNum) {
+          matchedCycle = [...cycles].reverse().find(cycle => le.date >= cycle.startDate && le.date <= cycle.endDate);
+        }
+
+        if (matchedCycle) {
+          const alreadyExists = matchedCycle.setupEvents.some(se => (se.event || '').toLowerCase() === (le.event || '').toLowerCase() && se.date === le.date);
+          if (!alreadyExists) {
+            matchedCycle.setupEvents.push(le);
+          }
+        }
+      });
+
+      // Assign production logs to cycles
+      beamLogs.forEach(log => {
+        let bestCycle = null;
+        const logMNum = log.machineNumber;
+        cycles.forEach(cycle => {
+          if (matchMachine(logMNum, cycle.machine)) {
+            if (log.productionDate >= cycle.startDate && log.productionDate <= cycle.endDate) {
+              if (!bestCycle || cycle.startDate > bestCycle.startDate) {
+                bestCycle = cycle;
+              }
+            }
+          }
+        });
+
+        const logMeters = parseFloat(log.totalMeters || log.meters) || 0;
+        const logWeight = parseFloat(log.takaWeight || log.weight) || 0;
+
+        if (bestCycle) {
+          bestCycle.logs.push({
+            productionDate: log.productionDate,
+            foldingDate: log.foldingDate,
+            takaSerial: log.takaSerial || 'Pending',
+            meters: logMeters,
+            weight: logWeight
+          });
+        } else if (cycles.length > 0 && logMNum) {
+          const sameMachineCycles = cycles.filter(itemCycle => matchMachine(logMNum, itemCycle.machine));
+          if (sameMachineCycles.length > 0) {
+            sameMachineCycles[sameMachineCycles.length - 1].logs.push({
+              productionDate: log.productionDate,
+              foldingDate: log.foldingDate,
+              takaSerial: log.takaSerial || 'Pending',
+              meters: logMeters,
+              weight: logWeight
+            });
+          }
+        }
+      });
+
+      // Assemble final timeline in exact chronological cycle sequence
+      const finalTimeline = [];
+
+      const processedHistoryIndices = new Set();
+      preCycleEvents.forEach(item => processedHistoryIndices.add(item.historyIndex));
+
+      // Consolidate preCycleEvents so there is ONLY 1 warping/manufacturing origin event at the top
+      if (preCycleEvents.length > 0) {
+        const explicitWarp = preCycleEvents.find(h => {
+          const e = (h.event || '').toLowerCase();
+          return e.includes('warped by') || e.includes('warping by') || e.includes('manufactured by');
+        });
+        const primaryOrigin = explicitWarp || preCycleEvents[0];
+
+        const wPerson = beam.warpingPerson || 'Unknown';
+        let cleanEvent = primaryOrigin.event || '';
+        if (cleanEvent === 'Beam Created' || cleanEvent === 'Beam manufactured' || cleanEvent.toLowerCase() === 'beam created') {
+          cleanEvent = `Warped by ${wPerson}`;
+        }
+
+        finalTimeline.push({
+          ...primaryOrigin,
+          event: cleanEvent
+        });
+      }
+
+      cycles.forEach((cycle, cIdx) => {
+        const cycleNumber = cIdx + 1;
+        const mNameStr = String(cycle.machine.name || 'Machine');
+        const mDisp = mNameStr.toLowerCase().includes('machine') ? mNameStr : `Machine ${mNameStr}`;
+        const hasCut = cycle.cutEvents.length > 0;
+        let cStatus = 'Cut Off';
+        if (hasCut) {
+          const lastCutText = (cycle.cutEvents[cycle.cutEvents.length - 1].event || '').toLowerCase();
+          cStatus = (lastCutText.includes('completed') || lastCutText.includes('complete')) ? 'Completed' : 'Cut Off';
+        } else if (cIdx === cycles.length - 1) {
+          cStatus = beam.status || 'On Loom';
+        }
+
+        // 1. Cycle Start (Beam Loaded)
+        finalTimeline.push({
+          ...cycle.startEvent,
+          cycleNumber,
+          cycleMachine: mDisp,
+          cycleStatus: cStatus,
+          isCycleStart: true
+        });
+        processedHistoryIndices.add(cycle.startEvent.historyIndex);
+
+        // 2. Setup Events
+        cycle.setupEvents.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        cycle.setupEvents.forEach(se => {
+          finalTimeline.push({
+            ...se,
+            cycleNumber,
+            cycleMachine: mDisp,
+            cycleStatus: cStatus
+          });
+        });
+
+        // 3. Production Details
+        if (cycle.logs.length > 0) {
+          cycle.logs.sort((a, b) => (a.productionDate || '').localeCompare(b.productionDate || ''));
+          const subTotalMeters = cycle.logs.reduce((acc, l) => acc + l.meters, 0);
+          const uniqueTakas = {};
+          cycle.logs.forEach(l => {
+            if (l.takaSerial && l.takaSerial !== 'Pending') {
+              uniqueTakas[l.takaSerial] = l.weight;
+            }
+          });
+          const subTotalWeight = Object.values(uniqueTakas).reduce((acc, w) => acc + w, 0);
+          const prodDate = cycle.logs[0].productionDate;
+
+          finalTimeline.push({
+            date: prodDate,
+            event: `Production Details for ${mDisp}`,
+            type: 'production',
+            category: 'derived',
+            cycleNumber,
+            cycleMachine: mDisp,
+            cycleStatus: cStatus,
+            details: {
+              machineNumber: cycle.machine.name,
+              logs: cycle.logs,
+              subTotalMeters,
+              subTotalWeight
+            }
+          });
+        }
+
+        // 4. Cut / Unload / Completion Events
+        cycle.cutEvents.forEach(ce => {
+          finalTimeline.push({
+            ...ce,
+            cycleNumber,
+            cycleMachine: mDisp,
+            cycleStatus: cStatus,
+            isCycleEnd: true
+          });
+          processedHistoryIndices.add(ce.historyIndex);
+        });
+      });
+
+      // 5. Any post-cycle or unassigned history events
+      historyEvents.forEach(item => {
+        const evt = (item.event || '').toLowerCase();
+        const isMfg = evt.includes('manufactured') || evt.includes('manufacture') || evt.includes('created') || evt.includes('warped') || evt.includes('warping') || item.type === 'warp';
+        if (!isMfg && !processedHistoryIndices.has(item.historyIndex)) {
+          finalTimeline.push(item);
+        }
+      });
+
+      // Guarantee: Filter finalTimeline so that ANY warping/manufacturing origin event appears ONLY ONCE at index 0!
+      let originSeen = false;
+      return finalTimeline.filter(item => {
+        const evt = (item.event || '').toLowerCase();
+        const isMfg = evt.includes('manufactured') || evt.includes('manufacture') || evt.includes('created') || evt.includes('warped') || evt.includes('warping') || item.type === 'warp';
+        if (isMfg) {
+          if (!originSeen) {
+            originSeen = true;
+            return true;
+          }
+          return false;
+        }
+        return true;
+      });
+    };
+
+    const beamUsed = beamLogs.reduce((acc, log) => acc + (parseFloat(log.totalMeters) || 0), 0);
+    const beamRemaining = (parseFloat(beam.meters) || 0) - beamUsed;
+    const beamShortagePercent = beam.meters > 0 ? (beamRemaining / beam.meters) * 100 : 0;
+    const isCompleted = beam.status === 'Completed';
+
+    const formatDate = (dateStr) => {
+      if (!dateStr || dateStr === '9999-12-31') return '';
+      try {
+        const parts = String(dateStr).split('T')[0].split('-');
+        if (parts.length === 3) {
+          const d = new Date(parts[0], parts[1] - 1, parts[2]);
+          if (!isNaN(d.getTime())) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = months[d.getMonth()];
+            const year = d.getFullYear();
+            return `${day} ${month} ${year}`;
+          }
+        }
+      } catch (e) { }
+      return dateStr;
+    };
+
+    let overlay = document.getElementById('global-beamcard-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'global-beamcard-overlay';
+      overlay.className = 'gbc-modal-overlay';
+      overlay.onclick = () => { overlay.style.display = 'none'; };
+      document.body.appendChild(overlay);
+    }
+
+    overlay.innerHTML = `
             <div class="gbc-modal" onclick="event.stopPropagation()">
                 <button type="button" class="close-btn" onclick="document.getElementById('global-beamcard-overlay').style.display='none'">&times;</button>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
@@ -2261,54 +2691,53 @@
                 </div>
 
                 <h3 class="display-font" style="font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; color: var(--fg);">Beam Timeline</h3>
-                
-                <!-- Timeline container -->
-                <div class="timeline" style="margin-bottom: 1rem;">
+                          <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1rem; margin-bottom: 1rem;">
                     ${(() => {
-                        const timeline = getBeamTimeline(beam);
-                        if (timeline.length === 0) {
-                            return '<div style="color: var(--muted); font-style: italic; font-size: 0.85rem; padding: 1rem 0;">No timeline events recorded.</div>';
-                        }
-                        return timeline.map(h => {
-                            const dotColor = h.type === 'machine' ? 'var(--accent3)' : (h.type === 'production' ? 'var(--success)' : (h.type === 'beam-loading' ? 'var(--accent2)' : 'var(--accent)'));
-                            
-                            let detailsHtml = '';
-                            if (h.type === 'production' && h.details && h.details.logs) {
-                                const grouped = [];
-                                const takaGroups = {};
-                                h.details.logs.forEach(log => {
-                                    const serial = log.takaSerial;
-                                    if (!serial || serial === 'Pending') {
-                                        grouped.push({
-                                            productionDates: [log.productionDate],
-                                            foldingDates: log.foldingDate ? [log.foldingDate] : [],
-                                            takaSerial: serial || 'Pending',
-                                            meters: log.meters,
-                                            weight: log.weight
-                                        });
-                                    } else {
-                                        if (!takaGroups[serial]) {
-                                            takaGroups[serial] = {
-                                                productionDates: [],
-                                                foldingDates: [],
-                                                takaSerial: serial,
-                                                meters: 0,
-                                                weight: 0
-                                            };
-                                            grouped.push(takaGroups[serial]);
-                                        }
-                                        if (!takaGroups[serial].productionDates.includes(log.productionDate)) {
-                                            takaGroups[serial].productionDates.push(log.productionDate);
-                                        }
-                                        if (log.foldingDate && !takaGroups[serial].foldingDates.includes(log.foldingDate)) {
-                                            takaGroups[serial].foldingDates.push(log.foldingDate);
-                                        }
-                                        takaGroups[serial].meters += log.meters;
-                                        takaGroups[serial].weight = Math.max(takaGroups[serial].weight, log.weight);
-                                    }
-                                });
+        const timeline = getBeamTimeline(beam);
+        if (timeline.length === 0) {
+          return '<div style="color: var(--muted); font-style: italic; font-size: 0.85rem; padding: 1rem 0;">No timeline events recorded.</div>';
+        }
 
-                                const trs = grouped.map(g => `
+        const renderItem = (h) => {
+          const dotColor = h.type === 'machine' ? 'var(--accent3)' : (h.type === 'production' ? 'var(--success)' : (h.type === 'beam-loading' ? 'var(--accent2)' : 'var(--accent)'));
+
+          let detailsHtml = '';
+          if (h.type === 'production' && h.details && h.details.logs) {
+            const grouped = [];
+            const takaGroups = {};
+            h.details.logs.forEach(log => {
+              const serial = log.takaSerial;
+              if (!serial || serial === 'Pending') {
+                grouped.push({
+                  productionDates: [log.productionDate],
+                  foldingDates: log.foldingDate ? [log.foldingDate] : [],
+                  takaSerial: serial || 'Pending',
+                  meters: log.meters,
+                  weight: log.weight
+                });
+              } else {
+                if (!takaGroups[serial]) {
+                  takaGroups[serial] = {
+                    productionDates: [],
+                    foldingDates: [],
+                    takaSerial: serial,
+                    meters: 0,
+                    weight: 0
+                  };
+                  grouped.push(takaGroups[serial]);
+                }
+                if (!takaGroups[serial].productionDates.includes(log.productionDate)) {
+                  takaGroups[serial].productionDates.push(log.productionDate);
+                }
+                if (log.foldingDate && !takaGroups[serial].foldingDates.includes(log.foldingDate)) {
+                  takaGroups[serial].foldingDates.push(log.foldingDate);
+                }
+                takaGroups[serial].meters += log.meters;
+                takaGroups[serial].weight = Math.max(takaGroups[serial].weight, log.weight);
+              }
+            });
+
+            const trs = grouped.map(g => `
                                     <tr>
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; border-bottom: none; color: var(--fg); vertical-align: top; width: 20%;">
                                             ${g.productionDates.map(d => `<div>${formatDate(d)}</div>`).join('')}
@@ -2316,13 +2745,13 @@
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; border-bottom: none; color: var(--fg); vertical-align: top; width: 20%;">
                                             ${g.foldingDates.length > 0 ? g.foldingDates.map(d => `<div>${formatDate(d)}</div>`).join('') : '—'}
                                         </td>
-                                        <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; border-bottom: none; font-weight: 500; color: var(--fg); vertical-align: top; width: 20%;">${g.takaSerial}</td>
+                                        <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; font-weight: 500; color: var(--fg); vertical-align: top; width: 20%;">${g.takaSerial}</td>
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; font-weight: 600; border-bottom: none; color: var(--fg); vertical-align: top; width: 20%;">${g.meters.toFixed(1)} m</td>
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; font-weight: 600; border-bottom: none; color: var(--fg); vertical-align: top; width: 20%;">${g.weight > 0 ? `${g.weight.toFixed(2)} kg` : '—'}</td>
                                     </tr>
                                 `).join('');
 
-                                detailsHtml = `
+            detailsHtml = `
                                     <div style="padding: 0.75rem; margin-top: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; width: 100%; overflow-x: auto;">
                                         <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.8rem; text-align: center;">
                                             <thead>
@@ -2345,36 +2774,136 @@
                                         </table>
                                     </div>
                                 `;
-                            }
+          }
 
-                            return `
-                                <div class="timeline-item">
-                                    <div class="timeline-dot" style="background: ${dotColor};"></div>
-                                    <div class="timeline-content">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: ${h.type === 'production' ? '0.5rem' : '0'};">
-                                            <div>
-                                                <div class="timeline-date">${h.hideDate ? '' : formatDate(h.date)}</div>
-                                                <div style="font-weight: 600; color: var(--fg);">${h.event}</div>
-                                            </div>
-                                        </div>
-                                        ${detailsHtml}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('');
-                    })()}
+          const eLower = (h.event || '').toLowerCase();
+          const isOriginEvent = eLower.includes('manufactured') || eLower.includes('created') || eLower.includes('warped');
+          let cancelBtnHtml = '';
+          if (h.historyIndex !== undefined && beam.history && h.historyIndex === (beam.history.length - 1) && !isOriginEvent) {
+            cancelBtnHtml = `
+              <button onclick="event.stopPropagation(); window.revertLastBeamMove('${beam.id || beam.beamNumber}')" 
+                      class="btn btn-outline" 
+                      title="Cancel / Revert this move"
+                      style="margin-left: 0.5rem; padding: 0.2rem 0.65rem; font-size: 0.72rem; color: #ef4444; border-color: #ef4444; border-radius: 6px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; background: rgba(239, 68, 68, 0.08);">
+                  ✕ Cancel Move
+              </button>
+            `;
+          }
+
+          return `
+            <div class="timeline-item" style="margin-bottom: 1.25rem;">
+                <div class="timeline-dot" style="background: ${dotColor};"></div>
+                <div class="timeline-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: ${h.type === 'production' ? '0.5rem' : '0'}; width: 100%;">
+                        <div>
+                            <div class="timeline-date">${h.hideDate ? '' : formatDate(h.date)}</div>
+                            <div style="font-weight: 600; color: var(--fg);">${h.event}</div>
+                        </div>
+                        ${cancelBtnHtml}
+                    </div>
+                    ${detailsHtml}
+                </div>
+            </div>
+          `;
+        };
+
+        const originItems = [];
+        const cycleGroups = {};
+        const unassignedItems = [];
+
+        timeline.forEach(item => {
+          if (item.cycleNumber) {
+            if (!cycleGroups[item.cycleNumber]) {
+              cycleGroups[item.cycleNumber] = [];
+            }
+            cycleGroups[item.cycleNumber].push(item);
+          } else {
+            const evt = (item.event || '').toLowerCase();
+            if (evt.includes('warped') || evt.includes('manufactured') || evt.includes('created') || item.type === 'warp') {
+              originItems.push(item);
+            } else {
+              unassignedItems.push(item);
+            }
+          }
+        });
+
+        let outputHtml = '';
+
+        if (originItems.length > 0) {
+          outputHtml += `
+            <div style="padding: 1.1rem 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+                <div style="font-size: 0.72rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.85rem;">
+                    WARPING & MANUFACTURING ORIGIN
+                </div>
+                <div class="timeline" style="margin: 0;">
+                    ${originItems.map(renderItem).join('')}
+                </div>
+            </div>
+          `;
+        }
+
+        const cycleNums = Object.keys(cycleGroups).map(Number).sort((a, b) => a - b);
+        cycleNums.forEach(cNum => {
+          const cItems = cycleGroups[cNum];
+          const firstItem = cItems[0] || {};
+          const cMachine = firstItem.cycleMachine || 'Loom';
+          const cStatus = firstItem.cycleStatus || 'Cut Off';
+          const statusBadgeStyle = cStatus === 'On Loom' 
+              ? 'background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);' 
+              : (cStatus === 'Completed' 
+                  ? 'background: rgba(139, 92, 246, 0.12); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3);' 
+                  : 'background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);');
+
+          outputHtml += `
+            <div style="padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border);">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 0.88rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em;">
+                            CYCLE ${cNum}
+                        </span>
+                        <span style="padding: 0.2rem 0.65rem; font-size: 0.72rem; font-weight: 700; background: rgba(139, 92, 246, 0.12); color: var(--accent); border-radius: 6px; border: 1px solid rgba(139, 92, 246, 0.25);">
+                            ${cMachine}
+                        </span>
+                    </div>
+                    <span style="padding: 0.25rem 0.65rem; font-size: 0.7rem; font-weight: 700; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.03em; ${statusBadgeStyle}">
+                        ${cStatus}
+                    </span>
+                </div>
+
+                <div class="timeline" style="margin: 0;">
+                    ${cItems.map(renderItem).join('')}
+                </div>
+            </div>
+          `;
+        });
+
+        if (unassignedItems.length > 0) {
+          outputHtml += `
+            <div style="padding: 1.1rem 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;">
+                <div style="font-size: 0.72rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.85rem;">
+                    OTHER EVENTS
+                </div>
+                <div class="timeline" style="margin: 0;">
+                    ${unassignedItems.map(renderItem).join('')}
+                </div>
+            </div>
+          `;
+        }
+
+        return outputHtml;
+      })()}
                 </div>
             </div>
         `;
-        overlay.style.display = 'flex';
-    };
+    overlay.style.display = 'flex';
+  };
 
-    // Auto click listener delegation
-    const gmcStyleId = 'global-machinecard-modal-styles';
-    if (!document.getElementById(gmcStyleId)) {
-        const styleEl = document.createElement('style');
-        styleEl.id = gmcStyleId;
-        styleEl.innerHTML = `
+  // Auto click listener delegation
+  const gmcStyleId = 'global-machinecard-modal-styles';
+  if (!document.getElementById(gmcStyleId)) {
+    const styleEl = document.createElement('style');
+    styleEl.id = gmcStyleId;
+    styleEl.innerHTML = `
             .gmc-modal-overlay {
                 display: none;
                 align-items: center;
@@ -2490,600 +3019,600 @@
             }
 
         `;
-        document.head.appendChild(styleEl);
+    document.head.appendChild(styleEl);
+  }
+
+  function getMachineTimelineData(machine, allBeams, beamLoadings, productionLogs) {
+    const machineEvents = [];
+    const mNameEscaped = machine.name.toString().replace(/[-\/\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex1 = new RegExp('(?:machine|no\\.?|on|from|completed on|unloaded from)\\s*(?:machine\\s+)?\\b' + mNameEscaped + '\\b', 'i');
+    const regex2 = new RegExp('\\b' + mNameEscaped + '\\b', 'i');
+
+    const matchesMachine = (eventStr) => {
+      if (!eventStr) return false;
+      const lower = eventStr.toLowerCase();
+      return regex1.test(lower) || regex2.test(lower);
+    };
+
+    (machine.history || []).forEach((h, idx) => {
+      machineEvents.push({
+        sourceType: 'machine_history',
+        sourceIndex: idx,
+        date: h.date,
+        event: h.event,
+        type: h.type || 'machine',
+        beam: null,
+        beamNumber: null,
+        category: 'machine-config'
+      });
+    });
+
+    allBeams.forEach(beam => {
+      (beam.history || []).forEach((h, idx) => {
+        if (matchesMachine(h.event)) {
+          machineEvents.push({
+            sourceType: 'beam_history',
+            beamId: beam.id,
+            sourceIndex: idx,
+            date: h.date,
+            event: h.event,
+            type: h.type || 'system',
+            beam: beam,
+            beamNumber: beam.beamNumber,
+            category: 'history'
+          });
+        }
+      });
+    });
+
+    beamLoadings.forEach(bl => {
+      if (String(bl.machineNumber).trim() === String(machine.id).trim() || String(bl.machineNumber).trim() === String(machine.name).trim()) {
+        let roleLabel = '';
+        let workerName = '';
+        if (bl.piecein) { roleLabel = 'Piece In'; workerName = bl.piecein; }
+        else if (bl.drawingIn) { roleLabel = 'Drawing In'; workerName = bl.drawingIn; }
+        else if (bl.fani) { roleLabel = 'Fani (Reed)'; workerName = bl.fani; }
+        else if (bl.dropPinJog) { roleLabel = 'Drop pin/Jog'; workerName = bl.dropPinJog; }
+
+        const beam = allBeams.find(b => b.beamNumber === bl.beamNumber);
+        machineEvents.push({
+          sourceType: 'beam_loading',
+          loadingId: bl.id,
+          date: bl.date,
+          event: roleLabel + " by " + workerName,
+          type: 'beam-loading',
+          beam: beam,
+          beamNumber: bl.beamNumber,
+          category: 'derived',
+          loadingMeters: bl.meters
+        });
+      }
+    });
+
+    machineEvents.sort((a, b) => a.date.localeCompare(b.date));
+
+    const configEvents = machineEvents.filter(e => e.category === 'machine-config');
+    const beamEvents = machineEvents.filter(e => e.category !== 'machine-config');
+
+    const cycles = [];
+    let currentCycle = null;
+
+    beamEvents.forEach(item => {
+      const eventText = (item.event || '').toLowerCase();
+      const isLoad = eventText.includes('pissing') || eventText.includes('piecing') || eventText.includes('loaded') || item.type === 'beam-loading';
+      const isUnload = eventText.includes('unloaded') || eventText.includes('completed') || eventText.includes('removed');
+
+      if (isLoad) {
+        if (!currentCycle || currentCycle.beamNumber !== item.beamNumber) {
+          if (currentCycle) {
+            currentCycle.endDate = item.date;
+          }
+          currentCycle = {
+            beam: item.beam,
+            beamNumber: item.beamNumber,
+            startDate: item.date,
+            endDate: null,
+            logs: [],
+            events: [item]
+          };
+          cycles.push(currentCycle);
+        } else {
+          currentCycle.events.push(item);
+        }
+      } else if (isUnload) {
+        if (currentCycle && currentCycle.beamNumber === item.beamNumber) {
+          currentCycle.endDate = item.date;
+          currentCycle.events.push(item);
+          currentCycle = null;
+        } else {
+          const openCycle = cycles.find(c => c.beamNumber === item.beamNumber && !c.endDate);
+          if (openCycle) {
+            openCycle.endDate = item.date;
+            openCycle.events.push(item);
+          } else {
+            cycles.push({
+              beam: item.beam,
+              beamNumber: item.beamNumber,
+              startDate: item.date,
+              endDate: item.date,
+              logs: [],
+              events: [item]
+            });
+          }
+        }
+      } else {
+        if (currentCycle) {
+          currentCycle.events.push(item);
+        } else {
+          const lastCycle = [...cycles].reverse().find(c => c.beamNumber === item.beamNumber);
+          if (lastCycle) {
+            lastCycle.events.push(item);
+          } else {
+            cycles.push({
+              beam: item.beam,
+              beamNumber: item.beamNumber,
+              startDate: item.date,
+              endDate: item.date,
+              logs: [],
+              events: [item]
+            });
+          }
+        }
+      }
+    });
+
+    cycles.forEach(c => {
+      if (!c.endDate) {
+        c.endDate = '9999-12-31';
+      }
+    });
+
+    const machineLogs = productionLogs.filter(log =>
+      String(log.machineNumber).trim() === String(machine.id).trim() ||
+      String(log.machineNumber).trim() === String(machine.name).trim()
+    );
+
+    machineLogs.forEach(log => {
+      let bestCycle = null;
+      cycles.forEach(cycle => {
+        if (cycle.beamNumber === log.beamNumber) {
+          if (log.productionDate >= cycle.startDate && log.productionDate <= cycle.endDate) {
+            if (!bestCycle || cycle.startDate > bestCycle.startDate) {
+              bestCycle = cycle;
+            }
+          }
+        }
+      });
+
+      if (bestCycle) {
+        bestCycle.logs.push({
+          productionDate: log.productionDate,
+          foldingDate: log.foldingDate,
+          takaSerial: log.takaSerial || 'Pending',
+          meters: parseFloat(log.totalMeters) || 0,
+          weight: parseFloat(log.takaWeight) || 0
+        });
+      } else {
+        const sameBeamCycles = cycles.filter(c => c.beamNumber === log.beamNumber);
+        if (sameBeamCycles.length > 0) {
+          sameBeamCycles[sameBeamCycles.length - 1].logs.push({
+            productionDate: log.productionDate,
+            foldingDate: log.foldingDate,
+            takaSerial: log.takaSerial || 'Pending',
+            meters: parseFloat(log.totalMeters) || 0,
+            weight: parseFloat(log.takaWeight) || 0
+          });
+        } else {
+          const beam = allBeams.find(b => b.beamNumber === log.beamNumber);
+          const newCycle = {
+            beam: beam,
+            beamNumber: log.beamNumber,
+            startDate: log.productionDate,
+            endDate: '9999-12-31',
+            logs: [{
+              productionDate: log.productionDate,
+              foldingDate: log.foldingDate,
+              takaSerial: log.takaSerial || 'Pending',
+              meters: parseFloat(log.totalMeters) || 0,
+              weight: parseFloat(log.takaWeight) || 0
+            }],
+            events: [{
+              date: log.productionDate,
+              event: 'Production started',
+              type: 'production',
+              beamNumber: log.beamNumber,
+              beam: beam,
+              category: 'derived'
+            }]
+          };
+          cycles.push(newCycle);
+        }
+      }
+    });
+
+    const finalTimeline = [];
+    cycles.sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+    cycles.filter(c => c.logs.length > 0).forEach(cycle => {
+      cycle.events.sort((a, b) => a.date.localeCompare(b.date));
+      cycle.logs.sort((a, b) => a.productionDate.localeCompare(b.productionDate));
+
+      let prodEvent = null;
+      if (cycle.logs.length > 0) {
+        const subTotalMeters = cycle.logs.reduce((acc, l) => acc + l.meters, 0);
+        const uniqueTakas = {};
+        cycle.logs.forEach(l => {
+          if (l.takaSerial && l.takaSerial !== 'Pending') {
+            uniqueTakas[l.takaSerial] = l.weight;
+          }
+        });
+        const subTotalWeight = Object.values(uniqueTakas).reduce((acc, w) => acc + w, 0);
+        const firstProdDate = cycle.logs[0].productionDate;
+
+        prodEvent = {
+          date: firstProdDate,
+          event: 'Production Details for Beam #' + cycle.beamNumber,
+          type: 'production',
+          category: 'derived',
+          details: {
+            beamNumber: cycle.beamNumber,
+            logs: cycle.logs,
+            subTotalMeters,
+            subTotalWeight
+          }
+        };
+      }
+
+      const cycleItems = [...cycle.events];
+      if (prodEvent) {
+        cycleItems.push(prodEvent);
+      }
+
+      const getItemRank = (item) => {
+        const evt = (item.event || '').toLowerCase();
+        const type = item.type;
+        if (evt.includes('manufactured') || evt.includes('created')) return 1;
+        if (evt.includes('beam loaded') || evt.includes('loaded on') || evt.includes('loaded')) return 2;
+        if (evt.includes('piece in') || evt.includes('pissing') || evt.includes('drawing in') || evt.includes('fani') || evt.includes('drop pin')) return 3;
+        if (type === 'production' || evt.includes('production details')) return 4;
+        if (evt.includes('unloaded') || evt.includes('completed') || evt.includes('removed')) return 5;
+        return 3;
+      };
+
+      cycleItems.sort((a, b) => {
+        const dateComp = (a.date || '').localeCompare(b.date || '');
+        if (dateComp !== 0) return dateComp;
+        return getItemRank(a) - getItemRank(b);
+      });
+
+      cycleItems.forEach(item => {
+        let displayEvent = item.event;
+        const bInfo = item.beam ? (" " + getBeamDetailsStr(item.beam, item.date, productionLogs)) : '';
+        if (item.type !== 'production' && item.category !== 'machine-config' && item.beamNumber) {
+          displayEvent = item.event + " - Beam #" + item.beamNumber + bInfo;
+        }
+        finalTimeline.push({
+          ...item,
+          event: displayEvent
+        });
+      });
+    });
+
+    configEvents.forEach(item => finalTimeline.push(item));
+
+    const getFinalItemRank = (item) => {
+      const evt = (item.event || '').toLowerCase();
+      const type = item.type;
+      if (evt.includes('manufactured') || evt.includes('created')) return 1;
+      if (evt.includes('beam loaded') || evt.includes('loaded on') || evt.includes('loaded')) return 2;
+      if (evt.includes('piece in') || evt.includes('pissing') || evt.includes('drawing in') || evt.includes('fani') || evt.includes('drop pin')) return 3;
+      if (type === 'production' || evt.includes('production details')) return 4;
+      if (evt.includes('unloaded') || evt.includes('completed') || evt.includes('removed')) return 5;
+      return 3;
+    };
+
+    finalTimeline.sort((a, b) => {
+      const dateComp = (a.date || '').localeCompare(b.date || '');
+      if (dateComp !== 0) return dateComp;
+      return getFinalItemRank(a) - getFinalItemRank(b);
+    });
+
+    return finalTimeline;
+  }
+
+  window.deleteTimelineEvent = function (machineId, sourceType, sourceIndex, beamId, loadingId, beamNumber) {
+    if (!confirm('Are you sure you want to delete/cancel this event?')) return;
+
+    let updated = false;
+
+    if (sourceType === 'machine_history') {
+      let machinesList = [];
+      try { machinesList = JSON.parse(localStorage.getItem('machines') || '[]'); } catch (e) { }
+      if ((!machinesList || !machinesList.length) && window.state && Array.isArray(window.state.machines)) {
+        machinesList = window.state.machines;
+      }
+
+      let machine = machinesList.find(m => String(m.id).trim() === String(machineId).trim() || String(m.name).trim() === String(machineId).trim());
+      let stateMachine = null;
+      if (window.state && Array.isArray(window.state.machines)) {
+        stateMachine = window.state.machines.find(m => String(m.id).trim() === String(machineId).trim() || String(m.name).trim() === String(machineId).trim());
+      }
+
+      const targetMachine = machine || stateMachine;
+      if (targetMachine && targetMachine.history && targetMachine.history[sourceIndex] !== undefined) {
+        const deletedEvent = targetMachine.history.splice(parseInt(sourceIndex, 10), 1)[0];
+        if (machine && stateMachine && machine !== stateMachine && stateMachine.history) {
+          const idxInState = stateMachine.history.findIndex((h, i) => i === parseInt(sourceIndex, 10) || (h.event === deletedEvent.event && h.date === deletedEvent.date));
+          if (idxInState !== -1) stateMachine.history.splice(idxInState, 1);
+        }
+        const delText = deletedEvent ? (deletedEvent.event || '') : '';
+
+        const applyRevert = (m) => {
+          if (!m) return;
+          // Jala
+          const jalaEvents = (m.history || []).filter(h => h.event && (h.event.toLowerCase().includes('jala:') || h.event.toLowerCase().includes('jala')));
+          if (jalaEvents.length > 0) {
+            const lastJalaEvent = jalaEvents[jalaEvents.length - 1];
+            const cleanTxt = lastJalaEvent.event.replace(/<[^>]*>/g, '');
+            const parts = cleanTxt.split(/→|to/i);
+            if (parts.length > 1) m.jala = parts[parts.length - 1].trim();
+          } else if (delText.toLowerCase().includes('jala')) {
+            const parts = delText.split(/→|to/i);
+            if (parts.length > 1) {
+              const leftPart = parts[0].replace(/.*jala.*changed:\s*/i, '').trim();
+              if (leftPart && leftPart.toLowerCase() !== 'none') m.jala = leftPart;
+            }
+          }
+
+          // Fani
+          const faniEvents = (m.history || []).filter(h => h.event && h.event.toLowerCase().includes('fani'));
+          if (faniEvents.length > 0) {
+            const lastFaniEvent = faniEvents[faniEvents.length - 1];
+            const cleanTxt = lastFaniEvent.event.replace(/<[^>]*>/g, '');
+            const parts = cleanTxt.split(/→|to/i);
+            if (parts.length > 1) m.fani = parts[parts.length - 1].trim();
+          } else if (delText.toLowerCase().includes('fani')) {
+            const parts = delText.split(/→|to/i);
+            if (parts.length > 1) {
+              const leftPart = parts[0].replace(/.*fani.*changed:\s*/i, '').trim();
+              if (leftPart && leftPart.toLowerCase() !== 'none') m.fani = leftPart;
+              else m.fani = '';
+            }
+          }
+
+          // Jacquard
+          const jacquardEvents = (m.history || []).filter(h => h.event && h.event.toLowerCase().includes('jacquard'));
+          if (jacquardEvents.length > 0) {
+            const lastJacquardEvent = jacquardEvents[jacquardEvents.length - 1];
+            const cleanTxt = lastJacquardEvent.event.replace(/<[^>]*>/g, '');
+            const parts = cleanTxt.split(/→|to/i);
+            if (parts.length > 1) {
+              const val = parts[parts.length - 1].trim();
+              const match = val.match(/(.*?)\s*\((.*?)\s*hooks?\)/i) || val.match(/(.*?)\s*\((.*?)\)/i);
+              if (match) {
+                m.jacquard = match[1].trim();
+                m.hooks = match[2].replace(/\D/g, '') || m.hooks;
+              } else {
+                m.jacquard = val;
+              }
+            }
+          } else if (delText.toLowerCase().includes('jacquard')) {
+            const parts = delText.split(/→|to/i);
+            if (parts.length > 1) {
+              const leftPart = parts[0].replace(/.*jacquard.*changed:\s*/i, '').trim();
+              if (leftPart && leftPart.toLowerCase() !== 'none') {
+                const match = leftPart.match(/(.*?)\s*\((.*?)\s*hooks?\)/i) || leftPart.match(/(.*?)\s*\((.*?)\)/i);
+                if (match) {
+                  m.jacquard = match[1].trim();
+                  m.hooks = match[2].replace(/\D/g, '') || m.hooks;
+                } else {
+                  m.jacquard = leftPart;
+                }
+              } else {
+                m.jacquard = '';
+                m.hooks = '';
+              }
+            }
+          }
+        };
+
+        applyRevert(machine);
+        applyRevert(stateMachine);
+
+        if (machinesList && machinesList.length) {
+          localStorage.setItem('machines', JSON.stringify(machinesList));
+        }
+        if (window.state && window.state.machines) {
+          localStorage.setItem('machines', JSON.stringify(window.state.machines));
+        }
+        if (window.saveState && typeof window.saveState === 'function') {
+          window.saveState();
+        }
+        window.dispatchEvent(new Event('storage'));
+        updated = true;
+      }
+    } else if (sourceType === 'beam_history') {
+      let allBeams = [];
+      try { allBeams = JSON.parse(localStorage.getItem('warp-beams') || '[]'); } catch (e) { }
+      if ((!allBeams || !allBeams.length) && window.state && Array.isArray(window.state.beams)) {
+        allBeams = window.state.beams;
+      }
+      const beam = allBeams.find(b => String(b.id) === String(beamId));
+      if (beam && beam.history && beam.history[sourceIndex] !== undefined) {
+        beam.history.splice(parseInt(sourceIndex, 10), 1);
+        localStorage.setItem('warp-beams', JSON.stringify(allBeams));
+        window.dispatchEvent(new Event('storage'));
+        updated = true;
+      }
+    } else if (sourceType === 'beam_loading') {
+      let beamLoadings = [];
+      try { beamLoadings = JSON.parse(localStorage.getItem('warp-beam-loadings') || '[]'); } catch (e) { }
+      const newLoadings = beamLoadings.filter(bl => String(bl.id) !== String(loadingId));
+      if (newLoadings.length !== beamLoadings.length) {
+        localStorage.setItem('warp-beam-loadings', JSON.stringify(newLoadings));
+        window.dispatchEvent(new Event('storage'));
+        updated = true;
+      }
+    } else if (sourceType === 'production_logs') {
+      let productionLogs = [];
+      try { productionLogs = JSON.parse(localStorage.getItem('productionLogs') || '[]'); } catch (e) { }
+      if ((!productionLogs || !productionLogs.length) && window.state && Array.isArray(window.state.productionLogs)) {
+        productionLogs = window.state.productionLogs;
+      }
+      const newLogs = productionLogs.filter(l => !((String(l.machineNumber).trim() === String(machineId).trim()) && String(l.beamNumber).trim() === String(beamNumber).trim()));
+      if (newLogs.length !== productionLogs.length) {
+        localStorage.setItem('productionLogs', JSON.stringify(newLogs));
+        if (window.state && window.state.productionLogs) {
+          window.state.productionLogs = window.state.productionLogs.filter(l => !((String(l.machineNumber).trim() === String(machineId).trim()) && String(l.beamNumber).trim() === String(beamNumber).trim()));
+        }
+        window.dispatchEvent(new Event('storage'));
+        updated = true;
+      }
     }
 
-    function getMachineTimelineData(machine, allBeams, beamLoadings, productionLogs) {
-        const machineEvents = [];
+    if (updated) {
+      if (window.state && window.state.machines && (!machinesList || !machinesList.length)) {
+        try { localStorage.setItem('machines', JSON.stringify(window.state.machines)); } catch (e) { }
+      }
+      if (typeof window.renderMachines === 'function') window.renderMachines();
+      if (typeof window.renderAll === 'function') window.renderAll();
+
+      if (typeof window.showGlobalMachineCard === 'function') {
+        try { window.showGlobalMachineCard(machineId); } catch (e) { }
+      } else if (typeof window.openMachineDetailsModal === 'function') {
+        try { window.openMachineDetailsModal(machineId); } catch (e) { }
+      }
+    }
+  };
+
+  window.showGlobalMachineCard = function (machineId) {
+    if (!machineId) return;
+
+    let machinesList = [];
+    try {
+      machinesList = JSON.parse(localStorage.getItem('machines') || '[]');
+    } catch (e) { }
+    if ((!machinesList || !machinesList.length) && window.state && Array.isArray(window.state.machines)) {
+      machinesList = window.state.machines;
+    }
+
+    let machine = machinesList.find(m => String(m.id).trim() === String(machineId).trim() || String(m.name).trim() === String(machineId).trim());
+    if (!machine && window.state && Array.isArray(window.state.machines)) {
+      machine = window.state.machines.find(m => String(m.id).trim() === String(machineId).trim() || String(m.name).trim() === String(machineId).trim());
+    }
+    if (!machine) {
+      alert(`Machine #${machineId} not found.`);
+      return;
+    }
+
+    let allBeams = [];
+    try {
+      allBeams = JSON.parse(localStorage.getItem('warp-beams') || '[]');
+    } catch (e) { }
+    if ((!allBeams || !allBeams.length) && window.state && Array.isArray(window.state.beams)) {
+      allBeams = window.state.beams;
+    }
+
+    let productionLogs = [];
+    try {
+      productionLogs = JSON.parse(localStorage.getItem('productionLogs') || '[]');
+    } catch (e) { }
+    if ((!productionLogs || !productionLogs.length) && window.state && Array.isArray(window.state.productionLogs)) {
+      productionLogs = window.state.productionLogs;
+    }
+
+    let beamLoadings = [];
+    try {
+      beamLoadings = JSON.parse(localStorage.getItem('warp-beam-loadings') || '[]');
+    } catch (e) { }
+    if ((!beamLoadings || !beamLoadings.length) && window.state && Array.isArray(window.state.beamLoadings)) {
+      beamLoadings = window.state.beamLoadings;
+    }
+
+    const activeBeam = allBeams.find(b => {
+      const mLower = String(machine.name).toLowerCase();
+      const bmLower = String(b.machineNumber || '').toLowerCase();
+      return b.status !== 'Completed' && (bmLower === mLower || bmLower === String(machine.id).toLowerCase());
+    });
+
+    const machineLogs = productionLogs.filter(l =>
+      String(l.machineNumber).trim() === String(machine.id).trim() ||
+      String(l.machineNumber).trim() === String(machine.name).trim()
+    );
+    const totalMeters = machineLogs.reduce((acc, log) => acc + (parseFloat(log.totalMeters) || 0), 0);
+
+    const beamNumbersSet = new Set();
+    machineLogs.forEach(l => { if (l.beamNumber) beamNumbersSet.add(l.beamNumber); });
+    beamLoadings.forEach(bl => {
+      if (String(bl.machineNumber).trim() === String(machine.id).trim() || String(bl.machineNumber).trim() === String(machine.name).trim()) {
+        if (bl.beamNumber) beamNumbersSet.add(bl.beamNumber);
+      }
+    });
+    allBeams.forEach(b => {
+      const matchesMachine = (eventStr) => {
+        if (!eventStr) return false;
+        const lower = eventStr.toLowerCase();
         const mNameEscaped = machine.name.toString().replace(/[-\/\^$*+?.()|[\]{}]/g, '\\$&');
         const regex1 = new RegExp('(?:machine|no\\.?|on|from|completed on|unloaded from)\\s*(?:machine\\s+)?\\b' + mNameEscaped + '\\b', 'i');
         const regex2 = new RegExp('\\b' + mNameEscaped + '\\b', 'i');
-        
-        const matchesMachine = (eventStr) => {
-            if (!eventStr) return false;
-            const lower = eventStr.toLowerCase();
-            return regex1.test(lower) || regex2.test(lower);
-        };
+        return regex1.test(lower) || regex2.test(lower);
+      };
+      if (b.beamNumber && (b.history || []).some(h => matchesMachine(h.event))) {
+        beamNumbersSet.add(b.beamNumber);
+      }
+    });
+    const totalBeamsRun = beamNumbersSet.size;
 
-        (machine.history || []).forEach((h, idx) => {
-            machineEvents.push({
-                sourceType: 'machine_history',
-                sourceIndex: idx,
-                date: h.date,
-                event: h.event,
-                type: h.type || 'machine',
-                beam: null,
-                beamNumber: null,
-                category: 'machine-config'
-            });
-        });
+    const timeline = getMachineTimelineData(machine, allBeams, beamLoadings, productionLogs);
 
-        allBeams.forEach(beam => {
-            (beam.history || []).forEach((h, idx) => {
-                if (matchesMachine(h.event)) {
-                    machineEvents.push({
-                        sourceType: 'beam_history',
-                        beamId: beam.id,
-                        sourceIndex: idx,
-                        date: h.date,
-                        event: h.event,
-                        type: h.type || 'system',
-                        beam: beam,
-                        beamNumber: beam.beamNumber,
-                        category: 'history'
-                    });
-                }
-            });
-        });
+    let jalasList = [];
+    try {
+      jalasList = JSON.parse(localStorage.getItem('jalas') || '[]');
+    } catch (e) { }
+    const matchingJala = jalasList.find(j => j.name === machine.jala);
+    const jalaStr = matchingJala ? (machine.jala + " (" + matchingJala.ends + " hooks)") : (machine.jala || '-');
 
-        beamLoadings.forEach(bl => {
-            if (String(bl.machineNumber).trim() === String(machine.id).trim() || String(bl.machineNumber).trim() === String(machine.name).trim()) {
-                let roleLabel = '';
-                let workerName = '';
-                if (bl.piecein) { roleLabel = 'Piece In'; workerName = bl.piecein; }
-                else if (bl.drawingIn) { roleLabel = 'Drawing In'; workerName = bl.drawingIn; }
-                else if (bl.fani) { roleLabel = 'Fani (Reed)'; workerName = bl.fani; }
-                else if (bl.dropPinJog) { roleLabel = 'Drop pin/Jog'; workerName = bl.dropPinJog; }
-                
-                const beam = allBeams.find(b => b.beamNumber === bl.beamNumber);
-                machineEvents.push({
-                    sourceType: 'beam_loading',
-                    loadingId: bl.id,
-                    date: bl.date,
-                    event: roleLabel + " by " + workerName,
-                    type: 'beam-loading',
-                    beam: beam,
-                    beamNumber: bl.beamNumber,
-                    category: 'derived',
-                    loadingMeters: bl.meters
-                });
-            }
-        });
-
-        machineEvents.sort((a, b) => a.date.localeCompare(b.date));
-
-        const configEvents = machineEvents.filter(e => e.category === 'machine-config');
-        const beamEvents = machineEvents.filter(e => e.category !== 'machine-config');
-
-        const cycles = [];
-        let currentCycle = null;
-
-        beamEvents.forEach(item => {
-            const eventText = (item.event || '').toLowerCase();
-            const isLoad = eventText.includes('pissing') || eventText.includes('piecing') || eventText.includes('loaded') || item.type === 'beam-loading';
-            const isUnload = eventText.includes('unloaded') || eventText.includes('completed') || eventText.includes('removed');
-            
-            if (isLoad) {
-                if (!currentCycle || currentCycle.beamNumber !== item.beamNumber) {
-                    if (currentCycle) {
-                        currentCycle.endDate = item.date;
-                    }
-                    currentCycle = {
-                        beam: item.beam,
-                        beamNumber: item.beamNumber,
-                        startDate: item.date,
-                        endDate: null,
-                        logs: [],
-                        events: [item]
-                    };
-                    cycles.push(currentCycle);
-                } else {
-                    currentCycle.events.push(item);
-                }
-            } else if (isUnload) {
-                if (currentCycle && currentCycle.beamNumber === item.beamNumber) {
-                    currentCycle.endDate = item.date;
-                    currentCycle.events.push(item);
-                    currentCycle = null;
-                } else {
-                    const openCycle = cycles.find(c => c.beamNumber === item.beamNumber && !c.endDate);
-                    if (openCycle) {
-                        openCycle.endDate = item.date;
-                        openCycle.events.push(item);
-                    } else {
-                        cycles.push({
-                            beam: item.beam,
-                            beamNumber: item.beamNumber,
-                            startDate: item.date,
-                            endDate: item.date,
-                            logs: [],
-                            events: [item]
-                        });
-                    }
-                }
-            } else {
-                if (currentCycle) {
-                    currentCycle.events.push(item);
-                } else {
-                    const lastCycle = [...cycles].reverse().find(c => c.beamNumber === item.beamNumber);
-                    if (lastCycle) {
-                        lastCycle.events.push(item);
-                    } else {
-                        cycles.push({
-                            beam: item.beam,
-                            beamNumber: item.beamNumber,
-                            startDate: item.date,
-                            endDate: item.date,
-                            logs: [],
-                            events: [item]
-                        });
-                    }
-                }
-            }
-        });
-
-        cycles.forEach(c => {
-            if (!c.endDate) {
-                c.endDate = '9999-12-31';
-            }
-        });
-
-        const machineLogs = productionLogs.filter(log => 
-            String(log.machineNumber).trim() === String(machine.id).trim() || 
-            String(log.machineNumber).trim() === String(machine.name).trim()
-        );
-
-        machineLogs.forEach(log => {
-            let bestCycle = null;
-            cycles.forEach(cycle => {
-                if (cycle.beamNumber === log.beamNumber) {
-                    if (log.productionDate >= cycle.startDate && log.productionDate <= cycle.endDate) {
-                        if (!bestCycle || cycle.startDate > bestCycle.startDate) {
-                            bestCycle = cycle;
-                        }
-                    }
-                }
-            });
-            
-            if (bestCycle) {
-                bestCycle.logs.push({
-                    productionDate: log.productionDate,
-                    foldingDate: log.foldingDate,
-                    takaSerial: log.takaSerial || 'Pending',
-                    meters: parseFloat(log.totalMeters) || 0,
-                    weight: parseFloat(log.takaWeight) || 0
-                });
-            } else {
-                const sameBeamCycles = cycles.filter(c => c.beamNumber === log.beamNumber);
-                if (sameBeamCycles.length > 0) {
-                    sameBeamCycles[sameBeamCycles.length - 1].logs.push({
-                        productionDate: log.productionDate,
-                        foldingDate: log.foldingDate,
-                        takaSerial: log.takaSerial || 'Pending',
-                        meters: parseFloat(log.totalMeters) || 0,
-                        weight: parseFloat(log.takaWeight) || 0
-                    });
-                } else {
-                    const beam = allBeams.find(b => b.beamNumber === log.beamNumber);
-                    const newCycle = {
-                        beam: beam,
-                        beamNumber: log.beamNumber,
-                        startDate: log.productionDate,
-                        endDate: '9999-12-31',
-                        logs: [{
-                            productionDate: log.productionDate,
-                            foldingDate: log.foldingDate,
-                            takaSerial: log.takaSerial || 'Pending',
-                            meters: parseFloat(log.totalMeters) || 0,
-                            weight: parseFloat(log.takaWeight) || 0
-                        }],
-                        events: [{
-                            date: log.productionDate,
-                            event: 'Production started',
-                            type: 'production',
-                            beamNumber: log.beamNumber,
-                            beam: beam,
-                            category: 'derived'
-                        }]
-                    };
-                    cycles.push(newCycle);
-                }
-            }
-        });
-
-        const finalTimeline = [];
-        cycles.sort((a, b) => a.startDate.localeCompare(b.startDate));
-
-        cycles.filter(c => c.logs.length > 0).forEach(cycle => {
-            cycle.events.sort((a, b) => a.date.localeCompare(b.date));
-            cycle.logs.sort((a, b) => a.productionDate.localeCompare(b.productionDate));
-            
-            let prodEvent = null;
-            if (cycle.logs.length > 0) {
-                const subTotalMeters = cycle.logs.reduce((acc, l) => acc + l.meters, 0);
-                const uniqueTakas = {};
-                cycle.logs.forEach(l => {
-                    if (l.takaSerial && l.takaSerial !== 'Pending') {
-                        uniqueTakas[l.takaSerial] = l.weight;
-                    }
-                });
-                const subTotalWeight = Object.values(uniqueTakas).reduce((acc, w) => acc + w, 0);
-                const firstProdDate = cycle.logs[0].productionDate;
-                
-                prodEvent = {
-                    date: firstProdDate,
-                    event: 'Production Details for Beam #' + cycle.beamNumber,
-                    type: 'production',
-                    category: 'derived',
-                    details: {
-                        beamNumber: cycle.beamNumber,
-                        logs: cycle.logs,
-                        subTotalMeters,
-                        subTotalWeight
-                    }
-                };
-            }
-
-            const cycleItems = [...cycle.events];
-            if (prodEvent) {
-                cycleItems.push(prodEvent);
-            }
-
-            const getItemRank = (item) => {
-                const evt = (item.event || '').toLowerCase();
-                const type = item.type;
-                if (evt.includes('manufactured') || evt.includes('created')) return 1;
-                if (evt.includes('beam loaded') || evt.includes('loaded on') || evt.includes('loaded')) return 2;
-                if (evt.includes('piece in') || evt.includes('pissing') || evt.includes('drawing in') || evt.includes('fani') || evt.includes('drop pin')) return 3;
-                if (type === 'production' || evt.includes('production details')) return 4;
-                if (evt.includes('unloaded') || evt.includes('completed') || evt.includes('removed')) return 5;
-                return 3;
-            };
-
-            cycleItems.sort((a, b) => {
-                const dateComp = (a.date || '').localeCompare(b.date || '');
-                if (dateComp !== 0) return dateComp;
-                return getItemRank(a) - getItemRank(b);
-            });
-
-            cycleItems.forEach(item => {
-                let displayEvent = item.event;
-                const bInfo = item.beam ? (" " + getBeamDetailsStr(item.beam, item.date, productionLogs)) : '';
-                if (item.type !== 'production' && item.category !== 'machine-config' && item.beamNumber) {
-                    displayEvent = item.event + " - Beam #" + item.beamNumber + bInfo;
-                }
-                finalTimeline.push({
-                    ...item,
-                    event: displayEvent
-                });
-            });
-        });
-
-        configEvents.forEach(item => finalTimeline.push(item));
-        
-        const getFinalItemRank = (item) => {
-            const evt = (item.event || '').toLowerCase();
-            const type = item.type;
-            if (evt.includes('manufactured') || evt.includes('created')) return 1;
-            if (evt.includes('beam loaded') || evt.includes('loaded on') || evt.includes('loaded')) return 2;
-            if (evt.includes('piece in') || evt.includes('pissing') || evt.includes('drawing in') || evt.includes('fani') || evt.includes('drop pin')) return 3;
-            if (type === 'production' || evt.includes('production details')) return 4;
-            if (evt.includes('unloaded') || evt.includes('completed') || evt.includes('removed')) return 5;
-            return 3;
-        };
-
-        finalTimeline.sort((a, b) => {
-            const dateComp = (a.date || '').localeCompare(b.date || '');
-            if (dateComp !== 0) return dateComp;
-            return getFinalItemRank(a) - getFinalItemRank(b);
-        });
-
-        return finalTimeline;
+    let activeBeamVal = 'None';
+    let activeBadge = '<span style="color: var(--muted);">—</span>';
+    let activeBg = 'var(--bg)';
+    let activeBorder = 'var(--border)';
+    if (activeBeam) {
+      activeBeamVal = `<span style="cursor: pointer; color: var(--accent); font-weight: 700; text-decoration: underline;" onclick="window.showGlobalBeamCard('${activeBeam.beamNumber}')">Beam #${activeBeam.beamNumber}</span>`;
+      activeBadge = '<span class="badge badge-on-loom" style="font-size: 0.6rem; padding: 1px 6px; background: rgba(139, 92, 246, 0.1); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 6px; font-weight:700;">ON LOOM</span>';
+      activeBg = 'rgba(139, 92, 246, 0.05)';
+      activeBorder = 'var(--accent)';
     }
 
-    window.deleteTimelineEvent = function(machineId, sourceType, sourceIndex, beamId, loadingId, beamNumber) {
-        if (!confirm('Are you sure you want to delete/cancel this event?')) return;
-
-        let updated = false;
-
-        if (sourceType === 'machine_history') {
-            let machinesList = [];
-            try { machinesList = JSON.parse(localStorage.getItem('machines') || '[]'); } catch(e) {}
-            if ((!machinesList || !machinesList.length) && window.state && Array.isArray(window.state.machines)) {
-                machinesList = window.state.machines;
-            }
-            
-            let machine = machinesList.find(m => String(m.id).trim() === String(machineId).trim() || String(m.name).trim() === String(machineId).trim());
-            let stateMachine = null;
-            if (window.state && Array.isArray(window.state.machines)) {
-                stateMachine = window.state.machines.find(m => String(m.id).trim() === String(machineId).trim() || String(m.name).trim() === String(machineId).trim());
-            }
-
-            const targetMachine = machine || stateMachine;
-            if (targetMachine && targetMachine.history && targetMachine.history[sourceIndex] !== undefined) {
-                const deletedEvent = targetMachine.history.splice(parseInt(sourceIndex, 10), 1)[0];
-                if (machine && stateMachine && machine !== stateMachine && stateMachine.history) {
-                    const idxInState = stateMachine.history.findIndex((h, i) => i === parseInt(sourceIndex, 10) || (h.event === deletedEvent.event && h.date === deletedEvent.date));
-                    if (idxInState !== -1) stateMachine.history.splice(idxInState, 1);
-                }
-                const delText = deletedEvent ? (deletedEvent.event || '') : '';
-
-                const applyRevert = (m) => {
-                    if (!m) return;
-                    // Jala
-                    const jalaEvents = (m.history || []).filter(h => h.event && (h.event.toLowerCase().includes('jala:') || h.event.toLowerCase().includes('jala')));
-                    if (jalaEvents.length > 0) {
-                        const lastJalaEvent = jalaEvents[jalaEvents.length - 1];
-                        const cleanTxt = lastJalaEvent.event.replace(/<[^>]*>/g, '');
-                        const parts = cleanTxt.split(/→|to/i);
-                        if (parts.length > 1) m.jala = parts[parts.length - 1].trim();
-                    } else if (delText.toLowerCase().includes('jala')) {
-                        const parts = delText.split(/→|to/i);
-                        if (parts.length > 1) {
-                            const leftPart = parts[0].replace(/.*jala.*changed:\s*/i, '').trim();
-                            if (leftPart && leftPart.toLowerCase() !== 'none') m.jala = leftPart;
-                        }
-                    }
-
-                    // Fani
-                    const faniEvents = (m.history || []).filter(h => h.event && h.event.toLowerCase().includes('fani'));
-                    if (faniEvents.length > 0) {
-                        const lastFaniEvent = faniEvents[faniEvents.length - 1];
-                        const cleanTxt = lastFaniEvent.event.replace(/<[^>]*>/g, '');
-                        const parts = cleanTxt.split(/→|to/i);
-                        if (parts.length > 1) m.fani = parts[parts.length - 1].trim();
-                    } else if (delText.toLowerCase().includes('fani')) {
-                        const parts = delText.split(/→|to/i);
-                        if (parts.length > 1) {
-                            const leftPart = parts[0].replace(/.*fani.*changed:\s*/i, '').trim();
-                            if (leftPart && leftPart.toLowerCase() !== 'none') m.fani = leftPart;
-                            else m.fani = '';
-                        }
-                    }
-
-                    // Jacquard
-                    const jacquardEvents = (m.history || []).filter(h => h.event && h.event.toLowerCase().includes('jacquard'));
-                    if (jacquardEvents.length > 0) {
-                        const lastJacquardEvent = jacquardEvents[jacquardEvents.length - 1];
-                        const cleanTxt = lastJacquardEvent.event.replace(/<[^>]*>/g, '');
-                        const parts = cleanTxt.split(/→|to/i);
-                        if (parts.length > 1) {
-                            const val = parts[parts.length - 1].trim();
-                            const match = val.match(/(.*?)\s*\((.*?)\s*hooks?\)/i) || val.match(/(.*?)\s*\((.*?)\)/i);
-                            if (match) {
-                                m.jacquard = match[1].trim();
-                                m.hooks = match[2].replace(/\D/g, '') || m.hooks;
-                            } else {
-                                m.jacquard = val;
-                            }
-                        }
-                    } else if (delText.toLowerCase().includes('jacquard')) {
-                        const parts = delText.split(/→|to/i);
-                        if (parts.length > 1) {
-                            const leftPart = parts[0].replace(/.*jacquard.*changed:\s*/i, '').trim();
-                            if (leftPart && leftPart.toLowerCase() !== 'none') {
-                                const match = leftPart.match(/(.*?)\s*\((.*?)\s*hooks?\)/i) || leftPart.match(/(.*?)\s*\((.*?)\)/i);
-                                if (match) {
-                                    m.jacquard = match[1].trim();
-                                    m.hooks = match[2].replace(/\D/g, '') || m.hooks;
-                                } else {
-                                    m.jacquard = leftPart;
-                                }
-                            } else {
-                                m.jacquard = '';
-                                m.hooks = '';
-                            }
-                        }
-                    }
-                };
-
-                applyRevert(machine);
-                applyRevert(stateMachine);
-
-                if (machinesList && machinesList.length) {
-                    localStorage.setItem('machines', JSON.stringify(machinesList));
-                }
-                if (window.state && window.state.machines) {
-                    localStorage.setItem('machines', JSON.stringify(window.state.machines));
-                }
-                if (window.saveState && typeof window.saveState === 'function') {
-                    window.saveState();
-                }
-                window.dispatchEvent(new Event('storage'));
-                updated = true;
-            }
-        } else if (sourceType === 'beam_history') {
-            let allBeams = [];
-            try { allBeams = JSON.parse(localStorage.getItem('warp-beams') || '[]'); } catch(e) {}
-            if ((!allBeams || !allBeams.length) && window.state && Array.isArray(window.state.beams)) {
-                allBeams = window.state.beams;
-            }
-            const beam = allBeams.find(b => String(b.id) === String(beamId));
-            if (beam && beam.history && beam.history[sourceIndex] !== undefined) {
-                beam.history.splice(parseInt(sourceIndex, 10), 1);
-                localStorage.setItem('warp-beams', JSON.stringify(allBeams));
-                window.dispatchEvent(new Event('storage'));
-                updated = true;
-            }
-        } else if (sourceType === 'beam_loading') {
-            let beamLoadings = [];
-            try { beamLoadings = JSON.parse(localStorage.getItem('warp-beam-loadings') || '[]'); } catch(e) {}
-            const newLoadings = beamLoadings.filter(bl => String(bl.id) !== String(loadingId));
-            if (newLoadings.length !== beamLoadings.length) {
-                localStorage.setItem('warp-beam-loadings', JSON.stringify(newLoadings));
-                window.dispatchEvent(new Event('storage'));
-                updated = true;
-            }
-        } else if (sourceType === 'production_logs') {
-            let productionLogs = [];
-            try { productionLogs = JSON.parse(localStorage.getItem('productionLogs') || '[]'); } catch(e) {}
-            if ((!productionLogs || !productionLogs.length) && window.state && Array.isArray(window.state.productionLogs)) {
-                productionLogs = window.state.productionLogs;
-            }
-            const newLogs = productionLogs.filter(l => !( (String(l.machineNumber).trim() === String(machineId).trim()) && String(l.beamNumber).trim() === String(beamNumber).trim() ));
-            if (newLogs.length !== productionLogs.length) {
-                localStorage.setItem('productionLogs', JSON.stringify(newLogs));
-                if (window.state && window.state.productionLogs) {
-                    window.state.productionLogs = window.state.productionLogs.filter(l => !( (String(l.machineNumber).trim() === String(machineId).trim()) && String(l.beamNumber).trim() === String(beamNumber).trim() ));
-                }
-                window.dispatchEvent(new Event('storage'));
-                updated = true;
-            }
+    const formatDate = (dateStr) => {
+      if (!dateStr || dateStr === '9999-12-31') return '';
+      try {
+        const parts = String(dateStr).split('T')[0].split('-');
+        if (parts.length === 3) {
+          const d = new Date(parts[0], parts[1] - 1, parts[2]);
+          if (!isNaN(d.getTime())) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = months[d.getMonth()];
+            const year = d.getFullYear();
+            return `${day} ${month} ${year}`;
+          }
         }
-
-        if (updated) {
-            if (window.state && window.state.machines && (!machinesList || !machinesList.length)) {
-                try { localStorage.setItem('machines', JSON.stringify(window.state.machines)); } catch(e) {}
-            }
-            if (typeof window.renderMachines === 'function') window.renderMachines();
-            if (typeof window.renderAll === 'function') window.renderAll();
-            
-            if (typeof window.showGlobalMachineCard === 'function') {
-                try { window.showGlobalMachineCard(machineId); } catch(e) {}
-            } else if (typeof window.openMachineDetailsModal === 'function') {
-                try { window.openMachineDetailsModal(machineId); } catch(e) {}
-            }
-        }
+      } catch (e) { }
+      return dateStr;
     };
 
-    window.showGlobalMachineCard = function(machineId) {
-        if (!machineId) return;
+    let overlay = document.getElementById('global-machinecard-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'global-machinecard-overlay';
+      overlay.className = 'gmc-modal-overlay';
+      overlay.onclick = () => { overlay.style.display = 'none'; };
+      document.body.appendChild(overlay);
+    }
 
-        let machinesList = [];
-        try {
-            machinesList = JSON.parse(localStorage.getItem('machines') || '[]');
-        } catch(e) {}
-        if ((!machinesList || !machinesList.length) && window.state && Array.isArray(window.state.machines)) {
-            machinesList = window.state.machines;
-        }
+    const lastMachineHistoryIndex = timeline.findLastIndex(item => item.sourceType === 'machine_history');
 
-        let machine = machinesList.find(m => String(m.id).trim() === String(machineId).trim() || String(m.name).trim() === String(machineId).trim());
-        if (!machine && window.state && Array.isArray(window.state.machines)) {
-            machine = window.state.machines.find(m => String(m.id).trim() === String(machineId).trim() || String(m.name).trim() === String(machineId).trim());
-        }
-        if (!machine) {
-            alert(`Machine #${machineId} not found.`);
-            return;
-        }
-
-        let allBeams = [];
-        try {
-            allBeams = JSON.parse(localStorage.getItem('warp-beams') || '[]');
-        } catch(e) {}
-        if ((!allBeams || !allBeams.length) && window.state && Array.isArray(window.state.beams)) {
-            allBeams = window.state.beams;
-        }
-
-        let productionLogs = [];
-        try {
-            productionLogs = JSON.parse(localStorage.getItem('productionLogs') || '[]');
-        } catch(e) {}
-        if ((!productionLogs || !productionLogs.length) && window.state && Array.isArray(window.state.productionLogs)) {
-            productionLogs = window.state.productionLogs;
-        }
-
-        let beamLoadings = [];
-        try {
-            beamLoadings = JSON.parse(localStorage.getItem('warp-beam-loadings') || '[]');
-        } catch(e) {}
-        if ((!beamLoadings || !beamLoadings.length) && window.state && Array.isArray(window.state.beamLoadings)) {
-            beamLoadings = window.state.beamLoadings;
-        }
-
-        const activeBeam = allBeams.find(b => {
-            const mLower = String(machine.name).toLowerCase();
-            const bmLower = String(b.machineNumber || '').toLowerCase();
-            return b.status !== 'Completed' && (bmLower === mLower || bmLower === String(machine.id).toLowerCase());
-        });
-
-        const machineLogs = productionLogs.filter(l => 
-            String(l.machineNumber).trim() === String(machine.id).trim() || 
-            String(l.machineNumber).trim() === String(machine.name).trim()
-        );
-        const totalMeters = machineLogs.reduce((acc, log) => acc + (parseFloat(log.totalMeters) || 0), 0);
-
-        const beamNumbersSet = new Set();
-        machineLogs.forEach(l => { if (l.beamNumber) beamNumbersSet.add(l.beamNumber); });
-        beamLoadings.forEach(bl => {
-            if (String(bl.machineNumber).trim() === String(machine.id).trim() || String(bl.machineNumber).trim() === String(machine.name).trim()) {
-                if (bl.beamNumber) beamNumbersSet.add(bl.beamNumber);
-            }
-        });
-        allBeams.forEach(b => {
-            const matchesMachine = (eventStr) => {
-                if (!eventStr) return false;
-                const lower = eventStr.toLowerCase();
-                const mNameEscaped = machine.name.toString().replace(/[-\/\^$*+?.()|[\]{}]/g, '\\$&');
-                const regex1 = new RegExp('(?:machine|no\\.?|on|from|completed on|unloaded from)\\s*(?:machine\\s+)?\\b' + mNameEscaped + '\\b', 'i');
-                const regex2 = new RegExp('\\b' + mNameEscaped + '\\b', 'i');
-                return regex1.test(lower) || regex2.test(lower);
-            };
-            if (b.beamNumber && (b.history || []).some(h => matchesMachine(h.event))) {
-                beamNumbersSet.add(b.beamNumber);
-            }
-        });
-        const totalBeamsRun = beamNumbersSet.size;
-
-        const timeline = getMachineTimelineData(machine, allBeams, beamLoadings, productionLogs);
-
-        let jalasList = [];
-        try {
-            jalasList = JSON.parse(localStorage.getItem('jalas') || '[]');
-        } catch(e) {}
-        const matchingJala = jalasList.find(j => j.name === machine.jala);
-        const jalaStr = matchingJala ? (machine.jala + " (" + matchingJala.ends + " hooks)") : (machine.jala || '-');
-
-        let activeBeamVal = 'None';
-        let activeBadge = '<span style="color: var(--muted);">—</span>';
-        let activeBg = 'var(--bg)';
-        let activeBorder = 'var(--border)';
-        if (activeBeam) {
-            activeBeamVal = `<span style="cursor: pointer; color: var(--accent); font-weight: 700; text-decoration: underline;" onclick="window.showGlobalBeamCard('${activeBeam.beamNumber}')">Beam #${activeBeam.beamNumber}</span>`;
-            activeBadge = '<span class="badge badge-on-loom" style="font-size: 0.6rem; padding: 1px 6px; background: rgba(139, 92, 246, 0.1); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 6px; font-weight:700;">ON LOOM</span>';
-            activeBg = 'rgba(139, 92, 246, 0.05)';
-            activeBorder = 'var(--accent)';
-        }
-
-        const formatDate = (dateStr) => {
-            if (!dateStr || dateStr === '9999-12-31') return '';
-            try {
-                const parts = String(dateStr).split('T')[0].split('-');
-                if (parts.length === 3) {
-                    const d = new Date(parts[0], parts[1]-1, parts[2]);
-                    if (!isNaN(d.getTime())) {
-                        const day = String(d.getDate()).padStart(2, '0');
-                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                        const month = months[d.getMonth()];
-                        const year = d.getFullYear();
-                        return `${day} ${month} ${year}`;
-                    }
-                }
-            } catch(e) {}
-            return dateStr;
-        };
-
-        let overlay = document.getElementById('global-machinecard-overlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'global-machinecard-overlay';
-            overlay.className = 'gmc-modal-overlay';
-            overlay.onclick = () => { overlay.style.display = 'none'; };
-            document.body.appendChild(overlay);
-        }
-
-        const lastMachineHistoryIndex = timeline.findLastIndex(item => item.sourceType === 'machine_history');
-
-        overlay.innerHTML = `
+    overlay.innerHTML = `
             <div class="gmc-modal" onclick="event.stopPropagation()">
                 <button type="button" class="close-btn" onclick="document.getElementById('global-machinecard-overlay').style.display='none'">&times;</button>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
@@ -3122,68 +3651,68 @@
                 <!-- Timeline container -->
                 <div class="timeline" style="margin-bottom: 1rem;">
                     ${(() => {
-                        if (timeline.length === 0) {
-                            return '<div style="color: var(--muted); font-style: italic; font-size: 0.85rem; padding: 1rem 0;">No history found for this machine.</div>';
-                        }
-                        return timeline.map((h, index) => {
-                            const dotBg = h.type === 'machine' ? 'var(--accent3)' : (h.type === 'production' ? 'var(--success)' : (h.type === 'beam-loading' ? 'var(--accent2)' : 'var(--accent)'));
-                            const isProd = h.type === 'production';
-                            const isCancelable = (index === timeline.length - 1 || index === lastMachineHistoryIndex);
+        if (timeline.length === 0) {
+          return '<div style="color: var(--muted); font-style: italic; font-size: 0.85rem; padding: 1rem 0;">No history found for this machine.</div>';
+        }
+        return timeline.map((h, index) => {
+          const dotBg = h.type === 'machine' ? 'var(--accent3)' : (h.type === 'production' ? 'var(--success)' : (h.type === 'beam-loading' ? 'var(--accent2)' : 'var(--accent)'));
+          const isProd = h.type === 'production';
+          const isCancelable = (index === timeline.length - 1 || index === lastMachineHistoryIndex);
 
-                            let deleteBtnHtml = '';
-                            if (isCancelable && h.sourceType === 'machine_history' && h.type !== 'production') {
-                                deleteBtnHtml = `<button type="button" class="btn btn-sm" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; cursor: pointer; flex-shrink: 0; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;" onclick="window.deleteTimelineEvent('${machine.id}', '${h.sourceType || ''}', '${h.sourceIndex !== undefined ? h.sourceIndex : ''}', '${h.beamId || ''}', '${h.loadingId || ''}', '${h.details && h.details.beamNumber ? h.details.beamNumber : ''}')">✕ Cancel Event</button>`;
-                            }
-                            
-                            let contentHtml = '';
-                            if (isProd && h.details && h.details.logs) {
-                                const grouped = [];
-                                const takaGroups = {};
-                                h.details.logs.forEach(log => {
-                                    const serial = log.takaSerial;
-                                    if (!serial || serial === 'Pending') {
-                                        grouped.push({
-                                            productionDates: [log.productionDate],
-                                            foldingDates: log.foldingDate ? [log.foldingDate] : [],
-                                            takaSerial: serial || 'Pending',
-                                            meters: log.meters,
-                                            weight: log.weight
-                                        });
-                                    } else {
-                                        if (!takaGroups[serial]) {
-                                            takaGroups[serial] = {
-                                                productionDates: [],
-                                                foldingDates: [],
-                                                takaSerial: serial,
-                                                meters: 0,
-                                                weight: 0
-                                            };
-                                            grouped.push(takaGroups[serial]);
-                                        }
-                                        if (!takaGroups[serial].productionDates.includes(log.productionDate)) {
-                                            takaGroups[serial].productionDates.push(log.productionDate);
-                                        }
-                                        if (log.foldingDate && !takaGroups[serial].foldingDates.includes(log.foldingDate)) {
-                                            takaGroups[serial].foldingDates.push(log.foldingDate);
-                                        }
-                                        takaGroups[serial].meters += log.meters;
-                                        takaGroups[serial].weight = Math.max(takaGroups[serial].weight, log.weight);
-                                    }
-                                });
+          let deleteBtnHtml = '';
+          if (isCancelable && h.sourceType === 'machine_history' && h.type !== 'production') {
+            deleteBtnHtml = `<button type="button" class="btn btn-sm" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; cursor: pointer; flex-shrink: 0; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;" onclick="window.deleteTimelineEvent('${machine.id}', '${h.sourceType || ''}', '${h.sourceIndex !== undefined ? h.sourceIndex : ''}', '${h.beamId || ''}', '${h.loadingId || ''}', '${h.details && h.details.beamNumber ? h.details.beamNumber : ''}')">✕ Cancel Event</button>`;
+          }
 
-                                const rowsHtml = grouped.map((g, idx) => {
-                                    const pDates = g.productionDates.map(d => `<div style="white-space: nowrap;">${formatDate(d)}</div>`).join('');
-                                    const fDates = g.foldingDates.length > 0 ? g.foldingDates.map(d => `<div style="white-space: nowrap;">${formatDate(d)}</div>`).join('') : '—';
-                                    return `<tr>
+          let contentHtml = '';
+          if (isProd && h.details && h.details.logs) {
+            const grouped = [];
+            const takaGroups = {};
+            h.details.logs.forEach(log => {
+              const serial = log.takaSerial;
+              if (!serial || serial === 'Pending') {
+                grouped.push({
+                  productionDates: [log.productionDate],
+                  foldingDates: log.foldingDate ? [log.foldingDate] : [],
+                  takaSerial: serial || 'Pending',
+                  meters: log.meters,
+                  weight: log.weight
+                });
+              } else {
+                if (!takaGroups[serial]) {
+                  takaGroups[serial] = {
+                    productionDates: [],
+                    foldingDates: [],
+                    takaSerial: serial,
+                    meters: 0,
+                    weight: 0
+                  };
+                  grouped.push(takaGroups[serial]);
+                }
+                if (!takaGroups[serial].productionDates.includes(log.productionDate)) {
+                  takaGroups[serial].productionDates.push(log.productionDate);
+                }
+                if (log.foldingDate && !takaGroups[serial].foldingDates.includes(log.foldingDate)) {
+                  takaGroups[serial].foldingDates.push(log.foldingDate);
+                }
+                takaGroups[serial].meters += log.meters;
+                takaGroups[serial].weight = Math.max(takaGroups[serial].weight, log.weight);
+              }
+            });
+
+            const rowsHtml = grouped.map((g, idx) => {
+              const pDates = g.productionDates.map(d => `<div style="white-space: nowrap;">${formatDate(d)}</div>`).join('');
+              const fDates = g.foldingDates.length > 0 ? g.foldingDates.map(d => `<div style="white-space: nowrap;">${formatDate(d)}</div>`).join('') : '—';
+              return `<tr>
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; border-bottom: none; color: var(--fg); vertical-align: top; width: 20%;">${pDates}</td>
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; border-bottom: none; color: var(--fg); vertical-align: top; width: 20%;">${fDates}</td>
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; border-bottom: none; font-weight: 500; color: var(--fg); vertical-align: top; width: 20%;">${g.takaSerial}</td>
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; font-weight: 600; border-bottom: none; color: var(--accent); vertical-align: top; width: 20%;">${g.meters.toFixed(1)} m</td>
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; font-weight: 600; border-bottom: none; color: var(--fg); vertical-align: top; width: 20%;">${g.weight > 0 ? g.weight.toFixed(2) + ' kg' : '—'}</td>
                                     </tr>`;
-                                }).join('');
+            }).join('');
 
-                                contentHtml = `
+            contentHtml = `
                                     <div style="padding: 0.75rem; margin-top: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; width: 100%; overflow-x: auto;">
                                         <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.8rem; text-align: center;">
                                             <thead>
@@ -3206,9 +3735,9 @@
                                         </table>
                                     </div>
                                 `;
-                            }
+          }
 
-                            return `
+          return `
                                 <div class="timeline-item">
                                     <div class="timeline-dot" style="background: ${dotBg};"></div>
                                     <div class="timeline-content">
@@ -3223,411 +3752,411 @@
                                     </div>
                                 </div>
                             `;
-                        }).join('');
-                    })()}
+        }).join('');
+      })()}
                 </div>
             </div>
         `;
-        overlay.style.display = 'flex';
-    };
+    overlay.style.display = 'flex';
+  };
 
-    // Override local functions if loaded
-    window.openMachineDetailsModal = window.showGlobalMachineCard;
+  // Override local functions if loaded
+  window.openMachineDetailsModal = window.showGlobalMachineCard;
 
-    document.addEventListener('click', function(e) {
-        // Exclude inputs, dropdowns, selects, textareas, toasts to prevent cards from opening on selection
-        if (e.target.closest('select') || 
-            e.target.closest('input') || 
-            e.target.closest('textarea') ||
-            e.target.closest('#toast-container') ||
-            e.target.closest('.toast-container') ||
-            e.target.closest('.toast') ||
-            e.target.closest('.dropdown-list') || 
-            e.target.closest('.dropdown-menu') || 
-            e.target.closest('.dropdown-item') ||
-            e.target.closest('.select-input-wrapper') ||
-            e.target.closest('[class*="dropdown"]') || 
-            e.target.closest('[class*="select"]')) {
-            return;
-        }
+  document.addEventListener('click', function (e) {
+    // Exclude inputs, dropdowns, selects, textareas, toasts to prevent cards from opening on selection
+    if (e.target.closest('select') ||
+      e.target.closest('input') ||
+      e.target.closest('textarea') ||
+      e.target.closest('#toast-container') ||
+      e.target.closest('.toast-container') ||
+      e.target.closest('.toast') ||
+      e.target.closest('.dropdown-list') ||
+      e.target.closest('.dropdown-menu') ||
+      e.target.closest('.dropdown-item') ||
+      e.target.closest('.select-input-wrapper') ||
+      e.target.closest('[class*="dropdown"]') ||
+      e.target.closest('[class*="select"]')) {
+      return;
+    }
 
-        // Exclude beam tracker tab
-        const isBeamTrackerTab = window.location.pathname.includes('warp') && 
-            (document.querySelector('.nav-tab.active')?.textContent.includes('Beam tracker') || 
-             document.querySelector('.nav-tab.active')?.textContent.includes('tracker'));
+    // Exclude beam tracker tab
+    const isBeamTrackerTab = window.location.pathname.includes('warp') &&
+      (document.querySelector('.nav-tab.active')?.textContent.includes('Beam tracker') ||
+        document.querySelector('.nav-tab.active')?.textContent.includes('tracker'));
 
-        if (isBeamTrackerTab) return;
+    if (isBeamTrackerTab) return;
 
-        // Find the actual clickable trigger target
-        const trigger = e.target.closest('.clickable-trigger') || e.target.closest('#rb-beam-no');
-        if (!trigger) return;
+    // Find the actual clickable trigger target
+    const trigger = e.target.closest('.clickable-trigger') || e.target.closest('#rb-beam-no');
+    if (!trigger) return;
 
-        // Match span id='rb-beam-no'
-        if (trigger.id === 'rb-beam-no' && trigger.innerText.trim()) {
-            let allBeams = [];
-            try {
-                allBeams = JSON.parse(localStorage.getItem('warp-beams') || '[]');
-            } catch(e) {}
-            const exists = allBeams.some(b => String(b.beamNumber).trim().toLowerCase() === String(trigger.innerText.trim()).toLowerCase());
-            if (exists) {
+    // Match span id='rb-beam-no'
+    if (trigger.id === 'rb-beam-no' && trigger.innerText.trim()) {
+      let allBeams = [];
+      try {
+        allBeams = JSON.parse(localStorage.getItem('warp-beams') || '[]');
+      } catch (e) { }
+      const exists = allBeams.some(b => String(b.beamNumber).trim().toLowerCase() === String(trigger.innerText.trim()).toLowerCase());
+      if (exists) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.showGlobalBeamCard(trigger.innerText.trim());
+        return;
+      }
+    }
+
+    // Match exact "Beam #101" patterns in text (e.g. from labels, timelines)
+    let text = trigger.innerText || '';
+    let match = text.match(/Beam\s*#\s*([A-Za-z0-9\-]+)/i);
+    if (match && match[1]) {
+      if (beamExists(match[1])) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.showGlobalBeamCard(match[1]);
+        return;
+      }
+    }
+
+    // Match exact "Machine #X" or "Machine X" patterns in text (e.g. "Machine 1", "Machine #1")
+    let mMatch = text.match(/(?:Machine|Loom)\s*#?\s*([A-Za-z0-9\-]+)/i);
+    if (mMatch && mMatch[1] && !trigger.closest('select') && !trigger.closest('input')) {
+      if (machineExists(mMatch[1])) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.showGlobalMachineCard(mMatch[1]);
+        return;
+      }
+    }
+
+    // Match table columns under Machine/Loom header
+    let cell = trigger.closest('td');
+    if (cell && !trigger.closest('button') && !trigger.closest('input') && !trigger.closest('a') && !trigger.closest('select')) {
+      let index = cell.cellIndex;
+      let table = cell.closest('table');
+      if (table) {
+        let ths = table.querySelectorAll('thead tr th');
+        if (ths.length > index) {
+          let thText = ths[index].innerText.toLowerCase();
+          if (thText.includes('machine') || thText.includes('loom')) {
+            let val = cell.innerText.trim();
+            let exactMatch = val.match(/(?:Machine|Loom)?\s*#?\s*([A-Za-z0-9\-]+)/i);
+            if (exactMatch && exactMatch[1] && exactMatch[1] !== '-') {
+              if (machineExists(exactMatch[1])) {
                 e.preventDefault();
                 e.stopPropagation();
-                window.showGlobalBeamCard(trigger.innerText.trim());
+                window.showGlobalMachineCard(exactMatch[1]);
                 return;
+              }
             }
+          }
         }
+      }
+    }
+  });
 
-        // Match exact "Beam #101" patterns in text (e.g. from labels, timelines)
-        let text = trigger.innerText || '';
-        let match = text.match(/Beam\s*#\s*([A-Za-z0-9\-]+)/i);
-        if (match && match[1]) {
-            if (beamExists(match[1])) {
-                e.preventDefault();
-                e.stopPropagation();
-                window.showGlobalBeamCard(match[1]);
-                return;
-            }
-        }
+  // --- Auto-underline and highlight clickable triggers ---
+  let cachedMachines = null;
+  let cachedBeams = null;
 
-        // Match exact "Machine #X" or "Machine X" patterns in text (e.g. "Machine 1", "Machine #1")
-        let mMatch = text.match(/(?:Machine|Loom)\s*#?\s*([A-Za-z0-9\-]+)/i);
-        if (mMatch && mMatch[1] && !trigger.closest('select') && !trigger.closest('input')) {
-            if (machineExists(mMatch[1])) {
-                e.preventDefault();
-                e.stopPropagation();
-                window.showGlobalMachineCard(mMatch[1]);
-                return;
-            }
-        }
+  function getMachinesList() {
+    if (cachedMachines) return cachedMachines;
+    try {
+      cachedMachines = JSON.parse(localStorage.getItem('machines') || '[]');
+    } catch (e) { }
+    if (!cachedMachines || !cachedMachines.length) {
+      cachedMachines = [];
+    }
+    return cachedMachines;
+  }
 
-        // Match table columns under Machine/Loom header
-        let cell = trigger.closest('td');
-        if (cell && !trigger.closest('button') && !trigger.closest('input') && !trigger.closest('a') && !trigger.closest('select')) {
-            let index = cell.cellIndex;
-            let table = cell.closest('table');
-            if (table) {
-                let ths = table.querySelectorAll('thead tr th');
-                if (ths.length > index) {
-                    let thText = ths[index].innerText.toLowerCase();
-                    if (thText.includes('machine') || thText.includes('loom')) {
-                        let val = cell.innerText.trim();
-                        let exactMatch = val.match(/(?:Machine|Loom)?\s*#?\s*([A-Za-z0-9\-]+)/i);
-                        if (exactMatch && exactMatch[1] && exactMatch[1] !== '-') {
-                            if (machineExists(exactMatch[1])) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                window.showGlobalMachineCard(exactMatch[1]);
-                                return;
-                            }
-                        }
-                    }
-                }
+  function getBeamsList() {
+    if (cachedBeams) return cachedBeams;
+    try {
+      cachedBeams = JSON.parse(localStorage.getItem('warp-beams') || '[]');
+    } catch (e) { }
+    return cachedBeams || [];
+  }
+
+  function machineExists(name) {
+    const list = getMachinesList();
+    return list.some(m => String(m.id).trim().toLowerCase() === String(name).trim().toLowerCase() || String(m.name).trim().toLowerCase() === String(name).trim().toLowerCase());
+  }
+
+  function beamExists(num) {
+    const list = getBeamsList();
+    return list.some(b => String(b.beamNumber).trim().toLowerCase() === String(num).trim().toLowerCase());
+  }
+
+  function enhanceClickables() {
+    // 1. Scan tables for Machine/Loom headers and add clickable-trigger
+    document.querySelectorAll('table').forEach(table => {
+      const ths = table.querySelectorAll('thead tr th');
+      ths.forEach((th, index) => {
+        const thText = th.innerText.toLowerCase();
+        if (thText.includes('machine') || thText.includes('loom')) {
+          table.querySelectorAll(`tbody tr td:nth-child(${index + 1})`).forEach(cell => {
+            if (cell.classList.contains('clickable-trigger')) return;
+            if (cell.querySelector('button') || cell.querySelector('input') || cell.querySelector('select') || cell.querySelector('a')) return;
+
+            let val = cell.innerText.trim();
+            let exactMatch = val.match(/(?:Machine|Loom)?\s*#?\s*([A-Za-z0-9\-]+)/i);
+            if (exactMatch && exactMatch[1] && exactMatch[1] !== '-') {
+              if (machineExists(exactMatch[1])) {
+                cell.classList.add('clickable-trigger');
+                cell.title = "Click to view Machine details";
+              }
             }
+          });
         }
+      });
     });
 
-    // --- Auto-underline and highlight clickable triggers ---
-    let cachedMachines = null;
-    let cachedBeams = null;
+    // 2. Scan elements containing text patterns like Beam #101 or Machine #2
+    const elements = document.querySelectorAll('p, span, div, td, li, label, strong, em, td a');
+    elements.forEach(el => {
+      if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') return;
+      if (el.closest('.clickable-trigger')) return;
+      if (el.querySelector('.clickable-trigger')) return;
+      if (el.closest('.dropdown-list') || el.closest('.dropdown-item') || el.closest('.select-input-wrapper')) return;
 
-    function getMachinesList() {
-        if (cachedMachines) return cachedMachines;
-        try {
-            cachedMachines = JSON.parse(localStorage.getItem('machines') || '[]');
-        } catch(e) {}
-        if (!cachedMachines || !cachedMachines.length) {
-            cachedMachines = [];
-        }
-        return cachedMachines;
-    }
+      let hasChanged = false;
+      el.childNodes.forEach(node => {
+        if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim()) {
+          let val = node.nodeValue;
+          let replaced = val;
 
-    function getBeamsList() {
-        if (cachedBeams) return cachedBeams;
-        try {
-            cachedBeams = JSON.parse(localStorage.getItem('warp-beams') || '[]');
-        } catch(e) {}
-        return cachedBeams || [];
-    }
-
-    function machineExists(name) {
-        const list = getMachinesList();
-        return list.some(m => String(m.id).trim().toLowerCase() === String(name).trim().toLowerCase() || String(m.name).trim().toLowerCase() === String(name).trim().toLowerCase());
-    }
-
-    function beamExists(num) {
-        const list = getBeamsList();
-        return list.some(b => String(b.beamNumber).trim().toLowerCase() === String(num).trim().toLowerCase());
-    }
-
-    function enhanceClickables() {
-        // 1. Scan tables for Machine/Loom headers and add clickable-trigger
-        document.querySelectorAll('table').forEach(table => {
-            const ths = table.querySelectorAll('thead tr th');
-            ths.forEach((th, index) => {
-                const thText = th.innerText.toLowerCase();
-                if (thText.includes('machine') || thText.includes('loom')) {
-                    table.querySelectorAll(`tbody tr td:nth-child(${index + 1})`).forEach(cell => {
-                        if (cell.classList.contains('clickable-trigger')) return;
-                        if (cell.querySelector('button') || cell.querySelector('input') || cell.querySelector('select') || cell.querySelector('a')) return;
-                        
-                        let val = cell.innerText.trim();
-                        let exactMatch = val.match(/(?:Machine|Loom)?\s*#?\s*([A-Za-z0-9\-]+)/i);
-                        if (exactMatch && exactMatch[1] && exactMatch[1] !== '-') {
-                            if (machineExists(exactMatch[1])) {
-                                cell.classList.add('clickable-trigger');
-                                cell.title = "Click to view Machine details";
-                            }
-                        }
-                    });
-                }
-            });
-        });
-
-        // 2. Scan elements containing text patterns like Beam #101 or Machine #2
-        const elements = document.querySelectorAll('p, span, div, td, li, label, strong, em, td a');
-        elements.forEach(el => {
-            if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') return;
-            if (el.closest('.clickable-trigger')) return;
-            if (el.querySelector('.clickable-trigger')) return;
-            if (el.closest('.dropdown-list') || el.closest('.dropdown-item') || el.closest('.select-input-wrapper')) return;
-            
-            let hasChanged = false;
-            el.childNodes.forEach(node => {
-                if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim()) {
-                    let val = node.nodeValue;
-                    let replaced = val;
-                    
-                    replaced = replaced.replace(/Beam\s*#\s*([A-Za-z0-9\-]+)/gi, (fullMatch, beamNo) => {
-                        if (beamExists(beamNo)) {
-                            hasChanged = true;
-                            return `<span class="clickable-trigger" title="Click to view Beam details">${fullMatch}</span>`;
-                        }
-                        return fullMatch;
-                    });
-
-                    replaced = replaced.replace(/(Machine|Loom)\s*#\s*([A-Za-z0-9\-]+)/gi, (fullMatch, prefix, machNo) => {
-                        if (machineExists(machNo)) {
-                            hasChanged = true;
-                            return `<span class="clickable-trigger" title="Click to view Machine details">${fullMatch}</span>`;
-                        }
-                        return fullMatch;
-                    });
-
-                    if (hasChanged) {
-                        const tempSpan = document.createElement('span');
-                        tempSpan.innerHTML = replaced;
-                        node.replaceWith(tempSpan);
-                    }
-                }
-            });
-        });
-
-        // 3. Highlight id="rb-beam-no"
-        document.querySelectorAll('#rb-beam-no').forEach(el => {
-            if (el.classList.contains('clickable-trigger')) return;
-            const beamNo = el.innerText.trim();
-            if (beamNo && beamExists(beamNo)) {
-                el.classList.add('clickable-trigger');
-                el.title = "Click to view Beam details";
+          replaced = replaced.replace(/Beam\s*#\s*([A-Za-z0-9\-]+)/gi, (fullMatch, beamNo) => {
+            if (beamExists(beamNo)) {
+              hasChanged = true;
+              return `<span class="clickable-trigger" title="Click to view Beam details">${fullMatch}</span>`;
             }
-        });
-    }
+            return fullMatch;
+          });
 
-    window.escapeHtml = function(text) {
-        if (text === null || text === undefined) return '';
-        return String(text)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+          replaced = replaced.replace(/(Machine|Loom)\s*#\s*([A-Za-z0-9\-]+)/gi, (fullMatch, prefix, machNo) => {
+            if (machineExists(machNo)) {
+              hasChanged = true;
+              return `<span class="clickable-trigger" title="Click to view Machine details">${fullMatch}</span>`;
+            }
+            return fullMatch;
+          });
+
+          if (hasChanged) {
+            const tempSpan = document.createElement('span');
+            tempSpan.innerHTML = replaced;
+            node.replaceWith(tempSpan);
+          }
+        }
+      });
+    });
+
+    // 3. Highlight id="rb-beam-no"
+    document.querySelectorAll('#rb-beam-no').forEach(el => {
+      if (el.classList.contains('clickable-trigger')) return;
+      const beamNo = el.innerText.trim();
+      if (beamNo && beamExists(beamNo)) {
+        el.classList.add('clickable-trigger');
+        el.title = "Click to view Beam details";
+      }
+    });
+  }
+
+  window.escapeHtml = function (text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
+  // Upgrade native filter <select>s to contained custom menus (mobile/tablet + DevTools).
+  // Keeps the original <select> in the DOM so existing onchange handlers keep working.
+  function enhanceNativeFilterSelects() {
+    const ids = [
+      'filter-machine', 'filter-worker',
+      'bl-filter-role', 'bl-filter-machine', 'bl-filter-sort',
+      'catalog-machine-filter', 'log-filter-type', 'log-sort-order',
+      'prod-stock-filter', 'stock-dash-group-by', 'filter-process',
+      // Staff + Loans (native OS popups overflow on phone)
+      'loan-emp-select', 'loan-term-select',
+      'team-emp-role', 'team-emp-machine', 'team-emp-salary-style',
+      'roster-role-filter-select',
+      // Manage → Machines (+ related)
+      'new-machine-rapier', 'new-machine-jacquard', 'new-machine-jala',
+      'new-quality-type', 'new-quality-supplier',
+      'edit-emp-role', 'edit-emp-machine', 'edit-emp-salary-style',
+      // Machine Parts
+      'console-part', 'quick-part-select', 'quick-type-select', 'modal-part-machine',
+      // EP Parser
+      'select-view-mode', 'select-harness-mode', 'select-matrix-view',
+      // Cast-out calculator
+      'jalaSelect'
+    ];
+
+    const selectSet = new Set();
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && el.tagName === 'SELECT') selectSet.add(el);
+    });
+    // Yarn/weaving costing input tables — native OS menus overflow past the card on phone
+    document.querySelectorAll(
+      '.sidebar .input-card select, .input-card select, main.flex .sidebar select'
+    ).forEach((el) => {
+      if (el && el.tagName === 'SELECT') selectSet.add(el);
+    });
+
+    const placeListInView = (btn, list) => {
+      const set = (prop, value) => list.style.setProperty(prop, value, 'important');
+
+      // Keep menu locked to the trigger width (avoids native OS popup overflow +
+      // broken fixed positioning inside transformed .input-card ancestors).
+      set('position', 'absolute');
+      set('left', '0');
+      set('right', '0');
+      set('top', 'calc(100% + 4px)');
+      set('bottom', 'auto');
+      set('width', '100%');
+      set('max-width', '100%');
+      set('min-width', '0');
+      set('max-height', '240px');
+
+      if (window.innerWidth > 1024) return;
+
+      const rect = btn.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - 12;
+      const spaceAbove = rect.top - 12;
+      if (spaceBelow < 160 && spaceAbove > spaceBelow) {
+        set('top', 'auto');
+        set('bottom', 'calc(100% + 4px)');
+        set('max-height', `${Math.max(140, spaceAbove - 8)}px`);
+      } else {
+        set('max-height', `${Math.max(140, Math.min(240, spaceBelow - 8))}px`);
+      }
     };
 
-    // Upgrade native filter <select>s to contained custom menus (mobile/tablet + DevTools).
-    // Keeps the original <select> in the DOM so existing onchange handlers keep working.
-    function enhanceNativeFilterSelects() {
-      const ids = [
-        'filter-machine', 'filter-worker',
-        'bl-filter-role', 'bl-filter-machine', 'bl-filter-sort',
-        'catalog-machine-filter', 'log-filter-type', 'log-sort-order',
-        'prod-stock-filter', 'stock-dash-group-by', 'filter-process',
-        // Staff + Loans (native OS popups overflow on phone)
-        'loan-emp-select', 'loan-term-select',
-        'team-emp-role', 'team-emp-machine', 'team-emp-salary-style',
-        'roster-role-filter-select',
-        // Manage → Machines (+ related)
-        'new-machine-rapier', 'new-machine-jacquard', 'new-machine-jala',
-        'new-quality-type', 'new-quality-supplier',
-        'edit-emp-role', 'edit-emp-machine', 'edit-emp-salary-style',
-        // Machine Parts
-        'console-part', 'quick-part-select', 'quick-type-select', 'modal-part-machine',
-        // EP Parser
-        'select-view-mode', 'select-harness-mode', 'select-matrix-view',
-        // Cast-out calculator
-        'jalaSelect'
-      ];
+    selectSet.forEach((select) => {
+      if (!select || select.tagName !== 'SELECT' || select.dataset.vfEnhanced === '1') return;
+      if (select.multiple || select.size > 1) return;
+      if (select.closest('.vf-filter-dd') || select.closest('.select-input-wrapper')) return;
+      if (select.disabled && select.closest('.printable-offscreen-wrapper, #printable-report-content, #printable-compare-content')) return;
 
-      const selectSet = new Set();
-      ids.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el && el.tagName === 'SELECT') selectSet.add(el);
-      });
-      // Yarn/weaving costing input tables — native OS menus overflow past the card on phone
-      document.querySelectorAll(
-        '.sidebar .input-card select, .input-card select, main.flex .sidebar select'
-      ).forEach((el) => {
-        if (el && el.tagName === 'SELECT') selectSet.add(el);
-      });
+      select.dataset.vfEnhanced = '1';
 
-      const placeListInView = (btn, list) => {
-        const set = (prop, value) => list.style.setProperty(prop, value, 'important');
+      const wrap = document.createElement('div');
+      wrap.className = 'vf-filter-dd';
 
-        // Keep menu locked to the trigger width (avoids native OS popup overflow +
-        // broken fixed positioning inside transformed .input-card ancestors).
-        set('position', 'absolute');
-        set('left', '0');
-        set('right', '0');
-        set('top', 'calc(100% + 4px)');
-        set('bottom', 'auto');
-        set('width', '100%');
-        set('max-width', '100%');
-        set('min-width', '0');
-        set('max-height', '240px');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'vf-filter-dd-btn';
+      btn.setAttribute('aria-haspopup', 'listbox');
 
-        if (window.innerWidth > 1024) return;
+      const list = document.createElement('div');
+      list.className = 'dropdown-list vf-filter-dd-list';
+      list.style.display = 'none';
+      list.setAttribute('role', 'listbox');
 
-        const rect = btn.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - rect.bottom - 12;
-        const spaceAbove = rect.top - 12;
-        if (spaceBelow < 160 && spaceAbove > spaceBelow) {
-          set('top', 'auto');
-          set('bottom', 'calc(100% + 4px)');
-          set('max-height', `${Math.max(140, spaceAbove - 8)}px`);
-        } else {
-          set('max-height', `${Math.max(140, Math.min(240, spaceBelow - 8))}px`);
+      const syncLabel = () => {
+        const opt = select.options[select.selectedIndex];
+        const text = opt ? opt.textContent : (select.getAttribute('placeholder') || 'Select');
+        let label = btn.querySelector('.vf-filter-dd-label');
+        if (!label) {
+          label = document.createElement('span');
+          label.className = 'vf-filter-dd-label';
+          btn.textContent = '';
+          btn.appendChild(label);
         }
+        label.textContent = text;
+        btn.disabled = !!select.disabled;
       };
 
-      selectSet.forEach((select) => {
-        if (!select || select.tagName !== 'SELECT' || select.dataset.vfEnhanced === '1') return;
-        if (select.multiple || select.size > 1) return;
-        if (select.closest('.vf-filter-dd') || select.closest('.select-input-wrapper')) return;
-        if (select.disabled && select.closest('.printable-offscreen-wrapper, #printable-report-content, #printable-compare-content')) return;
-
-        select.dataset.vfEnhanced = '1';
-
-        const wrap = document.createElement('div');
-        wrap.className = 'vf-filter-dd';
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'vf-filter-dd-btn';
-        btn.setAttribute('aria-haspopup', 'listbox');
-
-        const list = document.createElement('div');
-        list.className = 'dropdown-list vf-filter-dd-list';
-        list.style.display = 'none';
-        list.setAttribute('role', 'listbox');
-
-        const syncLabel = () => {
-          const opt = select.options[select.selectedIndex];
-          const text = opt ? opt.textContent : (select.getAttribute('placeholder') || 'Select');
-          let label = btn.querySelector('.vf-filter-dd-label');
-          if (!label) {
-            label = document.createElement('span');
-            label.className = 'vf-filter-dd-label';
-            btn.textContent = '';
-            btn.appendChild(label);
+      const rebuildList = () => {
+        list.innerHTML = '';
+        Array.from(select.options).forEach((opt) => {
+          if (opt.hidden || (opt.style && opt.style.display === 'none')) return;
+          const item = document.createElement('div');
+          item.className = 'dropdown-item' + (opt.selected ? ' selected' : '');
+          item.setAttribute('role', 'option');
+          item.textContent = opt.textContent;
+          if (opt.disabled) {
+            item.classList.add('is-disabled');
+            item.setAttribute('aria-disabled', 'true');
+          } else {
+            item.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              select.value = opt.value;
+              select.dispatchEvent(new Event('change', { bubbles: true }));
+              syncLabel();
+              list.style.display = 'none';
+              btn.setAttribute('aria-expanded', 'false');
+            });
           }
-          label.textContent = text;
-          btn.disabled = !!select.disabled;
-        };
-
-        const rebuildList = () => {
-          list.innerHTML = '';
-          Array.from(select.options).forEach((opt) => {
-            if (opt.hidden || (opt.style && opt.style.display === 'none')) return;
-            const item = document.createElement('div');
-            item.className = 'dropdown-item' + (opt.selected ? ' selected' : '');
-            item.setAttribute('role', 'option');
-            item.textContent = opt.textContent;
-            if (opt.disabled) {
-              item.classList.add('is-disabled');
-              item.setAttribute('aria-disabled', 'true');
-            } else {
-              item.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                select.value = opt.value;
-                select.dispatchEvent(new Event('change', { bubbles: true }));
-                syncLabel();
-                list.style.display = 'none';
-                btn.setAttribute('aria-expanded', 'false');
-              });
-            }
-            list.appendChild(item);
-          });
-        };
-
-        select.classList.add('vf-filter-dd-native');
-        select.style.cssText += ';position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important;margin:0!important;padding:0!important;border:0!important;';
-
-        const parent = select.parentNode;
-        parent.insertBefore(wrap, select);
-        wrap.appendChild(btn);
-        wrap.appendChild(list);
-        wrap.appendChild(select);
-
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (select.disabled) return;
-          const willOpen = list.style.display === 'none';
-          document.querySelectorAll('.vf-filter-dd-list').forEach((el) => {
-            el.style.display = 'none';
-          });
-          document.querySelectorAll('.vf-filter-dd-btn').forEach((el) => {
-            el.setAttribute('aria-expanded', 'false');
-          });
-          if (willOpen) {
-            rebuildList();
-            list.style.display = 'block';
-            placeListInView(btn, list);
-            btn.setAttribute('aria-expanded', 'true');
-          }
+          list.appendChild(item);
         });
+      };
 
-        const mo = new MutationObserver(() => syncLabel());
-        mo.observe(select, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['disabled'] });
-        select.addEventListener('change', syncLabel);
+      select.classList.add('vf-filter-dd-native');
+      select.style.cssText += ';position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important;margin:0!important;padding:0!important;border:0!important;';
 
-        syncLabel();
+      const parent = select.parentNode;
+      parent.insertBefore(wrap, select);
+      wrap.appendChild(btn);
+      wrap.appendChild(list);
+      wrap.appendChild(select);
+
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (select.disabled) return;
+        const willOpen = list.style.display === 'none';
+        document.querySelectorAll('.vf-filter-dd-list').forEach((el) => {
+          el.style.display = 'none';
+        });
+        document.querySelectorAll('.vf-filter-dd-btn').forEach((el) => {
+          el.setAttribute('aria-expanded', 'false');
+        });
+        if (willOpen) {
+          rebuildList();
+          list.style.display = 'block';
+          placeListInView(btn, list);
+          btn.setAttribute('aria-expanded', 'true');
+        }
       });
-    }
 
-    function enhanceNativeMonthInputs() {
-      const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const mo = new MutationObserver(() => syncLabel());
+      mo.observe(select, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['disabled'] });
+      select.addEventListener('change', syncLabel);
 
-      document.querySelectorAll('input[type="month"]').forEach((input) => {
-        if (input.dataset.vfMonthReady === '1' || input.closest('.vf-month-picker')) return;
-        input.dataset.vfMonthReady = '1';
+      syncLabel();
+    });
+  }
 
-        const wrap = document.createElement('div');
-        wrap.className = 'vf-month-picker';
+  function enhanceNativeMonthInputs() {
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'vf-month-btn';
-        btn.setAttribute('aria-haspopup', 'dialog');
-        btn.setAttribute('aria-expanded', 'false');
-        const label = document.createElement('span');
-        label.className = 'vf-month-btn-label';
-        btn.appendChild(label);
+    document.querySelectorAll('input[type="month"]').forEach((input) => {
+      if (input.dataset.vfMonthReady === '1' || input.closest('.vf-month-picker')) return;
+      input.dataset.vfMonthReady = '1';
 
-        const panel = document.createElement('div');
-        panel.className = 'vf-month-panel';
-        panel.innerHTML = `
+      const wrap = document.createElement('div');
+      wrap.className = 'vf-month-picker';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'vf-month-btn';
+      btn.setAttribute('aria-haspopup', 'dialog');
+      btn.setAttribute('aria-expanded', 'false');
+      const label = document.createElement('span');
+      label.className = 'vf-month-btn-label';
+      btn.appendChild(label);
+
+      const panel = document.createElement('div');
+      panel.className = 'vf-month-panel';
+      panel.innerHTML = `
           <div class="vf-month-year-row">
             <button type="button" data-vf-year="-1" aria-label="Previous year">‹</button>
             <div class="vf-month-year-label"></div>
@@ -3640,188 +4169,188 @@
           </div>
         `;
 
-        const parent = input.parentNode;
-        parent.insertBefore(wrap, input);
-        wrap.appendChild(btn);
-        wrap.appendChild(panel);
-        wrap.appendChild(input);
+      const parent = input.parentNode;
+      parent.insertBefore(wrap, input);
+      wrap.appendChild(btn);
+      wrap.appendChild(panel);
+      wrap.appendChild(input);
 
-        let viewYear = new Date().getFullYear();
+      let viewYear = new Date().getFullYear();
 
-        const parseValue = () => {
-          const v = input.value || '';
-          const m = /^(\d{4})-(\d{2})$/.exec(v);
-          if (!m) return null;
-          return { year: Number(m[1]), month: Number(m[2]) };
-        };
+      const parseValue = () => {
+        const v = input.value || '';
+        const m = /^(\d{4})-(\d{2})$/.exec(v);
+        if (!m) return null;
+        return { year: Number(m[1]), month: Number(m[2]) };
+      };
 
-        const formatLabel = () => {
-          const parsed = parseValue();
-          if (!parsed) {
-            label.textContent = input.placeholder || 'Select month';
-            label.style.opacity = '0.55';
-            return;
+      const formatLabel = () => {
+        const parsed = parseValue();
+        if (!parsed) {
+          label.textContent = input.placeholder || 'Select month';
+          label.style.opacity = '0.55';
+          return;
+        }
+        label.style.opacity = '1';
+        label.textContent = `${MONTH_FULL[parsed.month - 1]} ${parsed.year}`;
+      };
+
+      const setValue = (yyyyMm) => {
+        const prev = input.value;
+        input.value = yyyyMm || '';
+        formatLabel();
+        if (prev !== input.value) {
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      };
+
+      const renderPanel = () => {
+        const yearLabel = panel.querySelector('.vf-month-year-label');
+        const grid = panel.querySelector('.vf-month-grid');
+        const selected = parseValue();
+        yearLabel.textContent = String(viewYear);
+        grid.innerHTML = '';
+        MONTH_NAMES.forEach((name, idx) => {
+          const m = idx + 1;
+          const cell = document.createElement('button');
+          cell.type = 'button';
+          cell.textContent = name;
+          if (selected && selected.year === viewYear && selected.month === m) {
+            cell.classList.add('is-selected');
           }
-          label.style.opacity = '1';
-          label.textContent = `${MONTH_FULL[parsed.month - 1]} ${parsed.year}`;
-        };
-
-        const setValue = (yyyyMm) => {
-          const prev = input.value;
-          input.value = yyyyMm || '';
-          formatLabel();
-          if (prev !== input.value) {
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-        };
-
-        const renderPanel = () => {
-          const yearLabel = panel.querySelector('.vf-month-year-label');
-          const grid = panel.querySelector('.vf-month-grid');
-          const selected = parseValue();
-          yearLabel.textContent = String(viewYear);
-          grid.innerHTML = '';
-          MONTH_NAMES.forEach((name, idx) => {
-            const m = idx + 1;
-            const cell = document.createElement('button');
-            cell.type = 'button';
-            cell.textContent = name;
-            if (selected && selected.year === viewYear && selected.month === m) {
-              cell.classList.add('is-selected');
-            }
-            cell.addEventListener('click', (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const mm = String(m).padStart(2, '0');
-              setValue(`${viewYear}-${mm}`);
-              wrap.classList.remove('open');
-              btn.setAttribute('aria-expanded', 'false');
-            });
-            grid.appendChild(cell);
-          });
-        };
-
-        const openPanel = () => {
-          document.querySelectorAll('.vf-month-picker.open').forEach((el) => {
-            if (el !== wrap) {
-              el.classList.remove('open');
-              const b = el.querySelector('.vf-month-btn');
-              if (b) b.setAttribute('aria-expanded', 'false');
-            }
-          });
-          document.querySelectorAll('.vf-date-picker.open').forEach((el) => {
-            el.classList.remove('open');
-            const b = el.querySelector('.vf-date-btn');
-            if (b) b.setAttribute('aria-expanded', 'false');
-          });
-          document.querySelectorAll('.vf-filter-dd-list').forEach((el) => {
-            el.style.display = 'none';
-          });
-          const selected = parseValue();
-          viewYear = selected ? selected.year : new Date().getFullYear();
-          renderPanel();
-          wrap.classList.add('open');
-          btn.setAttribute('aria-expanded', 'true');
-        };
-
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (input.disabled) return;
-          if (wrap.classList.contains('open')) {
+          cell.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const mm = String(m).padStart(2, '0');
+            setValue(`${viewYear}-${mm}`);
             wrap.classList.remove('open');
             btn.setAttribute('aria-expanded', 'false');
-          } else {
-            openPanel();
+          });
+          grid.appendChild(cell);
+        });
+      };
+
+      const openPanel = () => {
+        document.querySelectorAll('.vf-month-picker.open').forEach((el) => {
+          if (el !== wrap) {
+            el.classList.remove('open');
+            const b = el.querySelector('.vf-month-btn');
+            if (b) b.setAttribute('aria-expanded', 'false');
           }
         });
+        document.querySelectorAll('.vf-date-picker.open').forEach((el) => {
+          el.classList.remove('open');
+          const b = el.querySelector('.vf-date-btn');
+          if (b) b.setAttribute('aria-expanded', 'false');
+        });
+        document.querySelectorAll('.vf-filter-dd-list').forEach((el) => {
+          el.style.display = 'none';
+        });
+        const selected = parseValue();
+        viewYear = selected ? selected.year : new Date().getFullYear();
+        renderPanel();
+        wrap.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      };
 
-        panel.querySelector('[data-vf-year="-1"]').addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          viewYear -= 1;
-          renderPanel();
-        });
-        panel.querySelector('[data-vf-year="1"]').addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          viewYear += 1;
-          renderPanel();
-        });
-        panel.querySelector('[data-vf-clear]').addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setValue('');
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (input.disabled) return;
+        if (wrap.classList.contains('open')) {
           wrap.classList.remove('open');
           btn.setAttribute('aria-expanded', 'false');
-        });
-        panel.querySelector('[data-vf-today]').addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const now = new Date();
-          viewYear = now.getFullYear();
-          const mm = String(now.getMonth() + 1).padStart(2, '0');
-          setValue(`${viewYear}-${mm}`);
-          wrap.classList.remove('open');
-          btn.setAttribute('aria-expanded', 'false');
-        });
-
-        // Keep label in sync when other code sets input.value
-        const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-        if (desc && desc.set) {
-          Object.defineProperty(input, 'value', {
-            configurable: true,
-            enumerable: true,
-            get() { return desc.get.call(this); },
-            set(v) {
-              desc.set.call(this, v);
-              formatLabel();
-            }
-          });
+        } else {
+          openPanel();
         }
-        input.addEventListener('change', formatLabel);
-
-        formatLabel();
       });
-    }
 
-    function enhanceNativeDateInputs() {
-      const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-      const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-      const pad = (n) => String(n).padStart(2, '0');
-      const toKey = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
-      const parseKey = (v) => {
-        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
-        if (!m) return null;
-        return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
-      };
-      const formatDisplay = (v) => {
-        const p = parseKey(v);
-        if (!p) return null;
-        return `${MONTH_FULL[p.month - 1].slice(0, 3)} ${p.day}, ${p.year}`;
-      };
-
-      document.querySelectorAll('input[type="date"]').forEach((input) => {
-        if (input.dataset.vfDateReady === '1' || input.closest('.vf-date-picker')) return;
-        input.dataset.vfDateReady = '1';
-
-        const wrap = document.createElement('div');
-        wrap.className = 'vf-date-picker';
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'vf-date-btn';
-        btn.setAttribute('aria-haspopup', 'dialog');
+      panel.querySelector('[data-vf-year="-1"]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        viewYear -= 1;
+        renderPanel();
+      });
+      panel.querySelector('[data-vf-year="1"]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        viewYear += 1;
+        renderPanel();
+      });
+      panel.querySelector('[data-vf-clear]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setValue('');
+        wrap.classList.remove('open');
         btn.setAttribute('aria-expanded', 'false');
-        const label = document.createElement('span');
-        label.className = 'vf-date-btn-label';
-        btn.appendChild(label);
+      });
+      panel.querySelector('[data-vf-today]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const now = new Date();
+        viewYear = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        setValue(`${viewYear}-${mm}`);
+        wrap.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      });
 
-        const panel = document.createElement('div');
-        panel.className = 'vf-date-panel';
-        panel.innerHTML = `
+      // Keep label in sync when other code sets input.value
+      const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+      if (desc && desc.set) {
+        Object.defineProperty(input, 'value', {
+          configurable: true,
+          enumerable: true,
+          get() { return desc.get.call(this); },
+          set(v) {
+            desc.set.call(this, v);
+            formatLabel();
+          }
+        });
+      }
+      input.addEventListener('change', formatLabel);
+
+      formatLabel();
+    });
+  }
+
+  function enhanceNativeDateInputs() {
+    const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const toKey = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
+    const parseKey = (v) => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
+      if (!m) return null;
+      return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
+    };
+    const formatDisplay = (v) => {
+      const p = parseKey(v);
+      if (!p) return null;
+      return `${MONTH_FULL[p.month - 1].slice(0, 3)} ${p.day}, ${p.year}`;
+    };
+
+    document.querySelectorAll('input[type="date"]').forEach((input) => {
+      if (input.dataset.vfDateReady === '1' || input.closest('.vf-date-picker')) return;
+      input.dataset.vfDateReady = '1';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'vf-date-picker';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'vf-date-btn';
+      btn.setAttribute('aria-haspopup', 'dialog');
+      btn.setAttribute('aria-expanded', 'false');
+      const label = document.createElement('span');
+      label.className = 'vf-date-btn-label';
+      btn.appendChild(label);
+
+      const panel = document.createElement('div');
+      panel.className = 'vf-date-panel';
+      panel.innerHTML = `
           <div class="vf-date-nav">
             <button type="button" data-vf-nav="-1" aria-label="Previous month">‹</button>
             <div class="vf-date-nav-label"></div>
@@ -3835,259 +4364,259 @@
           </div>
         `;
 
-        const parent = input.parentNode;
-        parent.insertBefore(wrap, input);
-        wrap.appendChild(btn);
-        wrap.appendChild(panel);
-        wrap.appendChild(input);
+      const parent = input.parentNode;
+      parent.insertBefore(wrap, input);
+      wrap.appendChild(btn);
+      wrap.appendChild(panel);
+      wrap.appendChild(input);
 
-        let viewYear = new Date().getFullYear();
-        let viewMonth = new Date().getMonth() + 1; // 1-12
+      let viewYear = new Date().getFullYear();
+      let viewMonth = new Date().getMonth() + 1; // 1-12
 
-        const formatLabel = () => {
-          const text = formatDisplay(input.value);
-          if (!text) {
-            label.textContent = input.getAttribute('placeholder') || 'mm/dd/yyyy';
-            label.style.opacity = '0.55';
-            return;
+      const formatLabel = () => {
+        const text = formatDisplay(input.value);
+        if (!text) {
+          label.textContent = input.getAttribute('placeholder') || 'mm/dd/yyyy';
+          label.style.opacity = '0.55';
+          return;
+        }
+        label.style.opacity = '1';
+        label.textContent = text;
+      };
+
+      const setValue = (yyyyMmDd) => {
+        const prev = input.value;
+        input.value = yyyyMmDd || '';
+        formatLabel();
+        if (prev !== input.value) {
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      };
+
+      const renderPanel = () => {
+        const navLabel = panel.querySelector('.vf-date-nav-label');
+        const grid = panel.querySelector('.vf-date-grid');
+        const selected = parseKey(input.value);
+        const today = new Date();
+        const todayKey = toKey(today.getFullYear(), today.getMonth() + 1, today.getDate());
+
+        navLabel.textContent = `${MONTH_FULL[viewMonth - 1]} ${viewYear}`;
+        grid.innerHTML = '';
+
+        const first = new Date(viewYear, viewMonth - 1, 1);
+        const startPad = first.getDay(); // 0=Sun
+        const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
+        const prevDays = new Date(viewYear, viewMonth - 1, 0).getDate();
+
+        const cells = [];
+        for (let i = 0; i < startPad; i++) {
+          const day = prevDays - startPad + i + 1;
+          const y = viewMonth === 1 ? viewYear - 1 : viewYear;
+          const m = viewMonth === 1 ? 12 : viewMonth - 1;
+          cells.push({ y, m, d: day, other: true });
+        }
+        for (let d = 1; d <= daysInMonth; d++) {
+          cells.push({ y: viewYear, m: viewMonth, d, other: false });
+        }
+        while (cells.length % 7 !== 0 || cells.length < 42) {
+          const idx = cells.length - (startPad + daysInMonth);
+          const d = idx + 1;
+          const y = viewMonth === 12 ? viewYear + 1 : viewYear;
+          const m = viewMonth === 12 ? 1 : viewMonth + 1;
+          cells.push({ y, m, d, other: true });
+          if (cells.length >= 42) break;
+        }
+
+        cells.forEach((cell) => {
+          const key = toKey(cell.y, cell.m, cell.d);
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = String(cell.d);
+          if (cell.other) b.classList.add('is-other');
+          if (key === todayKey) b.classList.add('is-today');
+          if (selected && key === toKey(selected.year, selected.month, selected.day)) {
+            b.classList.add('is-selected');
           }
-          label.style.opacity = '1';
-          label.textContent = text;
-        };
-
-        const setValue = (yyyyMmDd) => {
-          const prev = input.value;
-          input.value = yyyyMmDd || '';
-          formatLabel();
-          if (prev !== input.value) {
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-        };
-
-        const renderPanel = () => {
-          const navLabel = panel.querySelector('.vf-date-nav-label');
-          const grid = panel.querySelector('.vf-date-grid');
-          const selected = parseKey(input.value);
-          const today = new Date();
-          const todayKey = toKey(today.getFullYear(), today.getMonth() + 1, today.getDate());
-
-          navLabel.textContent = `${MONTH_FULL[viewMonth - 1]} ${viewYear}`;
-          grid.innerHTML = '';
-
-          const first = new Date(viewYear, viewMonth - 1, 1);
-          const startPad = first.getDay(); // 0=Sun
-          const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
-          const prevDays = new Date(viewYear, viewMonth - 1, 0).getDate();
-
-          const cells = [];
-          for (let i = 0; i < startPad; i++) {
-            const day = prevDays - startPad + i + 1;
-            const y = viewMonth === 1 ? viewYear - 1 : viewYear;
-            const m = viewMonth === 1 ? 12 : viewMonth - 1;
-            cells.push({ y, m, d: day, other: true });
-          }
-          for (let d = 1; d <= daysInMonth; d++) {
-            cells.push({ y: viewYear, m: viewMonth, d, other: false });
-          }
-          while (cells.length % 7 !== 0 || cells.length < 42) {
-            const idx = cells.length - (startPad + daysInMonth);
-            const d = idx + 1;
-            const y = viewMonth === 12 ? viewYear + 1 : viewYear;
-            const m = viewMonth === 12 ? 1 : viewMonth + 1;
-            cells.push({ y, m, d, other: true });
-            if (cells.length >= 42) break;
-          }
-
-          cells.forEach((cell) => {
-            const key = toKey(cell.y, cell.m, cell.d);
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.textContent = String(cell.d);
-            if (cell.other) b.classList.add('is-other');
-            if (key === todayKey) b.classList.add('is-today');
-            if (selected && key === toKey(selected.year, selected.month, selected.day)) {
-              b.classList.add('is-selected');
-            }
-            b.addEventListener('click', (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              // Respect min/max if present
-              if (input.min && key < input.min) return;
-              if (input.max && key > input.max) return;
-              setValue(key);
-              wrap.classList.remove('open');
-              btn.setAttribute('aria-expanded', 'false');
-            });
-            grid.appendChild(b);
-          });
-        };
-
-        const closeOthers = () => {
-          document.querySelectorAll('.vf-date-picker.open').forEach((el) => {
-            if (el !== wrap) {
-              el.classList.remove('open');
-              const b = el.querySelector('.vf-date-btn');
-              if (b) b.setAttribute('aria-expanded', 'false');
-            }
-          });
-          document.querySelectorAll('.vf-month-picker.open').forEach((el) => {
-            el.classList.remove('open');
-            const b = el.querySelector('.vf-month-btn');
-            if (b) b.setAttribute('aria-expanded', 'false');
-          });
-          document.querySelectorAll('.vf-filter-dd-list').forEach((el) => {
-            el.style.display = 'none';
-          });
-        };
-
-        const openPanel = () => {
-          closeOthers();
-          const selected = parseKey(input.value);
-          if (selected) {
-            viewYear = selected.year;
-            viewMonth = selected.month;
-          } else {
-            const now = new Date();
-            viewYear = now.getFullYear();
-            viewMonth = now.getMonth() + 1;
-          }
-          renderPanel();
-          wrap.classList.add('open');
-          btn.setAttribute('aria-expanded', 'true');
-        };
-
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (input.disabled || input.readOnly) return;
-          if (wrap.classList.contains('open')) {
+          b.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Respect min/max if present
+            if (input.min && key < input.min) return;
+            if (input.max && key > input.max) return;
+            setValue(key);
             wrap.classList.remove('open');
             btn.setAttribute('aria-expanded', 'false');
-          } else {
-            openPanel();
-          }
-        });
-
-        panel.querySelector('[data-vf-nav="-1"]').addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          viewMonth -= 1;
-          if (viewMonth < 1) {
-            viewMonth = 12;
-            viewYear -= 1;
-          }
-          renderPanel();
-        });
-        panel.querySelector('[data-vf-nav="1"]').addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          viewMonth += 1;
-          if (viewMonth > 12) {
-            viewMonth = 1;
-            viewYear += 1;
-          }
-          renderPanel();
-        });
-        panel.querySelector('[data-vf-clear]').addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setValue('');
-          wrap.classList.remove('open');
-          btn.setAttribute('aria-expanded', 'false');
-        });
-        panel.querySelector('[data-vf-today]').addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const now = new Date();
-          viewYear = now.getFullYear();
-          viewMonth = now.getMonth() + 1;
-          const key = toKey(viewYear, viewMonth, now.getDate());
-          if (input.min && key < input.min) return;
-          if (input.max && key > input.max) return;
-          setValue(key);
-          wrap.classList.remove('open');
-          btn.setAttribute('aria-expanded', 'false');
-        });
-
-        const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-        if (desc && desc.set) {
-          Object.defineProperty(input, 'value', {
-            configurable: true,
-            enumerable: true,
-            get() { return desc.get.call(this); },
-            set(v) {
-              desc.set.call(this, v);
-              formatLabel();
-            }
           });
-        }
-        input.addEventListener('change', formatLabel);
+          grid.appendChild(b);
+        });
+      };
 
-        formatLabel();
-      });
-    }
-
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('.vf-filter-dd')) return;
-      document.querySelectorAll('.vf-filter-dd-list').forEach((el) => {
-        el.style.display = 'none';
-      });
-      document.querySelectorAll('.vf-filter-dd-btn').forEach((el) => {
-        el.setAttribute('aria-expanded', 'false');
-      });
-      if (!e.target.closest('.vf-month-picker')) {
+      const closeOthers = () => {
+        document.querySelectorAll('.vf-date-picker.open').forEach((el) => {
+          if (el !== wrap) {
+            el.classList.remove('open');
+            const b = el.querySelector('.vf-date-btn');
+            if (b) b.setAttribute('aria-expanded', 'false');
+          }
+        });
         document.querySelectorAll('.vf-month-picker.open').forEach((el) => {
           el.classList.remove('open');
           const b = el.querySelector('.vf-month-btn');
           if (b) b.setAttribute('aria-expanded', 'false');
         });
-      }
-      if (!e.target.closest('.vf-date-picker')) {
-        document.querySelectorAll('.vf-date-picker.open').forEach((el) => {
-          el.classList.remove('open');
-          const b = el.querySelector('.vf-date-btn');
-          if (b) b.setAttribute('aria-expanded', 'false');
+        document.querySelectorAll('.vf-filter-dd-list').forEach((el) => {
+          el.style.display = 'none';
         });
-      }
-    });
+      };
 
-    function startPickerEnhancers() {
-      if (document.documentElement.dataset.vfNoEnhance === 'true' || 
-          (document.body && document.body.dataset.vfNoEnhance === 'true')) {
-        return;
-      }
-      enhanceClickables();
-      enhanceNativeFilterSelects();
-      enhanceNativeMonthInputs();
-      enhanceNativeDateInputs();
+      const openPanel = () => {
+        closeOthers();
+        const selected = parseKey(input.value);
+        if (selected) {
+          viewYear = selected.year;
+          viewMonth = selected.month;
+        } else {
+          const now = new Date();
+          viewYear = now.getFullYear();
+          viewMonth = now.getMonth() + 1;
+        }
+        renderPanel();
+        wrap.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      };
 
-      // Catch dynamically injected elements / modals via debounced MutationObserver
-      try {
-        let moTimer = null;
-        const mo = new MutationObserver(() => {
-          if (document.documentElement.dataset.vfNoEnhance === 'true' || 
-              (document.body && document.body.dataset.vfNoEnhance === 'true')) {
-            return;
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (input.disabled || input.readOnly) return;
+        if (wrap.classList.contains('open')) {
+          wrap.classList.remove('open');
+          btn.setAttribute('aria-expanded', 'false');
+        } else {
+          openPanel();
+        }
+      });
+
+      panel.querySelector('[data-vf-nav="-1"]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        viewMonth -= 1;
+        if (viewMonth < 1) {
+          viewMonth = 12;
+          viewYear -= 1;
+        }
+        renderPanel();
+      });
+      panel.querySelector('[data-vf-nav="1"]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        viewMonth += 1;
+        if (viewMonth > 12) {
+          viewMonth = 1;
+          viewYear += 1;
+        }
+        renderPanel();
+      });
+      panel.querySelector('[data-vf-clear]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setValue('');
+        wrap.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      });
+      panel.querySelector('[data-vf-today]').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const now = new Date();
+        viewYear = now.getFullYear();
+        viewMonth = now.getMonth() + 1;
+        const key = toKey(viewYear, viewMonth, now.getDate());
+        if (input.min && key < input.min) return;
+        if (input.max && key > input.max) return;
+        setValue(key);
+        wrap.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      });
+
+      const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+      if (desc && desc.set) {
+        Object.defineProperty(input, 'value', {
+          configurable: true,
+          enumerable: true,
+          get() { return desc.get.call(this); },
+          set(v) {
+            desc.set.call(this, v);
+            formatLabel();
           }
-          if (moTimer) return;
-          moTimer = requestAnimationFrame(() => {
-            moTimer = null;
-            enhanceClickables();
-            enhanceNativeMonthInputs();
-            enhanceNativeDateInputs();
-            enhanceNativeFilterSelects();
-          });
         });
-        mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
-      } catch (_) { /* ignore */ }
-    }
+      }
+      input.addEventListener('change', formatLabel);
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', startPickerEnhancers);
-    } else {
-        startPickerEnhancers();
+      formatLabel();
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.vf-filter-dd')) return;
+    document.querySelectorAll('.vf-filter-dd-list').forEach((el) => {
+      el.style.display = 'none';
+    });
+    document.querySelectorAll('.vf-filter-dd-btn').forEach((el) => {
+      el.setAttribute('aria-expanded', 'false');
+    });
+    if (!e.target.closest('.vf-month-picker')) {
+      document.querySelectorAll('.vf-month-picker.open').forEach((el) => {
+        el.classList.remove('open');
+        const b = el.querySelector('.vf-month-btn');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      });
     }
+    if (!e.target.closest('.vf-date-picker')) {
+      document.querySelectorAll('.vf-date-picker.open').forEach((el) => {
+        el.classList.remove('open');
+        const b = el.querySelector('.vf-date-btn');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      });
+    }
+  });
+
+  function startPickerEnhancers() {
+    if (document.documentElement.dataset.vfNoEnhance === 'true' ||
+      (document.body && document.body.dataset.vfNoEnhance === 'true')) {
+      return;
+    }
+    enhanceClickables();
+    enhanceNativeFilterSelects();
+    enhanceNativeMonthInputs();
+    enhanceNativeDateInputs();
+
+    // Catch dynamically injected elements / modals via debounced MutationObserver
+    try {
+      let moTimer = null;
+      const mo = new MutationObserver(() => {
+        if (document.documentElement.dataset.vfNoEnhance === 'true' ||
+          (document.body && document.body.dataset.vfNoEnhance === 'true')) {
+          return;
+        }
+        if (moTimer) return;
+        moTimer = requestAnimationFrame(() => {
+          moTimer = null;
+          enhanceClickables();
+          enhanceNativeMonthInputs();
+          enhanceNativeDateInputs();
+          enhanceNativeFilterSelects();
+        });
+      });
+      mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    } catch (_) { /* ignore */ }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startPickerEnhancers);
+  } else {
+    startPickerEnhancers();
+  }
 })();
 
 
