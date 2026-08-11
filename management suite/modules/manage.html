@@ -2648,17 +2648,35 @@
       </div>
     </div>
 
+    <div class="card" style="margin-bottom: 1.5rem; background: var(--surface); border: 1.5px solid var(--border);">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label style="font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🔍</span> Universal Search RM Suppliers
+        </label>
+        <input type="text" id="supplier-search-bar" placeholder="Search supplier name, contact person, phone, email, address, notes…" oninput="handleSupplierSearch(this.value)" style="width: 100%; height: 40px; padding: 0.6rem 0.75rem; border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; background-color: var(--surface); color: var(--fg); border: 1.5px solid var(--border);">
+      </div>
+    </div>
+
     <div class="card">
       <h3>Available Manage RM Suppliers</h3>
+      <style>
+        #supplier-mgmt-table td.supplier-address-col {
+          max-width: none !important;
+          overflow: visible !important;
+          white-space: normal !important;
+          word-break: normal !important;
+          overflow-wrap: break-word !important;
+        }
+      </style>
       <div class="table-container" style="margin-top: 1rem;">
-        <table>
+        <table id="supplier-mgmt-table">
           <thead>
             <tr>
               <th>Supplier Name</th>
               <th>Contact Person</th>
               <th>Phone</th>
               <th>Email</th>
-              <th>Address</th>
+              <th class="supplier-address-col">Address</th>
               <th>Notes</th>
               <th>Actions</th>
             </tr>
@@ -5966,21 +5984,44 @@ function showToast(message, type = 'info') {
   }
 
   let editingSupplierId = null;
+  let supplierSearchQuery = '';
+
+  window.handleSupplierSearch = function(val) {
+    supplierSearchQuery = val;
+    renderSuppliers();
+  };
 
   function renderSuppliers() {
     const body = document.getElementById('supplier-mgmt-body');
     if (!body) return;
-    if (rawMaterialSuppliers.length === 0) {
-      body.innerHTML = '<tr><td colspan="7" style="color: var(--muted); padding: 2rem;">No suppliers found. Add one above!</td></tr>';
+    
+    let filteredSuppliers = rawMaterialSuppliers;
+    if (supplierSearchQuery.trim()) {
+      const terms = supplierSearchQuery.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      filteredSuppliers = rawMaterialSuppliers.filter(s => {
+        return terms.every(term => {
+          return (s.name || '').toLowerCase().includes(term) ||
+                 (s.contact || '').toLowerCase().includes(term) ||
+                 (s.phone || '').toLowerCase().includes(term) ||
+                 (s.email || '').toLowerCase().includes(term) ||
+                 (s.address || '').toLowerCase().includes(term) ||
+                 (s.notes || '').toLowerCase().includes(term);
+        });
+      });
+    }
+
+    if (filteredSuppliers.length === 0) {
+      body.innerHTML = `<tr><td colspan="7" style="color: var(--muted); padding: 2rem;">${supplierSearchQuery.trim() ? 'No suppliers matching search criteria.' : 'No suppliers found. Add one above!'}</td></tr>`;
       return;
     }
-    body.innerHTML = rawMaterialSuppliers.map(s => `
+
+    body.innerHTML = filteredSuppliers.map(s => `
       <tr>
         <td style="font-weight: 600;">${s.name}</td>
         <td>${s.contact || '-'}</td>
         <td>${s.phone || '-'}</td>
         <td>${s.email || '-'}</td>
-        <td style="max-width: 200px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${s.address || '-'}</td>
+        <td style="max-width: none; white-space: normal; word-break: break-word;">${s.address || '-'}</td>
         <td>${s.notes || '-'}</td>
         <td>
           <div style="display: flex; gap: 0.5rem; justify-content: center;">
