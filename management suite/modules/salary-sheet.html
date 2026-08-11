@@ -10929,7 +10929,7 @@
                 const cycles = [];
                 baseTimeline.forEach((item) => {
                     const eventText = (item.event || '').toLowerCase();
-                    if (eventText.includes('pissing on') || eventText.includes('jala piecing') || eventText.includes('loaded on')) {
+                    if (eventText.includes('loaded on') || eventText.includes('beam loaded') || eventText.includes('assigned to')) {
                         const mach = getMachineFromEvent(item.event);
                         if (mach) {
                             cycles.push({
@@ -11053,10 +11053,27 @@
                     }
                 });
 
-                baseTimeline.forEach(item => {
-                    if (!finalTimeline.includes(item)) {
-                        finalTimeline.push(item);
-                    }
+                const getEventRank = (item) => {
+                    const evt = (item.event || '').toLowerCase();
+                    const type = item.type;
+                    if (evt.includes('manufactured') || evt.includes('created') || evt.includes('warped') || evt.includes('warping') || type === 'warp') return 1;
+                    if ((evt.includes('beam loaded') || evt.includes('loaded on') || evt.includes('assigned to')) && !evt.includes('unloaded') && !evt.includes('cut off') && !evt.includes('cut from')) return 2;
+                    if ((evt.includes('piece in') || evt.includes('piece-in') || evt.includes('piecing') || evt.includes('pissing') || evt.includes('pass in') || evt.includes('pass-in') || evt.includes('drawing in') || evt.includes('fani') || evt.includes('reed') || evt.includes('drop pin') || evt.includes('jog') || evt.includes('jala') || type === 'beam-loading') && !evt.includes('unloaded') && !evt.includes('cut off')) return 3;
+                    if (type === 'production' || evt.includes('production details') || evt.includes('production started') || evt.includes('woven')) return 4;
+                    if (evt.includes('cut off') || evt.includes('unloaded') || evt.includes('completed') || evt.includes('removed') || evt.includes('cut from')) return 5;
+                    return 3;
+                };
+
+                finalTimeline.sort((a, b) => {
+                    const dateA = a.date || '';
+                    const dateB = b.date || '';
+                    const dateComp = dateA.localeCompare(dateB);
+                    if (dateComp !== 0) return dateComp;
+                    const rankComp = getEventRank(a) - getEventRank(b);
+                    if (rankComp !== 0) return rankComp;
+                    const idxA = a.historyIndex !== undefined ? a.historyIndex : 999;
+                    const idxB = b.historyIndex !== undefined ? b.historyIndex : 999;
+                    return idxA - idxB;
                 });
 
                 return finalTimeline;

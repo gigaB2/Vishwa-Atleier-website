@@ -2020,11 +2020,21 @@
                 if (displayEvent === 'Beam Created' || displayEvent === 'Beam manufactured') {
                     displayEvent = `Beam manufactured by ${beam.warpingPerson || 'Unknown'}`;
                 }
+                if ((h.reason || h.decisionBy || (displayEvent && displayEvent.toLowerCase().includes('reason:'))) && !displayEvent.toLowerCase().includes('beam cut off')) {
+                    const reasonStr = h.reason ? `Reason: ${h.reason}` : '';
+                    const decStr = h.decisionBy ? `Decision By: ${h.decisionBy}` : '';
+                    const metaStr = [reasonStr, decStr].filter(Boolean).join(' | ');
+                    if (metaStr && !displayEvent.includes(metaStr)) {
+                        displayEvent = `Beam Cut Off: ${displayEvent}${displayEvent.includes('(') ? '' : ` (${metaStr})`}`;
+                    }
+                }
+
+                const isCut = e.includes('cut off') || e.includes('unloaded') || e.includes('cut from') || e.includes('completed');
 
                 events.push({
                     date: h.date,
                     event: displayEvent,
-                    type: h.type || 'system',
+                    type: isCut ? 'machine' : (h.type || 'system'),
                     category: 'history',
                     historyIndex: idx
                 });
@@ -2109,28 +2119,31 @@
             });
 
             // Sort strictly chronologically by date with logical lifecycle ranking
+            const getRank = (item) => {
+                const evt = (item.event || '').toLowerCase();
+                const type = item.type;
+
+                // 1. Manufacturing / Creation / Warping
+                if (evt.includes('manufactured') || evt.includes('manufacture') || evt.includes('created') || evt.includes('warped') || evt.includes('warping') || type === 'warp') return 1;
+
+                // 2. Beam Loaded on Machine
+                if ((evt.includes('beam loaded') || evt.includes('loaded on') || evt.includes('assigned to')) && !evt.includes('unloaded') && !evt.includes('cut off') && !evt.includes('cut from')) return 2;
+                
+                // 3. Setup / Preparation details (Piece In, Piecing, Pissing, Pass-In, Drawing In, Fani, Drop Pin)
+                if ((evt.includes('piece in') || evt.includes('piece-in') || evt.includes('piecing') || evt.includes('pissing') || evt.includes('pass in') || evt.includes('pass-in') || evt.includes('drawing in') || evt.includes('fani') || evt.includes('reed') || evt.includes('drop pin') || evt.includes('jog') || evt.includes('jala') || type === 'beam-loading') && !evt.includes('unloaded') && !evt.includes('cut off')) return 3;
+                
+                // 4. Production Details
+                if (type === 'production' || evt.includes('production details') || evt.includes('production started') || evt.includes('woven')) return 4;
+
+                // 5. Unloaded / Cut off / Completed / Removed
+                if (evt.includes('unloaded') || evt.includes('cut off') || evt.includes('cut from') || evt.includes('completed') || evt.includes('removed')) return 5;
+                
+                return 3;
+            };
+
             uniqueEvents.sort((a, b) => {
                 const dateComp = (a.date || '').localeCompare(b.date || '');
                 if (dateComp !== 0) return dateComp;
-
-                const getRank = (item) => {
-                    const evt = (item.event || '').toLowerCase();
-                    const type = item.type;
-
-                    // 1. Manufacturing / Creation / Warping
-                    if (evt.includes('manufactured') || evt.includes('manufacture') || evt.includes('created') || evt.includes('warped') || evt.includes('warping') || type === 'warp') return 1;
-                    // 2. Beam Loaded on Machine
-                    if (evt.includes('beam loaded') || evt.includes('loaded on') || evt.includes('assigned to')) return 2;
-                    // 3. Setup / Preparation details (Piece In, Piecing, Pissing, Pass-In, Drawing In, Fani, Drop Pin)
-                    if (evt.includes('piece in') || evt.includes('piece-in') || evt.includes('piecing') || evt.includes('pissing') || evt.includes('pass in') || evt.includes('pass-in') || evt.includes('drawing in') || evt.includes('fani') || evt.includes('reed') || evt.includes('drop pin') || evt.includes('jog') || evt.includes('jala')) return 3;
-                    // 4. Production Details
-                    if (type === 'production' || evt.includes('production details') || evt.includes('production started') || evt.includes('woven')) return 4;
-                    // 5. Unloaded / Cut off / Completed / Removed
-                    if (evt.includes('unloaded') || evt.includes('cut off') || evt.includes('cut from') || evt.includes('completed') || evt.includes('removed')) return 5;
-                    
-                    return 3;
-                };
-
                 return getRank(a) - getRank(b);
             });
 
@@ -2159,6 +2172,17 @@
                 } else {
                     cleanedEvents.push(item);
                 }
+            });
+
+            // Final sort by rank to ensure production precedes unload on same date
+            cleanedEvents.sort((a, b) => {
+                const dateComp = (a.date || '').localeCompare(b.date || '');
+                if (dateComp !== 0) return dateComp;
+                const rankComp = getRank(a) - getRank(b);
+                if (rankComp !== 0) return rankComp;
+                const idxA = a.historyIndex !== undefined ? a.historyIndex : 500;
+                const idxB = b.historyIndex !== undefined ? b.historyIndex : 500;
+                return idxA - idxB;
             });
 
             return cleanedEvents;
