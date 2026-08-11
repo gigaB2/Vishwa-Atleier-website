@@ -2316,6 +2316,8 @@
         .filter(h => {
           const e = (h.event || '').toLowerCase();
           if (e.includes('sync from production sheet')) return false;
+          if (e.includes('was removed') || e.includes('returned to available')) return false;
+          if (e.includes('limbo') || e.includes('displaced') || e.includes('unassigned')) return false;
           return true;
         })
         .map(h => {
@@ -2668,6 +2670,7 @@
       let originSeen = false;
       return finalTimeline.filter(item => {
         const evt = (item.event || '').toLowerCase();
+        if (evt.includes('limbo') || evt.includes('displaced') || evt.includes('unassigned') || evt.includes('returned to available') || evt.includes('was removed')) return false;
         const isMfg = evt.includes('manufactured') || evt.includes('manufacture') || evt.includes('created') || evt.includes('warped') || evt.includes('warping') || item.type === 'warp';
         if (isMfg) {
           if (!originSeen) {
