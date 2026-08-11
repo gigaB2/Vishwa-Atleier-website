@@ -2386,6 +2386,7 @@
                         const e = (h.event || '').toLowerCase();
                         if (e.includes('sync from production sheet')) return false;
                         if (e.includes('was removed') || e.includes('returned to available')) return false;
+                        if (e.includes('limbo')) return false;
                         return true;
                     })
                     .map(h => {

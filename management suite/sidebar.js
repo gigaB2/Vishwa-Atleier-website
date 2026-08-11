@@ -2182,7 +2182,7 @@
         if (!Array.isArray(occupiedBeam.history)) occupiedBeam.history = [];
         occupiedBeam.history.push({
           date: new Date().toISOString().substring(0, 10),
-          event: `Moved to Limbo / Displaced from Machine ${newMachine} (Reverted move of Beam #${beam.beamNumber})`,
+          event: `Displaced from Machine ${newMachine} (Reverted move of Beam #${beam.beamNumber})`,
           type: 'system'
         });
         allBeams[occupiedBeamIdx] = occupiedBeam;
