@@ -486,14 +486,11 @@
     tempDiv.innerHTML = sidebarHtml;
 
     // Resolve all relative paths before inserting.
-    // Local `serve` cleanUrls: drop ".html" so ?tab= / ?view= survive redirects.
-    // GitHub Pages / static hosts: keep ".html" (extensionless paths 404).
-    const useCleanUrls = /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+    // Preserve .html extension for static files to prevent 404 errors on local web servers.
     tempDiv.querySelectorAll('a').forEach(a => {
       const href = a.getAttribute('href');
       if (href && !href.startsWith('http') && !href.startsWith('https') && !href.startsWith('#') && !href.startsWith('javascript:')) {
-        const resolved = useCleanUrls ? href.replace(/\.html(?=[\?#]|$)/i, '') : href;
-        a.setAttribute('href', rootPath + resolved);
+        a.setAttribute('href', rootPath + href);
       }
     });
 

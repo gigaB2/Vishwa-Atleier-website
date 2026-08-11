@@ -1339,7 +1339,7 @@
                             ⬇️ Download .JAC Card Mask
                         </button>
                         <button id="btnDownloadEpFile" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer">
-                            ⬇️ Download .EP Card Mask
+                            ⬇️ Download .EP Mask Only
                         </button>
                         <button id="btnOpenEpParser" onclick="openInEpParser()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-600/20 flex items-center gap-1.5 cursor-pointer">
                             👁️ Open in EP Parser
@@ -1347,16 +1347,51 @@
                     </div>
                 </div>
 
-                <div class="space-y-2">
+                <!-- DESIGN FILE EP MASK MERGER PANEL -->
+                <div class="bg-slate-900/80 light:bg-slate-100 p-4 rounded-xl border border-slate-800 light:border-slate-300 space-y-3">
                     <div class="flex items-center justify-between">
-                        <label class="text-xs font-mono text-slate-400">Digital Card Mask Stream Preview (1 = Active / Threaded, 0 = Skip / Cast-out):</label>
-                        <div class="flex items-center gap-2 text-xs font-mono">
-                            <button id="btnPreviewJAC" onclick="switchCardPreviewFormat('jac')" class="px-2.5 py-1 rounded bg-teal-500/20 text-teal-400 border border-teal-500/40 font-bold cursor-pointer">.JAC Card Mask</button>
-                            <button id="btnPreviewEP" onclick="switchCardPreviewFormat('ep')" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 font-bold cursor-pointer">.EP Card Mask</button>
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-200 light:text-slate-900 flex items-center gap-1.5">
+                                🎨 Apply Cast-Out Mask to your Multi-Pick Fabric Design (.EP)
+                            </h3>
+                            <p class="text-[11px] text-slate-400 light:text-slate-500">
+                                Upload your multi-pick fabric design file (.EP). This will apply your calculated cast-out mask ($0$ for cast-out hooks across all picks) and generate a ready-to-weave merged `.EP` file.
+                            </p>
+                        </div>
+                        <label class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 flex-shrink-0 shadow-lg shadow-purple-600/20">
+                            📂 Upload Design .EP File
+                            <input type="file" id="designEpFileInput" accept=".ep" class="hidden" onchange="handleDesignEpUpload(event)">
+                        </label>
+                    </div>
+                    <div id="mergedEpStatus" class="hidden p-3 rounded-lg bg-slate-950 light:bg-white border border-slate-800 light:border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span id="mergedEpInfo" class="font-mono text-emerald-400 light:text-emerald-600 font-medium">Design loaded successfully!</span>
+                        <div class="flex items-center gap-2">
+                            <button id="btnDownloadMergedEp" onclick="downloadMergedEpFile()" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold transition text-xs flex items-center gap-1">
+                                💾 Download Merged Design (.EP)
+                            </button>
+                            <button id="btnOpenMergedInParser" onclick="openMergedInEpParser()" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold transition text-xs flex items-center gap-1">
+                                👁️ Preview Merged in EP Parser
+                            </button>
                         </div>
                     </div>
-                    <textarea id="jacFilePreview" readonly rows="14" class="w-full bg-slate-950 font-mono text-xs text-emerald-400 border border-slate-800 rounded-xl p-4 focus:outline-none"></textarea>
                 </div>
+
+                    <div class="space-y-2">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <label class="text-xs font-mono text-slate-400">Digital Card Mask Stream Preview (1 = Active / Threaded, 0 = Skip / Cast-out):</label>
+                            <div class="flex flex-wrap items-center gap-2 text-xs font-mono">
+                                <div class="flex items-center gap-1 bg-slate-900 light:bg-slate-100 border border-slate-800 light:border-slate-300 rounded-lg p-0.5">
+                                    <button id="btnPickMode1" onclick="switchPickMode('1pick')" class="px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 font-bold cursor-pointer transition">1 Pick</button>
+                                    <button id="btnPickModeInching" onclick="switchPickMode('inching')" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 font-bold cursor-pointer transition">Inching (2 Picks)</button>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <button id="btnPreviewJAC" onclick="switchCardPreviewFormat('jac')" class="px-2.5 py-1 rounded bg-teal-500/20 text-teal-400 border border-teal-500/40 font-bold cursor-pointer">.JAC Card Mask</button>
+                                    <button id="btnPreviewEP" onclick="switchCardPreviewFormat('ep')" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 font-bold cursor-pointer">.EP Card Mask</button>
+                                </div>
+                            </div>
+                        </div>
+                        <textarea id="jacFilePreview" readonly rows="14" class="w-full bg-slate-950 font-mono text-xs text-emerald-400 border border-slate-800 rounded-xl p-4 focus:outline-none"></textarea>
+                    </div>
             </div>
 
             <!-- TAB 6: COMPLETE HOOK SCHEDULE TABLE -->
@@ -2943,6 +2978,11 @@
             // Update live visual preview of rhythmic patterns
             updateRhythmVisualPreview();
             
+            // Re-merge loaded design file if active
+            if (typeof mergeDesignEpWithCastout === 'function') {
+                mergeDesignEpWithCastout();
+            }
+            
             // Save state on any updates
             saveState();
         }
@@ -3971,6 +4011,23 @@
         }
 
         let currentCardPreviewFormat = 'ep'; // Default to .ep format for ArahWeave / Loom Plugins!
+        let currentPickMode = '1pick'; // '1pick' | 'inching'
+
+        function switchPickMode(mode) {
+            currentPickMode = mode;
+            const btn1 = document.getElementById('btnPickMode1');
+            const btnInching = document.getElementById('btnPickModeInching');
+            if (mode === 'inching') {
+                if (btnInching) btnInching.className = "px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 font-bold cursor-pointer transition shadow-xs";
+                if (btn1) btn1.className = "px-2.5 py-1 rounded bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 font-bold cursor-pointer transition";
+            } else {
+                if (btn1) btn1.className = "px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 font-bold cursor-pointer transition shadow-xs";
+                if (btnInching) btnInching.className = "px-2.5 py-1 rounded bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 font-bold cursor-pointer transition";
+            }
+            if (state.result) {
+                renderJacFileTab(state.result);
+            }
+        }
 
         function switchCardPreviewFormat(fmt) {
             currentCardPreviewFormat = fmt;
@@ -3989,22 +4046,29 @@
         }
 
         function generateEpFileContent(res) {
+            const rowsCount = currentPickMode === 'inching' ? 2 : 1;
             let epContent = `; ELECTRONIC JACQUARD LOOM CARD MASK (.EP)\n`;
             epContent += `; Generated by Jacquard Cast-Out Engine v3.0\n`;
             epContent += `FORMAT: EP_CARD_MASK_V6\n`;
             epContent += `TOTAL_HOOKS: ${res.H_machine}\n`;
-            epContent += `ROWS: 1\n`;
+            epContent += `ROWS: ${rowsCount}\n`;
             epContent += `HOOKS_PER_ROW: ${res.H_machine}\n`;
             epContent += `TARGET_ENDS: ${res.N_target}\n`;
             epContent += `REPEATS: ${res.R}\n`;
             epContent += `UTILIZATION: ${res.utilization}%\n`;
+            epContent += `MODE: ${currentPickMode === 'inching' ? 'INCHING (2 PICKS - ROW 2 ALL 0s)' : '1 PICK'}\n`;
             epContent += `; ---------------------------------------------------------\n`;
             epContent += `; ROW PATTERN MATRIX (1 = ACTIVE / THREADED, 0 = CAST-OUT / SKIP)\n`;
             epContent += `; ---------------------------------------------------------\n\n`;
 
             const sortedHooks = [...res.fullComberMap].sort((a, b) => a.globalIndex - b.globalIndex);
-            const bitPattern = sortedHooks.map(item => item.active ? '1' : '0').join('');
-            epContent += `ROW_01: ${bitPattern}\n`;
+            const row1BitPattern = sortedHooks.map(item => item.active ? '1' : '0').join('');
+            epContent += `ROW_01: ${row1BitPattern}\n`;
+
+            if (currentPickMode === 'inching') {
+                const row2BitPattern = '0'.repeat(res.H_machine);
+                epContent += `ROW_02: ${row2BitPattern}\n`;
+            }
 
             epContent += `\n; END OF LOOM PLUGIN EP CARD FILE\n`;
             return epContent;
@@ -4017,12 +4081,22 @@
             } else {
                 let fileContent = `; JACQUARD CAST-OUT CARD MASK FILE (.JAC)\n`;
                 fileContent += `; Generated by Jacquard Cast-Out Engine Enterprise v3.0\n`;
-                fileContent += `; Total Hooks: ${res.H_machine} | Rows: ${res.N_rows} | Target Ends: ${res.N_target} | Repeats: ${res.R}\n`;
+                fileContent += `; Total Hooks: ${res.H_machine} | Rows: ${res.N_rows} | Target Ends: ${res.N_target} | Repeats: ${res.R} | Mode: ${currentPickMode === 'inching' ? 'Inching (2 Picks - Row 2 All 0s)' : '1 Pick'}\n`;
                 fileContent += `; Format: 1 = Active Cord, 0 = Skipped (Cast-out)\n\n`;
 
-                res.fullComberMap.forEach(item => {
-                    fileContent += `HOOK_${String(item.globalIndex).padStart(5, '0')} | ROW_${String(item.row).padStart(2, '0')}_COL_${String(item.col).padStart(3, '0')} | ${item.active ? '1' : '0'}\n`;
+                const sortedHooks = [...res.fullComberMap].sort((a, b) => a.globalIndex - b.globalIndex);
+
+                fileContent += `; --- PICK 1 (STANDARD THREADING) ---\n`;
+                sortedHooks.forEach(item => {
+                    fileContent += `PICK_1 | HOOK_${String(item.globalIndex).padStart(5, '0')} | ROW_${String(item.row).padStart(2, '0')}_COL_${String(item.col).padStart(3, '0')} | ${item.active ? '1' : '0'}\n`;
                 });
+
+                if (currentPickMode === 'inching') {
+                    fileContent += `\n; --- PICK 2 (INCHING - ALL HOOKS DOWN / 0) ---\n`;
+                    sortedHooks.forEach(item => {
+                        fileContent += `PICK_2 | HOOK_${String(item.globalIndex).padStart(5, '0')} | ROW_${String(item.row).padStart(2, '0')}_COL_${String(item.col).padStart(3, '0')} | 0\n`;
+                    });
+                }
 
                 DOM.jacFilePreview.value = fileContent;
             }
@@ -4033,25 +4107,34 @@
             const res = state.result;
             let fileContent = `; JACQUARD CAST-OUT CARD MASK FILE (.JAC)\n`;
             fileContent += `; Generated by Jacquard Cast-Out Engine Enterprise v3.0\n`;
-            fileContent += `; Total Hooks: ${res.H_machine} | Rows: ${res.N_rows} | Target Ends: ${res.N_target} | Repeats: ${res.R}\n`;
+            fileContent += `; Total Hooks: ${res.H_machine} | Rows: ${res.N_rows} | Target Ends: ${res.N_target} | Repeats: ${res.R} | Mode: ${currentPickMode === 'inching' ? 'Inching (2 Picks - Row 2 All 0s)' : '1 Pick'}\n`;
             fileContent += `; Format: 1 = Active Cord, 0 = Skipped (Cast-out)\n\n`;
 
-            res.fullComberMap.forEach(item => {
-                fileContent += `HOOK_${String(item.globalIndex).padStart(5, '0')} | ROW_${String(item.row).padStart(2, '0')}_COL_${String(item.col).padStart(3, '0')} | ${item.active ? '1' : '0'}\n`;
+            const sortedHooks = [...res.fullComberMap].sort((a, b) => a.globalIndex - b.globalIndex);
+            fileContent += `; --- PICK 1 (STANDARD THREADING) ---\n`;
+            sortedHooks.forEach(item => {
+                fileContent += `PICK_1 | HOOK_${String(item.globalIndex).padStart(5, '0')} | ROW_${String(item.row).padStart(2, '0')}_COL_${String(item.col).padStart(3, '0')} | ${item.active ? '1' : '0'}\n`;
             });
+
+            if (currentPickMode === 'inching') {
+                fileContent += `\n; --- PICK 2 (INCHING - ALL HOOKS DOWN / 0) ---\n`;
+                sortedHooks.forEach(item => {
+                    fileContent += `PICK_2 | HOOK_${String(item.globalIndex).padStart(5, '0')} | ROW_${String(item.row).padStart(2, '0')}_COL_${String(item.col).padStart(3, '0')} | 0\n`;
+                });
+            }
 
             const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Jacquard_Mask_${state.totalHooks}H_${state.targetThreads}Ends.jac`;
+            a.download = `Jacquard_Mask_${state.totalHooks}H_${state.targetThreads}Ends_${currentPickMode}.jac`;
             a.click();
             URL.revokeObjectURL(url);
         }
 
         function generateBinaryEpBlob(res) {
             const width = res.H_machine;
-            const height = 1; // Mask is a static 1-pick configuration
+            const height = currentPickMode === 'inching' ? 2 : 1;
             const hookBytes = Math.ceil(width / 8);
             const rowWidth = hookBytes + 4;
             const headerSize = 38;
@@ -4066,7 +4149,7 @@
             const blocks = Math.ceil(totalSize / 512);
             view.setUint16(0, blocks, true);
 
-            // 2. Picks count (height of pattern = 1 pick) (at offset 3)
+            // 2. Picks count (height of pattern = 1 or 2 picks) (at offset 3)
             view.setUint16(3, height, true);
 
             // 3. Embedded Filename (offset 6 to 13)
@@ -4080,9 +4163,9 @@
 
             // Sort comber map by globalIndex to ensure hooks are in correct physical sequence
             const sortedHooks = [...res.fullComberMap].sort((a, b) => a.globalIndex - b.globalIndex);
-            const start = headerSize;
 
-            // Pack hooks into hookBytes (each byte contains 8 hooks, MSB first)
+            // Row 1 (Pick 1)
+            let start = headerSize;
             for (let b = 0; b < hookBytes; b++) {
                 let byteVal = 0;
                 for (let bitIdx = 0; bitIdx < 8; bitIdx++) {
@@ -4097,10 +4180,16 @@
                 }
                 bytes[start + b] = byteVal;
             }
+            bytes[start + hookBytes] = 1; // Weft selector
 
-            // Set weft selector byte (at offset start + hookBytes) to 1
-            bytes[start + hookBytes] = 1;
-            // Control/unused bytes (at offset start + hookBytes + 1, 2, 3) are 0 by default
+            // Row 2 (Pick 2 - Inching Mode if selected: all 0s)
+            if (currentPickMode === 'inching') {
+                start = headerSize + rowWidth;
+                for (let b = 0; b < hookBytes; b++) {
+                    bytes[start + b] = 0; // All bits set to 0
+                }
+                bytes[start + hookBytes] = 1; // Weft selector
+            }
 
             return new Blob([buffer], { type: 'application/octet-stream' });
         }
@@ -4112,7 +4201,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Jacquard_Loom_Mask_${state.totalHooks}H_${state.targetThreads}Ends.ep`;
+            a.download = `Jacquard_Loom_Mask_${state.totalHooks}H_${state.targetThreads}Ends_${currentPickMode}.ep`;
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -4124,12 +4213,108 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const dataUrl = e.target.result;
-                const fileName = `Jacquard_Loom_Mask_${state.totalHooks}H_${state.targetThreads}Ends.ep`;
+                const fileName = `Jacquard_Loom_Mask_${state.totalHooks}H_${state.targetThreads}Ends_${currentPickMode}.ep`;
                 sessionStorage.setItem('pending-ep-file', dataUrl);
                 sessionStorage.setItem('pending-ep-filename', fileName);
                 window.open('ep-parser.html', '_blank');
             };
             reader.readAsDataURL(blob);
+        }
+
+        // DESIGN FILE EP MERGER LOGIC
+        let loadedDesignEpBuffer = null;
+        let mergedEpBlob = null;
+        let loadedDesignFileName = "";
+
+        function handleDesignEpUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            loadedDesignFileName = file.name;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                loadedDesignEpBuffer = e.target.result;
+                mergeDesignEpWithCastout();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function mergeDesignEpWithCastout() {
+            if (!loadedDesignEpBuffer || !state.result) return;
+            const res = state.result;
+            const origBytes = new Uint8Array(loadedDesignEpBuffer);
+            const view = new DataView(loadedDesignEpBuffer);
+
+            // Parse Bonas EP Header
+            const picksCount = view.getUint16(3, true);
+            const hooksCount = view.getUint16(32, true);
+            const headerSize = 38;
+            const hookBytes = Math.ceil(hooksCount / 8);
+            const rowWidth = hookBytes + 4;
+
+            // Prepare mask byte array for active hooks
+            const sortedHooks = [...res.fullComberMap].sort((a, b) => a.globalIndex - b.globalIndex);
+            const maskBytes = new Uint8Array(hookBytes);
+            for (let b = 0; b < hookBytes; b++) {
+                let byteVal = 0;
+                for (let bitIdx = 0; bitIdx < 8; bitIdx++) {
+                    const c = b * 8 + bitIdx;
+                    if (c < Math.min(hooksCount, res.H_machine)) {
+                        const item = sortedHooks[c];
+                        const activeBit = (item && item.active) ? 1 : 0;
+                        byteVal = (byteVal << 1) | activeBit;
+                    } else {
+                        byteVal = (byteVal << 1) | 1;
+                    }
+                }
+                maskBytes[b] = byteVal;
+            }
+
+            // Create new buffer copy and apply bitwise AND to each pick
+            const newBuffer = loadedDesignEpBuffer.slice(0);
+            const newBytes = new Uint8Array(newBuffer);
+
+            for (let p = 0; p < picksCount; p++) {
+                const pickStart = headerSize + (p * rowWidth);
+                for (let b = 0; b < hookBytes; b++) {
+                    if (pickStart + b < newBytes.length) {
+                        newBytes[pickStart + b] &= maskBytes[b];
+                    }
+                }
+            }
+
+            mergedEpBlob = new Blob([newBuffer], { type: 'application/octet-stream' });
+
+            const statusEl = document.getElementById('mergedEpStatus');
+            const infoEl = document.getElementById('mergedEpInfo');
+            if (statusEl && infoEl) {
+                infoEl.textContent = `✅ Successfully merged cast-out mask with "${loadedDesignFileName}" (${picksCount} picks, ${hooksCount} hooks)!`;
+                statusEl.classList.remove('hidden');
+            }
+        }
+
+        function downloadMergedEpFile() {
+            if (!mergedEpBlob) return;
+            const baseName = loadedDesignFileName.replace(/\.ep$/i, '');
+            const url = URL.createObjectURL(mergedEpBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${baseName}_CastOutMerged.ep`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function openMergedInEpParser() {
+            if (!mergedEpBlob) return;
+            const baseName = loadedDesignFileName.replace(/\.ep$/i, '');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const dataUrl = e.target.result;
+                const fileName = `${baseName}_CastOutMerged.ep`;
+                sessionStorage.setItem('pending-ep-file', dataUrl);
+                sessionStorage.setItem('pending-ep-filename', fileName);
+                window.open('ep-parser.html', '_blank');
+            };
+            reader.readAsDataURL(mergedEpBlob);
         }
 
         // Render Schedule Tab
