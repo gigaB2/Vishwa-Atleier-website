@@ -2157,9 +2157,40 @@
     }
 
     if (newStatus === 'On Loom' && (!newMachine || String(newMachine).trim() === '')) {
-      // Safety fallback: if status is On Loom but machine is invalid/empty, revert to Available to prevent beam from disappearing
-      newStatus = 'Available';
+      // Safety fallback: if status is On Loom but machine is invalid/empty, set to Limbo to prevent beam from disappearing
+      newStatus = 'Limbo';
       newMachine = null;
+    }
+
+    // Machine Occupation Collision Check:
+    // If restoring a beam to a loom that ALREADY HAS another beam loaded on it,
+    // safely move the currently loaded beam to Limbo so it NEVER vanishes or gets silently overwritten!
+    if (newStatus === 'On Loom' && newMachine) {
+      const cleanTargetMach = String(newMachine).toLowerCase().replace(/^machine\s+/i, '').replace(/^loom\s+/i, '').trim();
+      const occupiedBeamIdx = allBeams.findIndex(b => {
+        if (String(b.id) === String(beam.id) || String(b.beamNumber) === String(beam.beamNumber)) return false;
+        const st = (b.status || '').trim().toLowerCase();
+        if (st !== 'on loom' && st !== 'on machine' && st !== 'running' && st !== 'active') return false;
+        const bMach = String(b.machineNumber || b.machine || b.loom || '').toLowerCase().replace(/^machine\s+/i, '').replace(/^loom\s+/i, '').trim();
+        return bMach === cleanTargetMach;
+      });
+
+      if (occupiedBeamIdx !== -1) {
+        const occupiedBeam = allBeams[occupiedBeamIdx];
+        occupiedBeam.status = 'Limbo';
+        occupiedBeam.machineNumber = null;
+        if (!Array.isArray(occupiedBeam.history)) occupiedBeam.history = [];
+        occupiedBeam.history.push({
+          date: new Date().toISOString().substring(0, 10),
+          event: `Moved to Limbo / Displaced from Machine ${newMachine} (Reverted move of Beam #${beam.beamNumber})`,
+          type: 'system'
+        });
+        allBeams[occupiedBeamIdx] = occupiedBeam;
+
+        if (typeof window.showToast === 'function') {
+          window.showToast(`Loom ${newMachine} was occupied by Beam #${occupiedBeam.beamNumber}. Beam #${occupiedBeam.beamNumber} moved to Limbo.`, 'warning');
+        }
+      }
     }
 
     beam.status = newStatus;

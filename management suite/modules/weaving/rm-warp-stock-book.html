@@ -3573,6 +3573,8 @@
                 });
             }, [filteredBeams]);
 
+            const [sidebarTab, setSidebarTab] = useState('all');
+
             const getBeamMaxDate = (beam) => {
                 if (!beam) return null;
 
@@ -5252,7 +5254,61 @@
 
                             {/* Right Sidebar: Completed & Limbo Beams */}
                             <div className="card warp-tracker-sidebar warp-tracker-completed-panel" style={{ display: 'flex', flexDirection: 'column', margin: 0, flexShrink: 0 }}>
-                                {displayLimboBeams.length > 0 && (
+                                <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '1rem', background: 'var(--surface)', padding: '0.25rem', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                                    <button
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.35rem 0.2rem',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            borderRadius: '7px',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            background: sidebarTab === 'all' ? 'var(--accent)' : 'transparent',
+                                            color: sidebarTab === 'all' ? '#fff' : 'var(--muted)',
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                        onClick={() => setSidebarTab('all')}
+                                    >
+                                        All ({displayLimboBeams.length + displayCompletedBeams.length})
+                                    </button>
+                                    <button
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.35rem 0.2rem',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            borderRadius: '7px',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            background: sidebarTab === 'limbo' ? '#d97706' : 'transparent',
+                                            color: sidebarTab === 'limbo' ? '#fff' : (displayLimboBeams.length > 0 ? '#f59e0b' : 'var(--muted)'),
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                        onClick={() => setSidebarTab('limbo')}
+                                    >
+                                        ⚠️ Limbo ({displayLimboBeams.length})
+                                    </button>
+                                    <button
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.35rem 0.2rem',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            borderRadius: '7px',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            background: sidebarTab === 'completed' ? 'var(--accent)' : 'transparent',
+                                            color: sidebarTab === 'completed' ? '#fff' : 'var(--muted)',
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                        onClick={() => setSidebarTab('completed')}
+                                    >
+                                        Completed ({displayCompletedBeams.length})
+                                    </button>
+                                </div>
+
+                                {(sidebarTab === 'all' || sidebarTab === 'limbo') && displayLimboBeams.length > 0 && (
                                     <div style={{ marginBottom: '1.25rem', paddingBottom: '1rem', borderBottom: '1px dashed rgba(245, 158, 11, 0.4)' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
                                             <h3 style={{ color: '#d97706', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
@@ -5302,68 +5358,79 @@
                                         ))}
                                     </div>
                                 )}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                    <h3>Completed Beams</h3>
-                                    <span className="badge" style={{ background: 'var(--bg)' }}>{displayCompletedBeams.length}</span>
-                                </div>
-                                <div className="warp-tracker-beam-scroll">
-                                    {displayCompletedBeams
-                                        .map(b => ({ ...b, stats: getBeamStats(b) }))
-                                        .sort((a, b) => b.stats.shortagePercent - a.stats.shortagePercent)
-                                        .slice(0, 30)
-                                        .map(beam => {
-                                            const stats = beam.stats;
-                                            return (
-                                                <div
-                                                    key={beam.id}
-                                                    className="beam-card-hover warp-tracker-beam-card"
-                                                    style={{ cursor: 'pointer' }}
-                                                    onClick={() => setSelectedBeam(beam)}
-                                                >
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
-                                                        <div style={{ fontWeight: 800, fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                            {(() => {
-                                                                const compLoom = getCompletedLoomNumber(beam);
-                                                                return compLoom ? `LOOM ${compLoom}` : 'COMPLETED';
-                                                            })()}
-                                                        </div>
-                                                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--fg)' }}>
-                                                            {stats.remaining.toFixed(0)}<span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 500 }}> / {beam.meters}m</span>
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ height: '8px', background: 'rgba(0,0,0,0.08)', borderRadius: '4px', marginBottom: '1rem', overflow: 'hidden' }}>
-                                                        <div style={{
-                                                            width: `${Math.max(0, Math.min(100, (stats.remaining / (parseFloat(beam.meters) || 1)) * 100))}%`,
-                                                            height: '100%',
-                                                            background: 'linear-gradient(90deg, var(--accent), var(--accent2))',
-                                                            boxShadow: '0 0 8px rgba(139, 92, 246, 0.3)'
-                                                        }}></div>
-                                                    </div>
-                                                    <div style={{ marginTop: '0.75rem' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                                                            <div style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '1rem' }}>BEAM #{beam.beamNumber}</div>
-                                                            <div style={{
-                                                                fontWeight: 800,
-                                                                fontSize: '0.65rem',
-                                                                color: 'var(--error)',
-                                                                background: 'rgba(239, 68, 68, 0.1)',
-                                                                padding: '0.15rem 0.4rem',
-                                                                borderRadius: '8px'
-                                                            }}>
-                                                                {stats.shortagePercent.toFixed(1)}%
+
+                                {sidebarTab === 'limbo' && displayLimboBeams.length === 0 && (
+                                    <div style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0.5rem', fontSize: '0.85rem' }}>
+                                        No unassigned / Limbo beams found.
+                                    </div>
+                                )}
+
+                                {(sidebarTab === 'all' || sidebarTab === 'completed') && (
+                                    <>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                            <h3>Completed Beams</h3>
+                                            <span className="badge" style={{ background: 'var(--bg)' }}>{displayCompletedBeams.length}</span>
+                                        </div>
+                                        <div className="warp-tracker-beam-scroll">
+                                            {displayCompletedBeams
+                                                .map(b => ({ ...b, stats: getBeamStats(b) }))
+                                                .sort((a, b) => b.stats.shortagePercent - a.stats.shortagePercent)
+                                                .slice(0, 30)
+                                                .map(beam => {
+                                                    const stats = beam.stats;
+                                                    return (
+                                                        <div
+                                                            key={beam.id}
+                                                            className="beam-card-hover warp-tracker-beam-card"
+                                                            style={{ cursor: 'pointer' }}
+                                                            onClick={() => setSelectedBeam(beam)}
+                                                        >
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
+                                                                <div style={{ fontWeight: 800, fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                                    {(() => {
+                                                                        const compLoom = getCompletedLoomNumber(beam);
+                                                                        return compLoom ? `LOOM ${compLoom}` : 'COMPLETED';
+                                                                    })()}
+                                                                </div>
+                                                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--fg)' }}>
+                                                                    {stats.remaining.toFixed(0)}<span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 500 }}> / {beam.meters}m</span>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ height: '8px', background: 'rgba(0,0,0,0.08)', borderRadius: '4px', marginBottom: '1rem', overflow: 'hidden' }}>
+                                                                <div style={{
+                                                                    width: `${Math.max(0, Math.min(100, (stats.remaining / (parseFloat(beam.meters) || 1)) * 100))}%`,
+                                                                    height: '100%',
+                                                                    background: 'linear-gradient(90deg, var(--accent), var(--accent2))',
+                                                                    boxShadow: '0 0 8px rgba(139, 92, 246, 0.3)'
+                                                                }}></div>
+                                                            </div>
+                                                            <div style={{ marginTop: '0.75rem' }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                                                                    <div style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '1rem' }}>BEAM #{beam.beamNumber}</div>
+                                                                    <div style={{
+                                                                        fontWeight: 800,
+                                                                        fontSize: '0.65rem',
+                                                                        color: 'var(--error)',
+                                                                        background: 'rgba(239, 68, 68, 0.1)',
+                                                                        padding: '0.15rem 0.4rem',
+                                                                        borderRadius: '8px'
+                                                                    }}>
+                                                                        {stats.shortagePercent.toFixed(1)}%
+                                                                    </div>
+                                                                </div>
+                                                                <div style={{ fontSize: '0.75rem', fontWeight: 600, marginTop: '0.2rem' }}>{beam.quality}</div>
+                                                                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.1rem' }}>{beam.code} / {beam.color}</div>
+                                                                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.1rem' }}>{beam.ends} Ends</div>
                                                             </div>
                                                         </div>
-                                                        <div style={{ fontSize: '0.75rem', fontWeight: 600, marginTop: '0.2rem' }}>{beam.quality}</div>
-                                                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.1rem' }}>{beam.code} / {beam.color}</div>
-                                                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.1rem' }}>{beam.ends} Ends</div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    {beams.filter(b => b.status === 'Completed').length === 0 && (
-                                        <p style={{ color: 'var(--muted)', fontSize: '0.9rem', textAlign: 'center', marginTop: '2rem' }}>No completed beams yet.</p>
-                                    )}
-                                </div>
+                                                    );
+                                                })}
+                                            {displayCompletedBeams.length === 0 && (
+                                                <p style={{ color: 'var(--muted)', fontSize: '0.9rem', textAlign: 'center', marginTop: '2rem' }}>No completed beams yet.</p>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     )}
