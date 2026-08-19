@@ -263,7 +263,7 @@
     }
 
     .hero-overlay {
-      background: linear-gradient(to bottom, rgba(25, 28, 28, 0.25) 0%, rgba(25, 28, 28, 0.75) 100%);
+      background: linear-gradient(to bottom, rgba(15, 17, 21, 0.15) 0%, rgba(15, 17, 21, 0.5) 100%);
     }
 
     #stepper-nav-bar {
@@ -310,6 +310,24 @@
       -webkit-backface-visibility: hidden !important;
       backface-visibility: hidden !important;
     }
+
+    @media (max-width: 1024px) {
+      .desktop-nav-menu {
+        display: none !important;
+      }
+      .mobile-nav-toggle {
+        display: block !important;
+      }
+    }
+
+    @media (min-width: 1025px) {
+      .desktop-nav-menu {
+        display: flex !important;
+      }
+      .mobile-nav-toggle {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 
@@ -321,14 +339,25 @@
     class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-sm border-b border-outline-variant transition-all duration-300"
     id="site-header">
     <div
-      class="flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 max-w-container-max mx-auto relative">
+      class="flex justify-between items-center px-margin-mobile min-[1025px]:px-margin-desktop py-4 max-w-container-max mx-auto relative">
       <a href="#hero" class="font-headline-md text-headline-md tracking-tighter text-primary flex items-center gap-3">
         <span class="font-headline-md text-primary font-bold">VISHWA</span>
         <span class="font-headline-md italic font-normal text-secondary">ATELIER</span>
       </a>
 
-      <!-- Right Side Button with Dropdown Box -->
-      <div class="relative">
+      <!-- Desktop Persistent Navigation Menu (Shown at > 1024px) -->
+      <div class="hidden min-[1025px]:flex items-center gap-4 xl:gap-8 desktop-nav-menu">
+        <a href="#story" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Heritage</a>
+        <a href="#process" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Process</a>
+        <a href="#bento" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Infrastructure</a>
+        <a href="#lookbook" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Look Books</a>
+        <a href="#group-companies" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Group Entities</a>
+        <a href="#footer" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Contact</a>
+        <a href="management suite/index.html" rel="nofollow" class="font-label-caps text-xs bg-primary text-white hover:bg-tertiary-container hover:text-tertiary-fixed px-4 py-2 transition-colors">Client Login</a>
+      </div>
+
+      <!-- Mobile Right Side Button with Dropdown Box (Shown at <= 1024px) -->
+      <div class="relative min-[1025px]:hidden mobile-nav-toggle">
         <button
           class="material-symbols-outlined p-2 text-primary hover:bg-surface-container transition-colors cursor-pointer select-none"
           id="mobile-toggle-btn" aria-label="Toggle Navigation Dropdown">menu</button>
@@ -394,15 +423,14 @@
         <div class="max-w-4xl space-y-4 sm:space-y-5 md:space-y-6">
           <div
             class="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 text-white font-label-caps text-xs">
-            <span>✨</span> 40 YEARS OF MASTER WEAVING EXCELLENCE
+            <span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim inline-block"></span> 40 YEARS OF WEAVING EXCELLENCE
           </div>
           <h1 class="font-display-lg text-3xl sm:text-4xl md:text-display-lg text-white leading-tight">
             Heritage in Every Thread
           </h1>
           <p class="font-body-lg text-body-lg text-white/90 max-w-2xl">
-            Unveiling the Artistry of Indian Luxury — From Our Looms to Your Wardrobe. Backed by three generations of
-            manufacturing mastery, Vishwa Atelier crafts fine Jacquard & Airjet luxury textiles and sarees with
-            unmatched precision.
+            Fine Jacquard & Airjet woven textiles and high-definition sarees engineered for global fashion houses.
+            Backed by three generations of industrial weaving mastery in Surat.
           </p>
           <div class="pt-2 sm:pt-4 flex flex-wrap gap-3 sm:gap-4">
             <a href="#lookbook"
@@ -440,19 +468,18 @@
     </section>
 
     <!-- Manufacturing History & Asymmetric Heritage Section -->
-    <section class="py-24 md:py-36 bg-surface" id="story">
+    <section class="py-16 md:py-24 bg-surface" id="story">
       <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
         <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter items-center">
           <div class="md:col-span-6 space-y-8">
-            <span class="font-label-caps text-label-caps text-secondary tracking-widest block">UNVEILING ELEGANCE,
-              WEAVING TRADITIONS — VISHWA ATELIER</span>
+            <span class="font-label-caps text-label-caps text-secondary tracking-widest block">WEAVING TRADITIONS & TECHNICAL PRECISION — VISHWA ATELIER</span>
             <h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary">Heritage</h2>
             <div class="space-y-6 text-on-surface-variant font-body-md leading-relaxed">
               <p>
                 In the heartlands of India—where colors dance with tradition and heritage intertwines with craft—stands
                 the premier weaving house of <strong>Vishwa Fashions</strong>. Backed by the illustrious <strong>Vishwa
                   Atelier</strong>, we carry a 40-year legacy of technical expertise, quality assurance, and innovation
-                in luxury textile manufacturing. Vishwa Atelier Group operates five registered business entities across India.
+                in industrial textile manufacturing. Vishwa Atelier Group operates five registered business entities across India.
               </p>
               <p>
                 Spanning three generations of manufacturing mastery, our journey evolved from a humble weaving setup
@@ -461,14 +488,11 @@
                 reflects precision, rich cultural motifs, and artistic finesse.
               </p>
               <p class="text-sm text-secondary italic">
-                Our sarees are more than just woven fabrics—they are living expressions of India’s rich cultural
-                tapestry, crafted with passion, authenticity, and timeless elegance directly from our looms to partners
-                and wardrobes across the globe.
+                Our sarees are living expressions of India’s rich cultural tapestry, crafted with passion, authenticity, and timeless elegance directly from our looms to partners and wardrobes across the globe.
               </p>
             </div>
             <div class="pt-4 border-t border-outline-variant inline-block">
-              <p class="font-headline-md italic text-primary">"Unveiling the Artistry of Indian Luxury: From Our Looms
-                to Your Wardrobe."</p>
+              <p class="font-headline-md italic text-primary">"Four decades of technical mastery, where every thread reflects India’s rich weaving heritage."</p>
             </div>
           </div>
 
@@ -487,7 +511,7 @@
     </section>
 
     <!-- Manufacturing Process Showcase (7 Stages) -->
-    <section class="py-24 md:py-36 bg-surface-container-low" id="process">
+    <section class="py-16 md:py-24 bg-surface-container-low" id="process">
       <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
         <div class="text-center max-w-3xl mx-auto mb-16">
           <span class="font-label-caps text-label-caps text-secondary tracking-widest block mb-3">PRECISION
@@ -758,7 +782,7 @@
     </section>
 
     <!-- Factory & Looms Infrastructure Showcase Bento Grid Section -->
-    <section class="py-24 md:py-36 bg-surface" id="bento">
+    <section class="py-16 md:py-24 bg-surface" id="bento">
       <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
         <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
           <div class="max-w-2xl">
@@ -944,7 +968,7 @@
     </section>
 
     <!-- Look Book Showcase Section -->
-    <section class="py-24 md:py-36 bg-surface-container-low" id="lookbook">
+    <section class="py-16 md:py-24 bg-surface-container-low" id="lookbook">
       <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
         <div class="text-center max-w-3xl mx-auto mb-16">
           <span class="font-label-caps text-label-caps text-secondary tracking-widest block mb-3">SIGNATURE
@@ -1006,7 +1030,7 @@
                   <div class="grid grid-cols-2 gap-4 py-4 border-y border-outline-variant/60">
                     <div>
                       <div class="font-label-caps text-[10px] text-secondary">Designs</div>
-                      <div class="font-body-md font-semibold text-primary">51 Saree Masterpieces</div>
+                      <div class="font-body-md font-semibold text-primary">51 Curated Saree Designs</div>
                     </div>
                     <div>
                       <div class="font-label-caps text-[10px] text-secondary">Craftsmanship</div>
@@ -1020,8 +1044,9 @@
                       Explore Catalog Page →
                     </a>
                     <a href="lookbooks/Lookbook 1 (AVF)/Lookbook_1_Catalog.pdf" target="_blank"
-                      class="border border-primary text-primary text-center px-6 py-3.5 font-label-caps text-label-caps hover:bg-primary hover:text-white transition-colors">
-                      Download PDF Catalog 📥
+                      class="border border-primary text-primary text-center px-6 py-3.5 font-label-caps text-label-caps hover:bg-primary hover:text-white transition-colors inline-flex items-center justify-center gap-2">
+                      <span>Download PDF Catalog</span>
+                      <span class="material-symbols-outlined text-sm">download</span>
                     </a>
                   </div>
                 </div>
@@ -1052,14 +1077,13 @@
                   <span class="font-label-caps text-label-caps text-secondary">Lookbook Edition 02</span>
                   <h3 class="font-headline-md text-headline-md text-primary">VK Saree Collection</h3>
                   <p class="font-body-md text-on-surface-variant leading-relaxed">
-                    65 Masterpiece saree designs featuring heavy Brocade weaves, multi-hued Jacquard repeats, and rich
-                    traditional Indian motifs.
+                    65 Architectural saree designs featuring heavy Brocade weaves, multi-hued Jacquard repeats, and rich traditional Indian motifs.
                   </p>
 
                   <div class="grid grid-cols-2 gap-4 py-4 border-y border-outline-variant/60">
                     <div>
                       <div class="font-label-caps text-[10px] text-secondary">Designs</div>
-                      <div class="font-body-md font-semibold text-primary">65 Saree Masterpieces</div>
+                      <div class="font-body-md font-semibold text-primary">65 Brocade Saree Designs</div>
                     </div>
                     <div>
                       <div class="font-label-caps text-[10px] text-secondary">Weave Quality</div>
@@ -1073,8 +1097,9 @@
                       Explore Catalog Page →
                     </a>
                     <a href="lookbooks/Lookbook 2 (VK)/Lookbook_2_Catalog.pdf" target="_blank"
-                      class="border border-primary text-primary text-center px-6 py-3.5 font-label-caps text-label-caps hover:bg-primary hover:text-white transition-colors">
-                      Download PDF Catalog 📥
+                      class="border border-primary text-primary text-center px-6 py-3.5 font-label-caps text-label-caps hover:bg-primary hover:text-white transition-colors inline-flex items-center justify-center gap-2">
+                      <span>Download PDF Catalog</span>
+                      <span class="material-symbols-outlined text-sm">download</span>
                     </a>
                   </div>
                 </div>
@@ -1125,8 +1150,9 @@
                       Explore Catalog Page →
                     </a>
                     <a href="lookbooks/Lookbook 3 (Bloom)/Lookbook_3_Bloom.pdf" target="_blank"
-                      class="border border-primary text-primary text-center px-6 py-3.5 font-label-caps text-label-caps hover:bg-primary hover:text-white transition-colors">
-                      Download PDF Catalog 📥
+                      class="border border-primary text-primary text-center px-6 py-3.5 font-label-caps text-label-caps hover:bg-primary hover:text-white transition-colors inline-flex items-center justify-center gap-2">
+                      <span>Download PDF Catalog</span>
+                      <span class="material-symbols-outlined text-sm">download</span>
                     </a>
                   </div>
                 </div>
@@ -1156,7 +1182,7 @@
     </section>
 
     <!-- Group Companies Section -->
-    <section class="py-24 bg-surface-container-low border-t border-outline-variant/60" id="group-companies">
+    <section class="py-16 md:py-24 bg-surface-container-low border-t border-outline-variant/60" id="group-companies">
       <div class="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto space-y-10">
 
         <!-- Section Header with Slider Navigation Controls -->
@@ -1165,7 +1191,7 @@
           <div class="space-y-3 max-w-3xl">
             <div
               class="inline-flex items-center gap-2 text-xs font-label-caps text-tertiary-container tracking-widest uppercase bg-tertiary-fixed/40 px-3 py-1 border border-tertiary-fixed-dim">
-              <span>🏛️</span> Vishwa Atelier Group
+              <span class="w-1.5 h-1.5 rounded-full bg-tertiary-container inline-block"></span> Vishwa Atelier Group
             </div>
             <h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary">
               Our Group Entities
@@ -1461,11 +1487,8 @@
       </div>
     </section>
 
-    </div>
-    </section>
-
     <!-- Stay Woven In Section -->
-    <section class="py-24 bg-primary text-white text-center">
+    <section class="py-16 md:py-20 bg-primary text-white text-center">
       <div class="max-w-2xl mx-auto px-margin-mobile">
         <h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg mb-4 text-white">Stay Woven In</h2>
         <p class="font-body-md text-white/70">Connect directly with our leadership team for bespoke textile inquiries

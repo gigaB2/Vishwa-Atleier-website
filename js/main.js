@@ -273,10 +273,14 @@ function initNavbarScrollspy() {
         navLinks.forEach(link => {
           if (link.getAttribute('href') === `#${id}`) {
             link.classList.add('text-primary', 'font-semibold');
-            link.classList.remove('text-secondary');
+            link.classList.remove('text-secondary', 'text-primary/80');
           } else {
             link.classList.remove('text-primary', 'font-semibold');
-            link.classList.add('text-secondary');
+            if (link.closest('#nav-menu')) {
+              link.classList.add('text-secondary');
+            } else {
+              link.classList.add('text-primary/80');
+            }
           }
         });
       }
