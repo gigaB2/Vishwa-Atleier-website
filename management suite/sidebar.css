@@ -1964,3 +1964,65 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   }
 }
 
+/* ==========================================================================
+   5. Boneyard-style Shimmer Loading Skeletons
+   ========================================================================== */
+@keyframes vf-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.vf-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.7) 25%,
+    rgba(241, 245, 249, 0.95) 50%,
+    rgba(226, 232, 240, 0.7) 75%
+  ) !important;
+  background-size: 200% 100% !important;
+  animation: vf-shimmer 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+  border-radius: 6px !important;
+  color: transparent !important;
+  user-select: none !important;
+  pointer-events: none !important;
+  border: none !important;
+}
+
+.dark-mode .vf-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(39, 39, 42, 0.7) 25%,
+    rgba(63, 63, 70, 0.9) 50%,
+    rgba(39, 39, 42, 0.7) 75%
+  ) !important;
+  background-size: 200% 100% !important;
+}
+
+.vf-skeleton-text {
+  height: 14px;
+  margin: 6px 0;
+  display: inline-block;
+  width: 100%;
+}
+
+.vf-skeleton-circle {
+  border-radius: 50% !important;
+  width: 36px;
+  height: 36px;
+  display: inline-block;
+}
+
+.vf-skeleton-card {
+  height: 110px;
+  border-radius: 12px !important;
+}
+
+.vf-skeleton-row {
+  height: 44px;
+  margin-bottom: 8px;
+}
+
