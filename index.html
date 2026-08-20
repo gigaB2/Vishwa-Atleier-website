@@ -14,7 +14,7 @@
   <link rel="canonical" href="https://vishwaatelier.com/" />
 
   <!-- Preload Key Hero & LCP Assets for Performance Optimization -->
-  <link rel="preload" as="image" href="assets/images/Jacquard rapier.webp" type="image/webp" />
+  <link rel="preload" as="image" href="assets/images/Jacquard%20rapier.webp" type="image/webp" />
 
   <!-- GEO Location Metadata for Local & Global Brand Authority -->
   <meta name="geo.region" content="IN-GJ" />
@@ -346,14 +346,18 @@
       </a>
 
       <!-- Desktop Persistent Navigation Menu (Shown at > 1024px) -->
-      <div class="hidden min-[1025px]:flex items-center gap-4 xl:gap-8 desktop-nav-menu">
+      <div class="hidden min-[1025px]:flex items-center gap-4 xl:gap-6 desktop-nav-menu">
         <a href="#story" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Heritage</a>
         <a href="#process" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Process</a>
         <a href="#bento" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Infrastructure</a>
         <a href="#lookbook" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Look Books</a>
         <a href="#group-companies" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Group Entities</a>
         <a href="#footer" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Contact</a>
-        <a href="management suite/index.html" rel="nofollow" class="font-label-caps text-xs bg-primary text-white hover:bg-tertiary-container hover:text-tertiary-fixed px-4 py-2 transition-colors">Client Login</a>
+        <button type="button" data-open-modal="inquiry" data-interest="Wholesale Catalog / Export Inquiry"
+          class="font-label-caps text-xs border border-primary text-primary hover:bg-primary hover:text-white px-3.5 py-1.5 transition-colors cursor-pointer inline-flex items-center gap-1.5">
+          <span>Request Quote</span>
+        </button>
+        <a href="management%20suite/index.html" rel="nofollow" class="font-label-caps text-xs bg-primary text-white hover:bg-tertiary-container hover:text-tertiary-fixed px-4 py-2 transition-colors">Client Login</a>
       </div>
 
       <!-- Mobile Right Side Button with Dropdown Box (Shown at <= 1024px) -->
@@ -396,8 +400,13 @@
             <span>06. Contact</span>
             <span class="text-[10px] text-secondary">→</span>
           </a>
+          <button type="button" data-open-modal="inquiry" data-interest="Wholesale Catalog / Export Inquiry"
+            class="font-label-caps text-xs text-left text-primary hover:text-tertiary-container hover:bg-surface-container p-3 transition-colors flex items-center justify-between w-full cursor-pointer">
+            <span>Request Quote & Samples</span>
+            <span class="text-[10px] text-secondary">→</span>
+          </button>
           <a class="font-label-caps text-xs font-semibold text-primary hover:text-tertiary-container hover:bg-surface-container p-3 transition-colors flex items-center justify-between bg-surface-container/50"
-            href="management suite/index.html" rel="nofollow">
+            href="management%20suite/index.html" rel="nofollow">
             <span>Client / Staff Login</span>
             <span class="text-[10px] text-secondary">→</span>
           </a>
@@ -433,8 +442,13 @@
             Backed by three generations of industrial weaving mastery in Surat.
           </p>
           <div class="pt-2 sm:pt-4 flex flex-wrap gap-3 sm:gap-4">
+            <button type="button" data-open-modal="inquiry" data-interest="Bespoke Design & Custom Looms"
+              class="bg-white text-primary px-8 py-4 font-label-caps text-label-caps hover:bg-primary-fixed transition-colors duration-300 inline-flex items-center gap-2 cursor-pointer shadow-lg">
+              <span>Request B2B Quote & Samples</span>
+              <span class="material-symbols-outlined text-sm">arrow_forward</span>
+            </button>
             <a href="#lookbook"
-              class="bg-white text-primary px-8 py-4 font-label-caps text-label-caps hover:bg-primary-fixed transition-colors duration-300 inline-block">
+              class="border border-white/80 bg-white/10 backdrop-blur-sm text-white px-8 py-4 font-label-caps text-label-caps hover:bg-white hover:text-primary transition-colors duration-300 inline-block">
               View Look Book
             </a>
             <a href="#process"
@@ -1038,14 +1052,19 @@
                     </div>
                   </div>
 
-                  <div class="flex flex-col sm:flex-row gap-4 pt-2">
-                    <a href="lookbooks/Lookbook 1 (AVF)/Lookbook_1_Catalog.html"
-                      class="bg-primary text-white text-center px-8 py-3.5 font-label-caps text-label-caps hover:bg-tertiary-container hover:text-tertiary-fixed transition-colors">
+                  <div class="flex flex-col sm:flex-row flex-wrap gap-3 pt-2">
+                    <a href="lookbooks/Lookbook%201%20(AVF)/Lookbook_1_Catalog.html"
+                      class="bg-primary text-white text-center px-6 py-3.5 font-label-caps text-xs hover:bg-tertiary-container hover:text-tertiary-fixed transition-colors">
                       Explore Catalog Page →
                     </a>
-                    <a href="lookbooks/Lookbook 1 (AVF)/Lookbook_1_Catalog.pdf" target="_blank"
-                      class="border border-primary text-primary text-center px-6 py-3.5 font-label-caps text-label-caps hover:bg-primary hover:text-white transition-colors inline-flex items-center justify-center gap-2">
-                      <span>Download PDF Catalog</span>
+                    <button type="button" data-open-modal="inquiry" data-interest="AVF Saree Collection (Lookbook 01)"
+                      class="border border-primary text-primary text-center px-5 py-3.5 font-label-caps text-xs hover:bg-primary hover:text-white transition-colors inline-flex items-center justify-center gap-2 cursor-pointer">
+                      <span>Request Samples & RFQ</span>
+                      <span class="material-symbols-outlined text-sm">request_quote</span>
+                    </button>
+                    <a href="lookbooks/Lookbook%201%20(AVF)/Lookbook_1_Catalog.pdf" target="_blank"
+                      class="border border-outline-variant text-secondary text-center px-4 py-3.5 font-label-caps text-xs hover:border-primary hover:text-primary transition-colors inline-flex items-center justify-center gap-1.5">
+                      <span>PDF</span>
                       <span class="material-symbols-outlined text-sm">download</span>
                     </a>
                   </div>
@@ -1091,14 +1110,19 @@
                     </div>
                   </div>
 
-                  <div class="flex flex-col sm:flex-row gap-4 pt-2">
-                    <a href="lookbooks/Lookbook 2 (VK)/Lookbook_2_Catalog.html"
-                      class="bg-primary text-white text-center px-8 py-3.5 font-label-caps text-label-caps hover:bg-tertiary-container hover:text-tertiary-fixed transition-colors">
+                  <div class="flex flex-col sm:flex-row flex-wrap gap-3 pt-2">
+                    <a href="lookbooks/Lookbook%202%20(VK)/Lookbook_2_Catalog.html"
+                      class="bg-primary text-white text-center px-6 py-3.5 font-label-caps text-xs hover:bg-tertiary-container hover:text-tertiary-fixed transition-colors">
                       Explore Catalog Page →
                     </a>
-                    <a href="lookbooks/Lookbook 2 (VK)/Lookbook_2_Catalog.pdf" target="_blank"
-                      class="border border-primary text-primary text-center px-6 py-3.5 font-label-caps text-label-caps hover:bg-primary hover:text-white transition-colors inline-flex items-center justify-center gap-2">
-                      <span>Download PDF Catalog</span>
+                    <button type="button" data-open-modal="inquiry" data-interest="VK Saree Collection (Lookbook 02)"
+                      class="border border-primary text-primary text-center px-5 py-3.5 font-label-caps text-xs hover:bg-primary hover:text-white transition-colors inline-flex items-center justify-center gap-2 cursor-pointer">
+                      <span>Request Samples & RFQ</span>
+                      <span class="material-symbols-outlined text-sm">request_quote</span>
+                    </button>
+                    <a href="lookbooks/Lookbook%202%20(VK)/Lookbook_2_Catalog.pdf" target="_blank"
+                      class="border border-outline-variant text-secondary text-center px-4 py-3.5 font-label-caps text-xs hover:border-primary hover:text-primary transition-colors inline-flex items-center justify-center gap-1.5">
+                      <span>PDF</span>
                       <span class="material-symbols-outlined text-sm">download</span>
                     </a>
                   </div>
@@ -1144,14 +1168,19 @@
                     </div>
                   </div>
 
-                  <div class="flex flex-col sm:flex-row gap-4 pt-2">
-                    <a href="lookbooks/Lookbook 3 (Bloom)/Lookbook_3_Catalog.html"
-                      class="bg-primary text-white text-center px-8 py-3.5 font-label-caps text-label-caps hover:bg-tertiary-container hover:text-tertiary-fixed transition-colors">
+                  <div class="flex flex-col sm:flex-row flex-wrap gap-3 pt-2">
+                    <a href="lookbooks/Lookbook%203%20(Bloom)/Lookbook_3_Catalog.html"
+                      class="bg-primary text-white text-center px-6 py-3.5 font-label-caps text-xs hover:bg-tertiary-container hover:text-tertiary-fixed transition-colors">
                       Explore Catalog Page →
                     </a>
-                    <a href="lookbooks/Lookbook 3 (Bloom)/Lookbook_3_Bloom.pdf" target="_blank"
-                      class="border border-primary text-primary text-center px-6 py-3.5 font-label-caps text-label-caps hover:bg-primary hover:text-white transition-colors inline-flex items-center justify-center gap-2">
-                      <span>Download PDF Catalog</span>
+                    <button type="button" data-open-modal="inquiry" data-interest="Bloom Collection (Lookbook 03)"
+                      class="border border-primary text-primary text-center px-5 py-3.5 font-label-caps text-xs hover:bg-primary hover:text-white transition-colors inline-flex items-center justify-center gap-2 cursor-pointer">
+                      <span>Request Samples & RFQ</span>
+                      <span class="material-symbols-outlined text-sm">request_quote</span>
+                    </button>
+                    <a href="lookbooks/Lookbook%203%20(Bloom)/Lookbook_3_Bloom.pdf" target="_blank"
+                      class="border border-outline-variant text-secondary text-center px-4 py-3.5 font-label-caps text-xs hover:border-primary hover:text-primary transition-colors inline-flex items-center justify-center gap-1.5">
+                      <span>PDF</span>
                       <span class="material-symbols-outlined text-sm">download</span>
                     </a>
                   </div>
@@ -1532,11 +1561,11 @@
         <h4 class="font-label-caps text-label-caps text-primary mb-6">Collections</h4>
         <ul class="space-y-3 font-body-md text-sm">
           <li><a class="text-on-surface-variant hover:text-primary transition-colors"
-              href="lookbooks/Lookbook 1 (AVF)/Lookbook_1_Catalog.html">Lookbook 01 (AVF)</a></li>
+              href="lookbooks/Lookbook%201%20(AVF)/Lookbook_1_Catalog.html">Lookbook 01 (AVF)</a></li>
           <li><a class="text-on-surface-variant hover:text-primary transition-colors"
-              href="lookbooks/Lookbook 2 (VK)/Lookbook_2_Catalog.html">Lookbook 02 (VK)</a></li>
+              href="lookbooks/Lookbook%202%20(VK)/Lookbook_2_Catalog.html">Lookbook 02 (VK)</a></li>
           <li><a class="text-on-surface-variant hover:text-primary transition-colors"
-              href="lookbooks/Lookbook 3 (Bloom)/Lookbook_3_Catalog.html">Lookbook 03 (Bloom)</a></li>
+              href="lookbooks/Lookbook%203%20(Bloom)/Lookbook_3_Catalog.html">Lookbook 03 (Bloom)</a></li>
         </ul>
       </div>
 
@@ -1602,6 +1631,77 @@
       <a href="#hero" class="font-label-caps text-xs text-primary hover:underline">Back to top ↑</a>
     </div>
   </footer>
+
+  <!-- Luxury B2B Inquiry & Sample Request Modal -->
+  <div id="inquiry-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="bg-white border border-outline-variant max-w-lg w-full p-6 sm:p-8 shadow-2xl relative transform scale-95 transition-transform duration-300 max-h-[90vh] overflow-y-auto">
+      <button id="modal-close-btn" type="button" class="absolute top-4 right-4 text-secondary hover:text-primary transition-colors p-2 cursor-pointer" aria-label="Close inquiry modal">
+        <span class="material-symbols-outlined text-2xl">close</span>
+      </button>
+      
+      <div class="mb-6">
+        <p class="font-label-caps text-xs text-secondary tracking-widest uppercase mb-1">Vishwa Atelier</p>
+        <h3 id="modal-title" class="font-headline-md text-2xl text-primary font-normal">B2B Saree & Fabric Inquiry</h3>
+        <p class="font-body-md text-sm text-secondary mt-1">Direct connect with our master weavers & production leads in Sachin GIDC, Surat.</p>
+      </div>
+
+      <form id="inquiry-form" class="space-y-4">
+        <div>
+          <label for="lead-name" class="block font-label-caps text-xs uppercase text-primary mb-1">Full Name / Company *</label>
+          <input type="text" id="lead-name" required class="w-full px-3 py-2.5 bg-surface border border-outline-variant text-primary text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="e.g. Aditya Birla Fashion / Boutique Owner" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="lead-phone" class="block font-label-caps text-xs uppercase text-primary mb-1">WhatsApp / Phone *</label>
+            <input type="tel" id="lead-phone" required class="w-full px-3 py-2.5 bg-surface border border-outline-variant text-primary text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="+91 98765 43210" />
+          </div>
+          <div>
+            <label for="lead-email" class="block font-label-caps text-xs uppercase text-primary mb-1">Corporate Email</label>
+            <input type="email" id="lead-email" class="w-full px-3 py-2.5 bg-surface border border-outline-variant text-primary text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="buyer@domain.com" />
+          </div>
+        </div>
+
+        <div>
+          <label for="lead-interest" class="block font-label-caps text-xs uppercase text-primary mb-1">Product Requirement</label>
+          <select id="lead-interest" class="w-full px-3 py-2.5 bg-surface border border-outline-variant text-primary text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors">
+            <option value="Jacquard Rapier High-End Sarees">Jacquard Rapier High-End Sarees</option>
+            <option value="AVF Saree Collection (Lookbook 01)">AVF Saree Collection (Lookbook 01)</option>
+            <option value="VK Saree Collection (Lookbook 02)">VK Saree Collection (Lookbook 02)</option>
+            <option value="Bloom Collection (Lookbook 03)">Bloom Collection (Lookbook 03)</option>
+            <option value="Airjet Grey Fabric & Bulk Weaving">Airjet Grey Fabric & Bulk Weaving</option>
+            <option value="Zari Covered Specialty Yarns (Lucky Spintex)">Zari Covered Specialty Yarns (Lucky Spintex)</option>
+            <option value="Bespoke Design & Custom Looms">Bespoke Design & Custom Looms</option>
+            <option value="General Wholesale / Trade Catalog">General Wholesale / Trade Catalog</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="lead-moq" class="block font-label-caps text-xs uppercase text-primary mb-1">Estimated Order Volume / MOQ</label>
+          <select id="lead-moq" class="w-full px-3 py-2.5 bg-surface border border-outline-variant text-primary text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors">
+            <option value="Sample Swatches / Catalog (Trial)">Sample Swatches / Catalog (Trial)</option>
+            <option value="100 - 500 Pieces">100 - 500 Pieces (Boutique / Brand)</option>
+            <option value="500 - 2,000 Pieces">500 - 2,000 Pieces (Wholesale / Retail Chain)</option>
+            <option value="2,000+ Meters / Looms Allocation">2,000+ Meters / Bulk Contract</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="lead-message" class="block font-label-caps text-xs uppercase text-primary mb-1">Specifications or Notes</label>
+          <textarea id="lead-message" rows="2" class="w-full px-3 py-2.5 bg-surface border border-outline-variant text-primary text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="Specify yarn counts, weave type, or delivery timeline..."></textarea>
+        </div>
+
+        <div class="pt-2 flex flex-col sm:flex-row gap-3">
+          <button type="submit" class="flex-1 bg-primary text-white font-label-caps text-xs py-3 px-6 hover:bg-neutral-800 transition-colors uppercase tracking-wider text-center cursor-pointer">
+            Send Direct Inquiry
+          </button>
+          <button type="button" id="modal-wa-btn" class="flex items-center justify-center gap-2 bg-[#25D366] text-white font-label-caps text-xs py-3 px-5 hover:bg-[#1EBE5D] transition-colors uppercase tracking-wider cursor-pointer">
+            <span class="material-symbols-outlined text-base">chat</span> WhatsApp RFQ
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- JavaScript Controller -->
   <script src="js/main.js"></script>

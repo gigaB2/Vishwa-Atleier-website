@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initMobileMenu();
   initGroupCompaniesSlider();
   initAutoplayVideos();
+  initInquiryModal();
 });
 
 /* 1. Manufacturing Process Stepper */
@@ -443,42 +444,12 @@ function initAutoplayVideos() {
     const promise = video.play();
     if (promise !== undefined) {
       promise.catch(() => {
-        // Autoplay policy or Low Power Mode restricted playback; will retry on interaction
+        // Autoplay policy or Low Power Mode restricted playback; will retry on gesture unlock
       });
     }
   }
 
-  function playVisibleVideos() {
-    videos.forEach(video => {
-      const pane = video.closest('.process-pane');
-      if (!pane || !pane.classList.contains('hidden')) {
-        prepareAndPlay(video);
-      }
-    });
-  }
-
-  // Attempt initial playback immediately and on window load
-  playVisibleVideos();
-  window.addEventListener('load', playVisibleVideos);
-
-  // Re-trigger playback on user gestures (touch, tap, scroll) for iOS/Android Low Power Mode
-  const interactionEvents = ['touchstart', 'touchend', 'pointerdown', 'click', 'scroll'];
-  const handleUserGesture = () => {
-    playVisibleVideos();
-  };
-
-  interactionEvents.forEach(evt => {
-    window.addEventListener(evt, handleUserGesture, { passive: true });
-  });
-
-  // Re-attempt playback when returning to document focus
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      playVisibleVideos();
-    }
-  });
-
-  // IntersectionObserver to auto-start video when scrolling into viewport on mobile
+  // Efficient IntersectionObserver with threshold 0.15 for auto-play / auto-pause
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -488,11 +459,163 @@ function initAutoplayVideos() {
 
         if (entry.isIntersecting && !isPaneHidden) {
           prepareAndPlay(video);
+        } else {
+          video.pause();
         }
       });
-    }, { threshold: 0.1 });
+    }, { threshold: 0.15 });
 
     videos.forEach(v => observer.observe(v));
+  } else {
+    // Fallback for environments without IntersectionObserver
+    videos.forEach(video => {
+      const pane = video.closest('.process-pane');
+      if (!pane || !pane.classList.contains('hidden')) {
+        prepareAndPlay(video);
+      }
+    });
+  }
+
+  // Single one-time gesture unlock for browsers/devices requiring interaction
+  const unlockEvents = ['touchstart', 'pointerdown', 'click'];
+  const unlockAutoplay = () => {
+    unlockEvents.forEach(evt => window.removeEventListener(evt, unlockAutoplay));
+    videos.forEach(video => {
+      const pane = video.closest('.process-pane');
+      if (!pane || !pane.classList.contains('hidden')) {
+        prepareAndPlay(video);
+      }
+    });
+  };
+
+  unlockEvents.forEach(evt => {
+    window.addEventListener(evt, unlockAutoplay, { passive: true, once: true });
+  });
+
+  // Re-attempt playback when returning to document focus
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      videos.forEach(video => {
+        const pane = video.closest('.process-pane');
+        if (!pane || !pane.classList.contains('hidden')) {
+          prepareAndPlay(video);
+        }
+      });
+    } else {
+      videos.forEach(video => video.pause());
+    }
+  });
+}
+
+/* 7. Luxury B2B Inquiry & Sample Request Modal Controller */
+function initInquiryModal() {
+  const modal = document.getElementById('inquiry-modal');
+  const closeBtn = document.getElementById('modal-close-btn');
+  const form = document.getElementById('inquiry-form');
+  const waBtn = document.getElementById('modal-wa-btn');
+  const triggers = document.querySelectorAll('[data-open-modal="inquiry"]');
+
+  if (!modal) return;
+
+  function openModal(presetInterest = '') {
+    if (presetInterest) {
+      const select = document.getElementById('lead-interest');
+      if (select) {
+        let matched = false;
+        for (let i = 0; i < select.options.length; i++) {
+          if (select.options[i].value.toLowerCase().includes(presetInterest.toLowerCase()) ||
+              presetInterest.toLowerCase().includes(select.options[i].value.toLowerCase())) {
+            select.selectedIndex = i;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) select.value = presetInterest;
+      }
+    }
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    modal.classList.add('opacity-100', 'pointer-events-auto');
+    const inner = modal.querySelector('div');
+    if (inner) {
+      inner.classList.remove('scale-95');
+      inner.classList.add('scale-100');
+    }
+    document.body.classList.add('overflow-hidden');
+  }
+
+  function closeModal() {
+    modal.classList.add('opacity-0', 'pointer-events-none');
+    modal.classList.remove('opacity-100', 'pointer-events-auto');
+    const inner = modal.querySelector('div');
+    if (inner) {
+      inner.classList.remove('scale-100');
+      inner.classList.add('scale-95');
+    }
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  triggers.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const interest = btn.getAttribute('data-interest') || '';
+      openModal(interest);
+    });
+  });
+
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('pointer-events-none')) {
+      closeModal();
+    }
+  });
+
+  function getFormData() {
+    return {
+      name: document.getElementById('lead-name')?.value?.trim() || '',
+      phone: document.getElementById('lead-phone')?.value?.trim() || '',
+      email: document.getElementById('lead-email')?.value?.trim() || '',
+      interest: document.getElementById('lead-interest')?.value || '',
+      moq: document.getElementById('lead-moq')?.value || '',
+      message: document.getElementById('lead-message')?.value?.trim() || ''
+    };
+  }
+
+  if (waBtn) {
+    waBtn.addEventListener('click', () => {
+      const data = getFormData();
+      if (!data.name || !data.phone) {
+        const nameInput = document.getElementById('lead-name');
+        if (!data.name && nameInput) {
+          nameInput.focus();
+          return;
+        }
+        const phoneInput = document.getElementById('lead-phone');
+        if (!data.phone && phoneInput) {
+          phoneInput.focus();
+          return;
+        }
+      }
+      const text = `Hello Vishwa Atelier,%0A%0A*New B2B Inquiry:*%0A• *Name / Entity:* ${encodeURIComponent(data.name || 'Trade Buyer')}%0A• *Contact:* ${encodeURIComponent(data.phone)}%0A• *Email:* ${encodeURIComponent(data.email || 'N/A')}%0A• *Requirement:* ${encodeURIComponent(data.interest)}%0A• *Volume / MOQ:* ${encodeURIComponent(data.moq)}%0A• *Notes:* ${encodeURIComponent(data.message || 'N/A')}`;
+      window.open(`https://wa.me/919313772824?text=${text}`, '_blank');
+      closeModal();
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = getFormData();
+      const subject = encodeURIComponent(`B2B Inquiry: ${data.interest} - ${data.name}`);
+      const body = encodeURIComponent(`Name / Company: ${data.name}\nWhatsApp / Phone: ${data.phone}\nCorporate Email: ${data.email || 'N/A'}\nProduct Requirement: ${data.interest}\nEstimated Volume / MOQ: ${data.moq}\n\nSpecifications / Notes:\n${data.message || 'N/A'}`);
+      window.location.href = `mailto:vishwa@vishwafashions.com,rajiv@vishwafashions.com?subject=${subject}&body=${body}`;
+      closeModal();
+    });
   }
 }
+
 
