@@ -54,6 +54,9 @@
     };
   }
 
+  // Track last known server timestamps to avoid re-downloading unchanged payloads
+  const lastKnownTimestamps = {};
+
   // Supabase REST API Client
   const supabaseApi = {
     async get(key) {
@@ -74,6 +77,9 @@
     },
     async set(key, value) {
       try {
+        const nowIso = new Date().toISOString();
+        lastKnownTimestamps[key] = nowIso;
+
         // Master Key-Value table sync with on_conflict=key for proper PostgREST upsert
         fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?on_conflict=key`, {
           method: 'POST',
@@ -86,7 +92,7 @@
           body: JSON.stringify({
             key: key,
             value: value,
-            updated_at: new Date().toISOString()
+            updated_at: nowIso
           })
         }).catch(() => {});
 
@@ -111,7 +117,7 @@
                 body: JSON.stringify({
                   id: String(item.id),
                   data: item,
-                  updated_at: new Date().toISOString()
+                  updated_at: nowIso
                 })
               }).catch(() => {});
             }
@@ -125,6 +131,7 @@
     },
     async delete(key) {
       try {
+        delete lastKnownTimestamps[key];
         await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=eq.${encodeURIComponent(key)}`, {
           method: 'DELETE',
           headers: {
@@ -136,6 +143,7 @@
     },
     async clearAll() {
       try {
+        Object.keys(lastKnownTimestamps).forEach(k => delete lastKnownTimestamps[k]);
         await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=neq.null`, {
           method: 'DELETE',
           headers: {
@@ -281,25 +289,90 @@
         return null;
       }
     },
-    async loadAll() {
+    async loadAll(isInitial = false) {
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?select=key,value`, {
+        // Optimization: On initial load, fetch full dataset once. On subsequent polls, check timestamps first.
+        if (isInitial || Object.keys(lastKnownTimestamps).length === 0) {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?select=key,value,updated_at`, {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          });
+          if (res.ok) {
+            const rows = await res.json();
+            let hasChanges = false;
+            const updatedKeys = [];
+            rows.forEach(row => {
+              try {
+                if (row.updated_at) lastKnownTimestamps[row.key] = row.updated_at;
+                const strValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
+                const lastWrite = lastLocalWrites[row.key] || 0;
+                if (Date.now() - lastWrite < 3000) return;
+
+                if (cache[row.key] !== strValue) {
+                  cache[row.key] = strValue;
+                  try { nativeLocalStorage.setItem(row.key, strValue); } catch(e) {}
+                  updatedKeys.push(row.key);
+                  hasChanges = true;
+                }
+              } catch (e) {
+                cache[row.key] = String(row.value);
+              }
+            });
+            if (hasChanges) {
+              window.dispatchEvent(new Event('storage'));
+              updatedKeys.forEach(k => {
+                window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: k, value: cache[k] } }));
+                try {
+                  window.dispatchEvent(new StorageEvent('storage', { key: k, newValue: cache[k] }));
+                } catch(e) {}
+              });
+            }
+          }
+          return;
+        }
+
+        // Lightweight Polling: Fetch ONLY key and updated_at metadata (bytes instead of megabytes)
+        const metaRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?select=key,updated_at`, {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
           }
         });
-        if (res.ok) {
-          const rows = await res.json();
+        if (!metaRes.ok) return;
+        const metaRows = await metaRes.json();
+
+        // Identify keys that have actually changed on the server
+        const changedKeys = [];
+        metaRows.forEach(row => {
+          const lastWrite = lastLocalWrites[row.key] || 0;
+          if (Date.now() - lastWrite < 3000) return; // Skip keys edited locally recently
+
+          const knownTs = lastKnownTimestamps[row.key];
+          if (!knownTs || !row.updated_at || row.updated_at !== knownTs || !cache.hasOwnProperty(row.key)) {
+            changedKeys.push(row.key);
+          }
+        });
+
+        if (changedKeys.length === 0) return; // Zero network payload downloaded if nothing changed!
+
+        // Fetch values ONLY for changed keys
+        const encodedKeys = changedKeys.map(k => `"${encodeURIComponent(k)}"`).join(',');
+        const valRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=in.(${encodedKeys})&select=key,value,updated_at`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        if (valRes.ok) {
+          const rows = await valRes.json();
           let hasChanges = false;
           const updatedKeys = [];
           rows.forEach(row => {
             try {
+              if (row.updated_at) lastKnownTimestamps[row.key] = row.updated_at;
               const strValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
-              const lastWrite = lastLocalWrites[row.key] || 0;
-              if (Date.now() - lastWrite < 3000) {
-                return;
-              }
               if (cache[row.key] !== strValue) {
                 cache[row.key] = strValue;
                 try { nativeLocalStorage.setItem(row.key, strValue); } catch(e) {}
@@ -326,19 +399,48 @@
     }
   };
 
-  // Fetch full cloud dataset from Supabase immediately
-  supabaseApi.loadAll().then(() => {
-    console.log("Vishwa Fashions — Cloud Supabase sync active across all devices.");
+  // Initial full cloud dataset fetch on boot
+  supabaseApi.loadAll(true).then(() => {
+    console.log("Vishwa Fashions — Cloud Supabase sync active (egress optimized).");
   });
 
-  // Fast polling every 2.5 seconds to keep all open windows/devices strictly in sync
-  setInterval(() => {
-    supabaseApi.loadAll();
-  }, 2500);
+  // Smart polling interval & Visibility Throttling (30s interval, disabled when tab is hidden)
+  let syncIntervalId = null;
+  const POLL_INTERVAL_MS = 30000;
 
-  // Sync on window focus
+  function startSmartSync() {
+    if (!syncIntervalId) {
+      syncIntervalId = setInterval(() => {
+        if (!document.hidden) {
+          supabaseApi.loadAll(false);
+        }
+      }, POLL_INTERVAL_MS);
+    }
+  }
+
+  function stopSmartSync() {
+    if (syncIntervalId) {
+      clearInterval(syncIntervalId);
+      syncIntervalId = null;
+    }
+  }
+
+  startSmartSync();
+
+  // Listen for tab focus/visibility changes to resume polling immediately
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopSmartSync();
+    } else {
+      supabaseApi.loadAll(false);
+      startSmartSync();
+    }
+  });
+
   window.addEventListener('focus', () => {
-    supabaseApi.loadAll();
+    if (!document.hidden) {
+      supabaseApi.loadAll(false);
+    }
   });
 
   // Override localStorage calls to point to Cloud Storage with synchronous native fallback
