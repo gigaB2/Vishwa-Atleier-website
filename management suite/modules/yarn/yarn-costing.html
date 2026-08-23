@@ -9795,14 +9795,22 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     csv.push(`No. of Spindles,${product.noOfSpindles}`);
     csv.push(`TPM,${product.tpm}`);
     csv.push(`Efficiency,${product.efficiency}%`);
-    csv.push(`Total HP of Doubler Machine in Use,${product.hp}`);
-    csv.push(`Total HP of Cops Winder in Use,${product.hpCops !== undefined ? product.hpCops : 0}`);
-    csv.push(`Cops Working Hours,${product.workingHoursCops !== undefined ? product.workingHoursCops : 24}`);
-    csv.push(`Total HP of Heat Set Machine,${product.hpHeatSet !== undefined ? product.hpHeatSet : 0}`);
-    csv.push(`Heat Set Working Hours,${product.workingHoursHeatSet !== undefined ? product.workingHoursHeatSet : 24}`);
-    csv.push(`Heat Set Working Days,${product.workingDaysHeatSet !== undefined ? product.workingDaysHeatSet : 28}`);
-    csv.push(`Load Factor,${product.loadFactor}%`);
-    csv.push(`Electricity Rate,₹ ${product.electricityRate}/unit`);
+    if (product.electricityMode === 'lump_sum') {
+      csv.push("Electricity Mode,Monthly Lump Sum");
+      csv.push(`Monthly Electricity Cost,₹ ${product.monthlyElectricityCost || 0}`);
+      if (product.electricityRate) {
+        csv.push(`Electricity Rate,₹ ${product.electricityRate}/unit`);
+      }
+    } else {
+      csv.push(`Total HP of Doubler Machine in Use,${product.hp}`);
+      csv.push(`Total HP of Cops Winder in Use,${product.hpCops !== undefined ? product.hpCops : 0}`);
+      csv.push(`Cops Working Hours,${product.workingHoursCops !== undefined ? product.workingHoursCops : 24}`);
+      csv.push(`Total HP of Heat Set Machine,${product.hpHeatSet !== undefined ? product.hpHeatSet : 0}`);
+      csv.push(`Heat Set Working Hours,${product.workingHoursHeatSet !== undefined ? product.workingHoursHeatSet : 24}`);
+      csv.push(`Heat Set Working Days,${product.workingDaysHeatSet !== undefined ? product.workingDaysHeatSet : 28}`);
+      csv.push(`Load Factor,${product.loadFactor}%`);
+      csv.push(`Electricity Rate,₹ ${product.electricityRate}/unit`);
+    }
     csv.push("");
     csv.push("YARN PARAMETERS");
     csv.push(`Ply Count,${product.ply} Ply`);
@@ -9971,14 +9979,22 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     csv.push(`No. of Spindles,${product.noOfSpindles}`);
     csv.push(`TPM,${product.tpm}`);
     csv.push(`Efficiency,${product.efficiency}%`);
-    csv.push(`Total HP of TFO Machine in Use,${product.hp}`);
-    csv.push(`Total HP of Cops Winder in Use,${product.hpCops !== undefined ? product.hpCops : 0}`);
-    csv.push(`Cops Working Hours,${product.workingHoursCops !== undefined ? product.workingHoursCops : 24}`);
-    csv.push(`Total HP of Heat Set Machine,${product.hpHeatSet !== undefined ? product.hpHeatSet : 0}`);
-    csv.push(`Heat Set Working Hours,${product.workingHoursHeatSet !== undefined ? product.workingHoursHeatSet : 24}`);
-    csv.push(`Heat Set Working Days,${product.workingDaysHeatSet !== undefined ? product.workingDaysHeatSet : 28}`);
-    csv.push(`Load Factor,${product.loadFactor}%`);
-    csv.push(`Electricity Rate,₹ ${product.electricityRate}/unit`);
+    if (product.electricityMode === 'lump_sum') {
+      csv.push("Electricity Mode,Monthly Lump Sum");
+      csv.push(`Monthly Electricity Cost,₹ ${product.monthlyElectricityCost || 0}`);
+      if (product.electricityRate) {
+        csv.push(`Electricity Rate,₹ ${product.electricityRate}/unit`);
+      }
+    } else {
+      csv.push(`Total HP of TFO Machine in Use,${product.hp}`);
+      csv.push(`Total HP of Cops Winder in Use,${product.hpCops !== undefined ? product.hpCops : 0}`);
+      csv.push(`Cops Working Hours,${product.workingHoursCops !== undefined ? product.workingHoursCops : 24}`);
+      csv.push(`Total HP of Heat Set Machine,${product.hpHeatSet !== undefined ? product.hpHeatSet : 0}`);
+      csv.push(`Heat Set Working Hours,${product.workingHoursHeatSet !== undefined ? product.workingHoursHeatSet : 24}`);
+      csv.push(`Heat Set Working Days,${product.workingDaysHeatSet !== undefined ? product.workingDaysHeatSet : 28}`);
+      csv.push(`Load Factor,${product.loadFactor}%`);
+      csv.push(`Electricity Rate,₹ ${product.electricityRate}/unit`);
+    }
     csv.push("");
     csv.push("RAW MATERIAL DETAILS");
     csv.push(`Yarn Quality,${product.name}`);
@@ -11247,7 +11263,41 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
         className: "badge-id"
       }, "4"), /*#__PURE__*/React.createElement("h3", {
         className: "font-bold text-[10px] uppercase tracking-wider text-slate-700"
-      }, "Electricity Parameters")), /*#__PURE__*/React.createElement("table", {
+      }, "Electricity Parameters")), (product.electricityMode === 'lump_sum') ? /*#__PURE__*/React.createElement("table", {
+        className: "w-full text-[9.5px] text-left border-collapse font-medium"
+      }, /*#__PURE__*/React.createElement("tbody", {
+        className: "divide-y divide-slate-100 text-slate-700"
+      }, /*#__PURE__*/React.createElement("tr", {
+        className: "hover:bg-slate-50/30"
+      }, /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 border-r font-semibold text-slate-500 bg-slate-50/30 w-[45%]"
+      }, "Electricity Mode"), /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 text-center text-slate-800 font-bold"
+      }, "Monthly Lump Sum")), /*#__PURE__*/React.createElement("tr", {
+        className: "hover:bg-slate-50/30"
+      }, /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 border-r font-semibold text-slate-500 bg-slate-50/30"
+      }, "Monthly Electricity Bill"), /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 text-center text-slate-800 font-bold"
+      }, `₹ ${Number(product.monthlyElectricityCost || 0).toLocaleString('en-IN')}`)), Number(product.electricityRate) > 0 && /*#__PURE__*/React.createElement("tr", {
+        className: "hover:bg-slate-50/30"
+      }, /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 border-r font-semibold text-slate-500 bg-slate-50/30"
+      }, "Electricity Rate / Unit (₹)"), /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 text-center text-slate-800 font-bold"
+      }, formatDoublerVal(product.electricityRate, '', '₹ ', 0))), /*#__PURE__*/React.createElement("tr", {
+        className: "hover:bg-slate-50/30 bg-violet-50/30"
+      }, /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 border-r font-semibold text-violet-700"
+      }, "Calculated Daily Cost"), /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 text-center text-violet-800 font-bold"
+      }, `₹ ${(subCalcs?.costDay || 0).toFixed(2)} / day`)), /*#__PURE__*/React.createElement("tr", {
+        className: "hover:bg-slate-50/30 bg-emerald-50/30"
+      }, /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 border-r font-semibold text-emerald-700"
+      }, "Calculated Cost / Kg"), /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 text-center text-emerald-800 font-bold"
+      }, `₹ ${(subCalcs?.powerCostPerKg || 0).toFixed(2)} / kg`)))) : /*#__PURE__*/React.createElement("table", {
         className: "w-full text-[9.5px] text-left border-collapse font-medium"
       }, /*#__PURE__*/React.createElement("tbody", {
         className: "divide-y divide-slate-100 text-slate-700"
@@ -12736,43 +12786,80 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
         },
           renderHeader(`${label} Costing Calculator - Power Calculations`),
           /*#__PURE__*/React.createElement("div", { className: "flex flex-col gap-1 mt-3.5" },
-            renderCard("1. Electricity Power Load (kW)",
-              /*#__PURE__*/React.createElement("div", null, 
-                `Load = (HP \xD7 0.746 \xD7 Load Factor) / ${isDoubler ? '100' : '90'}`
+            (activeProd.electricityMode === 'lump_sum') ? /*#__PURE__*/React.createElement(React.Fragment, null,
+              renderCard("1. Monthly Lump Sum Electricity Cost",
+                /*#__PURE__*/React.createElement("div", null, 
+                  "Mode: Direct Monthly Lump Sum Electricity Bill (Bypasses individual HP load calculations)",
+                  /*#__PURE__*/React.createElement("br"),
+                  "Daily Cost = Monthly Electricity Bill \xF7 Working Days per Month"
+                ),
+                /*#__PURE__*/React.createElement("div", null, 
+                  /*#__PURE__*/React.createElement("div", null, "Monthly Electricity Bill = \u20B9 ", Number(activeProd.monthlyElectricityCost || 0).toLocaleString('en-IN')),
+                  /*#__PURE__*/React.createElement("div", null, "Working Days per Month = ", daysPerMonth, " days")
+                ),
+                /*#__PURE__*/React.createElement("div", { className: "space-y-1" }, 
+                  /*#__PURE__*/React.createElement("div", null, `Daily Cost = \u20B9 ${Number(activeProd.monthlyElectricityCost || 0).toLocaleString('en-IN')} \xF7 ${daysPerMonth} days = \u20B9 ${costDay.toFixed(2)} / day`),
+                  /*#__PURE__*/React.createElement("div", null, `Monthly Total Electricity Cost = \u20B9 ${costMonth.toFixed(2)}`)
+                )
               ),
-              /*#__PURE__*/React.createElement("div", null, 
-                /*#__PURE__*/React.createElement("div", null, "HP = ", hp, " HP, Load Factor = ", loadFactor, "%"),
-              ),
-              /*#__PURE__*/React.createElement("div", { className: "space-y-1" }, 
-                /*#__PURE__*/React.createElement("div", null, isDoubler ? `Doubler Load = (${hp} \xD7 0.746 \xD7 ${loadFactor}) \xF7 100 = ${powerKwTfo.toFixed(2)} kW` : `Machine Load = (${hp} \xD7 0.746 \xD7 ${loadFactor}) \xF7 90 = ${powerKwTfo.toFixed(2)} kW`),
-                hasCops && /*#__PURE__*/React.createElement("div", null, isDoubler ? `Cops Load = (${hpCops} \xD7 0.746 \xD7 ${loadFactor}) \xF7 100 = ${powerKwCops.toFixed(2)} kW` : `Cops Load = (${hpCops} \xD7 ${noOfCops} \xD7 0.746 \xD7 ${loadFactor}) \xF7 90 = ${powerKwCops.toFixed(2)} kW`),
-                hasHeatSet && /*#__PURE__*/React.createElement("div", null, isDoubler ? `Heat Set Load = (${hpHeatSet} \xD7 0.746 \xD7 ${loadFactor}) \xF7 100 = ${powerKwHeatSet.toFixed(2)} kW` : `Heat Set Load = (${hpHeatSet} \xD7 ${noOfHeatSet} \xD7 0.746 \xD7 ${loadFactor}) \xF7 90 = ${powerKwHeatSet.toFixed(2)} kW`),
-                /*#__PURE__*/React.createElement("div", null, `Total Load = ${powerKwTfo.toFixed(2)}` + (hasCops ? ` + ${powerKwCops.toFixed(2)}` : '') + (hasHeatSet ? ` + ${powerKwHeatSet.toFixed(2)}` : '') + ` = ${powerKw.toFixed(2)} kW`)
+              renderCard("2. Estimated Daily & Monthly Electricity Units (kWh)",
+                /*#__PURE__*/React.createElement("div", null, 
+                  "Estimated Monthly Units = Monthly Electricity Bill \xF7 Electricity Rate per Unit",
+                  /*#__PURE__*/React.createElement("br"),
+                  "Estimated Daily Units = Estimated Monthly Units \xF7 Working Days per Month"
+                ),
+                /*#__PURE__*/React.createElement("div", null, 
+                  /*#__PURE__*/React.createElement("div", null, "Monthly Electricity Bill = \u20B9 ", Number(activeProd.monthlyElectricityCost || 0).toLocaleString('en-IN')),
+                  /*#__PURE__*/React.createElement("div", null, "Electricity Rate = \u20B9 ", electricityRate > 0 ? electricityRate.toFixed(2) : 'N/A', "/kWh"),
+                  /*#__PURE__*/React.createElement("div", null, "Working Days = ", daysPerMonth, " days", workingHours > 0 ? `, Working Hours = ${workingHours} hrs/day` : '')
+                ),
+                /*#__PURE__*/React.createElement("div", { className: "space-y-1.5" }, 
+                  electricityRate > 0 ? /*#__PURE__*/React.createElement(React.Fragment, null,
+                    /*#__PURE__*/React.createElement("div", null, `Estimated Monthly Units = \u20B9 ${Number(activeProd.monthlyElectricityCost || 0).toLocaleString('en-IN')} \xF7 \u20B9 ${electricityRate.toFixed(2)} = ${unitsMonth.toFixed(0)} kWh (Units)`),
+                    /*#__PURE__*/React.createElement("div", null, `Estimated Daily Units = ${unitsMonth.toFixed(0)} kWh \xF7 ${daysPerMonth} days = ${unitsDay.toFixed(1)} kWh/day`),
+                    workingHours > 0 && /*#__PURE__*/React.createElement("div", null, `Estimated Average Connected Load = ${unitsMonth.toFixed(0)} kWh \xF7 (${workingHours} hrs \xD7 ${daysPerMonth} days) = ${powerKw.toFixed(2)} kW`)
+                  ) : /*#__PURE__*/React.createElement("div", null, "Direct lump sum mode active. Rate per unit not specified for units conversion.")
+                )
               )
-            ),
-            renderCard("2. Daily & Monthly Electricity Units",
-              /*#__PURE__*/React.createElement("div", null, 
-                "Daily kWh = (MachineLoad \xD7 Hours) + (CopsLoad \xD7 CopsHours) + (HeatSetLoad \xD7 HeatSetHours)"
-              ),
-              /*#__PURE__*/React.createElement("div", null, 
-                /*#__PURE__*/React.createElement("div", null, "Machine Hours = ", workingHours, hasCops && `, Cops Hours = ${workingHoursCops}`, hasHeatSet && `, HeatSet Hours = ${workingHoursHeatSet}`),
-                /*#__PURE__*/React.createElement("div", null, "Days = ", daysPerMonth, hasHeatSet && ` (Machine & Cops), HeatSet Days = ${workingDaysHeatSet}`)
-              ),
-              /*#__PURE__*/React.createElement("div", { className: "space-y-1.5" }, 
-                /*#__PURE__*/React.createElement("div", { className: "font-semibold text-slate-700 underline" }, "Daily Units Calculation:"),
-                /*#__PURE__*/React.createElement("div", { className: "pl-2 text-slate-600 font-normal" }, 
-                  /*#__PURE__*/React.createElement("div", null, `• ${label}: ${powerKwTfo.toFixed(2)} kW \xD7 ${workingHours} hrs = ${(powerKwTfo * workingHours).toFixed(1)} kWh`),
-                  hasCops && /*#__PURE__*/React.createElement("div", null, `• Cops Winder: ${powerKwCops.toFixed(2)} kW \xD7 ${workingHoursCops} hrs = ${(powerKwCops * workingHoursCops).toFixed(1)} kWh`),
-                  hasHeatSet && /*#__PURE__*/React.createElement("div", null, `• Heat Set: ${powerKwHeatSet.toFixed(2)} kW \xD7 ${workingHoursHeatSet} hrs = ${(powerKwHeatSet * workingHoursHeatSet).toFixed(1)} kWh`)
+            ) : /*#__PURE__*/React.createElement(React.Fragment, null,
+              renderCard("1. Electricity Power Load (kW)",
+                /*#__PURE__*/React.createElement("div", null, 
+                  `Load = (HP \xD7 0.746 \xD7 Load Factor) / ${isDoubler ? '100' : '90'}`
                 ),
-                /*#__PURE__*/React.createElement("div", null, `Daily Units Sum = ${(powerKwTfo * workingHours).toFixed(1)}` + (hasCops ? ` + ${(powerKwCops * workingHoursCops).toFixed(1)}` : '') + (hasHeatSet ? ` + ${(powerKwHeatSet * workingHoursHeatSet).toFixed(1)}` : '') + ` = ${unitsDay.toFixed(1)} kWh`),
-                /*#__PURE__*/React.createElement("div", { className: "font-semibold text-slate-700 underline mt-2" }, "Monthly Units Calculation:"),
-                /*#__PURE__*/React.createElement("div", { className: "pl-2 text-slate-600 font-normal" },
-                  /*#__PURE__*/React.createElement("div", null, `• ${label}: ${(powerKwTfo * workingHours).toFixed(1)} kWh/day \xD7 ${daysPerMonth} days = ${(powerKwTfo * workingHours * daysPerMonth).toFixed(0)} kWh`),
-                  hasCops && /*#__PURE__*/React.createElement("div", null, `• Cops Winder: ${(powerKwCops * workingHoursCops).toFixed(1)} kWh/day \xD7 ${daysPerMonth} days = ${(powerKwCops * workingHoursCops * daysPerMonth).toFixed(0)} kWh`),
-                  hasHeatSet && /*#__PURE__*/React.createElement("div", null, `• Heat Set: ${(powerKwHeatSet * workingHoursHeatSet).toFixed(1)} kWh/day \xD7 ${workingDaysHeatSet} days = ${(powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet).toFixed(0)} kWh`)
+                /*#__PURE__*/React.createElement("div", null, 
+                  /*#__PURE__*/React.createElement("div", null, "HP = ", hp, " HP, Load Factor = ", loadFactor, "%")
                 ),
-                /*#__PURE__*/React.createElement("div", null, `Monthly Units Sum = ${(powerKwTfo * workingHours * daysPerMonth).toFixed(0)}` + (hasCops ? ` + ${(powerKwCops * workingHoursCops * daysPerMonth).toFixed(0)}` : '') + (hasHeatSet ? ` + ${(powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet).toFixed(0)}` : '') + ` = ${unitsMonth.toFixed(0)} kWh`)
+                /*#__PURE__*/React.createElement("div", { className: "space-y-1" }, 
+                  /*#__PURE__*/React.createElement("div", null, isDoubler ? `Doubler Load = (${hp} \xD7 0.746 \xD7 ${loadFactor}) \xF7 100 = ${powerKwTfo.toFixed(2)} kW` : `Machine Load = (${hp} \xD7 0.746 \xD7 ${loadFactor}) \xF7 90 = ${powerKwTfo.toFixed(2)} kW`),
+                  hasCops && /*#__PURE__*/React.createElement("div", null, isDoubler ? `Cops Load = (${hpCops} \xD7 0.746 \xD7 ${loadFactor}) \xF7 100 = ${powerKwCops.toFixed(2)} kW` : `Cops Load = (${hpCops} \xD7 ${noOfCops} \xD7 0.746 \xD7 ${loadFactor}) \xF7 90 = ${powerKwCops.toFixed(2)} kW`),
+                  hasHeatSet && /*#__PURE__*/React.createElement("div", null, isDoubler ? `Heat Set Load = (${hpHeatSet} \xD7 0.746 \xD7 ${loadFactor}) \xF7 100 = ${powerKwHeatSet.toFixed(2)} kW` : `Heat Set Load = (${hpHeatSet} \xD7 ${noOfHeatSet} \xD7 0.746 \xD7 ${loadFactor}) \xF7 90 = ${powerKwHeatSet.toFixed(2)} kW`),
+                  /*#__PURE__*/React.createElement("div", null, `Total Load = ${powerKwTfo.toFixed(2)}` + (hasCops ? ` + ${powerKwCops.toFixed(2)}` : '') + (hasHeatSet ? ` + ${powerKwHeatSet.toFixed(2)}` : '') + ` = ${powerKw.toFixed(2)} kW`)
+                )
+              ),
+              renderCard("2. Daily & Monthly Electricity Units",
+                /*#__PURE__*/React.createElement("div", null, 
+                  "Daily kWh = (MachineLoad \xD7 Hours) + (CopsLoad \xD7 CopsHours) + (HeatSetLoad \xD7 HeatSetHours)"
+                ),
+                /*#__PURE__*/React.createElement("div", null, 
+                  /*#__PURE__*/React.createElement("div", null, "Machine Hours = ", workingHours, hasCops && `, Cops Hours = ${workingHoursCops}`, hasHeatSet && `, HeatSet Hours = ${workingHoursHeatSet}`),
+                  /*#__PURE__*/React.createElement("div", null, "Days = ", daysPerMonth, hasHeatSet && ` (Machine & Cops), HeatSet Days = ${workingDaysHeatSet}`)
+                ),
+                /*#__PURE__*/React.createElement("div", { className: "space-y-1.5" }, 
+                  /*#__PURE__*/React.createElement("div", { className: "font-semibold text-slate-700 underline" }, "Daily Units Calculation:"),
+                  /*#__PURE__*/React.createElement("div", { className: "pl-2 text-slate-600 font-normal" }, 
+                    /*#__PURE__*/React.createElement("div", null, `• ${label}: ${powerKwTfo.toFixed(2)} kW \xD7 ${workingHours} hrs = ${(powerKwTfo * workingHours).toFixed(1)} kWh`),
+                    hasCops && /*#__PURE__*/React.createElement("div", null, `• Cops Winder: ${powerKwCops.toFixed(2)} kW \xD7 ${workingHoursCops} hrs = ${(powerKwCops * workingHoursCops).toFixed(1)} kWh`),
+                    hasHeatSet && /*#__PURE__*/React.createElement("div", null, `• Heat Set: ${powerKwHeatSet.toFixed(2)} kW \xD7 ${workingHoursHeatSet} hrs = ${(powerKwHeatSet * workingHoursHeatSet).toFixed(1)} kWh`)
+                  ),
+                  /*#__PURE__*/React.createElement("div", null, `Daily Units Sum = ${(powerKwTfo * workingHours).toFixed(1)}` + (hasCops ? ` + ${(powerKwCops * workingHoursCops).toFixed(1)}` : '') + (hasHeatSet ? ` + ${(powerKwHeatSet * workingHoursHeatSet).toFixed(1)}` : '') + ` = ${unitsDay.toFixed(1)} kWh`),
+                  /*#__PURE__*/React.createElement("div", { className: "font-semibold text-slate-700 underline mt-2" }, "Monthly Units Calculation:"),
+                  /*#__PURE__*/React.createElement("div", { className: "pl-2 text-slate-600 font-normal" }, 
+                    /*#__PURE__*/React.createElement("div", null, `• ${label}: ${(powerKwTfo * workingHours).toFixed(1)} kWh/day \xD7 ${daysPerMonth} days = ${(powerKwTfo * workingHours * daysPerMonth).toFixed(0)} kWh`),
+                    hasCops && /*#__PURE__*/React.createElement("div", null, `• Cops Winder: ${(powerKwCops * workingHoursCops).toFixed(1)} kWh/day \xD7 ${daysPerMonth} days = ${(powerKwCops * workingHoursCops * daysPerMonth).toFixed(0)} kWh`),
+                    hasHeatSet && /*#__PURE__*/React.createElement("div", null, `• Heat Set: ${(powerKwHeatSet * workingHoursHeatSet).toFixed(1)} kWh/day \xD7 ${workingDaysHeatSet} days = ${(powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet).toFixed(0)} kWh`)
+                  ),
+                  /*#__PURE__*/React.createElement("div", null, `Monthly Units Sum = ${(powerKwTfo * workingHours * daysPerMonth).toFixed(0)}` + (hasCops ? ` + ${(powerKwCops * workingHoursCops * daysPerMonth).toFixed(0)}` : '') + (hasHeatSet ? ` + ${(powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet).toFixed(0)}` : '') + ` = ${unitsMonth.toFixed(0)} kWh`)
+                )
               )
             )
           ),
@@ -12803,16 +12890,34 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
               )
             ),
             renderCard("Electricity Cost Details",
-              /*#__PURE__*/React.createElement("div", null, "Daily Cost = Daily Units Sum \xD7 Electricity Rate", /*#__PURE__*/React.createElement("br"), "Cost/Kg = Daily Cost \xF7 Daily Production"),
               /*#__PURE__*/React.createElement("div", null, 
-                /*#__PURE__*/React.createElement("div", null, "Daily Units = ", unitsDay.toFixed(1), " kWh"),
-                /*#__PURE__*/React.createElement("div", null, "Rate = \u20B9 ", electricityRate.toFixed(2), "/kWh"),
-                /*#__PURE__*/React.createElement("div", null, "Daily Production = ", totalProdDayEff.toFixed(2), " kg")
+                (activeProd.electricityMode === 'lump_sum')
+                  ? "Daily Cost = Monthly Electricity Bill \xF7 Working Days per Month"
+                  : "Daily Cost = Daily Units Sum \xD7 Electricity Rate",
+                /*#__PURE__*/React.createElement("br"),
+                "Cost/Kg = Daily Cost \xF7 Daily Production"
+              ),
+              /*#__PURE__*/React.createElement("div", null, 
+                (activeProd.electricityMode === 'lump_sum') ? /*#__PURE__*/React.createElement(React.Fragment, null,
+                  /*#__PURE__*/React.createElement("div", null, "Monthly Electricity Bill = \u20B9 ", Number(activeProd.monthlyElectricityCost || 0).toLocaleString('en-IN')),
+                  /*#__PURE__*/React.createElement("div", null, "Working Days = ", daysPerMonth, " days"),
+                  /*#__PURE__*/React.createElement("div", null, "Daily Production = ", totalProdDayEff.toFixed(2), " kg")
+                ) : /*#__PURE__*/React.createElement(React.Fragment, null,
+                  /*#__PURE__*/React.createElement("div", null, "Daily Units = ", unitsDay.toFixed(1), " kWh"),
+                  /*#__PURE__*/React.createElement("div", null, "Rate = \u20B9 ", electricityRate.toFixed(2), "/kWh"),
+                  /*#__PURE__*/React.createElement("div", null, "Daily Production = ", totalProdDayEff.toFixed(2), " kg")
+                )
               ),
               /*#__PURE__*/React.createElement("div", { className: "space-y-1" }, 
-                /*#__PURE__*/React.createElement("div", null, `Daily Cost = ${unitsDay.toFixed(1)} kWh \xD7 \u20B9 ${electricityRate.toFixed(2)} = \u20B9 ${costDay.toFixed(0)}`),
-                /*#__PURE__*/React.createElement("div", null, `Monthly Cost = \u20B9 ${costDay.toFixed(0)} \xD7 ${daysPerMonth} days = \u20B9 ${costMonth.toFixed(0)}`),
-                /*#__PURE__*/React.createElement("div", null, `Cost / Kg = \u20B9 ${costDay.toFixed(0)} \xF7 ${totalProdDayEff.toFixed(2)} kg = \u20B9 ${powerCostPerKg.toFixed(2)}/kg`)
+                (activeProd.electricityMode === 'lump_sum') ? /*#__PURE__*/React.createElement(React.Fragment, null,
+                  /*#__PURE__*/React.createElement("div", null, `Daily Cost = \u20B9 ${Number(activeProd.monthlyElectricityCost || 0).toLocaleString('en-IN')} \xF7 ${daysPerMonth} days = \u20B9 ${costDay.toFixed(2)} / day`),
+                  /*#__PURE__*/React.createElement("div", null, `Monthly Cost = \u20B9 ${costMonth.toFixed(2)}`),
+                  /*#__PURE__*/React.createElement("div", null, `Cost / Kg = \u20B9 ${costDay.toFixed(2)} \xF7 ${totalProdDayEff.toFixed(2)} kg = \u20B9 ${powerCostPerKg.toFixed(2)}/kg`)
+                ) : /*#__PURE__*/React.createElement(React.Fragment, null,
+                  /*#__PURE__*/React.createElement("div", null, `Daily Cost = ${unitsDay.toFixed(1)} kWh \xD7 \u20B9 ${electricityRate.toFixed(2)} = \u20B9 ${costDay.toFixed(0)}`),
+                  /*#__PURE__*/React.createElement("div", null, `Monthly Cost = \u20B9 ${costDay.toFixed(0)} \xD7 ${daysPerMonth} days = \u20B9 ${costMonth.toFixed(0)}`),
+                  /*#__PURE__*/React.createElement("div", null, `Cost / Kg = \u20B9 ${costDay.toFixed(0)} \xF7 ${totalProdDayEff.toFixed(2)} kg = \u20B9 ${powerCostPerKg.toFixed(2)}/kg`)
+                )
               )
             ),
             renderCard("Labor / Wages Cost Details",
@@ -13680,14 +13785,22 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     csv.push(`No. of Spindles,${product.noOfSpindles}`);
     csv.push(`TPM,${product.tpm}`);
     csv.push(`Efficiency,${product.efficiency}%`);
-    csv.push(`Total HP of Covering Machine in Use,${product.hp}`);
-    csv.push(`Total HP of Cops Winder in Use,${product.hpCops !== undefined ? product.hpCops : 0}`);
-    csv.push(`Cops Working Hours,${product.workingHoursCops !== undefined ? product.workingHoursCops : 24}`);
-    csv.push(`Total HP of Heat Set Machine,${product.hpHeatSet !== undefined ? product.hpHeatSet : 0}`);
-    csv.push(`Heat Set Working Hours,${product.workingHoursHeatSet !== undefined ? product.workingHoursHeatSet : 24}`);
-    csv.push(`Heat Set Working Days,${product.workingDaysHeatSet !== undefined ? product.workingDaysHeatSet : 28}`);
-    csv.push(`Load Factor,${product.loadFactor}%`);
-    csv.push(`Electricity Rate,₹ ${product.electricityRate}/unit`);
+    if (product.electricityMode === 'lump_sum') {
+      csv.push("Electricity Mode,Monthly Lump Sum");
+      csv.push(`Monthly Electricity Cost,₹ ${product.monthlyElectricityCost || 0}`);
+      if (product.electricityRate) {
+        csv.push(`Electricity Rate,₹ ${product.electricityRate}/unit`);
+      }
+    } else {
+      csv.push(`Total HP of Covering Machine in Use,${product.hp}`);
+      csv.push(`Total HP of Cops Winder in Use,${product.hpCops !== undefined ? product.hpCops : 0}`);
+      csv.push(`Cops Working Hours,${product.workingHoursCops !== undefined ? product.workingHoursCops : 24}`);
+      csv.push(`Total HP of Heat Set Machine,${product.hpHeatSet !== undefined ? product.hpHeatSet : 0}`);
+      csv.push(`Heat Set Working Hours,${product.workingHoursHeatSet !== undefined ? product.workingHoursHeatSet : 24}`);
+      csv.push(`Heat Set Working Days,${product.workingDaysHeatSet !== undefined ? product.workingDaysHeatSet : 28}`);
+      csv.push(`Load Factor,${product.loadFactor}%`);
+      csv.push(`Electricity Rate,₹ ${product.electricityRate}/unit`);
+    }
     csv.push("");
     csv.push("YARN PARAMETERS");
     csv.push(`Ply Count,${2} Ply`);
