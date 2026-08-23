@@ -372,6 +372,9 @@
             background-size: 1rem;
             padding-right: 2.35rem;
             cursor: pointer;
+            text-align: center;
+            text-align-last: center;
+            -webkit-text-align-last: center;
         }
 
         /* Compare Costing — quality picker + mobile/tablet layout */
@@ -1142,6 +1145,8 @@
                 padding: 0.7rem 0.9rem !important;
                 border-radius: 12px !important;
                 background-color: var(--surface, #fff) !important;
+                text-align: center !important;
+                text-align-last: center !important;
             }
 
             select.input-field {
@@ -1566,8 +1571,34 @@
             border: 1.5px solid var(--border);
             outline: none;
             font-size: 0.95rem;
+            text-align: center;
             transition: all 0.2s ease;
             background: #fafafa;
+        }
+        select.input-field {
+            text-align: center;
+            text-align-last: center;
+            -webkit-text-align-last: center;
+        }
+        .wc-input-panel input,
+        .wc-input-panel select,
+        .wc-input-panel textarea,
+        .input-card input,
+        .input-card select,
+        .input-card textarea {
+            text-align: center !important;
+            text-align-last: center !important;
+            -webkit-text-align-last: center !important;
+        }
+        .wc-input-panel input::placeholder,
+        .input-card input::placeholder,
+        .input-field::placeholder {
+            text-align: center !important;
+        }
+        .wc-input-panel select option,
+        .input-card select option,
+        select.input-field option {
+            text-align: center;
         }
         .input-field:focus {
             border-color: var(--accent);
