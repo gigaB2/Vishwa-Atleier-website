@@ -42,7 +42,13 @@
     }
   })();
 
-  // Auto-inject Supabase adapter if not present
+  // Auto-inject Config & Supabase adapter if not present
+  if (!window.APP_CONFIG) {
+    const cfgScript = document.createElement('script');
+    cfgScript.src = rootPath + 'assets/config.js';
+    document.head.appendChild(cfgScript);
+  }
+
   if (!window.VishwaSupabase) {
     const sbScript = document.createElement('script');
     sbScript.src = rootPath + 'assets/supabase-client.js';

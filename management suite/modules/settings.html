@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="../assets/config.js"></script>
   <script src="../assets/supabase-client.js"></script>
 
 
@@ -1788,6 +1789,73 @@
       </div>
     </div>
 
+    <!-- Cloud Database & Multi-Tenant Setup (Admin) -->
+    <div class="settings-card" id="supabase-database-settings">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.5rem;">
+        <div class="settings-section-title" style="margin-bottom: 0;">
+          <i class="ri-cloud-line" style="color: var(--accent);"></i> <span>Cloud Database &amp; Backend Sync</span>
+        </div>
+        <div id="supabase-status-badge" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; background: rgba(139, 92, 246, 0.1); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.25);">
+          <span id="supabase-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: currentColor;"></span>
+          <span id="supabase-status-text">Checking Status...</span>
+        </div>
+      </div>
+      <p class="settings-desc" style="margin: 0 0 1.25rem;">
+        Connect the application to a dedicated Supabase cloud instance or custom database backend. This separates database credentials from application source code for commercial distribution.
+      </p>
+
+      <div class="settings-grid" style="margin-bottom: 1rem;">
+        <div class="input-group full-width">
+          <label for="supabase-url-input" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Supabase Project URL</span>
+            <span id="supabase-source-tag" style="font-size: 0.7rem; font-weight: 600; color: var(--muted); text-transform: uppercase;"></span>
+          </label>
+          <input type="text" id="supabase-url-input" placeholder="https://your-project-ref.supabase.co" autocomplete="off" spellcheck="false">
+          <p style="font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem;">
+            The REST API URL found in your Supabase Project Settings &gt; API &gt; Project URL.
+          </p>
+        </div>
+
+        <div class="input-group full-width">
+          <label for="supabase-anon-key-input">Supabase Anon Public API Key</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="password" id="supabase-anon-key-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off" spellcheck="false" style="padding-right: 2.75rem;">
+            <button type="button" onclick="toggleSupabaseKeyVisibility()" style="position: absolute; right: 0.65rem; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 0.25rem; display: flex; align-items: center;" title="Toggle visibility">
+              <i class="ri-eye-line" id="supabase-key-eye"></i>
+            </button>
+          </div>
+          <p style="font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem;">
+            The safe client-side <code style="background: var(--bg); padding: 0.1rem 0.3rem; border-radius: 4px;">anon</code> <code style="background: var(--bg); padding: 0.1rem 0.3rem; border-radius: 4px;">public</code> key found in Supabase Project Settings &gt; API.
+          </p>
+        </div>
+      </div>
+
+      <!-- Quick Setup Guide & 1-Click SQL Schema copy for buyers -->
+      <div style="background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--fg);"><i class="ri-terminal-box-line" style="color: var(--accent);"></i> New Client Database Setup (1-Click SQL)</span>
+          <button type="button" onclick="copySupabaseSqlSchema()" class="save-btn" style="min-height: 32px; padding: 0.25rem 0.75rem; font-size: 0.75rem; background: var(--surface); color: var(--fg); border: 1px solid var(--border); box-shadow: none;">
+            <i class="ri-file-copy-line"></i> Copy Schema SQL
+          </button>
+        </div>
+        <p style="font-size: 0.75rem; color: var(--muted); margin: 0; line-height: 1.45;">
+          Selling to a new customer? Run the provided <strong style="color: var(--fg);">supabase-schema.sql</strong> script in their Supabase SQL Editor to automatically create all synchronized tables and Realtime channels.
+        </p>
+      </div>
+
+      <div class="settings-actions" style="display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: flex-end;">
+        <button type="button" id="btn-test-supabase" onclick="testSupabaseConnectionUI()" class="save-btn" style="background: var(--surface); color: var(--fg); border: 1.5px solid var(--border); box-shadow: none;">
+          <i class="ri-pulse-line"></i> Test Connection
+        </button>
+        <button type="button" onclick="resetSupabaseSettingsUI()" class="save-btn" style="background: var(--surface); color: var(--muted); border: 1.5px solid var(--border); box-shadow: none;">
+          <i class="ri-restart-line"></i> Reset to Default
+        </button>
+        <button type="button" onclick="saveSupabaseSettingsUI()" class="save-btn" style="background: linear-gradient(135deg, var(--accent), var(--accent2));">
+          <i class="ri-save-line"></i> Save &amp; Reconnect
+        </button>
+      </div>
+    </div>
+
     <!-- Database Backup / Import Export -->
     <div class="settings-card" id="backup-restore-settings">
       <div class="settings-section-title">
@@ -2743,6 +2811,7 @@
 
     const authCard = document.getElementById('user-access-settings');
     const backupCard = document.getElementById('backup-restore-settings');
+    const dbCard = document.getElementById('supabase-database-settings');
     const isAdmin = activeSession && activeSession.role === 'admin';
 
     if (authCard) {
@@ -2751,6 +2820,10 @@
 
     if (backupCard) {
       backupCard.style.display = isAdmin ? 'block' : 'none';
+    }
+
+    if (dbCard) {
+      dbCard.style.display = isAdmin ? 'block' : 'none';
     }
 
     if (!isAdmin) {
@@ -2768,7 +2841,186 @@
 
     renderAdminsList();
     renderUsersAndInvitesList();
+    loadSupabaseSettingsUI();
   }
+
+  // --- Supabase Cloud Database Configuration UI Handlers ---
+  function toggleSupabaseKeyVisibility() {
+    const input = document.getElementById('supabase-anon-key-input');
+    const eye = document.getElementById('supabase-key-eye');
+    if (!input || !eye) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      eye.className = 'ri-eye-off-line';
+    } else {
+      input.type = 'password';
+      eye.className = 'ri-eye-line';
+    }
+  }
+
+  function updateSupabaseStatusUI(status, config) {
+    const badge = document.getElementById('supabase-status-badge');
+    const text = document.getElementById('supabase-status-text');
+    const dot = document.getElementById('supabase-status-dot');
+    const sourceTag = document.getElementById('supabase-source-tag');
+    if (!badge || !text || !dot) return;
+
+    const st = status || (window.VishwaSupabase ? window.VishwaSupabase.getStatus() : 'offline');
+    const cfg = config || (window.VishwaSupabase ? window.VishwaSupabase.getConfig() : {});
+
+    if (sourceTag) {
+      if (cfg.source === 'localStorage') {
+        sourceTag.textContent = 'Active: Local Admin Override';
+        sourceTag.style.color = 'var(--accent2)';
+      } else if (cfg.source === 'config.js') {
+        sourceTag.textContent = 'Active: assets/config.js';
+        sourceTag.style.color = 'var(--accent)';
+      } else {
+        sourceTag.textContent = 'Not Configured (Pure Local Mode)';
+        sourceTag.style.color = 'var(--muted)';
+      }
+    }
+
+    if (st === 'connected') {
+      badge.style.background = 'rgba(16, 185, 129, 0.12)';
+      badge.style.color = '#10b981';
+      badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      text.textContent = 'Cloud Connected';
+    } else if (st === 'syncing') {
+      badge.style.background = 'rgba(59, 130, 246, 0.12)';
+      badge.style.color = '#3b82f6';
+      badge.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+      text.textContent = 'Syncing...';
+    } else if (st === 'connecting') {
+      badge.style.background = 'rgba(245, 158, 11, 0.12)';
+      badge.style.color = '#f59e0b';
+      badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+      text.textContent = 'Connecting...';
+    } else if (st === 'unconfigured') {
+      badge.style.background = 'rgba(107, 114, 128, 0.12)';
+      badge.style.color = 'var(--muted)';
+      badge.style.borderColor = 'rgba(107, 114, 128, 0.25)';
+      text.textContent = 'Unconfigured (Local Mode)';
+    } else {
+      badge.style.background = 'rgba(239, 68, 68, 0.12)';
+      badge.style.color = '#ef4444';
+      badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+      text.textContent = 'Cloud Offline';
+    }
+  }
+
+  function loadSupabaseSettingsUI() {
+    const urlInput = document.getElementById('supabase-url-input');
+    const keyInput = document.getElementById('supabase-anon-key-input');
+    if (!urlInput || !keyInput) return;
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.getConfig === 'function') {
+      const cfg = window.VishwaSupabase.getConfig();
+      urlInput.value = cfg.url || '';
+      keyInput.value = cfg.anonKey || '';
+      updateSupabaseStatusUI(window.VishwaSupabase.getStatus(), cfg);
+    } else {
+      const localUrl = localStorage.getItem('vf_supabase_url') || (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) || '';
+      const localKey = localStorage.getItem('vf_supabase_anon_key') || (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_ANON_KEY) || '';
+      urlInput.value = localUrl;
+      keyInput.value = localKey;
+      updateSupabaseStatusUI('unconfigured', {});
+    }
+  }
+
+  async function testSupabaseConnectionUI() {
+    const url = document.getElementById('supabase-url-input').value.trim();
+    const key = document.getElementById('supabase-anon-key-input').value.trim();
+    const btn = document.getElementById('btn-test-supabase');
+
+    if (!url || !key) {
+      showToast("Please enter both Supabase URL and Anon API Key.", "warning");
+      return;
+    }
+
+    const origContent = btn.innerHTML;
+    btn.innerHTML = '<i class="ri-loader-4-line" style="animation: spin 1s linear infinite; display: inline-block;"></i> Testing...';
+    btn.disabled = true;
+
+    try {
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.testConnection === 'function') {
+        const result = await window.VishwaSupabase.testConnection(url, key);
+        if (result.ok) {
+          showToast("Connection Successful! Supabase database is online and reachable.", "success");
+        } else {
+          showToast(`Connection Test Failed: ${result.message}`, "error");
+        }
+      } else {
+        // Fallback fetch
+        const res = await fetch(`${url.replace(/\/+$/, '')}/rest/v1/vf_kv_store?select=key&limit=1`, {
+          headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+        });
+        if (res.ok) {
+          showToast("Connection Successful!", "success");
+        } else {
+          showToast(`Connection failed with status ${res.status}`, "error");
+        }
+      }
+    } catch(e) {
+      showToast(`Connection error: ${e.message || e}`, "error");
+    } finally {
+      btn.innerHTML = origContent;
+      btn.disabled = false;
+    }
+  }
+
+  async function saveSupabaseSettingsUI() {
+    const url = document.getElementById('supabase-url-input').value.trim();
+    const key = document.getElementById('supabase-anon-key-input').value.trim();
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.configure === 'function') {
+      await window.VishwaSupabase.configure({ url, anonKey: key, saveToStorage: true });
+      showToast("Database configuration saved! Reconnecting cloud sync...", "success");
+      loadSupabaseSettingsUI();
+    } else {
+      localStorage.setItem('vf_supabase_url', url);
+      localStorage.setItem('vf_supabase_anon_key', key);
+      showToast("Database settings saved. Please refresh the page.", "success");
+    }
+  }
+
+  async function resetSupabaseSettingsUI() {
+    if (confirm("Reset database settings to default assets/config.js configuration?")) {
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.resetConfig === 'function') {
+        await window.VishwaSupabase.resetConfig();
+        showToast("Database settings reset to defaults.", "info");
+        loadSupabaseSettingsUI();
+      } else {
+        localStorage.removeItem('vf_supabase_url');
+        localStorage.removeItem('vf_supabase_anon_key');
+        showToast("Reset completed. Please refresh.", "info");
+        loadSupabaseSettingsUI();
+      }
+    }
+  }
+
+  function copySupabaseSqlSchema() {
+    const sqlUrl = '../assets/supabase-schema.sql';
+    fetch(sqlUrl)
+      .then(res => res.text())
+      .then(sqlText => {
+        navigator.clipboard.writeText(sqlText).then(() => {
+          showToast("Database Schema SQL copied to clipboard! Paste into Supabase SQL Editor.", "success");
+        }).catch(() => {
+          showToast("Schema is located at assets/supabase-schema.sql", "info");
+        });
+      })
+      .catch(() => {
+        showToast("Schema script is located at assets/supabase-schema.sql", "info");
+      });
+  }
+
+  // Listen for Supabase status changes to update UI live
+  window.addEventListener('supabase-status', function(e) {
+    if (e && e.detail) {
+      updateSupabaseStatusUI(e.detail.status, e.detail.config);
+    }
+  });
 
   function setAllPermLevel(containerId, level) {
     const container = document.getElementById(containerId);

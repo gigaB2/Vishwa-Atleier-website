@@ -1,12 +1,54 @@
 (function() {
-  const SUPABASE_URL = "https://fwlzysudduroyndkiewa.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3bHp5c3VkZHVyb3luZGtpZXdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4ODMwMDEsImV4cCI6MjEwMDQ1OTAwMX0.Cv0Ns_gslFFSe90_lu1YBqo9aEcHaUbmnsI43TDZ_oo";
+  // Native browser localStorage reference before overriding
+  const nativeLocalStorage = window.localStorage;
+
+  // Resolve Supabase configuration dynamically:
+  // 1. LocalStorage overrides (configured via Admin Settings in UI)
+  // 2. Global window.APP_CONFIG (from assets/config.js)
+  // 3. Fallback to unconfigured state
+  function resolveConfig() {
+    let url = '';
+    let key = '';
+    let source = 'none';
+
+    try {
+      const customUrl = nativeLocalStorage.getItem('vf_supabase_url');
+      const customKey = nativeLocalStorage.getItem('vf_supabase_anon_key');
+      if (customUrl && customKey && customUrl.trim() && customKey.trim()) {
+        url = customUrl.trim();
+        key = customKey.trim();
+        source = 'localStorage';
+      }
+    } catch(e) {}
+
+    if (!url && typeof window !== 'undefined' && window.APP_CONFIG) {
+      if (window.APP_CONFIG.SUPABASE_URL && window.APP_CONFIG.SUPABASE_ANON_KEY) {
+        url = (window.APP_CONFIG.SUPABASE_URL || '').trim();
+        key = (window.APP_CONFIG.SUPABASE_ANON_KEY || '').trim();
+        source = 'config.js';
+      }
+    }
+
+    if (url && url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+
+    const isPlaceholder = !url || !key || url.includes('your-project') || key.includes('your-anon');
+
+    return {
+      url: isPlaceholder ? '' : url,
+      anonKey: isPlaceholder ? '' : key,
+      isConfigured: !isPlaceholder && Boolean(url && key),
+      source: source
+    };
+  }
+
+  let activeConfig = resolveConfig();
+  let SUPABASE_URL = activeConfig.url;
+  let SUPABASE_ANON_KEY = activeConfig.anonKey;
 
   // Unique client session instance ID
   const CLIENT_ID = 'vf_client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
-
-  // Native browser localStorage reference before overriding
-  const nativeLocalStorage = window.localStorage;
 
   // In-memory cache for instant synchronous reading across device sessions
   const cache = {};
@@ -36,13 +78,13 @@
   let isHydrated = false;
 
   // Track connection status
-  let currentStatus = 'connecting'; // 'connecting' | 'connected' | 'syncing' | 'offline'
+  let currentStatus = activeConfig.isConfigured ? 'connecting' : 'unconfigured'; // 'connecting' | 'connected' | 'syncing' | 'offline' | 'unconfigured'
 
   function setSyncStatus(status) {
     if (currentStatus !== status) {
       currentStatus = status;
       try {
-        window.dispatchEvent(new CustomEvent('supabase-status', { detail: { status: status } }));
+        window.dispatchEvent(new CustomEvent('supabase-status', { detail: { status: status, config: activeConfig } }));
       } catch (e) {}
     }
   }
@@ -90,11 +132,16 @@
   const WS_CHANNEL_TOPIC = 'realtime:vf_costing_sync';
 
   function initRealtimeWebSocket() {
+    if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      setSyncStatus('unconfigured');
+      return;
+    }
     if (typeof WebSocket === 'undefined') return;
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
 
     try {
-      const wsUrl = `wss://fwlzysudduroyndkiewa.supabase.co/realtime/v1/websocket?apikey=${SUPABASE_ANON_KEY}&vsn=1.0.0`;
+      const cleanHost = SUPABASE_URL.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+      const wsUrl = `wss://${cleanHost}/realtime/v1/websocket?apikey=${SUPABASE_ANON_KEY}&vsn=1.0.0`;
       ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
@@ -147,17 +194,23 @@
       };
 
       ws.onclose = () => {
-        setSyncStatus('offline');
-        clearInterval(wsHeartbeatTimer);
-        scheduleWsReconnect();
+        if (activeConfig.isConfigured) {
+          setSyncStatus('offline');
+          clearInterval(wsHeartbeatTimer);
+          scheduleWsReconnect();
+        }
       };
 
       ws.onerror = () => {
-        setSyncStatus('offline');
-        try { ws.close(); } catch(e) {}
+        if (activeConfig.isConfigured) {
+          setSyncStatus('offline');
+          try { ws.close(); } catch(e) {}
+        }
       };
     } catch (e) {
-      scheduleWsReconnect();
+      if (activeConfig.isConfigured) {
+        scheduleWsReconnect();
+      }
     }
   }
 
@@ -512,8 +565,86 @@
         return null;
       }
     },
+    // Dynamic Configuration & Diagnostic APIs
+    getConfig: () => ({
+      url: SUPABASE_URL,
+      anonKey: SUPABASE_ANON_KEY,
+      isConfigured: activeConfig.isConfigured,
+      source: activeConfig.source
+    }),
+    async testConnection(testUrl, testKey) {
+      const url = (testUrl || SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = testKey || SUPABASE_ANON_KEY || '';
+      if (!url || !key) {
+        return { ok: false, message: 'URL and Anon Key are required.' };
+      }
+      try {
+        const cleanHost = url.replace(/^https?:\/\//i, '');
+        const res = await fetch(`${url}/rest/v1/vf_kv_store?select=key&limit=1`, {
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`
+          }
+        });
+        if (res.ok) {
+          return { ok: true, message: 'Connected successfully to Supabase!' };
+        } else {
+          const err = await res.json().catch(() => ({}));
+          return { ok: false, message: err.message || `Server returned error ${res.status}: ${res.statusText}` };
+        }
+      } catch (e) {
+        return { ok: false, message: `Connection failed: ${e.message || e}` };
+      }
+    },
+    async configure({ url, anonKey, saveToStorage = true }) {
+      if (saveToStorage) {
+        try {
+          if (url && anonKey) {
+            nativeLocalStorage.setItem('vf_supabase_url', url.trim());
+            nativeLocalStorage.setItem('vf_supabase_anon_key', anonKey.trim());
+          } else {
+            nativeLocalStorage.removeItem('vf_supabase_url');
+            nativeLocalStorage.removeItem('vf_supabase_anon_key');
+          }
+        } catch(e) {}
+      }
+
+      activeConfig = resolveConfig();
+      SUPABASE_URL = activeConfig.url;
+      SUPABASE_ANON_KEY = activeConfig.anonKey;
+
+      if (ws) {
+        try { ws.close(); } catch(e) {}
+        ws = null;
+      }
+      clearInterval(wsHeartbeatTimer);
+      clearTimeout(wsReconnectTimer);
+
+      if (activeConfig.isConfigured) {
+        setSyncStatus('connecting');
+        initRealtimeWebSocket();
+        await this.loadAll(true);
+      } else {
+        setSyncStatus('unconfigured');
+      }
+
+      return activeConfig;
+    },
+    resetConfig() {
+      try {
+        nativeLocalStorage.removeItem('vf_supabase_url');
+        nativeLocalStorage.removeItem('vf_supabase_anon_key');
+      } catch(e) {}
+      return this.configure({ url: null, anonKey: null, saveToStorage: false });
+    },
     // --- Cloud-First Hydration & Intelligent Item Merge Engine ---
     async loadAll(isInitial = false) {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        isHydrated = true;
+        setSyncStatus('unconfigured');
+        window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: [] } }));
+        return;
+      }
       try {
         if (isInitial || Object.keys(lastKnownTimestamps).length === 0) {
           const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?select=key,value,updated_at`, {
@@ -712,7 +843,7 @@
 
   // Initial full cloud dataset fetch & item reconciliation on boot
   supabaseApi.loadAll(true).then(() => {
-    console.log("Vishwa Fashions — Professional Realtime Cloud Sync active (Egress Optimized).");
+    console.log("Management Suite — Cloud Sync initialized.");
   });
 
   // Smart polling interval & Visibility Throttling (30s interval, disabled when tab is hidden)
