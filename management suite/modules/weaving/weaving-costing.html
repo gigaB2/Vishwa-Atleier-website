@@ -6931,6 +6931,9 @@ const App = () => {
   const [isTfoLocked, setIsTfoLocked] = useState(false);
   const [isDoublerLocked, setIsDoublerLocked] = useState(false);
   const [isCoveringLocked, setIsCoveringLocked] = useState(false);
+  const isRemoteSyncRef = useRef(false);
+  const isInitialMountRef = useRef(true);
+  const [syncStatus, setSyncStatus] = useState(() => (window.VishwaSupabase && typeof window.VishwaSupabase.getStatus === 'function' ? window.VishwaSupabase.getStatus() : 'connected'));
   const [products, setProducts] = useState(() => {
     const saved = localStorage.getItem('costing-products-v4');
     if (saved) {
@@ -7278,6 +7281,79 @@ const App = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
   useEffect(() => {
+    const handleSyncStatus = (e) => {
+      if (e.detail && e.detail.status) setSyncStatus(e.detail.status);
+    };
+    window.addEventListener('supabase-status', handleSyncStatus);
+    return () => window.removeEventListener('supabase-status', handleSyncStatus);
+  }, []);
+
+  useEffect(() => {
+    const handleRemoteSync = (e) => {
+      if (!e || !e.detail || !e.detail.key) return;
+      const { key, value } = e.detail;
+      if (!value) return;
+      try {
+        const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+        if (!Array.isArray(parsed) || parsed.length === 0) return;
+
+        if (key === 'costing-products-v4') {
+          const curStr = JSON.stringify(products);
+          const newStr = JSON.stringify(parsed);
+          if (curStr !== newStr) {
+            isRemoteSyncRef.current = true;
+            setProducts(parsed);
+          }
+        } else if (key === 'costing-tfo-products-v1') {
+          const curStr = JSON.stringify(tfoProducts);
+          const newStr = JSON.stringify(parsed);
+          if (curStr !== newStr) {
+            isRemoteSyncRef.current = true;
+            setTfoProducts(parsed);
+          }
+        } else if (key === 'costing-doubler-products-v1') {
+          const curStr = JSON.stringify(doublerProducts);
+          const newStr = JSON.stringify(parsed);
+          if (curStr !== newStr) {
+            isRemoteSyncRef.current = true;
+            setDoublerProducts(parsed);
+          }
+        } else if (key === 'costing-covering-products-v1') {
+          const curStr = JSON.stringify(coveringProducts);
+          const newStr = JSON.stringify(parsed);
+          if (curStr !== newStr) {
+            isRemoteSyncRef.current = true;
+            setCoveringProducts(parsed);
+          }
+        }
+      } catch (err) {
+        console.error('Remote sync update error:', err);
+      }
+    };
+
+    window.addEventListener('supabase-sync', handleRemoteSync);
+    window.addEventListener('storage', (e) => {
+      if (e.key && ['costing-products-v4', 'costing-tfo-products-v1', 'costing-doubler-products-v1', 'costing-covering-products-v1'].includes(e.key) && e.newValue) {
+        handleRemoteSync({ detail: { key: e.key, value: e.newValue } });
+      }
+    });
+
+    return () => {
+      window.removeEventListener('supabase-sync', handleRemoteSync);
+    };
+  }, [products, tfoProducts, doublerProducts, coveringProducts]);
+
+  useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      saveCostingProductsToIDB(products);
+      return;
+    }
+    if (isRemoteSyncRef.current) {
+      isRemoteSyncRef.current = false;
+      saveCostingProductsToIDB(products);
+      return;
+    }
     try {
       localStorage.setItem('costing-products-v4', JSON.stringify(products));
       if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
@@ -7993,8 +8069,12 @@ const App = () => {
   };
   const deleteProduct = index => {
     if (products.length <= 1) return;
-    const displayName = getProductDisplayName(products[index], index);
+    const itemToDelete = products[index];
+    const displayName = getProductDisplayName(itemToDelete, index);
     if (confirm(`Are you sure you want to delete "${displayName}"?`)) {
+      if (itemToDelete && window.VishwaSupabase && typeof window.VishwaSupabase.recordCostingDeletion === 'function') {
+        window.VishwaSupabase.recordCostingDeletion('costing-products-v4', itemToDelete.id);
+      }
       const updated = products.filter((_, i) => i !== index);
       setProducts(updated);
       setActiveIndex(0);
@@ -8002,8 +8082,12 @@ const App = () => {
   };
   const deleteTfoProduct = index => {
     if (tfoProducts.length <= 1) return;
-    const name = getTfoProductDisplayName(tfoProducts[index], index);
+    const itemToDelete = tfoProducts[index];
+    const name = getTfoProductDisplayName(itemToDelete, index);
     if (confirm(`Are you sure you want to delete "${name}"?`)) {
+      if (itemToDelete && window.VishwaSupabase && typeof window.VishwaSupabase.recordCostingDeletion === 'function') {
+        window.VishwaSupabase.recordCostingDeletion('costing-tfo-products-v1', itemToDelete.id);
+      }
       const updated = tfoProducts.filter((_, i) => i !== index);
       setTfoProducts(updated);
       setTfoActiveIndex(0);
@@ -8011,8 +8095,12 @@ const App = () => {
   };
   const deleteDoublerProduct = index => {
     if (doublerProducts.length <= 1) return;
-    const name = getDoublerProductDisplayName(doublerProducts[index], index);
+    const itemToDelete = doublerProducts[index];
+    const name = getDoublerProductDisplayName(itemToDelete, index);
     if (confirm(`Are you sure you want to delete "${name}"?`)) {
+      if (itemToDelete && window.VishwaSupabase && typeof window.VishwaSupabase.recordCostingDeletion === 'function') {
+        window.VishwaSupabase.recordCostingDeletion('costing-doubler-products-v1', itemToDelete.id);
+      }
       const updated = doublerProducts.filter((_, i) => i !== index);
       setDoublerProducts(updated);
       setDoublerActiveIndex(0);
@@ -8035,8 +8123,12 @@ const App = () => {
   };
   const deleteCoveringProduct = index => {
     if (coveringProducts.length <= 1) return;
-    const name = getCoveringProductDisplayName(coveringProducts[index], index);
+    const itemToDelete = coveringProducts[index];
+    const name = getCoveringProductDisplayName(itemToDelete, index);
     if (confirm(`Are you sure you want to delete "${name}"?`)) {
+      if (itemToDelete && window.VishwaSupabase && typeof window.VishwaSupabase.recordCostingDeletion === 'function') {
+        window.VishwaSupabase.recordCostingDeletion('costing-covering-products-v1', itemToDelete.id);
+      }
       const updated = coveringProducts.filter((_, i) => i !== index);
       setCoveringProducts(updated);
       setCoveringActiveIndex(0);
@@ -9260,6 +9352,7 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
   };
 
   useEffect(() => {
+    if (isRemoteSyncRef.current) return;
     const enriched = tfoProducts.map(p => {
       try {
         const calcs = computeTfoCalcs(p);
@@ -9267,9 +9360,14 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       } catch(e) { return p; }
     });
     localStorage.setItem('costing-tfo-products-v1', JSON.stringify(enriched));
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+      window.VishwaSupabase.set('costing-tfo-products-v1', enriched);
+    }
+    try { window.dispatchEvent(new StorageEvent('storage', { key: 'costing-tfo-products-v1' })); } catch(e){}
   }, [tfoProducts]);
 
   useEffect(() => {
+    if (isRemoteSyncRef.current) return;
     const enriched = doublerProducts.map(p => {
       try {
         const calcs = computeDoublerCalcs(p);
@@ -9277,9 +9375,14 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       } catch(e) { return p; }
     });
     localStorage.setItem('costing-doubler-products-v1', JSON.stringify(enriched));
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+      window.VishwaSupabase.set('costing-doubler-products-v1', enriched);
+    }
+    try { window.dispatchEvent(new StorageEvent('storage', { key: 'costing-doubler-products-v1' })); } catch(e){}
   }, [doublerProducts]);
 
   useEffect(() => {
+    if (isRemoteSyncRef.current) return;
     const enriched = coveringProducts.map(p => {
       try {
         const calcs = computeCoveringCalcs(p);
@@ -9287,6 +9390,10 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       } catch(e) { return p; }
     });
     localStorage.setItem('costing-covering-products-v1', JSON.stringify(enriched));
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+      window.VishwaSupabase.set('costing-covering-products-v1', enriched);
+    }
+    try { window.dispatchEvent(new StorageEvent('storage', { key: 'costing-covering-products-v1' })); } catch(e){}
   }, [coveringProducts]);
   const coveringCalcs = useMemo(() => computeCoveringCalcs(currentCoveringProduct), [currentCoveringProduct]);
   const doublerTotalConversionCostDay = doublerCalcs?.totalConversionCostDay || 0;
@@ -14263,10 +14370,24 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
   }, /*#__PURE__*/React.createElement("header", {
     className: "bg-white border-b px-6 py-3 flex justify-between items-center flex-shrink-0 z-50"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-6"
+    className: "flex items-center gap-4"
   }, /*#__PURE__*/React.createElement("h1", {
     className: "text-xl font-black tracking-tight text-slate-800 uppercase"
-  }, activeMainTab === 'fabric' ? "Fabric Costing Calculator" : activeMainTab === 'tfo' ? "TFO Costing Calculator" : activeMainTab === 'doubler' ? "Doubler Costing Calculator" : activeMainTab === 'covering' ? "Covering Costing Calculator" : activeMainTab === 'compare-weaving' ? "Compare Weaving Costing" : "Compare Yarn Costing")), /*#__PURE__*/React.createElement("div", {
+  }, activeMainTab === 'fabric' ? "Fabric Costing Calculator" : activeMainTab === 'tfo' ? "TFO Costing Calculator" : activeMainTab === 'doubler' ? "Doubler Costing Calculator" : activeMainTab === 'covering' ? "Covering Costing Calculator" : activeMainTab === 'compare-weaving' ? "Compare Weaving Costing" : "Compare Yarn Costing"), /*#__PURE__*/React.createElement("div", {
+    className: `inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-all ${
+      syncStatus === 'syncing' ? 'bg-violet-50 text-violet-700 border-violet-200' :
+      syncStatus === 'offline' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+      'bg-emerald-50 text-emerald-700 border-emerald-200'
+    }`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `w-2 h-2 rounded-full ${
+      syncStatus === 'syncing' ? 'bg-violet-600 animate-ping' :
+      syncStatus === 'offline' ? 'bg-amber-500' :
+      'bg-emerald-500 animate-pulse'
+    }`
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-medium tracking-wide"
+  }, syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'offline' ? 'Offline (Local)' : 'Live Synced'))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-4 items-center"
   }, activeMainTab === 'fabric' && /*#__PURE__*/React.createElement("button", {
     onClick: () => duplicateProduct(activeIndex),
