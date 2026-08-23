@@ -7071,6 +7071,7 @@ const App = () => {
   const [isTfoLocked, setIsTfoLocked] = useState(false);
   const [isDoublerLocked, setIsDoublerLocked] = useState(false);
   const [isCoveringLocked, setIsCoveringLocked] = useState(false);
+  const hasHydratedRef = useRef(false);
   const isInitialMountProductsRef = useRef(true);
   const isInitialMountTfoRef = useRef(true);
   const isInitialMountDoublerRef = useRef(true);
@@ -7296,36 +7297,32 @@ const App = () => {
 
         if (key === 'costing-products-v4') {
           const norm = normalizeProducts(parsed);
-          const curStr = JSON.stringify(products);
-          const newStr = JSON.stringify(norm);
-          if (curStr !== newStr) {
+          setProducts(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(norm)) return prev;
             skipNextSyncSaveRef.current.products = true;
-            setProducts(norm);
-          }
+            return norm;
+          });
         } else if (key === 'costing-tfo-products-v1') {
           const norm = normalizeTfoProducts(parsed);
-          const curStr = JSON.stringify(tfoProducts);
-          const newStr = JSON.stringify(norm);
-          if (curStr !== newStr) {
+          setTfoProducts(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(norm)) return prev;
             skipNextSyncSaveRef.current.tfo = true;
-            setTfoProducts(norm);
-          }
+            return norm;
+          });
         } else if (key === 'costing-doubler-products-v1') {
           const norm = normalizeDoublerProducts(parsed);
-          const curStr = JSON.stringify(doublerProducts);
-          const newStr = JSON.stringify(norm);
-          if (curStr !== newStr) {
+          setDoublerProducts(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(norm)) return prev;
             skipNextSyncSaveRef.current.doubler = true;
-            setDoublerProducts(norm);
-          }
+            return norm;
+          });
         } else if (key === 'costing-covering-products-v1') {
           const norm = normalizeCoveringProducts(parsed);
-          const curStr = JSON.stringify(coveringProducts);
-          const newStr = JSON.stringify(norm);
-          if (curStr !== newStr) {
+          setCoveringProducts(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(norm)) return prev;
             skipNextSyncSaveRef.current.covering = true;
-            setCoveringProducts(norm);
-          }
+            return norm;
+          });
         }
       } catch (err) {
         console.error('Remote sync update error:', err);
@@ -7333,6 +7330,8 @@ const App = () => {
     };
 
     const handleSupabaseReady = () => {
+      if (hasHydratedRef.current) return;
+      hasHydratedRef.current = true;
       ['costing-products-v4', 'costing-tfo-products-v1', 'costing-doubler-products-v1', 'costing-covering-products-v1'].forEach(k => {
         const val = localStorage.getItem(k);
         if (val) {
@@ -7357,7 +7356,7 @@ const App = () => {
       window.removeEventListener('supabase-sync', handleRemoteSync);
       window.removeEventListener('supabase-ready', handleSupabaseReady);
     };
-  }, [products, tfoProducts, doublerProducts, coveringProducts]);
+  }, []);
 
   useEffect(() => {
     if (isInitialMountProductsRef.current) {

@@ -233,10 +233,7 @@
     // Debounced and Hash-Guarded Persistent Database Write (Zero Wasted POST Quota)
     set(key, value, isImmediate = false) {
       try {
-        if (!isHydrated) {
-          // When not yet hydrated from cloud, prevent premature local writes from overwriting fresh cloud data
-          return true;
-        }
+        lastLocalWrites[key] = Date.now();
 
         const nowIso = new Date().toISOString();
         const valStr = typeof value === 'string' ? value : JSON.stringify(value);
@@ -538,10 +535,8 @@
                 kvMap[row.key] = row.value;
                 lastSavedHashes[row.key] = computeHash(strValue);
 
-                if (!isInitial) {
-                  const lastWrite = lastLocalWrites[row.key] || 0;
-                  if (Date.now() - lastWrite < 3000) return;
-                }
+                const lastWrite = lastLocalWrites[row.key] || 0;
+                if (Date.now() - lastWrite < 3000) return;
 
                 if (cache[row.key] !== strValue || isInitial) {
                   cache[row.key] = strValue;
@@ -611,7 +606,8 @@
                     const mergedList = Array.from(mergedMap.values());
                     const mergedStr = JSON.stringify(mergedList);
 
-                    if (mergedList.length > 0) {
+                    const lastTableWrite = lastLocalWrites[key] || 0;
+                    if (Date.now() - lastTableWrite >= 3000 && mergedList.length > 0) {
                       cache[key] = mergedStr;
                       lastSavedHashes[key] = computeHash(mergedStr);
                       try { nativeLocalStorage.setItem(key, mergedStr); } catch(e) {}
@@ -683,6 +679,9 @@
               const strValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
               lastSavedHashes[row.key] = computeHash(strValue);
 
+              const lastWrite = lastLocalWrites[row.key] || 0;
+              if (Date.now() - lastWrite < 3000) return;
+
               if (cache[row.key] !== strValue) {
                 cache[row.key] = strValue;
                 try { nativeLocalStorage.setItem(row.key, strValue); } catch(e) {}
@@ -705,6 +704,8 @@
         }
       } catch (e) {
         console.error('Supabase loadAll failed:', e);
+      } finally {
+        isHydrated = true;
       }
     }
   };
