@@ -491,6 +491,25 @@
         }
       } catch (e) {}
     },
+    // Explicit Item Undeletion / Restore Tracking (for Ctrl+Z Undo)
+    async unrecordCostingDeletion(key, itemId) {
+      try {
+        const idStr = String(itemId);
+        let deletedIds = [];
+        try {
+          const raw = cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_costing_ids');
+          if (raw) deletedIds = JSON.parse(raw);
+        } catch (e) {}
+
+        if (deletedIds.includes(idStr)) {
+          deletedIds = deletedIds.filter(id => id !== idStr);
+          const valStr = JSON.stringify(deletedIds);
+          cache['vf_deleted_costing_ids'] = valStr;
+          try { nativeLocalStorage.setItem('vf_deleted_costing_ids', valStr); } catch(e) {}
+          this.set('vf_deleted_costing_ids', deletedIds, true);
+        }
+      } catch (e) {}
+    },
     async clearAll() {
       try {
         Object.keys(lastKnownTimestamps).forEach(k => delete lastKnownTimestamps[k]);
