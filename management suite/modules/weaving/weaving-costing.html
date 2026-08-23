@@ -8714,6 +8714,8 @@ const App = () => {
     // Twist Factor kd for backward compatibility UI
     const kd = tpm * Math.sqrt(denier) / 1000;
     // Electricity calculations (accounting for motor efficiency of 90%)
+    const electricityMode = currentTfoProduct.electricityMode || 'hp';
+    const monthlyElectricityCost = Number(currentTfoProduct.monthlyElectricityCost) || 0;
     const motorEfficiency = 0.90;
     const hpHeatSet = Number(currentTfoProduct.hpHeatSet) || 0;
     const noOfHeatSet = Number(currentTfoProduct.noOfHeatSet) || 0;
@@ -8722,11 +8724,26 @@ const App = () => {
     const powerKwTfo = hp * 0.746 * (loadFactor / 100) / motorEfficiency;
     const powerKwCops = hpCops * 0.746 * (loadFactor / 100);
     const powerKwHeatSet = hpHeatSet * 0.746 * (loadFactor / 100);
-    const powerKw = powerKwTfo + powerKwCops + powerKwHeatSet;
-    const unitsDay = powerKwTfo * workingHours + powerKwCops * workingHoursCops + powerKwHeatSet * workingHoursHeatSet;
-    const unitsMonth = powerKwTfo * workingHours * daysPerMonth + powerKwCops * workingHoursCops * daysPerMonth + powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet;
-    const costMonth = unitsMonth * electricityRate;
-    const costDay = daysPerMonth > 0 ? costMonth / daysPerMonth : 0;
+    const powerKwHp = powerKwTfo + powerKwCops + powerKwHeatSet;
+    const unitsDayHp = powerKwTfo * workingHours + powerKwCops * workingHoursCops + powerKwHeatSet * workingHoursHeatSet;
+    const unitsMonthHp = powerKwTfo * workingHours * daysPerMonth + powerKwCops * workingHoursCops * daysPerMonth + powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet;
+    const costMonthHp = unitsMonthHp * electricityRate;
+    const costDayHp = daysPerMonth > 0 ? costMonthHp / daysPerMonth : 0;
+
+    let powerKw, unitsDay, unitsMonth, costMonth, costDay;
+    if (electricityMode === 'lump_sum') {
+      costMonth = monthlyElectricityCost;
+      costDay = daysPerMonth > 0 ? costMonth / daysPerMonth : 0;
+      unitsMonth = electricityRate > 0 ? costMonth / electricityRate : 0;
+      unitsDay = daysPerMonth > 0 ? unitsMonth / daysPerMonth : 0;
+      powerKw = (workingHours > 0 && daysPerMonth > 0) ? unitsMonth / (workingHours * daysPerMonth) : 0;
+    } else {
+      powerKw = powerKwHp;
+      unitsDay = unitsDayHp;
+      unitsMonth = unitsMonthHp;
+      costMonth = costMonthHp;
+      costDay = costDayHp;
+    }
     // Total production per day = prodDayEff
     const totalProdDayEff = prodDayEff;
     const powerCostPerKg = totalProdDayEff > 0 ? costDay / totalProdDayEff : 0;
@@ -9030,6 +9047,9 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     const prodDay100 = spindleProductionDay * noOfSpindles;
     const prodDayEff = machineProductionDay;
     const prodMonthEff = monthlyProduction;
+    // Electricity calculations
+    const electricityMode = currentDoublerProduct.electricityMode || 'hp';
+    const monthlyElectricityCost = Number(currentDoublerProduct.monthlyElectricityCost) || 0;
     const motorEfficiency = 0.90;
     const hpHeatSet = Number(currentDoublerProduct.hpHeatSet) || 0;
     const noOfHeatSet = Number(currentDoublerProduct.noOfHeatSet) || 0;
@@ -9038,11 +9058,26 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     const powerKwDoubler = hp * 0.746 * (loadFactor / 100);
     const powerKwCops = hpCops * 0.746 * (loadFactor / 100) / motorEfficiency;
     const powerKwHeatSet = hpHeatSet * 0.746 * (loadFactor / 100) / motorEfficiency;
-    const powerKw = powerKwDoubler + powerKwCops + powerKwHeatSet;
-    const unitsDay = powerKwDoubler * workingHours + powerKwCops * workingHoursCops + powerKwHeatSet * workingHoursHeatSet;
-    const unitsMonth = powerKwDoubler * workingHours * daysPerMonth + powerKwCops * workingHoursCops * daysPerMonth + powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet;
-    const costMonth = unitsMonth * electricityRate;
-    const costDay = daysPerMonth > 0 ? costMonth / daysPerMonth : 0;
+    const powerKwHp = powerKwDoubler + powerKwCops + powerKwHeatSet;
+    const unitsDayHp = powerKwDoubler * workingHours + powerKwCops * workingHoursCops + powerKwHeatSet * workingHoursHeatSet;
+    const unitsMonthHp = powerKwDoubler * workingHours * daysPerMonth + powerKwCops * workingHoursCops * daysPerMonth + powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet;
+    const costMonthHp = unitsMonthHp * electricityRate;
+    const costDayHp = daysPerMonth > 0 ? costMonthHp / daysPerMonth : 0;
+
+    let powerKw, unitsDay, unitsMonth, costMonth, costDay;
+    if (electricityMode === 'lump_sum') {
+      costMonth = monthlyElectricityCost;
+      costDay = daysPerMonth > 0 ? costMonth / daysPerMonth : 0;
+      unitsMonth = electricityRate > 0 ? costMonth / electricityRate : 0;
+      unitsDay = daysPerMonth > 0 ? unitsMonth / daysPerMonth : 0;
+      powerKw = (workingHours > 0 && daysPerMonth > 0) ? unitsMonth / (workingHours * daysPerMonth) : 0;
+    } else {
+      powerKw = powerKwHp;
+      unitsDay = unitsDayHp;
+      unitsMonth = unitsMonthHp;
+      costMonth = costMonthHp;
+      costDay = costDayHp;
+    }
     const totalProdDayEff = prodDayEff;
     const powerCostPerKg = totalProdDayEff > 0 ? costDay / totalProdDayEff : 0;
     const labors = currentDoublerProduct.labors || [];
@@ -9340,6 +9375,9 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     const prodDay100 = spindleProductionDay * noOfSpindles;
     const prodDayEff = machineProductionDay;
     const prodMonthEff = monthlyProduction;
+    // Electricity calculations
+    const electricityMode = currentCoveringProduct.electricityMode || 'hp';
+    const monthlyElectricityCost = Number(currentCoveringProduct.monthlyElectricityCost) || 0;
     const motorEfficiency = 0.90;
     const hpHeatSet = Number(currentCoveringProduct.hpHeatSet) || 0;
     const noOfHeatSet = Number(currentCoveringProduct.noOfHeatSet) || 0;
@@ -9348,11 +9386,26 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     const powerKwCovering = hp * 0.746 * (loadFactor / 100) / motorEfficiency;
     const powerKwCops = hpCops * 0.746 * (loadFactor / 100) / motorEfficiency;
     const powerKwHeatSet = hpHeatSet * 0.746 * (loadFactor / 100) / motorEfficiency;
-    const powerKw = powerKwCovering + powerKwCops + powerKwHeatSet;
-    const unitsDay = powerKwCovering * workingHours + powerKwCops * workingHoursCops + powerKwHeatSet * workingHoursHeatSet;
-    const unitsMonth = powerKwCovering * workingHours * daysPerMonth + powerKwCops * workingHoursCops * daysPerMonth + powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet;
-    const costMonth = unitsMonth * electricityRate;
-    const costDay = daysPerMonth > 0 ? costMonth / daysPerMonth : 0;
+    const powerKwHp = powerKwCovering + powerKwCops + powerKwHeatSet;
+    const unitsDayHp = powerKwCovering * workingHours + powerKwCops * workingHoursCops + powerKwHeatSet * workingHoursHeatSet;
+    const unitsMonthHp = powerKwCovering * workingHours * daysPerMonth + powerKwCops * workingHoursCops * daysPerMonth + powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet;
+    const costMonthHp = unitsMonthHp * electricityRate;
+    const costDayHp = daysPerMonth > 0 ? costMonthHp / daysPerMonth : 0;
+
+    let powerKw, unitsDay, unitsMonth, costMonth, costDay;
+    if (electricityMode === 'lump_sum') {
+      costMonth = monthlyElectricityCost;
+      costDay = daysPerMonth > 0 ? costMonth / daysPerMonth : 0;
+      unitsMonth = electricityRate > 0 ? costMonth / electricityRate : 0;
+      unitsDay = daysPerMonth > 0 ? unitsMonth / daysPerMonth : 0;
+      powerKw = (workingHours > 0 && daysPerMonth > 0) ? unitsMonth / (workingHours * daysPerMonth) : 0;
+    } else {
+      powerKw = powerKwHp;
+      unitsDay = unitsDayHp;
+      unitsMonth = unitsMonthHp;
+      costMonth = costMonthHp;
+      costDay = costDayHp;
+    }
     const totalProdDayEff = prodDayEff;
     const powerCostPerKg = totalProdDayEff > 0 ? costDay / totalProdDayEff : 0;
     const labors = currentCoveringProduct.labors || [];
