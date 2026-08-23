@@ -68,6 +68,9 @@
   const lastLocalWrites = {};
   const lastSavedHashes = {};
   const debouncedWriteTimers = {};
+  const pendingRemoteUpdates = {};
+  const deferredApplyTimers = {};
+
   const COSTING_KEYS = [
     'costing-products-v4',
     'costing-tfo-products-v1',
@@ -92,6 +95,59 @@
   // BroadcastChannel for instant real-time sync across open windows in the SAME browser
   const syncChannel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('vf_supabase_sync') : null;
 
+  function applyRemoteKeyUpdate(key, valStr) {
+    if (cache[key] !== valStr) {
+      cache[key] = valStr;
+      try { nativeLocalStorage.setItem(key, valStr); } catch(e) {}
+      lastSavedHashes[key] = computeHash(valStr);
+      lastKnownTimestamps[key] = new Date().toISOString();
+
+      window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key, value: valStr, isRemote: true } }));
+      try {
+        window.dispatchEvent(new StorageEvent('storage', { key: key, newValue: valStr }));
+      } catch(e) {
+        window.dispatchEvent(new Event('storage'));
+      }
+    }
+  }
+
+  function handleIncomingRemoteUpdate(key, valStr, isDelete = false) {
+    if (isDelete) {
+      delete cache[key];
+      delete lastKnownTimestamps[key];
+      delete lastSavedHashes[key];
+      delete pendingRemoteUpdates[key];
+      try { nativeLocalStorage.removeItem(key); } catch(e) {}
+      window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key, value: null, isRemote: true } }));
+      try {
+        window.dispatchEvent(new StorageEvent('storage', { key: key, newValue: null }));
+      } catch(e) {
+        window.dispatchEvent(new Event('storage'));
+      }
+      return;
+    }
+
+    const lastWrite = lastLocalWrites[key] || 0;
+    const timeSinceLastWrite = Date.now() - lastWrite;
+
+    if (timeSinceLastWrite < 3000) {
+      // User is actively editing this key locally. Defer application instead of dropping!
+      pendingRemoteUpdates[key] = valStr;
+      clearTimeout(deferredApplyTimers[key]);
+      deferredApplyTimers[key] = setTimeout(() => {
+        const currentElapsed = Date.now() - (lastLocalWrites[key] || 0);
+        if (currentElapsed >= 3000 && pendingRemoteUpdates[key]) {
+          const deferredVal = pendingRemoteUpdates[key];
+          delete pendingRemoteUpdates[key];
+          applyRemoteKeyUpdate(key, deferredVal);
+        }
+      }, (3000 - timeSinceLastWrite) + 150);
+      return;
+    }
+
+    applyRemoteKeyUpdate(key, valStr);
+  }
+
   if (syncChannel) {
     syncChannel.onmessage = (msg) => {
       if (msg && msg.data && msg.data.key) {
@@ -99,25 +155,9 @@
         if (senderId === CLIENT_ID) return; // Skip own messages
 
         if (type === 'removeItem') {
-          delete cache[key];
-          try { nativeLocalStorage.removeItem(key); } catch(e) {}
-          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key, value: null, isRemote: true } }));
-          try {
-            window.dispatchEvent(new StorageEvent('storage', { key: key, newValue: null }));
-          } catch(e) {
-            window.dispatchEvent(new Event('storage'));
-          }
+          handleIncomingRemoteUpdate(key, null, true);
         } else {
-          if (cache[key] !== value) {
-            cache[key] = value;
-            try { nativeLocalStorage.setItem(key, value); } catch(e) {}
-            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key, value, isRemote: true } }));
-            try {
-              window.dispatchEvent(new StorageEvent('storage', { key: key, newValue: value }));
-            } catch(e) {
-              window.dispatchEvent(new Event('storage'));
-            }
-          }
+          handleIncomingRemoteUpdate(key, value, false);
         }
       }
     };
@@ -174,20 +214,7 @@
             if (inner && inner.senderId !== CLIENT_ID && inner.key) {
               const { key, value } = inner;
               const valStr = typeof value === 'string' ? value : JSON.stringify(value);
-
-              if (cache[key] !== valStr) {
-                cache[key] = valStr;
-                try { nativeLocalStorage.setItem(key, valStr); } catch (err) {}
-                lastKnownTimestamps[key] = new Date().toISOString();
-
-                // Dispatch reactive events for React components
-                window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key, value: valStr, isRemote: true } }));
-                try {
-                  window.dispatchEvent(new StorageEvent('storage', { key: key, newValue: valStr }));
-                } catch (err) {
-                  window.dispatchEvent(new Event('storage'));
-                }
-              }
+              handleIncomingRemoteUpdate(key, valStr, false);
             }
           }
         } catch (err) {}
@@ -247,20 +274,54 @@
     }
   }
 
-  // Initialize Realtime WebSocket
-  initRealtimeWebSocket();
-
   // Track last known server timestamps to avoid re-downloading unchanged payloads
   const lastKnownTimestamps = {};
 
   // Simple string hash function for quick payload equality check
   function computeHash(str) {
+    if (!str) return '0';
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       hash = ((hash << 5) - hash) + str.charCodeAt(i);
       hash |= 0;
     }
     return hash.toString();
+  }
+
+  // --- Infinite Scale Paginated PostgREST Fetcher ---
+  // Chunked batch queries bypass default 1,000-row PostgREST limits for arbitrary dataset sizes
+  async function fetchAllRowsPaginated(tableOrPath, select = '*', extraParams = '') {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+    const pageSize = 1000;
+    let offset = 0;
+    let allRows = [];
+    let hasMore = true;
+
+    while (hasMore) {
+      try {
+        const separator = tableOrPath.includes('?') ? '&' : '?';
+        const url = `${SUPABASE_URL}/rest/v1/${tableOrPath}${separator}select=${encodeURIComponent(select)}&limit=${pageSize}&offset=${offset}${extraParams ? ('&' + extraParams) : ''}`;
+        const res = await fetch(url, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        if (!res.ok) break;
+        const rows = await res.json();
+        if (!Array.isArray(rows) || rows.length === 0) break;
+        allRows = allRows.concat(rows);
+        if (rows.length < pageSize) {
+          hasMore = false;
+        } else {
+          offset += pageSize;
+        }
+      } catch (e) {
+        console.warn('Pagination fetch notice:', e);
+        break;
+      }
+    }
+    return allRows;
   }
 
   // Supabase REST API Client
@@ -301,6 +362,7 @@
         broadcastRealtimeUpdate(key, value);
 
         const executeDbWrite = async () => {
+          if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return;
           try {
             setSyncStatus('syncing');
             lastKnownTimestamps[key] = nowIso;
@@ -337,16 +399,21 @@
               }));
 
               if (rows.length > 0) {
-                await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=id`, {
-                  method: 'POST',
-                  headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'resolution=merge-duplicates'
-                  },
-                  body: JSON.stringify(rows)
-                }).catch(() => {});
+                // Batch in chunks of 500 for safety against large payloads
+                const chunkSize = 500;
+                for (let i = 0; i < rows.length; i += chunkSize) {
+                  const chunk = rows.slice(i, i + chunkSize);
+                  await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=id`, {
+                    method: 'POST',
+                    headers: {
+                      'apikey': SUPABASE_ANON_KEY,
+                      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                      'Content-Type': 'application/json',
+                      'Prefer': 'resolution=merge-duplicates'
+                    },
+                    body: JSON.stringify(chunk)
+                  }).catch(() => {});
+                }
               }
             }
             setSyncStatus(ws && ws.readyState === WebSocket.OPEN ? 'connected' : 'offline');
@@ -372,13 +439,16 @@
       try {
         delete lastKnownTimestamps[key];
         delete lastSavedHashes[key];
-        await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=eq.${encodeURIComponent(key)}`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-          }
-        });
+        delete pendingRemoteUpdates[key];
+        if (activeConfig.isConfigured && SUPABASE_URL) {
+          await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=eq.${encodeURIComponent(key)}`, {
+            method: 'DELETE',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          });
+        }
       } catch(e) {}
     },
     // Explicit Item Deletion Tombstone Tracking
@@ -393,6 +463,10 @@
 
         if (!deletedIds.includes(idStr)) {
           deletedIds.push(idStr);
+          // Prune tombstone array to most recent 2000 items to avoid memory leaks
+          if (deletedIds.length > 2000) {
+            deletedIds = deletedIds.slice(-2000);
+          }
           const valStr = JSON.stringify(deletedIds);
           cache['vf_deleted_costing_ids'] = valStr;
           try { nativeLocalStorage.setItem('vf_deleted_costing_ids', valStr); } catch(e) {}
@@ -406,7 +480,7 @@
         else if (key === 'costing-doubler-products-v1') table = 'vf_costing_doubler_products';
         else if (key === 'costing-covering-products-v1') table = 'vf_costing_covering_products';
 
-        if (table) {
+        if (table && activeConfig.isConfigured && SUPABASE_URL) {
           fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(idStr)}`, {
             method: 'DELETE',
             headers: {
@@ -420,22 +494,24 @@
     async clearAll() {
       try {
         Object.keys(lastKnownTimestamps).forEach(k => delete lastKnownTimestamps[k]);
-        await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=neq.null`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-          }
-        });
-        const tables = ['vf_costing_products', 'vf_costing_tfo_products', 'vf_costing_doubler_products', 'vf_costing_covering_products'];
-        for (const t of tables) {
-          fetch(`${SUPABASE_URL}/rest/v1/${t}?id=neq.null`, {
+        if (activeConfig.isConfigured && SUPABASE_URL) {
+          await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=neq.null`, {
             method: 'DELETE',
             headers: {
               'apikey': SUPABASE_ANON_KEY,
               'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
             }
-          }).catch(() => {});
+          });
+          const tables = ['vf_costing_products', 'vf_costing_tfo_products', 'vf_costing_doubler_products', 'vf_costing_covering_products'];
+          for (const t of tables) {
+            fetch(`${SUPABASE_URL}/rest/v1/${t}?id=neq.null`, {
+              method: 'DELETE',
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              }
+            }).catch(() => {});
+          }
         }
       } catch(e) {}
     },
@@ -517,7 +593,7 @@
       try {
         let token = null;
         try { token = nativeLocalStorage.getItem('vf_supabase_token'); } catch(e) {}
-        if (token) {
+        if (token && SUPABASE_URL) {
           fetch(`${SUPABASE_URL}/auth/v1/logout`, {
             method: 'POST',
             headers: {
@@ -610,6 +686,14 @@
       }
 
       activeConfig = resolveConfig();
+      if (url && anonKey && !saveToStorage) {
+        activeConfig = {
+          url: url.trim().replace(/\/+$/, ''),
+          anonKey: anonKey.trim(),
+          isConfigured: true,
+          source: 'direct'
+        };
+      }
       SUPABASE_URL = activeConfig.url;
       SUPABASE_ANON_KEY = activeConfig.anonKey;
 
@@ -647,14 +731,8 @@
       }
       try {
         if (isInitial || Object.keys(lastKnownTimestamps).length === 0) {
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?select=key,value,updated_at`, {
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            }
-          });
-          if (res.ok) {
-            const rows = await res.json();
+          const rows = await fetchAllRowsPaginated('vf_kv_store', 'key,value,updated_at');
+          if (Array.isArray(rows)) {
             let hasChanges = false;
             const updatedKeys = [];
             const kvMap = {};
@@ -667,7 +745,10 @@
                 lastSavedHashes[row.key] = computeHash(strValue);
 
                 const lastWrite = lastLocalWrites[row.key] || 0;
-                if (Date.now() - lastWrite < 3000) return;
+                if (Date.now() - lastWrite < 3000) {
+                  pendingRemoteUpdates[row.key] = strValue;
+                  return;
+                }
 
                 if (cache[row.key] !== strValue || isInitial) {
                   cache[row.key] = strValue;
@@ -680,7 +761,7 @@
               }
             });
 
-            // Reconcile Dedicated Costing Tables for complete data safety
+            // Reconcile Dedicated Costing Tables for complete data safety (Paginated)
             try {
               const costingTableDefs = [
                 { key: 'costing-products-v4', table: 'vf_costing_products' },
@@ -698,53 +779,45 @@
               } catch (e) {}
 
               for (const { key, table } of costingTableDefs) {
-                const tblRes = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=id,data,updated_at`, {
-                  headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                  }
-                });
+                const tblRows = await fetchAllRowsPaginated(table, 'id,data,updated_at');
 
-                if (tblRes.ok) {
-                  const tblRows = await tblRes.json();
-                  if (Array.isArray(tblRows) && tblRows.length > 0) {
-                    let currentKvArray = [];
-                    try {
-                      const existing = kvMap[key];
-                      if (existing) currentKvArray = typeof existing === 'string' ? JSON.parse(existing) : existing;
-                    } catch(e) {}
+                if (Array.isArray(tblRows) && tblRows.length > 0) {
+                  let currentKvArray = [];
+                  try {
+                    const existing = kvMap[key];
+                    if (existing) currentKvArray = typeof existing === 'string' ? JSON.parse(existing) : existing;
+                  } catch(e) {}
 
-                    const mergedMap = new Map();
-                    // Load table items (authoritative server items)
-                    tblRows.forEach(r => {
-                      const idStr = String(r.data?.id || r.id);
-                      if (r.data && !deletedCostingIds.includes(idStr)) {
-                        mergedMap.set(idStr, r.data);
+                  const mergedMap = new Map();
+                  // Load table items (authoritative server items)
+                  tblRows.forEach(r => {
+                    const idStr = String(r.data?.id || r.id);
+                    if (r.data && !deletedCostingIds.includes(idStr)) {
+                      mergedMap.set(idStr, r.data);
+                    }
+                  });
+                  // Merge cloud kvMap items only if not deleted and not in table
+                  if (Array.isArray(currentKvArray)) {
+                    currentKvArray.forEach(item => {
+                      if (item && item.id) {
+                        const idStr = String(item.id);
+                        if (!deletedCostingIds.includes(idStr) && !mergedMap.has(idStr)) {
+                          mergedMap.set(idStr, item);
+                        }
                       }
                     });
-                    // Merge cloud kvMap items only if not deleted and not in table
-                    if (Array.isArray(currentKvArray)) {
-                      currentKvArray.forEach(item => {
-                        if (item && item.id) {
-                          const idStr = String(item.id);
-                          if (!deletedCostingIds.includes(idStr) && !mergedMap.has(idStr)) {
-                            mergedMap.set(idStr, item);
-                          }
-                        }
-                      });
-                    }
+                  }
 
-                    const mergedList = Array.from(mergedMap.values());
-                    const mergedStr = JSON.stringify(mergedList);
+                  const mergedList = Array.from(mergedMap.values());
+                  const mergedStr = JSON.stringify(mergedList);
 
-                    const lastTableWrite = lastLocalWrites[key] || 0;
-                    if (Date.now() - lastTableWrite >= 3000 && mergedList.length > 0) {
-                      cache[key] = mergedStr;
-                      lastSavedHashes[key] = computeHash(mergedStr);
-                      try { nativeLocalStorage.setItem(key, mergedStr); } catch(e) {}
-                      if (!updatedKeys.includes(key)) updatedKeys.push(key);
-                      hasChanges = true;
-                    }
+                  const lastTableWrite = lastLocalWrites[key] || 0;
+                  if (Date.now() - lastTableWrite >= 3000 && mergedList.length > 0) {
+                    cache[key] = mergedStr;
+                    lastSavedHashes[key] = computeHash(mergedStr);
+                    try { nativeLocalStorage.setItem(key, mergedStr); } catch(e) {}
+                    if (!updatedKeys.includes(key)) updatedKeys.push(key);
+                    hasChanges = true;
                   }
                 }
               }
@@ -768,70 +841,73 @@
           return;
         }
 
-        // Lightweight Polling: Fetch ONLY key and updated_at metadata (bytes instead of megabytes)
-        const metaRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?select=key,updated_at`, {
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-          }
-        });
-        if (!metaRes.ok) return;
-        const metaRows = await metaRes.json();
+        // Lightweight Polling: Fetch metadata with pagination for complete coverage
+        const metaRows = await fetchAllRowsPaginated('vf_kv_store', 'key,updated_at');
+        if (!Array.isArray(metaRows) || metaRows.length === 0) return;
 
         // Identify keys that have actually changed on the server
         const changedKeys = [];
         metaRows.forEach(row => {
           const lastWrite = lastLocalWrites[row.key] || 0;
-          if (Date.now() - lastWrite < 3000) return; // Skip keys edited locally recently
-
           const knownTs = lastKnownTimestamps[row.key];
           if (!knownTs || !row.updated_at || row.updated_at !== knownTs || !cache.hasOwnProperty(row.key)) {
-            changedKeys.push(row.key);
+            if (Date.now() - lastWrite >= 3000) {
+              changedKeys.push(row.key);
+            }
           }
         });
 
         if (changedKeys.length === 0) return; // Zero network payload downloaded if nothing changed!
 
-        // Fetch values ONLY for changed keys
-        const encodedKeys = changedKeys.map(k => `"${encodeURIComponent(k)}"`).join(',');
-        const valRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=in.(${encodedKeys})&select=key,value,updated_at`, {
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-          }
-        });
-        if (valRes.ok) {
-          const rows = await valRes.json();
-          let hasChanges = false;
-          const updatedKeys = [];
-          rows.forEach(row => {
-            try {
-              if (row.updated_at) lastKnownTimestamps[row.key] = row.updated_at;
-              const strValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
-              lastSavedHashes[row.key] = computeHash(strValue);
+        // Fetch values in chunks of 50 keys to prevent URL overflow
+        const chunkSize = 50;
+        let hasChanges = false;
+        const updatedKeys = [];
 
-              const lastWrite = lastLocalWrites[row.key] || 0;
-              if (Date.now() - lastWrite < 3000) return;
-
-              if (cache[row.key] !== strValue) {
-                cache[row.key] = strValue;
-                try { nativeLocalStorage.setItem(row.key, strValue); } catch(e) {}
-                updatedKeys.push(row.key);
-                hasChanges = true;
-              }
-            } catch (e) {
-              cache[row.key] = String(row.value);
+        for (let i = 0; i < changedKeys.length; i += chunkSize) {
+          const chunk = changedKeys.slice(i, i + chunkSize);
+          const encodedKeys = chunk.map(k => `"${encodeURIComponent(k)}"`).join(',');
+          const valRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=in.(${encodedKeys})&select=key,value,updated_at`, {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
             }
           });
-          if (hasChanges) {
-            window.dispatchEvent(new Event('storage'));
-            updatedKeys.forEach(k => {
-              window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: k, value: cache[k], isRemote: true } }));
+          if (valRes.ok) {
+            const rows = await valRes.json();
+            rows.forEach(row => {
               try {
-                window.dispatchEvent(new StorageEvent('storage', { key: k, newValue: cache[k] }));
-              } catch(e) {}
+                if (row.updated_at) lastKnownTimestamps[row.key] = row.updated_at;
+                const strValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
+                lastSavedHashes[row.key] = computeHash(strValue);
+
+                const lastWrite = lastLocalWrites[row.key] || 0;
+                if (Date.now() - lastWrite < 3000) {
+                  pendingRemoteUpdates[row.key] = strValue;
+                  return;
+                }
+
+                if (cache[row.key] !== strValue) {
+                  cache[row.key] = strValue;
+                  try { nativeLocalStorage.setItem(row.key, strValue); } catch(e) {}
+                  updatedKeys.push(row.key);
+                  hasChanges = true;
+                }
+              } catch (e) {
+                cache[row.key] = String(row.value);
+              }
             });
           }
+        }
+
+        if (hasChanges) {
+          window.dispatchEvent(new Event('storage'));
+          updatedKeys.forEach(k => {
+            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: k, value: cache[k], isRemote: true } }));
+            try {
+              window.dispatchEvent(new StorageEvent('storage', { key: k, newValue: cache[k] }));
+            } catch(e) {}
+          });
         }
       } catch (e) {
         console.error('Supabase loadAll failed:', e);
@@ -841,10 +917,29 @@
     }
   };
 
-  // Initial full cloud dataset fetch & item reconciliation on boot
-  supabaseApi.loadAll(true).then(() => {
-    console.log("Management Suite — Cloud Sync initialized.");
-  });
+  // Initial boot: start Realtime WS and initial load
+  if (activeConfig.isConfigured) {
+    initRealtimeWebSocket();
+    supabaseApi.loadAll(true).then(() => {
+      console.log("Management Suite — Cloud Sync initialized.");
+    });
+  } else {
+    // Self-healing: if APP_CONFIG loads after supabase-client.js, auto-configure
+    let checkAttempts = 0;
+    const configCheckTimer = setInterval(() => {
+      checkAttempts++;
+      if (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL && window.APP_CONFIG.SUPABASE_ANON_KEY) {
+        clearInterval(configCheckTimer);
+        const resolved = resolveConfig();
+        if (resolved.isConfigured && !activeConfig.isConfigured) {
+          supabaseApi.configure({ url: resolved.url, anonKey: resolved.anonKey, saveToStorage: false });
+        }
+      }
+      if (checkAttempts > 20) {
+        clearInterval(configCheckTimer);
+      }
+    }, 250);
+  }
 
   // Smart polling interval & Visibility Throttling (30s interval, disabled when tab is hidden)
   let syncIntervalId = null;
