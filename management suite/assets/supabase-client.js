@@ -233,6 +233,11 @@
     // Debounced and Hash-Guarded Persistent Database Write (Zero Wasted POST Quota)
     set(key, value, isImmediate = false) {
       try {
+        if (!isHydrated) {
+          // When not yet hydrated from cloud, prevent premature local writes from overwriting fresh cloud data
+          return true;
+        }
+
         const nowIso = new Date().toISOString();
         const valStr = typeof value === 'string' ? value : JSON.stringify(value);
         const payloadHash = computeHash(valStr);
@@ -533,10 +538,12 @@
                 kvMap[row.key] = row.value;
                 lastSavedHashes[row.key] = computeHash(strValue);
 
-                const lastWrite = lastLocalWrites[row.key] || 0;
-                if (Date.now() - lastWrite < 3000) return;
+                if (!isInitial) {
+                  const lastWrite = lastLocalWrites[row.key] || 0;
+                  if (Date.now() - lastWrite < 3000) return;
+                }
 
-                if (cache[row.key] !== strValue) {
+                if (cache[row.key] !== strValue || isInitial) {
                   cache[row.key] = strValue;
                   try { nativeLocalStorage.setItem(row.key, strValue); } catch(e) {}
                   updatedKeys.push(row.key);
@@ -577,25 +584,25 @@
                   if (Array.isArray(tblRows) && tblRows.length > 0) {
                     let currentKvArray = [];
                     try {
-                      const existing = cache[key] || kvMap[key];
+                      const existing = kvMap[key];
                       if (existing) currentKvArray = typeof existing === 'string' ? JSON.parse(existing) : existing;
                     } catch(e) {}
 
                     const mergedMap = new Map();
-                    // Load table items
+                    // Load table items (authoritative server items)
                     tblRows.forEach(r => {
                       const idStr = String(r.data?.id || r.id);
                       if (r.data && !deletedCostingIds.includes(idStr)) {
                         mergedMap.set(idStr, r.data);
                       }
                     });
-                    // Merge KV array items
+                    // Merge cloud kvMap items only if not deleted and not in table
                     if (Array.isArray(currentKvArray)) {
                       currentKvArray.forEach(item => {
                         if (item && item.id) {
                           const idStr = String(item.id);
-                          if (!deletedCostingIds.includes(idStr)) {
-                            mergedMap.set(idStr, { ...(mergedMap.get(idStr) || {}), ...item });
+                          if (!deletedCostingIds.includes(idStr) && !mergedMap.has(idStr)) {
+                            mergedMap.set(idStr, item);
                           }
                         }
                       });
@@ -604,15 +611,12 @@
                     const mergedList = Array.from(mergedMap.values());
                     const mergedStr = JSON.stringify(mergedList);
 
-                    if (mergedList.length > 0 && cache[key] !== mergedStr) {
+                    if (mergedList.length > 0) {
                       cache[key] = mergedStr;
                       lastSavedHashes[key] = computeHash(mergedStr);
                       try { nativeLocalStorage.setItem(key, mergedStr); } catch(e) {}
                       if (!updatedKeys.includes(key)) updatedKeys.push(key);
                       hasChanges = true;
-
-                      // Sync authoritative merged list back to KV store once
-                      this.set(key, mergedList, true);
                     }
                   }
                 }
@@ -622,9 +626,9 @@
             }
 
             isHydrated = true;
-            window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true } }));
+            window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
 
-            if (hasChanges) {
+            if (hasChanges || isInitial) {
               window.dispatchEvent(new Event('storage'));
               updatedKeys.forEach(k => {
                 window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: k, value: cache[k], isRemote: true } }));

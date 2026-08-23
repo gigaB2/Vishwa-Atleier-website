@@ -6927,12 +6927,158 @@ const App = () => {
     } catch (err) {
       _loadDesignsFromLS();
     }
+  const normalizeProducts = (list) => {
+    if (!Array.isArray(list) || list.length === 0) return [{
+      ...DEFAULT_PRODUCT,
+      id: Date.now(),
+      name: "New Fabric Quality 1",
+      sampleImages: [],
+      warps: DEFAULT_PRODUCT.warps.map(w => ({ ...w })),
+      wefts: DEFAULT_PRODUCT.wefts.map(w => ({ ...w })),
+      fabricDetails: { ...DEFAULT_PRODUCT.fabricDetails },
+      additionalCosts: []
+    }];
+    return list.map((item, idx) => ({
+      ...DEFAULT_PRODUCT,
+      ...item,
+      id: item.id || Date.now() + idx,
+      name: (item.name && item.name.trim() && item.name !== "New Fabric Quality") ? item.name : `New Fabric Quality ${idx + 1}`,
+      sampleImages: item.sampleImages || [],
+      warps: item.warps ? item.warps.map(w => ({ ...w })) : DEFAULT_PRODUCT.warps.map(w => ({ ...w })),
+      wefts: item.wefts ? item.wefts.map(w => ({ ...w })) : DEFAULT_PRODUCT.wefts.map(w => ({ ...w })),
+      fabricDetails: item.fabricDetails ? { ...DEFAULT_PRODUCT.fabricDetails, ...item.fabricDetails } : { ...DEFAULT_PRODUCT.fabricDetails },
+      additionalCosts: item.additionalCosts || []
+    }));
   };
+
+  const normalizeTfoProducts = (list) => {
+    if (!Array.isArray(list) || list.length === 0) return [{
+      ...DEFAULT_TFO_PRODUCT,
+      id: Date.now(),
+      name: "New TFO Quality 1"
+    }];
+    return list.map((item, idx) => {
+      const loadedItem = {
+        ...DEFAULT_TFO_PRODUCT,
+        ...item,
+        id: item.id || Date.now() + idx,
+        name: (item.name && item.name.trim() && item.name !== "New TFO Quality") ? item.name : `New TFO Quality ${idx + 1}`,
+        labors: item.labors || [],
+        machineCost: item.machineCost !== undefined ? item.machineCost : 1000000,
+        machineLifeYears: item.machineLifeYears !== undefined ? item.machineLifeYears : 10,
+        yarnQuality: item.yarnQuality !== undefined ? item.yarnQuality : "",
+        material: item.material !== undefined ? item.material : "polyester",
+        supplier: item.supplier !== undefined ? item.supplier : "",
+        color: item.color !== undefined ? item.color : "",
+        filament: item.filament !== undefined ? item.filament : "",
+        yarnRate: item.yarnRate !== undefined ? item.yarnRate : 0,
+        maintenanceCost: item.maintenanceCost !== undefined ? item.maintenanceCost : 0,
+        wastage: item.wastage !== undefined ? item.wastage : 0,
+        monthlyRent: item.monthlyRent !== undefined ? item.monthlyRent : 0,
+        takeUpTubeSize: item.takeUpTubeSize !== undefined ? item.takeUpTubeSize : 1.5,
+        paperTubeCost: item.paperTubeCost !== undefined ? item.paperTubeCost : 0,
+        rollsPerBox: item.rollsPerBox !== undefined ? item.rollsPerBox : 24,
+        boxCost: item.boxCost !== undefined ? item.boxCost : 0,
+        plasticBagCost: item.plasticBagCost !== undefined ? item.plasticBagCost : 0,
+        profitPercent: item.profitPercent !== undefined ? item.profitPercent : 15,
+        mySalePrice: item.mySalePrice !== undefined ? item.mySalePrice : 0,
+        discountValue: item.discountValue !== undefined ? item.discountValue : 0,
+        discountUnit: item.discountUnit !== undefined ? item.discountUnit : "%"
+      };
+      if (loadedItem.workingHours !== undefined && loadedItem.workingHours > 24) {
+        loadedItem.workingHours = 24;
+      }
+      return loadedItem;
+    });
+  };
+
+  const normalizeDoublerProducts = (list) => {
+    if (!Array.isArray(list) || list.length === 0) return [{
+      ...DEFAULT_DOUBLER_PRODUCT,
+      id: Date.now(),
+      name: "New Doubler Quality 1",
+      yarns: DEFAULT_DOUBLER_PRODUCT.yarns.map(y => ({ ...y }))
+    }];
+    return list.map((item, idx) => {
+      const loadedYarns = item.yarns ? item.yarns.map(y => ({ ...y })) : [];
+      while (loadedYarns.length < 3) {
+        const fallbackYarn = DEFAULT_DOUBLER_PRODUCT.yarns[loadedYarns.length] || {
+          role: loadedYarns.length === 0 ? "Core Yarn" : loadedYarns.length === 1 ? "Twisted Yarn (S/Z)" : "N/A",
+          name: "",
+          material: "",
+          yarnType: "",
+          yarnGloss: "",
+          supplier: "",
+          color: "",
+          mentionedDenier: "",
+          denier: "",
+          filament: "",
+          tensionProfile: "normal",
+          yarnRate: "",
+          twistDirection: loadedYarns.length === 0 ? "N/A" : loadedYarns.length === 1 ? "S" : "Z"
+        };
+        loadedYarns.push({ ...fallbackYarn });
+      }
+      return {
+        ...DEFAULT_DOUBLER_PRODUCT,
+        ...item,
+        id: item.id || Date.now() + idx,
+        name: (item.name && item.name.trim() && item.name !== "New Doubler Quality") ? item.name : `New Doubler Quality ${idx + 1}`,
+        yarns: loadedYarns
+      };
+    });
+  };
+
+  const normalizeCoveringProducts = (list) => {
+    if (!Array.isArray(list) || list.length === 0) return [{
+      ...DEFAULT_COVERING_PRODUCT,
+      id: Date.now(),
+      name: "New Covering Quality 1",
+      yarns: DEFAULT_COVERING_PRODUCT.yarns.map(y => ({ ...y }))
+    }];
+    return list.map((item, idx) => {
+      const loadedYarns = item.yarns ? item.yarns.map(y => ({ ...y })) : [];
+      while (loadedYarns.length < 2) {
+        const fallbackYarn = DEFAULT_COVERING_PRODUCT.yarns[loadedYarns.length] || {
+          role: loadedYarns.length === 0 ? "Core Yarn" : "Covering Yarn",
+          name: "",
+          material: "",
+          yarnType: "",
+          yarnGloss: "",
+          supplier: "",
+          color: "",
+          mentionedDenier: "",
+          denier: "",
+          filament: "",
+          tensionProfile: "normal",
+          yarnRate: "",
+          twistDirection: loadedYarns.length === 0 ? "S" : "Z"
+        };
+        loadedYarns.push({ ...fallbackYarn });
+      }
+      return {
+        ...DEFAULT_COVERING_PRODUCT,
+        ...item,
+        id: item.id || Date.now() + idx,
+        name: (item.name && item.name.trim() && item.name !== "New Covering Quality") ? item.name : `New Covering Quality ${idx + 1}`,
+        yarns: loadedYarns
+      };
+    });
+  };
+
   const [isTfoLocked, setIsTfoLocked] = useState(false);
   const [isDoublerLocked, setIsDoublerLocked] = useState(false);
   const [isCoveringLocked, setIsCoveringLocked] = useState(false);
-  const isRemoteSyncRef = useRef(false);
-  const isInitialMountRef = useRef(true);
+  const isInitialMountProductsRef = useRef(true);
+  const isInitialMountTfoRef = useRef(true);
+  const isInitialMountDoublerRef = useRef(true);
+  const isInitialMountCoveringRef = useRef(true);
+  const skipNextSyncSaveRef = useRef({
+    products: false,
+    tfo: false,
+    doubler: false,
+    covering: false
+  });
   const [syncStatus, setSyncStatus] = useState(() => (window.VishwaSupabase && typeof window.VishwaSupabase.getStatus === 'function' ? window.VishwaSupabase.getStatus() : 'connected'));
   const [products, setProducts] = useState(() => {
     const saved = localStorage.getItem('costing-products-v4');
@@ -6940,51 +7086,13 @@ const App = () => {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((item, idx) => ({
-            ...DEFAULT_PRODUCT,
-            ...item,
-            id: item.id || Date.now() + idx,
-            name: (item.name && item.name.trim() && item.name !== "New Fabric Quality") ? item.name : `New Fabric Quality ${idx + 1}`,
-            sampleImages: item.sampleImages || [],
-            warps: item.warps ? item.warps.map(w => ({
-              ...w
-            })) : DEFAULT_PRODUCT.warps.map(w => ({
-              ...w
-            })),
-            wefts: item.wefts ? item.wefts.map(w => ({
-              ...w
-            })) : DEFAULT_PRODUCT.wefts.map(w => ({
-              ...w
-            })),
-            fabricDetails: item.fabricDetails ? {
-              ...DEFAULT_PRODUCT.fabricDetails,
-              ...item.fabricDetails
-            } : {
-              ...DEFAULT_PRODUCT.fabricDetails
-            },
-            additionalCosts: item.additionalCosts || []
-          }));
+          return normalizeProducts(parsed);
         }
       } catch (e) {
         console.error(e);
       }
     }
-    return [{
-      ...DEFAULT_PRODUCT,
-      id: Date.now(),
-      name: "New Fabric Quality 1",
-      sampleImages: [],
-      warps: DEFAULT_PRODUCT.warps.map(w => ({
-        ...w
-      })),
-      wefts: DEFAULT_PRODUCT.wefts.map(w => ({
-        ...w
-      })),
-      fabricDetails: {
-        ...DEFAULT_PRODUCT.fabricDetails
-      },
-      additionalCosts: []
-    }];
+    return normalizeProducts([]);
   });
   const [activeIndex, setActiveIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
@@ -7044,49 +7152,13 @@ const App = () => {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((item, idx) => {
-            const loadedItem = {
-              ...DEFAULT_TFO_PRODUCT,
-              ...item,
-              id: item.id || Date.now() + idx,
-              name: (item.name && item.name.trim() && item.name !== "New TFO Quality") ? item.name : `New TFO Quality ${idx + 1}`,
-              labors: item.labors || [],
-              machineCost: item.machineCost !== undefined ? item.machineCost : 1000000,
-              machineLifeYears: item.machineLifeYears !== undefined ? item.machineLifeYears : 10,
-              yarnQuality: item.yarnQuality !== undefined ? item.yarnQuality : "",
-              material: item.material !== undefined ? item.material : "polyester",
-              supplier: item.supplier !== undefined ? item.supplier : "",
-              color: item.color !== undefined ? item.color : "",
-              filament: item.filament !== undefined ? item.filament : "",
-              yarnRate: item.yarnRate !== undefined ? item.yarnRate : 0,
-              maintenanceCost: item.maintenanceCost !== undefined ? item.maintenanceCost : 0,
-              wastage: item.wastage !== undefined ? item.wastage : 0,
-              monthlyRent: item.monthlyRent !== undefined ? item.monthlyRent : 0,
-              takeUpTubeSize: item.takeUpTubeSize !== undefined ? item.takeUpTubeSize : 1.5,
-              paperTubeCost: item.paperTubeCost !== undefined ? item.paperTubeCost : 0,
-              rollsPerBox: item.rollsPerBox !== undefined ? item.rollsPerBox : 24,
-              boxCost: item.boxCost !== undefined ? item.boxCost : 0,
-              plasticBagCost: item.plasticBagCost !== undefined ? item.plasticBagCost : 0,
-              profitPercent: item.profitPercent !== undefined ? item.profitPercent : 15,
-              mySalePrice: item.mySalePrice !== undefined ? item.mySalePrice : 0,
-              discountValue: item.discountValue !== undefined ? item.discountValue : 0,
-              discountUnit: item.discountUnit !== undefined ? item.discountUnit : "%"
-            };
-            if (loadedItem.workingHours !== undefined && loadedItem.workingHours > 24) {
-              loadedItem.workingHours = 24;
-            }
-            return loadedItem;
-          });
+          return normalizeTfoProducts(parsed);
         }
       } catch (e) {
         console.error(e);
       }
     }
-    return [{
-      ...DEFAULT_TFO_PRODUCT,
-      id: Date.now(),
-      name: "New TFO Quality 1"
-    }];
+    return normalizeTfoProducts([]);
   });
   const [tfoActiveIndex, setTfoActiveIndex] = useState(0);
   const [tfoSearchTerm, setTfoSearchTerm] = useState("");
@@ -7098,52 +7170,13 @@ const App = () => {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((item, idx) => {
-            const loadedYarns = item.yarns ? item.yarns.map(y => ({
-              ...y
-            })) : [];
-            while (loadedYarns.length < 3) {
-              const fallbackYarn = DEFAULT_DOUBLER_PRODUCT.yarns[loadedYarns.length] || {
-                role: loadedYarns.length === 0 ? "Core Yarn" : loadedYarns.length === 1 ? "Twisted Yarn (S/Z)" : "N/A",
-                name: "",
-                material: "",
-                yarnType: "",
-                yarnGloss: "",
-                supplier: "",
-                color: "",
-                mentionedDenier: "",
-                denier: "",
-                filament: "",
-                tensionProfile: "normal",
-                yarnRate: "",
-                twistDirection: loadedYarns.length === 0 ? "N/A" : loadedYarns.length === 1 ? "S" : "Z"
-              };
-              loadedYarns.push({
-                ...fallbackYarn
-              });
-            }
-            const loadedItem = {
-              ...DEFAULT_DOUBLER_PRODUCT,
-              ...item,
-              id: item.id || Date.now() + idx,
-              name: (item.name && item.name.trim() && item.name !== "New Doubler Quality") ? item.name : `New Doubler Quality ${idx + 1}`,
-              yarns: loadedYarns
-            };
-            return loadedItem;
-          });
+          return normalizeDoublerProducts(parsed);
         }
       } catch (e) {
         console.error(e);
       }
     }
-    return [{
-      ...DEFAULT_DOUBLER_PRODUCT,
-      id: Date.now(),
-      name: "New Doubler Quality 1",
-      yarns: DEFAULT_DOUBLER_PRODUCT.yarns.map(y => ({
-        ...y
-      }))
-    }];
+    return normalizeDoublerProducts([]);
   });
   const [doublerActiveIndex, setDoublerActiveIndex] = useState(0);
   const [doublerSearchTerm, setDoublerSearchTerm] = useState("");
@@ -7155,52 +7188,13 @@ const App = () => {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((item, idx) => {
-            const loadedYarns = item.yarns ? item.yarns.map(y => ({
-              ...y
-            })) : [];
-            while (loadedYarns.length < 2) {
-              const fallbackYarn = DEFAULT_COVERING_PRODUCT.yarns[loadedYarns.length] || {
-                role: loadedYarns.length === 0 ? "Core Yarn" : "Covering Yarn",
-                name: "",
-                material: "",
-                yarnType: "",
-                yarnGloss: "",
-                supplier: "",
-                color: "",
-                mentionedDenier: "",
-                denier: "",
-                filament: "",
-                tensionProfile: "normal",
-                yarnRate: "",
-                twistDirection: loadedYarns.length === 0 ? "S" : "Z"
-              };
-              loadedYarns.push({
-                ...fallbackYarn
-              });
-            }
-            const loadedItem = {
-              ...DEFAULT_COVERING_PRODUCT,
-              ...item,
-              id: item.id || Date.now() + idx,
-              name: (item.name && item.name.trim() && item.name !== "New Covering Quality") ? item.name : `New Covering Quality ${idx + 1}`,
-              yarns: loadedYarns
-            };
-            return loadedItem;
-          });
+          return normalizeCoveringProducts(parsed);
         }
       } catch (e) {
         console.error(e);
       }
     }
-    return [{
-      ...DEFAULT_COVERING_PRODUCT,
-      id: Date.now(),
-      name: "New Covering Quality 1",
-      yarns: DEFAULT_COVERING_PRODUCT.yarns.map(y => ({
-        ...y
-      }))
-    }];
+    return normalizeCoveringProducts([]);
   });
   const [coveringActiveIndex, setCoveringActiveIndex] = useState(0);
   const [yarnSpecPlyFocus, setYarnSpecPlyFocus] = useState(0);
@@ -7299,32 +7293,36 @@ const App = () => {
         if (!Array.isArray(parsed) || parsed.length === 0) return;
 
         if (key === 'costing-products-v4') {
+          const norm = normalizeProducts(parsed);
           const curStr = JSON.stringify(products);
-          const newStr = JSON.stringify(parsed);
+          const newStr = JSON.stringify(norm);
           if (curStr !== newStr) {
-            isRemoteSyncRef.current = true;
-            setProducts(parsed);
+            skipNextSyncSaveRef.current.products = true;
+            setProducts(norm);
           }
         } else if (key === 'costing-tfo-products-v1') {
+          const norm = normalizeTfoProducts(parsed);
           const curStr = JSON.stringify(tfoProducts);
-          const newStr = JSON.stringify(parsed);
+          const newStr = JSON.stringify(norm);
           if (curStr !== newStr) {
-            isRemoteSyncRef.current = true;
-            setTfoProducts(parsed);
+            skipNextSyncSaveRef.current.tfo = true;
+            setTfoProducts(norm);
           }
         } else if (key === 'costing-doubler-products-v1') {
+          const norm = normalizeDoublerProducts(parsed);
           const curStr = JSON.stringify(doublerProducts);
-          const newStr = JSON.stringify(parsed);
+          const newStr = JSON.stringify(norm);
           if (curStr !== newStr) {
-            isRemoteSyncRef.current = true;
-            setDoublerProducts(parsed);
+            skipNextSyncSaveRef.current.doubler = true;
+            setDoublerProducts(norm);
           }
         } else if (key === 'costing-covering-products-v1') {
+          const norm = normalizeCoveringProducts(parsed);
           const curStr = JSON.stringify(coveringProducts);
-          const newStr = JSON.stringify(parsed);
+          const newStr = JSON.stringify(norm);
           if (curStr !== newStr) {
-            isRemoteSyncRef.current = true;
-            setCoveringProducts(parsed);
+            skipNextSyncSaveRef.current.covering = true;
+            setCoveringProducts(norm);
           }
         }
       } catch (err) {
@@ -7332,7 +7330,21 @@ const App = () => {
       }
     };
 
+    const handleSupabaseReady = () => {
+      ['costing-products-v4', 'costing-tfo-products-v1', 'costing-doubler-products-v1', 'costing-covering-products-v1'].forEach(k => {
+        const val = localStorage.getItem(k);
+        if (val) {
+          handleRemoteSync({ detail: { key: k, value: val } });
+        }
+      });
+    };
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.isHydrated === 'function' && window.VishwaSupabase.isHydrated()) {
+      handleSupabaseReady();
+    }
+
     window.addEventListener('supabase-sync', handleRemoteSync);
+    window.addEventListener('supabase-ready', handleSupabaseReady);
     window.addEventListener('storage', (e) => {
       if (e.key && ['costing-products-v4', 'costing-tfo-products-v1', 'costing-doubler-products-v1', 'costing-covering-products-v1'].includes(e.key) && e.newValue) {
         handleRemoteSync({ detail: { key: e.key, value: e.newValue } });
@@ -7341,17 +7353,18 @@ const App = () => {
 
     return () => {
       window.removeEventListener('supabase-sync', handleRemoteSync);
+      window.removeEventListener('supabase-ready', handleSupabaseReady);
     };
   }, [products, tfoProducts, doublerProducts, coveringProducts]);
 
   useEffect(() => {
-    if (isInitialMountRef.current) {
-      isInitialMountRef.current = false;
+    if (isInitialMountProductsRef.current) {
+      isInitialMountProductsRef.current = false;
       saveCostingProductsToIDB(products);
       return;
     }
-    if (isRemoteSyncRef.current) {
-      isRemoteSyncRef.current = false;
+    if (skipNextSyncSaveRef.current.products) {
+      skipNextSyncSaveRef.current.products = false;
       saveCostingProductsToIDB(products);
       return;
     }
@@ -9367,7 +9380,14 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
   };
 
   useEffect(() => {
-    if (isRemoteSyncRef.current) return;
+    if (isInitialMountTfoRef.current) {
+      isInitialMountTfoRef.current = false;
+      return;
+    }
+    if (skipNextSyncSaveRef.current.tfo) {
+      skipNextSyncSaveRef.current.tfo = false;
+      return;
+    }
     const enriched = tfoProducts.map(p => {
       try {
         const calcs = computeTfoCalcs(p);
@@ -9382,7 +9402,14 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
   }, [tfoProducts]);
 
   useEffect(() => {
-    if (isRemoteSyncRef.current) return;
+    if (isInitialMountDoublerRef.current) {
+      isInitialMountDoublerRef.current = false;
+      return;
+    }
+    if (skipNextSyncSaveRef.current.doubler) {
+      skipNextSyncSaveRef.current.doubler = false;
+      return;
+    }
     const enriched = doublerProducts.map(p => {
       try {
         const calcs = computeDoublerCalcs(p);
@@ -9397,7 +9424,14 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
   }, [doublerProducts]);
 
   useEffect(() => {
-    if (isRemoteSyncRef.current) return;
+    if (isInitialMountCoveringRef.current) {
+      isInitialMountCoveringRef.current = false;
+      return;
+    }
+    if (skipNextSyncSaveRef.current.covering) {
+      skipNextSyncSaveRef.current.covering = false;
+      return;
+    }
     const enriched = coveringProducts.map(p => {
       try {
         const calcs = computeCoveringCalcs(p);
