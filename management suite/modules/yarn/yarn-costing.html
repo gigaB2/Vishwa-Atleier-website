@@ -11279,25 +11279,7 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
         className: "p-0.5 px-2 border-r font-semibold text-slate-500 bg-slate-50/30"
       }, "Monthly Electricity Bill"), /*#__PURE__*/React.createElement("td", {
         className: "p-0.5 px-2 text-center text-slate-800 font-bold"
-      }, `₹ ${Number(product.monthlyElectricityCost || 0).toLocaleString('en-IN')}`)), Number(product.electricityRate) > 0 && /*#__PURE__*/React.createElement("tr", {
-        className: "hover:bg-slate-50/30"
-      }, /*#__PURE__*/React.createElement("td", {
-        className: "p-0.5 px-2 border-r font-semibold text-slate-500 bg-slate-50/30"
-      }, "Electricity Rate / Unit (₹)"), /*#__PURE__*/React.createElement("td", {
-        className: "p-0.5 px-2 text-center text-slate-800 font-bold"
-      }, formatDoublerVal(product.electricityRate, '', '₹ ', 0))), /*#__PURE__*/React.createElement("tr", {
-        className: "hover:bg-slate-50/30 bg-violet-50/30"
-      }, /*#__PURE__*/React.createElement("td", {
-        className: "p-0.5 px-2 border-r font-semibold text-violet-700"
-      }, "Calculated Daily Cost"), /*#__PURE__*/React.createElement("td", {
-        className: "p-0.5 px-2 text-center text-violet-800 font-bold"
-      }, `₹ ${(subCalcs?.costDay || 0).toFixed(2)} / day`)), /*#__PURE__*/React.createElement("tr", {
-        className: "hover:bg-slate-50/30 bg-emerald-50/30"
-      }, /*#__PURE__*/React.createElement("td", {
-        className: "p-0.5 px-2 border-r font-semibold text-emerald-700"
-      }, "Calculated Cost / Kg"), /*#__PURE__*/React.createElement("td", {
-        className: "p-0.5 px-2 text-center text-emerald-800 font-bold"
-      }, `₹ ${(subCalcs?.powerCostPerKg || 0).toFixed(2)} / kg`)))) : /*#__PURE__*/React.createElement("table", {
+      }, `₹ ${Number(product.monthlyElectricityCost || 0).toLocaleString('en-IN')}`)))) : /*#__PURE__*/React.createElement("table", {
         className: "w-full text-[9.5px] text-left border-collapse font-medium"
       }, /*#__PURE__*/React.createElement("tbody", {
         className: "divide-y divide-slate-100 text-slate-700"
@@ -15604,36 +15586,7 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
       });
     },
     className: "w-full bg-transparent border-0 focus:ring-0 font-bold text-slate-700 p-1 text-center"
-  }))), /*#__PURE__*/React.createElement("tr", {
-    className: "bg-slate-50/50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 border-r font-semibold text-slate-500 bg-slate-50/30 whitespace-nowrap"
-  }, "Electricity Rate / Unit (₹) (Optional)"), /*#__PURE__*/React.createElement("td", {
-    className: "p-1 px-2"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "number",
-    placeholder: "e.g. 7.50",
-    value: currentCoveringProduct.electricityRate !== undefined ? currentCoveringProduct.electricityRate : '',
-    onChange: e => {
-      let val = e.target.value === '' ? '' : Number(e.target.value);
-      updateCoveringProduct({
-        electricityRate: val
-      });
-    },
-    className: "w-full bg-transparent border-0 focus:ring-0 font-bold text-slate-700 p-1 text-center"
-  }))), /*#__PURE__*/React.createElement("tr", {
-    className: "bg-violet-50/40 dark:bg-violet-950/20 border-t border-violet-100/50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 border-r font-semibold text-violet-700 dark:text-violet-300"
-  }, "Calculated Daily Electricity Cost"), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 text-center font-bold text-violet-800 dark:text-violet-200"
-  }, `₹ ${coveringCalcs?.costDay ? coveringCalcs.costDay.toFixed(2) : '0.00'} / day`)), /*#__PURE__*/React.createElement("tr", {
-    className: "bg-emerald-50/40 dark:bg-emerald-950/20"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 border-r font-semibold text-emerald-700 dark:text-emerald-300"
-  }, "Calculated Electricity Cost / Kg"), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 text-center font-bold text-emerald-800 dark:text-emerald-200"
-  }, `₹ ${coveringCalcs?.powerCostPerKg ? coveringCalcs.powerCostPerKg.toFixed(2) : '0.00'} / kg`))) : /*#__PURE__*/React.createElement("tbody", {
+  })))) : /*#__PURE__*/React.createElement("tbody", {
     className: "text-[13px]"
   }, (() => {
     let inputCount = 0;
@@ -17704,36 +17657,7 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
       });
     },
     className: "w-full bg-transparent border-0 focus:ring-0 font-bold text-slate-700 p-1 text-center"
-  }))), /*#__PURE__*/React.createElement("tr", {
-    className: "bg-slate-50/50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 border-r font-semibold text-slate-500 bg-slate-50/30 whitespace-nowrap"
-  }, "Electricity Rate / Unit (₹) (Optional)"), /*#__PURE__*/React.createElement("td", {
-    className: "p-1 px-2"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "number",
-    placeholder: "e.g. 7.50",
-    value: currentTfoProduct.electricityRate !== undefined ? currentTfoProduct.electricityRate : '',
-    onChange: e => {
-      let val = e.target.value === '' ? '' : Number(e.target.value);
-      updateTfoProduct({
-        electricityRate: val
-      });
-    },
-    className: "w-full bg-transparent border-0 focus:ring-0 font-bold text-slate-700 p-1 text-center"
-  }))), /*#__PURE__*/React.createElement("tr", {
-    className: "bg-violet-50/40 dark:bg-violet-950/20 border-t border-violet-100/50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 border-r font-semibold text-violet-700 dark:text-violet-300"
-  }, "Calculated Daily Electricity Cost"), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 text-center font-bold text-violet-800 dark:text-violet-200"
-  }, `₹ ${tfoCalcs?.costDay ? tfoCalcs.costDay.toFixed(2) : '0.00'} / day`)), /*#__PURE__*/React.createElement("tr", {
-    className: "bg-emerald-50/40 dark:bg-emerald-950/20"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 border-r font-semibold text-emerald-700 dark:text-emerald-300"
-  }, "Calculated Electricity Cost / Kg"), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 text-center font-bold text-emerald-800 dark:text-emerald-200"
-  }, `₹ ${tfoCalcs?.powerCostPerKg ? tfoCalcs.powerCostPerKg.toFixed(2) : '0.00'} / kg`))) : /*#__PURE__*/React.createElement("tbody", {
+  })))) : /*#__PURE__*/React.createElement("tbody", {
     className: "text-[13px]"
   }, (() => {
     let inputCount = 0;
@@ -19951,36 +19875,7 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
       });
     },
     className: "w-full bg-transparent border-0 focus:ring-0 font-bold text-slate-700 p-1 text-center"
-  }))), /*#__PURE__*/React.createElement("tr", {
-    className: "bg-slate-50/50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 border-r font-semibold text-slate-500 bg-slate-50/30 whitespace-nowrap"
-  }, "Electricity Rate / Unit (₹) (Optional)"), /*#__PURE__*/React.createElement("td", {
-    className: "p-1 px-2"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "number",
-    placeholder: "e.g. 7.50",
-    value: currentDoublerProduct.electricityRate !== undefined ? currentDoublerProduct.electricityRate : '',
-    onChange: e => {
-      let val = e.target.value === '' ? '' : Number(e.target.value);
-      updateDoublerProduct({
-        electricityRate: val
-      });
-    },
-    className: "w-full bg-transparent border-0 focus:ring-0 font-bold text-slate-700 p-1 text-center"
-  }))), /*#__PURE__*/React.createElement("tr", {
-    className: "bg-violet-50/40 dark:bg-violet-950/20 border-t border-violet-100/50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 border-r font-semibold text-violet-700 dark:text-violet-300"
-  }, "Calculated Daily Electricity Cost"), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 text-center font-bold text-violet-800 dark:text-violet-200"
-  }, `₹ ${doublerCalcs?.costDay ? doublerCalcs.costDay.toFixed(2) : '0.00'} / day`)), /*#__PURE__*/React.createElement("tr", {
-    className: "bg-emerald-50/40 dark:bg-emerald-950/20"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 border-r font-semibold text-emerald-700 dark:text-emerald-300"
-  }, "Calculated Electricity Cost / Kg"), /*#__PURE__*/React.createElement("td", {
-    className: "p-2 px-3 text-center font-bold text-emerald-800 dark:text-emerald-200"
-  }, `₹ ${doublerCalcs?.powerCostPerKg ? doublerCalcs.powerCostPerKg.toFixed(2) : '0.00'} / kg`))) : /*#__PURE__*/React.createElement("tbody", {
+  })))) : /*#__PURE__*/React.createElement("tbody", {
     className: "text-[13px]"
   }, (() => {
     let inputCount = 0;
