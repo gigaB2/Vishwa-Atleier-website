@@ -530,10 +530,6 @@
       presenceBar = document.createElement('div');
       presenceBar.id = 'vfPresenceBar';
       presenceBar.className = 'vf-presence-container';
-      presenceBar.style.position = 'fixed';
-      presenceBar.style.top = '14px';
-      presenceBar.style.right = '20px';
-      presenceBar.style.zIndex = '9990';
       presenceBar.innerHTML = `
         <span class="vf-presence-label">
           <span class="vf-presence-live-dot" title="Live Realtime Collab Sync Active"></span>
@@ -541,7 +537,53 @@
         </span>
         <div class="vf-avatar-stack" id="vfAvatarStack"></div>
       `;
-      document.body.appendChild(presenceBar);
+    }
+
+    // Dock directly next to the active sheet title or header
+    function dockNextToSheetTitle() {
+      const candidates = [
+        document.querySelector('.sheet-title'),
+        document.querySelector('.vf-sheet-title'),
+        document.querySelector('.vf-page-title'),
+        document.querySelector('.page-header h1'),
+        document.querySelector('.page-header h2'),
+        document.querySelector('header h1'),
+        document.querySelector('header .title'),
+        document.querySelector('header h2'),
+        document.querySelector('main h1'),
+        document.querySelector('.main-content h1'),
+        document.querySelector('#root h1'),
+        document.querySelector('h1'),
+        document.querySelector('#vfSbUserBadge')
+      ];
+
+      for (const t of candidates) {
+        if (t && t.offsetParent !== null) {
+          if (!t.contains(presenceBar) && t.parentElement) {
+            // Make sure container allows inline flex items
+            if (t.nextSibling) {
+              t.parentElement.insertBefore(presenceBar, t.nextSibling);
+            } else {
+              t.parentElement.appendChild(presenceBar);
+            }
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    if (!dockNextToSheetTitle()) {
+      if (!document.body.contains(presenceBar)) {
+        document.body.appendChild(presenceBar);
+      }
+      // Re-check periodically & on DOM updates to latch onto the sheet title when React mounts
+      const mo = new MutationObserver(() => {
+        if (dockNextToSheetTitle()) {
+          mo.disconnect();
+        }
+      });
+      mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
     }
 
     renderPresenceBarUI();
