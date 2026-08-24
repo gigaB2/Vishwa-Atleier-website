@@ -541,31 +541,40 @@
 
     // Dock directly next to the active sheet title or header
     function dockNextToSheetTitle() {
+      // 1. Direct slot in Costing modules
+      const slot = document.getElementById('vfPresenceBarSlot');
+      if (slot) {
+        if (!slot.contains(presenceBar)) {
+          slot.appendChild(presenceBar);
+          presenceBar.style.display = 'inline-flex';
+        }
+        return true;
+      }
+
+      // 2. Generic page title candidates in main content (excluding sidebar)
       const candidates = [
+        document.querySelector('header .flex.items-center'),
+        document.querySelector('header h1'),
+        document.querySelector('.page-header h1'),
         document.querySelector('.sheet-title'),
         document.querySelector('.vf-sheet-title'),
         document.querySelector('.vf-page-title'),
-        document.querySelector('.page-header h1'),
-        document.querySelector('.page-header h2'),
-        document.querySelector('header h1'),
-        document.querySelector('header .title'),
         document.querySelector('header h2'),
         document.querySelector('main h1'),
         document.querySelector('.main-content h1'),
         document.querySelector('#root h1'),
-        document.querySelector('h1'),
-        document.querySelector('#vfSbUserBadge')
+        document.querySelector('h1')
       ];
 
       for (const t of candidates) {
-        if (t && t.offsetParent !== null) {
+        if (t && t.offsetParent !== null && !t.closest('#vfSidebar')) {
           if (!t.contains(presenceBar) && t.parentElement) {
-            // Make sure container allows inline flex items
             if (t.nextSibling) {
               t.parentElement.insertBefore(presenceBar, t.nextSibling);
             } else {
               t.parentElement.appendChild(presenceBar);
             }
+            presenceBar.style.display = 'inline-flex';
             return true;
           }
         }
@@ -574,13 +583,11 @@
     }
 
     if (!dockNextToSheetTitle()) {
-      if (!document.body.contains(presenceBar)) {
-        document.body.appendChild(presenceBar);
-      }
+      presenceBar.style.display = 'none';
       // Re-check periodically & on DOM updates to latch onto the sheet title when React mounts
       const mo = new MutationObserver(() => {
         if (dockNextToSheetTitle()) {
-          mo.disconnect();
+          // Latch successfully
         }
       });
       mo.observe(document.body || document.documentElement, { childList: true, subtree: true });

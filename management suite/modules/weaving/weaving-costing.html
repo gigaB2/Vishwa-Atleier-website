@@ -14713,7 +14713,10 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     }`
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] font-medium tracking-wide"
-  }, syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'offline' ? 'Offline (Local)' : 'Live Synced'))), /*#__PURE__*/React.createElement("div", {
+  }, syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'offline' ? 'Offline (Local)' : 'Live Synced')), /*#__PURE__*/React.createElement("div", {
+    id: "vfPresenceBarSlot",
+    className: "inline-flex items-center"
+  })), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-4 items-center"
   }, activeMainTab === 'fabric' && /*#__PURE__*/React.createElement("button", {
     onClick: () => duplicateProduct(activeIndex),
