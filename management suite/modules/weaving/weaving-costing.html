@@ -8125,7 +8125,7 @@ const App = () => {
     const { type, item, index, name, storageKey } = lastDeleted;
 
     if (window.VishwaSupabase && typeof window.VishwaSupabase.unrecordCostingDeletion === 'function') {
-      window.VishwaSupabase.unrecordCostingDeletion(storageKey, item.id);
+      window.VishwaSupabase.unrecordCostingDeletion(storageKey, item.id, item);
     }
 
     if (type === 'fabric') {
@@ -8133,6 +8133,13 @@ const App = () => {
         const copy = [...prev];
         const targetIdx = Math.min(Math.max(0, index), copy.length);
         copy.splice(targetIdx, 0, item);
+        try {
+          localStorage.setItem('costing-products-v4', JSON.stringify(copy));
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+            window.VishwaSupabase.set('costing-products-v4', copy, true);
+          }
+          saveCostingProductsToIDB(copy);
+        } catch(e) {}
         return copy;
       });
       setActiveIndex(Math.min(Math.max(0, index), products.length));
@@ -8142,6 +8149,12 @@ const App = () => {
         const copy = [...prev];
         const targetIdx = Math.min(Math.max(0, index), copy.length);
         copy.splice(targetIdx, 0, item);
+        try {
+          localStorage.setItem('costing-tfo-products-v1', JSON.stringify(copy));
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+            window.VishwaSupabase.set('costing-tfo-products-v1', copy, true);
+          }
+        } catch(e) {}
         return copy;
       });
       setTfoActiveIndex(Math.min(Math.max(0, index), tfoProducts.length));
@@ -8151,6 +8164,12 @@ const App = () => {
         const copy = [...prev];
         const targetIdx = Math.min(Math.max(0, index), copy.length);
         copy.splice(targetIdx, 0, item);
+        try {
+          localStorage.setItem('costing-doubler-products-v1', JSON.stringify(copy));
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+            window.VishwaSupabase.set('costing-doubler-products-v1', copy, true);
+          }
+        } catch(e) {}
         return copy;
       });
       setDoublerActiveIndex(Math.min(Math.max(0, index), doublerProducts.length));
@@ -8160,6 +8179,12 @@ const App = () => {
         const copy = [...prev];
         const targetIdx = Math.min(Math.max(0, index), copy.length);
         copy.splice(targetIdx, 0, item);
+        try {
+          localStorage.setItem('costing-covering-products-v1', JSON.stringify(copy));
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+            window.VishwaSupabase.set('costing-covering-products-v1', copy, true);
+          }
+        } catch(e) {}
         return copy;
       });
       setCoveringActiveIndex(Math.min(Math.max(0, index), coveringProducts.length));

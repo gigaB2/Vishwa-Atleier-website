@@ -353,6 +353,9 @@
         const valStr = typeof value === 'string' ? value : JSON.stringify(value);
         const payloadHash = computeHash(valStr);
 
+        // Always clear pending debounced write timer for this key immediately
+        clearTimeout(debouncedWriteTimers[key]);
+
         // Check if unchanged to avoid redundant database writes
         if (lastSavedHashes[key] === payloadHash) {
           return true;
@@ -367,6 +370,7 @@
             setSyncStatus('syncing');
             lastKnownTimestamps[key] = nowIso;
             lastSavedHashes[key] = payloadHash;
+            cache[key] = valStr;
 
             // Master Key-Value table sync
             await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?on_conflict=key`, {
@@ -426,7 +430,6 @@
         if (isImmediate) {
           executeDbWrite();
         } else {
-          clearTimeout(debouncedWriteTimers[key]);
           debouncedWriteTimers[key] = setTimeout(executeDbWrite, 1200);
         }
         return true;
@@ -460,6 +463,7 @@
           const raw = cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_costing_ids');
           if (raw) deletedIds = JSON.parse(raw);
         } catch (e) {}
+        deletedIds = Array.isArray(deletedIds) ? deletedIds.map(String) : [];
 
         if (!deletedIds.includes(idStr)) {
           deletedIds.push(idStr);
@@ -492,7 +496,7 @@
       } catch (e) {}
     },
     // Explicit Item Undeletion / Restore Tracking (for Ctrl+Z Undo)
-    async unrecordCostingDeletion(key, itemId) {
+    async unrecordCostingDeletion(key, itemId, itemData = null) {
       try {
         const idStr = String(itemId);
         let deletedIds = [];
@@ -500,6 +504,7 @@
           const raw = cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_costing_ids');
           if (raw) deletedIds = JSON.parse(raw);
         } catch (e) {}
+        deletedIds = Array.isArray(deletedIds) ? deletedIds.map(String) : [];
 
         if (deletedIds.includes(idStr)) {
           deletedIds = deletedIds.filter(id => id !== idStr);
@@ -507,6 +512,30 @@
           cache['vf_deleted_costing_ids'] = valStr;
           try { nativeLocalStorage.setItem('vf_deleted_costing_ids', valStr); } catch(e) {}
           this.set('vf_deleted_costing_ids', deletedIds, true);
+        }
+
+        // Immediate re-insertion to dedicated Supabase table if itemData exists
+        let table = null;
+        if (key === 'costing-products-v4') table = 'vf_costing_products';
+        else if (key === 'costing-tfo-products-v1') table = 'vf_costing_tfo_products';
+        else if (key === 'costing-doubler-products-v1') table = 'vf_costing_doubler_products';
+        else if (key === 'costing-covering-products-v1') table = 'vf_costing_covering_products';
+
+        if (table && activeConfig.isConfigured && SUPABASE_URL && itemData) {
+          fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=id`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify([{
+              id: idStr,
+              data: itemData,
+              updated_at: new Date().toISOString()
+            }])
+          }).catch(() => {});
         }
       } catch (e) {}
     },
@@ -796,6 +825,7 @@
                   deletedCostingIds = typeof delRow === 'string' ? JSON.parse(delRow) : delRow;
                 }
               } catch (e) {}
+              deletedCostingIds = Array.isArray(deletedCostingIds) ? deletedCostingIds.map(String) : [];
 
               for (const { key, table } of costingTableDefs) {
                 const tblRows = await fetchAllRowsPaginated(table, 'id,data,updated_at');
@@ -826,6 +856,23 @@
                       }
                     });
                   }
+                  // Retain locally cached items if they are not tombstoned
+                  try {
+                    const localRaw = cache[key] || nativeLocalStorage.getItem(key);
+                    if (localRaw) {
+                      const localArr = JSON.parse(localRaw);
+                      if (Array.isArray(localArr)) {
+                        localArr.forEach(item => {
+                          if (item && item.id) {
+                            const idStr = String(item.id);
+                            if (!deletedCostingIds.includes(idStr) && !mergedMap.has(idStr)) {
+                              mergedMap.set(idStr, item);
+                            }
+                          }
+                        });
+                      }
+                    }
+                  } catch(e) {}
 
                   const mergedList = Array.from(mergedMap.values());
                   const mergedStr = JSON.stringify(mergedList);
