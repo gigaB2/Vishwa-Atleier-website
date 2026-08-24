@@ -7468,6 +7468,13 @@ const App = () => {
   }, []);
 
   useEffect(() => {
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.sendPresencePing === 'function') {
+      const currentTab = (new URLSearchParams(window.location.search)).get('tab') || 'tfo';
+      window.VishwaSupabase.sendPresencePing(currentTab);
+    }
+  }, []);
+
+  useEffect(() => {
     if (isInitialMountProductsRef.current) {
       isInitialMountProductsRef.current = false;
       saveCostingProductsToIDB(products);

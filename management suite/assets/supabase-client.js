@@ -148,28 +148,547 @@
     applyRemoteKeyUpdate(key, valStr);
   }
 
-  if (syncChannel) {
-    syncChannel.onmessage = (msg) => {
-      if (msg && msg.data && msg.data.key) {
-        const { key, value, type, senderId } = msg.data;
-        if (senderId === CLIENT_ID) return; // Skip own messages
-
-        if (type === 'removeItem') {
-          handleIncomingRemoteUpdate(key, null, true);
-        } else {
-          handleIncomingRemoteUpdate(key, value, false);
-        }
-      }
-    };
-  }
-
-  // --- Realtime WebSocket Synchronization Engine (Google Sheets Style) ---
+  // --- Realtime WebSocket & Presence Synchronization Engine (Google Sheets Style) ---
   // Zero Database Egress: Uses Phoenix Broadcast channel in Supabase server RAM
   let ws = null;
   let wsHeartbeatTimer = null;
   let wsReconnectTimer = null;
   let wsReconnectAttempts = 0;
   const WS_CHANNEL_TOPIC = 'realtime:vf_costing_sync';
+
+  // --- Realtime Presence & Avatar Palette Engine ---
+  const AVATAR_COLORS = [
+    { bg: '#8b5cf6', fg: '#ffffff', glow: 'rgba(139, 92, 246, 0.45)', border: '#7c3aed', name: 'Purple' },
+    { bg: '#3b82f6', fg: '#ffffff', glow: 'rgba(59, 130, 246, 0.45)', border: '#2563eb', name: 'Blue' },
+    { bg: '#10b981', fg: '#ffffff', glow: 'rgba(16, 185, 129, 0.45)', border: '#059669', name: 'Emerald' },
+    { bg: '#f59e0b', fg: '#ffffff', glow: 'rgba(245, 158, 11, 0.45)', border: '#d97706', name: 'Amber' },
+    { bg: '#ec4899', fg: '#ffffff', glow: 'rgba(236, 72, 153, 0.45)', border: '#db2777', name: 'Pink' },
+    { bg: '#06b6d4', fg: '#ffffff', glow: 'rgba(6, 182, 212, 0.45)', border: '#0891b2', name: 'Cyan' },
+    { bg: '#f43f5e', fg: '#ffffff', glow: 'rgba(244, 63, 94, 0.45)', border: '#e11d48', name: 'Rose' },
+    { bg: '#14b8a6', fg: '#ffffff', glow: 'rgba(20, 184, 166, 0.45)', border: '#0d9488', name: 'Teal' },
+    { bg: '#84cc16', fg: '#ffffff', glow: 'rgba(132, 204, 22, 0.45)', border: '#65a30d', name: 'Lime' },
+    { bg: '#6366f1', fg: '#ffffff', glow: 'rgba(99, 102, 241, 0.45)', border: '#4f46e5', name: 'Indigo' }
+  ];
+
+  function getLocalUserInfo() {
+    let name = 'Operator';
+    let role = 'Operator';
+    let userId = CLIENT_ID;
+    let email = '';
+    
+    try {
+      const sessRaw = nativeLocalStorage.getItem('vf_session');
+      if (sessRaw) {
+        const sess = JSON.parse(sessRaw);
+        if (sess.name) name = sess.name;
+        else if (sess.username) name = sess.username;
+        else if (sess.email) name = sess.email.split('@')[0];
+        if (sess.role) role = sess.role.charAt(0).toUpperCase() + sess.role.slice(1);
+        if (sess.id) userId = sess.id;
+        if (sess.email) email = sess.email;
+      } else {
+        const savedUser = nativeLocalStorage.getItem('vf_user_name');
+        if (savedUser) {
+          name = savedUser;
+          role = 'Operator';
+        }
+      }
+    } catch(e) {}
+    
+    // Deterministic color assignment based on userId or name
+    let hash = 0;
+    const strForHash = (userId || name || CLIENT_ID).toLowerCase();
+    for (let i = 0; i < strForHash.length; i++) {
+      hash = (hash << 5) - hash + strForHash.charCodeAt(i);
+      hash |= 0;
+    }
+    const colorIndex = Math.abs(hash) % AVATAR_COLORS.length;
+    const userColor = AVATAR_COLORS[colorIndex];
+    
+    // Compute user initials (up to 2 letters)
+    const cleanName = name.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+    const parts = cleanName ? cleanName.split(/\s+/) : ['U'];
+    let initials = 'U';
+    if (parts.length >= 2 && parts[0] && parts[1]) {
+      initials = (parts[0][0] + parts[1][0]).toUpperCase();
+    } else if (parts[0] && parts[0].length >= 2) {
+      initials = parts[0].slice(0, 2).toUpperCase();
+    } else if (parts[0]) {
+      initials = parts[0][0].toUpperCase();
+    }
+
+    return {
+      id: userId,
+      clientId: CLIENT_ID,
+      name: name,
+      email: email,
+      initials: initials,
+      role: role,
+      color: userColor
+    };
+  }
+
+  function getCurrentPageKey() {
+    try {
+      const path = window.location.pathname.toLowerCase();
+      const page = path.split('/').pop() || 'index.html';
+      return page.split('?')[0].split('#')[0];
+    } catch(e) {
+      return 'index.html';
+    }
+  }
+
+  // Active in-memory presence store: clientId -> { user, page, tab, field, isTyping, lastPing, isSelf }
+  const presenceStore = {};
+  window.__vf_presence_store = presenceStore;
+
+  function notifyPresenceListeners() {
+    const currentPage = getCurrentPageKey();
+    const allUsers = Object.values(presenceStore);
+    const pageUsers = allUsers.filter(u => !u.page || u.page === currentPage);
+    try {
+      window.dispatchEvent(new CustomEvent('supabase-presence', {
+        detail: {
+          users: allUsers,
+          pageUsers: pageUsers,
+          currentPage: currentPage,
+          selfId: CLIENT_ID
+        }
+      }));
+    } catch (e) {}
+  }
+
+  function sendPresencePing(tab, field, isTyping = false) {
+    const user = getLocalUserInfo();
+    const page = getCurrentPageKey();
+    const currentTab = tab || window.__vf_active_tab || '';
+    const currentField = field || window.__vf_active_field || '';
+
+    const payload = {
+      type: 'presence_ping',
+      clientId: CLIENT_ID,
+      user: user,
+      page: page,
+      tab: currentTab,
+      field: currentField,
+      isTyping: Boolean(isTyping),
+      timestamp: Date.now()
+    };
+
+    presenceStore[CLIENT_ID] = {
+      user: user,
+      page: page,
+      tab: currentTab,
+      field: currentField,
+      isTyping: Boolean(isTyping),
+      lastPing: Date.now(),
+      isSelf: true
+    };
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({
+          topic: WS_CHANNEL_TOPIC,
+          event: 'broadcast',
+          payload: {
+            type: 'broadcast',
+            event: 'presence_ping',
+            payload: payload
+          },
+          ref: 'pres_' + Date.now()
+        }));
+      } catch(e) {}
+    }
+
+    if (syncChannel) {
+      try {
+        syncChannel.postMessage({
+          type: 'presence_ping',
+          senderId: CLIENT_ID,
+          payload: payload
+        });
+      } catch(e) {}
+    }
+
+    notifyPresenceListeners();
+  }
+
+  function sendPresenceLeave() {
+    delete presenceStore[CLIENT_ID];
+    const payload = {
+      type: 'presence_leave',
+      clientId: CLIENT_ID,
+      page: getCurrentPageKey(),
+      timestamp: Date.now()
+    };
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({
+          topic: WS_CHANNEL_TOPIC,
+          event: 'broadcast',
+          payload: {
+            type: 'broadcast',
+            event: 'presence_leave',
+            payload: payload
+          },
+          ref: 'leave_' + Date.now()
+        }));
+      } catch(e) {}
+    }
+
+    if (syncChannel) {
+      try {
+        syncChannel.postMessage({
+          type: 'presence_leave',
+          senderId: CLIENT_ID,
+          payload: payload
+        });
+      } catch(e) {}
+    }
+
+    notifyPresenceListeners();
+  }
+
+  function handleIncomingPresencePing(payload) {
+    if (!payload || !payload.clientId || payload.clientId === CLIENT_ID) return;
+    presenceStore[payload.clientId] = {
+      user: payload.user || { name: 'User', role: 'Viewer', color: AVATAR_COLORS[0], initials: 'U' },
+      page: payload.page || '',
+      tab: payload.tab || '',
+      field: payload.field || '',
+      isTyping: Boolean(payload.isTyping),
+      lastPing: Date.now(),
+      isSelf: false
+    };
+    notifyPresenceListeners();
+  }
+
+  function handleIncomingPresenceLeave(payload) {
+    if (!payload || !payload.clientId) return;
+    delete presenceStore[payload.clientId];
+    notifyPresenceListeners();
+  }
+
+  function handleIncomingFieldFocus(payload) {
+    if (!payload || payload.senderId === CLIENT_ID) return;
+    try {
+      window.dispatchEvent(new CustomEvent('supabase-field-focus', { detail: payload }));
+    } catch(e) {}
+  }
+
+  function handleIncomingFieldChange(payload) {
+    if (!payload || payload.senderId === CLIENT_ID) return;
+    try {
+      window.dispatchEvent(new CustomEvent('supabase-field-change', { detail: payload }));
+    } catch(e) {}
+  }
+
+  // Purge disconnected users who haven't pinged in > 25 seconds
+  setInterval(() => {
+    const now = Date.now();
+    let changed = false;
+    Object.keys(presenceStore).forEach(cid => {
+      if (cid !== CLIENT_ID && now - (presenceStore[cid].lastPing || 0) > 25000) {
+        delete presenceStore[cid];
+        changed = true;
+      }
+    });
+    if (changed) {
+      notifyPresenceListeners();
+    }
+  }, 4000);
+
+  // Send periodic presence ping every 10 seconds while active
+  setInterval(() => {
+    if (!document.hidden) {
+      sendPresencePing();
+    }
+  }, 10000);
+
+  // Hook tab visibility & page unload
+  window.addEventListener('beforeunload', sendPresenceLeave);
+  window.addEventListener('pagehide', sendPresenceLeave);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      sendPresenceLeave();
+    } else {
+      sendPresencePing();
+    }
+  });
+
+  // Collaborative input & cell broadcasters
+  function broadcastFieldFocus(fieldId, isFocused, meta = {}) {
+    const user = getLocalUserInfo();
+    const page = getCurrentPageKey();
+    const payload = {
+      type: 'field_focus',
+      senderId: CLIENT_ID,
+      user: user,
+      page: page,
+      tab: meta.tab || window.__vf_active_tab || '',
+      fieldId: fieldId,
+      isFocused: Boolean(isFocused),
+      meta: meta,
+      timestamp: Date.now()
+    };
+
+    if (isFocused) {
+      window.__vf_active_field = fieldId;
+    } else if (window.__vf_active_field === fieldId) {
+      window.__vf_active_field = null;
+    }
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({
+          topic: WS_CHANNEL_TOPIC,
+          event: 'broadcast',
+          payload: {
+            type: 'broadcast',
+            event: 'field_focus',
+            payload: payload
+          },
+          ref: 'foc_' + Date.now()
+        }));
+      } catch(e) {}
+    }
+
+    if (syncChannel) {
+      try {
+        syncChannel.postMessage({
+          type: 'field_focus',
+          senderId: CLIENT_ID,
+          payload: payload
+        });
+      } catch(e) {}
+    }
+
+    sendPresencePing(payload.tab, window.__vf_active_field, false);
+  }
+
+  function broadcastFieldChange(fieldId, value, meta = {}) {
+    const user = getLocalUserInfo();
+    const page = getCurrentPageKey();
+    const payload = {
+      type: 'field_change',
+      senderId: CLIENT_ID,
+      user: user,
+      page: page,
+      tab: meta.tab || window.__vf_active_tab || '',
+      fieldId: fieldId,
+      value: value,
+      meta: meta,
+      timestamp: Date.now()
+    };
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({
+          topic: WS_CHANNEL_TOPIC,
+          event: 'broadcast',
+          payload: {
+            type: 'broadcast',
+            event: 'field_change',
+            payload: payload
+          },
+          ref: 'fchg_' + Date.now()
+        }));
+      } catch(e) {}
+    }
+
+    if (syncChannel) {
+      try {
+        syncChannel.postMessage({
+          type: 'field_change',
+          senderId: CLIENT_ID,
+          payload: payload
+        });
+      } catch(e) {}
+    }
+
+    sendPresencePing(payload.tab, fieldId, true);
+  }
+
+  // --- Realtime Collaborative Form & Input Field Synchronizer (Google Sheets Style) ---
+  function initCollaborativeDOMSync() {
+    const activeRemoteFocuses = new Map();
+    let inputDebounceTimer = null;
+
+    function getFieldIdentifier(el) {
+      if (!el || !el.tagName) return null;
+      const tag = el.tagName.toLowerCase();
+      if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return null;
+      if (el.type === 'password' || el.type === 'hidden') return null;
+      
+      if (el.dataset && el.dataset.collabId) return el.dataset.collabId;
+      if (el.id && !el.id.startsWith('__')) return el.id;
+      if (el.name) return el.name;
+
+      const rowEl = el.closest('[data-row-id], [data-item-id], tr, li, .card, .product-card');
+      const rowKey = rowEl ? (rowEl.dataset.rowId || rowEl.dataset.itemId || rowEl.id || Array.from(rowEl.parentElement ? rowEl.parentElement.children : []).indexOf(rowEl)) : 'form';
+      const fieldKey = el.getAttribute('aria-label') || el.placeholder || el.type || 'inp';
+      return `${rowKey}__${fieldKey}`.replace(/\s+/g, '_');
+    }
+
+    function findElementByFieldId(fieldId) {
+      if (!fieldId) return null;
+      try {
+        let el = document.querySelector(`[data-collab-id="${CSS.escape(fieldId)}"]`) || document.getElementById(fieldId);
+        if (el) return el;
+
+        if (fieldId.includes('__')) {
+          const [rowKey, fieldKey] = fieldId.split('__');
+          const row = document.querySelector(`[data-row-id="${CSS.escape(rowKey)}"], [data-item-id="${CSS.escape(rowKey)}"], #${CSS.escape(rowKey)}`);
+          if (row) {
+            el = row.querySelector(`[name="${CSS.escape(fieldKey)}"], [placeholder="${CSS.escape(fieldKey)}"], [aria-label="${CSS.escape(fieldKey)}"]`);
+            if (el) return el;
+          }
+        }
+      } catch(e) {}
+      return null;
+    }
+
+    function escapeHtmlStr(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Local user focus & typing broadcasters
+    document.addEventListener('focusin', (e) => {
+      const fid = getFieldIdentifier(e.target);
+      if (!fid) return;
+      broadcastFieldFocus(fid, true, {
+        label: e.target.placeholder || e.target.name || ''
+      });
+    }, true);
+
+    document.addEventListener('focusout', (e) => {
+      const fid = getFieldIdentifier(e.target);
+      if (!fid) return;
+      broadcastFieldFocus(fid, false);
+    }, true);
+
+    document.addEventListener('input', (e) => {
+      const fid = getFieldIdentifier(e.target);
+      if (!fid) return;
+      const val = e.target.value;
+
+      clearTimeout(inputDebounceTimer);
+      inputDebounceTimer = setTimeout(() => {
+        broadcastFieldChange(fid, val, {
+          label: e.target.placeholder || e.target.name || ''
+        });
+      }, 60);
+    }, true);
+
+    // Incoming Remote Field Focus Handler
+    window.addEventListener('supabase-field-focus', (e) => {
+      const { fieldId, isFocused, user } = e.detail || {};
+      if (!fieldId || !user) return;
+
+      const el = findElementByFieldId(fieldId);
+      
+      // Clean up previous tag if any
+      if (activeRemoteFocuses.has(fieldId)) {
+        const prev = activeRemoteFocuses.get(fieldId);
+        if (prev.tagEl) prev.tagEl.remove();
+        if (prev.inputEl) {
+          prev.inputEl.classList.remove('vf-collab-focus-ring');
+          prev.inputEl.style.removeProperty('--vf-collab-color');
+          prev.inputEl.style.removeProperty('--vf-collab-glow');
+        }
+        activeRemoteFocuses.delete(fieldId);
+      }
+
+      if (isFocused && el) {
+        const color = user.color || { bg: '#8b5cf6', fg: '#ffffff', glow: 'rgba(139,92,246,0.35)' };
+        el.classList.add('vf-collab-focus-ring');
+        el.style.setProperty('--vf-collab-color', color.bg);
+        el.style.setProperty('--vf-collab-glow', color.glow);
+
+        const tag = document.createElement('div');
+        tag.className = 'vf-collab-editor-tag';
+        tag.style.setProperty('--vf-collab-color', color.bg);
+        tag.innerHTML = `
+          <span style="font-size:0.6rem;">●</span>
+          <span>${escapeHtmlStr(user.name || 'User')} is editing</span>
+        `;
+
+        const parent = el.parentElement;
+        if (parent) {
+          const computedPos = window.getComputedStyle(parent).position;
+          if (computedPos === 'static') {
+            parent.style.position = 'relative';
+          }
+          parent.appendChild(tag);
+        }
+
+        activeRemoteFocuses.set(fieldId, { tagEl: tag, inputEl: el, user: user });
+      }
+    });
+
+    // Incoming Remote Field Change Handler (Live Keystrokes)
+    window.addEventListener('supabase-field-change', (e) => {
+      const { fieldId, value } = e.detail || {};
+      if (!fieldId) return;
+
+      const el = findElementByFieldId(fieldId);
+      if (!el) return;
+
+      // Skip overwrite if local user is actively typing in this exact input
+      if (document.activeElement === el) return;
+
+      if (el.value !== value) {
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value') ? 
+          Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set : null;
+        const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value') ?
+          Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set : null;
+        
+        if (el.tagName.toLowerCase() === 'input' && nativeInputValueSetter) {
+          nativeInputValueSetter.call(el, value);
+        } else if (el.tagName.toLowerCase() === 'textarea' && nativeTextAreaValueSetter) {
+          nativeTextAreaValueSetter.call(el, value);
+        } else {
+          el.value = value;
+        }
+
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCollaborativeDOMSync);
+  } else {
+    initCollaborativeDOMSync();
+  }
+
+  if (syncChannel) {
+    syncChannel.onmessage = (msg) => {
+      if (msg && msg.data) {
+        const { key, value, type, senderId, payload } = msg.data;
+        if (senderId === CLIENT_ID) return; // Skip own messages
+
+        if (type === 'presence_ping' && payload) {
+          handleIncomingPresencePing(payload);
+        } else if (type === 'presence_leave' && payload) {
+          handleIncomingPresenceLeave(payload);
+        } else if (type === 'field_focus' && payload) {
+          handleIncomingFieldFocus(payload);
+        } else if (type === 'field_change' && payload) {
+          handleIncomingFieldChange(payload);
+        } else if (key) {
+          if (type === 'removeItem') {
+            handleIncomingRemoteUpdate(key, null, true);
+          } else {
+            handleIncomingRemoteUpdate(key, value, false);
+          }
+        }
+      }
+    };
+  }
 
   function initRealtimeWebSocket() {
     if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -204,6 +723,9 @@
             ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb_' + Date.now() }));
           }
         }, 25000);
+
+        // Immediate presence announcement on socket connect
+        sendPresencePing();
       };
 
       ws.onmessage = (e) => {
@@ -211,7 +733,19 @@
           const data = JSON.parse(e.data);
           if (data && data.event === 'broadcast' && data.payload) {
             const inner = data.payload.payload || data.payload;
-            if (inner && inner.senderId !== CLIENT_ID && inner.key) {
+            if (!inner || inner.senderId === CLIENT_ID || inner.clientId === CLIENT_ID) return;
+
+            const eventType = inner.type || data.payload.event;
+
+            if (eventType === 'presence_ping') {
+              handleIncomingPresencePing(inner);
+            } else if (eventType === 'presence_leave') {
+              handleIncomingPresenceLeave(inner);
+            } else if (eventType === 'field_focus') {
+              handleIncomingFieldFocus(inner);
+            } else if (eventType === 'field_change') {
+              handleIncomingFieldChange(inner);
+            } else if (inner.key) {
               const { key, value } = inner;
               const valStr = typeof value === 'string' ? value : JSON.stringify(value);
               handleIncomingRemoteUpdate(key, valStr, false);
@@ -980,7 +1514,21 @@
       } finally {
         isHydrated = true;
       }
-    }
+    },
+    // --- Realtime User Presence & Live Collaborative Editing APIs ---
+    getCurrentUser: () => getLocalUserInfo(),
+    getCurrentPage: () => getCurrentPageKey(),
+    getPresenceStore: () => ({ ...presenceStore }),
+    getPresence(page) {
+      const targetPage = page || getCurrentPageKey();
+      return Object.values(presenceStore).filter(u => !u.page || u.page === targetPage);
+    },
+    getAllPresence: () => Object.values(presenceStore),
+    sendPresencePing: (tab, field, isTyping) => sendPresencePing(tab, field, isTyping),
+    sendPresenceLeave: () => sendPresenceLeave(),
+    broadcastFieldFocus: (fieldId, isFocused, meta) => broadcastFieldFocus(fieldId, isFocused, meta),
+    broadcastFieldChange: (fieldId, value, meta) => broadcastFieldChange(fieldId, value, meta),
+    getAvatarColors: () => AVATAR_COLORS
   };
 
   // Initial boot: start Realtime WS and initial load

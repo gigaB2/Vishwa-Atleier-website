@@ -7391,6 +7391,13 @@ const App = () => {
   }, []);
 
   useEffect(() => {
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.sendPresencePing === 'function') {
+      const activeProd = products[activeIndex] ? (products[activeIndex].name || `Item ${activeIndex + 1}`) : 'Fabric';
+      window.VishwaSupabase.sendPresencePing('fabric', activeProd);
+    }
+  }, [activeIndex, products]);
+
+  useEffect(() => {
     if (isInitialMountProductsRef.current) {
       isInitialMountProductsRef.current = false;
       saveCostingProductsToIDB(products);

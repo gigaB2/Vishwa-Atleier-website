@@ -503,7 +503,181 @@
 
     // Initialize sidebar logic, event listeners, active states
     initSidebarLogic();
+    injectPresenceBar();
   }
+
+  // --- Realtime User Presence Bar (Google Sheets Style) ---
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function injectPresenceBar() {
+    // Avoid injecting on login screen
+    const path = window.location.pathname.toLowerCase();
+    const page = path.split('/').pop() || 'index.html';
+    if (page === 'index.html' && !localStorage.getItem('vf_session') && !localStorage.getItem('vf_user_name')) {
+      return;
+    }
+
+    let presenceBar = document.getElementById('vfPresenceBar');
+    if (!presenceBar) {
+      presenceBar = document.createElement('div');
+      presenceBar.id = 'vfPresenceBar';
+      presenceBar.className = 'vf-presence-container';
+      presenceBar.style.position = 'fixed';
+      presenceBar.style.top = '14px';
+      presenceBar.style.right = '20px';
+      presenceBar.style.zIndex = '9990';
+      presenceBar.innerHTML = `
+        <span class="vf-presence-label">
+          <span class="vf-presence-live-dot" title="Live Realtime Collab Sync Active"></span>
+          <span id="vfPresenceCountText">1 Online</span>
+        </span>
+        <div class="vf-avatar-stack" id="vfAvatarStack"></div>
+      `;
+      document.body.appendChild(presenceBar);
+    }
+
+    renderPresenceBarUI();
+  }
+
+  function renderPresenceBarUI(presenceDetail) {
+    const stack = document.getElementById('vfAvatarStack');
+    const countText = document.getElementById('vfPresenceCountText');
+    if (!stack) return;
+
+    let users = presenceDetail && presenceDetail.pageUsers;
+    if (!users && window.VishwaSupabase && typeof window.VishwaSupabase.getPresence === 'function') {
+      users = window.VishwaSupabase.getPresence();
+    }
+    if (!users || !Array.isArray(users) || users.length === 0) {
+      const selfUser = window.VishwaSupabase && typeof window.VishwaSupabase.getCurrentUser === 'function' ? 
+        window.VishwaSupabase.getCurrentUser() : { name: 'Operator', role: 'Operator', initials: 'OP', color: { bg: '#8b5cf6', fg: '#ffffff', glow: 'rgba(139,92,246,0.45)' } };
+      users = [{ user: selfUser, isSelf: true, lastPing: Date.now() }];
+    }
+
+    const selfId = (presenceDetail && presenceDetail.selfId) || (window.VishwaSupabase && window.VishwaSupabase.getCurrentUser && window.VishwaSupabase.getCurrentUser().clientId);
+
+    if (countText) {
+      countText.textContent = users.length === 1 ? '1 Online' : `${users.length} Online`;
+    }
+
+    stack.innerHTML = '';
+
+    const maxVisible = 4;
+    const visibleUsers = users.slice(0, maxVisible);
+    const overflowUsers = users.slice(maxVisible);
+
+    if (overflowUsers.length > 0) {
+      const moreWrap = document.createElement('div');
+      moreWrap.className = 'vf-presence-avatar-wrap';
+      moreWrap.innerHTML = `
+        <div class="vf-presence-overflow-badge">+${overflowUsers.length}</div>
+        <div class="vf-presence-popover">
+          <div class="vf-popover-header" style="font-size: 0.78rem; font-weight: 700; color: var(--fg); margin-bottom: 8px;">
+            Other Active Viewers (${overflowUsers.length})
+          </div>
+          ${overflowUsers.map(u => {
+            const uColor = u.user && u.user.color ? u.user.color : { bg: '#8b5cf6', fg: '#ffffff' };
+            return `
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <div class="vf-popover-avatar" style="background: ${uColor.bg}; color: ${uColor.fg}; width: 22px; height: 22px; font-size: 0.65rem;">
+                ${escapeHtml(u.user ? u.user.initials : 'U')}
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  ${escapeHtml(u.user ? u.user.name : 'User')}
+                </div>
+                <div style="font-size: 0.65rem; color: var(--muted);">${escapeHtml(u.user ? u.user.role : 'Viewer')}${u.tab ? ' • ' + escapeHtml(u.tab) : ''}</div>
+              </div>
+            </div>
+          `;}).join('')}
+        </div>
+      `;
+      stack.appendChild(moreWrap);
+    }
+
+    visibleUsers.forEach(u => {
+      const isSelf = u.isSelf || (u.user && u.user.clientId === selfId) || (u.clientId === selfId);
+      const color = u.user && u.user.color ? u.user.color : { bg: '#8b5cf6', fg: '#ffffff', glow: 'rgba(139,92,246,0.45)' };
+      const name = (u.user && u.user.name) || 'User';
+      const role = (u.user && u.user.role) || 'Operator';
+      const initials = (u.user && u.user.initials) || name.slice(0, 2).toUpperCase();
+      const tabName = u.tab ? u.tab.replace(/[-_]/g, ' ') : '';
+      const actionText = u.isTyping ? 'Typing in costing sheet...' : (u.field ? `Editing field` : 'Viewing page');
+
+      const avatarWrap = document.createElement('div');
+      avatarWrap.className = 'vf-presence-avatar-wrap';
+      avatarWrap.setAttribute('data-client-id', u.clientId || '');
+
+      avatarWrap.innerHTML = `
+        <div class="vf-presence-avatar" style="background: ${color.bg}; color: ${color.fg}; box-shadow: 0 0 10px ${color.glow};">
+          ${escapeHtml(initials)}
+          <span class="vf-presence-status-dot ${u.isTyping ? 'typing' : ''}"></span>
+        </div>
+        <div class="vf-presence-popover">
+          <div class="vf-popover-header">
+            <div class="vf-popover-avatar" style="background: ${color.bg}; color: ${color.fg};">
+              ${escapeHtml(initials)}
+            </div>
+            <div>
+              <div class="vf-popover-name">
+                ${escapeHtml(name)}
+                ${isSelf ? '<span class="vf-popover-self-chip">You</span>' : ''}
+              </div>
+              <div class="vf-popover-role">${escapeHtml(role)}</div>
+            </div>
+          </div>
+          ${tabName ? `
+            <div style="margin-bottom: 4px;">
+              <span class="vf-popover-tab-badge">📍 Tab: ${escapeHtml(tabName)}</span>
+            </div>
+          ` : ''}
+          <div class="vf-popover-meta-row">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${u.isTyping ? '#f59e0b' : '#10b981'};"></span>
+            <span>${escapeHtml(actionText)}</span>
+          </div>
+        </div>
+      `;
+
+      stack.appendChild(avatarWrap);
+    });
+  }
+
+  window.addEventListener('supabase-presence', (e) => {
+    renderPresenceBarUI(e.detail);
+  });
+
+  // Automatically detect and broadcast active tab from URL params & tab clicks
+  function detectActiveTab() {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab') || urlParams.get('view') || '';
+      if (tabParam) {
+        window.__vf_active_tab = tabParam;
+      }
+    } catch(e) {}
+  }
+  detectActiveTab();
+
+  document.addEventListener('click', (e) => {
+    const tabEl = e.target.closest('[role="tab"], .tab-btn, button[data-tab], [data-view]');
+    if (tabEl) {
+      const tabVal = tabEl.dataset.tab || tabEl.dataset.view || tabEl.getAttribute('aria-controls') || tabEl.textContent.trim();
+      if (tabVal && tabVal.length < 30) {
+        window.__vf_active_tab = tabVal;
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.sendPresencePing === 'function') {
+          window.VishwaSupabase.sendPresencePing(tabVal);
+        }
+      }
+    }
+  }, true);
 
   // 6. Global helper functions accessed by inline onclicks
   window._vfToggleFolder = function (btn) {
