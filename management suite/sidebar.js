@@ -539,37 +539,66 @@
       `;
     }
 
-    // Dock directly next to the active sheet title or header
+    // Dock directly next to the active sheet title or header across all modules
     function dockNextToSheetTitle() {
-      // 1. Direct slot in Costing modules
+      if (document.body.contains(presenceBar) && presenceBar.parentElement && !presenceBar.parentElement.closest('#vfSidebar')) {
+        // If already nicely attached inside a header or next to title, keep it
+        const parent = presenceBar.parentElement;
+        if (parent.closest('header, .logo-section, .page-header, .salary-page-header, .dl-page-header, #vfPresenceBarSlot') ||
+            parent.querySelector('h1, h2, .logo, .title')) {
+          presenceBar.style.display = 'inline-flex';
+          return true;
+        }
+      }
+
+      // 1. Direct explicit slot in Costing modules
       const slot = document.getElementById('vfPresenceBarSlot');
       if (slot) {
         if (!slot.contains(presenceBar)) {
           slot.appendChild(presenceBar);
-          presenceBar.style.display = 'inline-flex';
         }
+        presenceBar.style.display = 'inline-flex';
         return true;
       }
 
-      // 2. Generic page title candidates in main content (excluding sidebar)
+      // 2. Comprehensive sheet title selectors across all modules
       const candidates = [
+        document.querySelector('.logo-section .logo'),
+        document.querySelector('.logo-section'),
+        document.querySelector('#page-header-title'),
+        document.querySelector('#division-title'),
+        document.querySelector('.salary-page-header h1'),
+        document.querySelector('.salary-page-header .title'),
+        document.querySelector('.salary-page-header'),
+        document.querySelector('.dl-page-header h1'),
+        document.querySelector('.dl-page-header'),
         document.querySelector('header .flex.items-center'),
         document.querySelector('header h1'),
+        document.querySelector('header h2'),
         document.querySelector('.page-header h1'),
+        document.querySelector('.page-header h2'),
+        document.querySelector('.page-header'),
         document.querySelector('.sheet-title'),
         document.querySelector('.vf-sheet-title'),
         document.querySelector('.vf-page-title'),
-        document.querySelector('header h2'),
+        document.querySelector('header .logo'),
+        document.querySelector('.logo'),
         document.querySelector('main h1'),
+        document.querySelector('main h2'),
         document.querySelector('.main-content h1'),
+        document.querySelector('.main-content h2'),
         document.querySelector('#root h1'),
-        document.querySelector('h1')
+        document.querySelector('#root h2'),
+        document.querySelector('h1'),
+        document.querySelector('h2')
       ];
 
       for (const t of candidates) {
-        if (t && t.offsetParent !== null && !t.closest('#vfSidebar')) {
+        if (t && t.offsetParent !== null && !t.closest('#vfSidebar') && !t.closest('.modal') && !t.closest('.vf-modal') && !t.closest('.dialog')) {
           if (!t.contains(presenceBar) && t.parentElement) {
-            if (t.nextSibling) {
+            if (t.classList && (t.classList.contains('logo-section') || t.classList.contains('salary-page-header') || t.classList.contains('dl-page-header'))) {
+              t.appendChild(presenceBar);
+            } else if (t.nextSibling) {
               t.parentElement.insertBefore(presenceBar, t.nextSibling);
             } else {
               t.parentElement.appendChild(presenceBar);
@@ -584,14 +613,13 @@
 
     if (!dockNextToSheetTitle()) {
       presenceBar.style.display = 'none';
-      // Re-check periodically & on DOM updates to latch onto the sheet title when React mounts
-      const mo = new MutationObserver(() => {
-        if (dockNextToSheetTitle()) {
-          // Latch successfully
-        }
-      });
-      mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
     }
+
+    // Continuously observe DOM updates across React routes and tab transitions
+    const mo = new MutationObserver(() => {
+      dockNextToSheetTitle();
+    });
+    mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
 
     renderPresenceBarUI();
   }
