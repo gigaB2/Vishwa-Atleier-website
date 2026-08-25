@@ -611,6 +611,17 @@
       }, 60);
     }, true);
 
+    document.addEventListener('change', (e) => {
+      const fid = getFieldIdentifier(e.target);
+      if (!fid) return;
+      const val = e.target.value;
+
+      clearTimeout(inputDebounceTimer);
+      broadcastFieldChange(fid, val, {
+        label: e.target.placeholder || e.target.name || ''
+      });
+    }, true);
+
     // Incoming Remote Field Focus Handler
     window.addEventListener('supabase-field-focus', (e) => {
       const { fieldId, isFocused, user } = e.detail || {};

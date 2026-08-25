@@ -2041,10 +2041,22 @@
       return '';
     }
 
+    function triggerFieldSync(el) {
+      if (!el) return;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
     function selectProdNameOption(val) {
-      document.getElementById('prod-name').value = val;
-      document.getElementById('prod-name-search').value = val;
-      document.getElementById('prod-name-dropdown').style.display = 'none';
+      const hiddenName = document.getElementById('prod-name');
+      const searchInput = document.getElementById('prod-name-search');
+      if (hiddenName) hiddenName.value = val;
+      if (searchInput) {
+        searchInput.value = val;
+        triggerFieldSync(searchInput);
+      }
+      const dropdown = document.getElementById('prod-name-dropdown');
+      if (dropdown) dropdown.style.display = 'none';
 
       // Autofill details from costing calculator if found
       const storageKeys = {
@@ -2061,53 +2073,72 @@
 
       window._currentSelectedCostingProduct = prod || null;
 
+      const denierEl = document.getElementById('prod-denier');
+      const tpmEl = document.getElementById('prod-tpm');
+      const rollsEl = document.getElementById('prod-rolls');
+      const colorEl = document.getElementById('prod-color');
+      const twistEl = document.getElementById('prod-twist');
+      const lotEl = document.getElementById('prod-lot');
+
       if (prod) {
         const denierVal = prod.resultantDenier || (prod.calcs && prod.calcs.resultantDenier) || '';
-        if (denierVal) {
-          document.getElementById('prod-denier').value = parseFloat(parseFloat(denierVal).toFixed(2));
-        } else {
-          document.getElementById('prod-denier').value = '';
+        if (denierEl) {
+          denierEl.value = denierVal ? parseFloat(parseFloat(denierVal).toFixed(2)) : '';
+          triggerFieldSync(denierEl);
         }
 
         // Auto fill tpm
         const tpmVal = prod.tpm || prod.totalTpm || '';
-        if (tpmVal !== undefined && tpmVal !== '') {
-          document.getElementById('prod-tpm').value = parseInt(tpmVal);
+        if (tpmEl && tpmVal !== undefined && tpmVal !== '') {
+          tpmEl.value = parseInt(tpmVal);
+          triggerFieldSync(tpmEl);
         }
 
         // Auto fill rolls per box/bori if configured in costing
-        if (prod.rollsPerBox) {
-          document.getElementById('prod-rolls').value = parseInt(prod.rollsPerBox);
+        if (rollsEl && prod.rollsPerBox) {
+          rollsEl.value = parseInt(prod.rollsPerBox);
+          triggerFieldSync(rollsEl);
         }
       }
 
       // Auto fill color (secondary yarn color for 2-ply / 3-ply)
       const extractedColor = getSecondaryColor(prod);
-      if (extractedColor) {
-        document.getElementById('prod-color').value = extractedColor;
-      } else if (productLogs.length > 0 && productLogs[0].color) {
-        document.getElementById('prod-color').value = productLogs[0].color;
+      if (colorEl) {
+        if (extractedColor) {
+          colorEl.value = extractedColor;
+        } else if (productLogs.length > 0 && productLogs[0].color) {
+          colorEl.value = productLogs[0].color;
+        }
+        triggerFieldSync(colorEl);
       }
 
       // Auto fill twist (from costing calculator config)
       const extractedTwist = getTwistConfig(prod);
-      if (extractedTwist) {
-        document.getElementById('prod-twist').value = extractedTwist;
-      } else if (productLogs.length > 0 && productLogs[0].twist) {
-        document.getElementById('prod-twist').value = productLogs[0].twist;
+      if (twistEl) {
+        if (extractedTwist) {
+          twistEl.value = extractedTwist;
+        } else if (productLogs.length > 0 && productLogs[0].twist) {
+          twistEl.value = productLogs[0].twist;
+        }
+        if (typeof refreshProdTwistCustomSelect === 'function') {
+          refreshProdTwistCustomSelect();
+        }
+        triggerFieldSync(twistEl);
       }
 
       // Auto fill lot: try latest production log first, then costing sheet, then generate sequential LOT-xxx
-      if (productLogs.length > 0) {
-        document.getElementById('prod-lot').value = cleanLotNumber(productLogs[0].lotNo);
-      } else if (prod && (prod.lotNo || prod.lot)) {
-        document.getElementById('prod-lot').value = cleanLotNumber(prod.lotNo || prod.lot);
-      } else {
-        document.getElementById('prod-lot').value = cleanLotNumber(generateNextLotNumber(val));
+      if (lotEl) {
+        if (productLogs.length > 0) {
+          lotEl.value = cleanLotNumber(productLogs[0].lotNo);
+        } else if (prod && (prod.lotNo || prod.lot)) {
+          lotEl.value = cleanLotNumber(prod.lotNo || prod.lot);
+        } else {
+          lotEl.value = cleanLotNumber(generateNextLotNumber(val));
+        }
+        triggerFieldSync(lotEl);
       }
 
       populateProdLotDropdown();
-
     }
 
     function generateNextLotNumber(productName) {
@@ -2147,6 +2178,19 @@
       }
 
       return `${prefix}${sep}${maxNum + 1}`;
+    }
+
+    // Keep hidden prod-name in sync when prod-name-search changes locally or from remote real-time
+    const prodNameSearchEl = document.getElementById('prod-name-search');
+    if (prodNameSearchEl) {
+      prodNameSearchEl.addEventListener('input', function() {
+        const hiddenEl = document.getElementById('prod-name');
+        if (hiddenEl) hiddenEl.value = this.value;
+      });
+      prodNameSearchEl.addEventListener('change', function() {
+        const hiddenEl = document.getElementById('prod-name');
+        if (hiddenEl) hiddenEl.value = this.value;
+      });
     }
 
     // Hide dropdown on blur
@@ -2259,14 +2303,39 @@
     };
 
     function selectProdLotOption(opt) {
-      document.getElementById('prod-lot').value = cleanLotNumber(opt.value);
-      document.getElementById('prod-lot-dropdown').style.display = 'none';
+      const lotEl = document.getElementById('prod-lot');
+      if (lotEl) {
+        lotEl.value = cleanLotNumber(opt.value);
+        triggerFieldSync(lotEl);
+      }
+      const dropdown = document.getElementById('prod-lot-dropdown');
+      if (dropdown) dropdown.style.display = 'none';
 
       // Autofill specs associated with selected lot if existing
-      if (opt.color) document.getElementById('prod-color').value = opt.color;
-      if (opt.denier) document.getElementById('prod-denier').value = opt.denier;
-      if (opt.tpm) document.getElementById('prod-tpm').value = opt.tpm;
-      if (opt.twist) document.getElementById('prod-twist').value = opt.twist;
+      const colorEl = document.getElementById('prod-color');
+      const denierEl = document.getElementById('prod-denier');
+      const tpmEl = document.getElementById('prod-tpm');
+      const twistEl = document.getElementById('prod-twist');
+
+      if (opt.color && colorEl) {
+        colorEl.value = opt.color;
+        triggerFieldSync(colorEl);
+      }
+      if (opt.denier && denierEl) {
+        denierEl.value = opt.denier;
+        triggerFieldSync(denierEl);
+      }
+      if (opt.tpm && tpmEl) {
+        tpmEl.value = opt.tpm;
+        triggerFieldSync(tpmEl);
+      }
+      if (opt.twist && twistEl) {
+        twistEl.value = opt.twist;
+        if (typeof refreshProdTwistCustomSelect === 'function') {
+          refreshProdTwistCustomSelect();
+        }
+        triggerFieldSync(twistEl);
+      }
     }
 
     // Hide dropdown on blur
