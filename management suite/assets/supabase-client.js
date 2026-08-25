@@ -64,10 +64,67 @@
   function isLocalOnlyKey(key) {
     if (!key || typeof key !== 'string') return true;
     if (LOCAL_ONLY_KEYS.has(key)) return true;
-    if (key.startsWith('user_theme_') || key.startsWith('bl_qr_session_') || key.startsWith('vf_device_') || key.startsWith('vf_local_')) {
+    if (key.startsWith('user_theme_') || key.startsWith('vf_device_') || key.startsWith('vf_local_')) {
       return true;
     }
     return false;
+  }
+
+  // --- IndexedDB Safe Storage Fallback (Protects against 5MB QuotaExceededError crashes) ---
+  const IDB_NAME = 'vf_management_suite_db';
+  const IDB_STORE = 'vf_keyval';
+  let idbInstance = null;
+
+  function getIDB() {
+    if (idbInstance) return Promise.resolve(idbInstance);
+    if (typeof indexedDB === 'undefined') return Promise.resolve(null);
+    return new Promise((resolve) => {
+      try {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(IDB_STORE)) {
+            db.createObjectStore(IDB_STORE);
+          }
+        };
+        req.onsuccess = (e) => {
+          idbInstance = e.target.result;
+          resolve(idbInstance);
+        };
+        req.onerror = () => resolve(null);
+      } catch (err) {
+        resolve(null);
+      }
+    });
+  }
+
+  function idbSet(key, val) {
+    getIDB().then(db => {
+      if (!db) return;
+      try {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(val, key);
+      } catch (e) {}
+    });
+  }
+
+  function idbDelete(key) {
+    getIDB().then(db => {
+      if (!db) return;
+      try {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).delete(key);
+      } catch (e) {}
+    });
+  }
+
+  function safeLocalStorageSet(key, valStr) {
+    try {
+      nativeLocalStorage.setItem(key, valStr);
+    } catch (err) {
+      // If QuotaExceededError or security storage limit hit, fall back safely to IndexedDB
+      idbSet(key, valStr);
+    }
   }
 
   // Unique client session instance ID
@@ -86,6 +143,25 @@
       }
     }
   } catch (e) {}
+
+  // Hydrate additional large keys from IndexedDB asynchronously into in-memory cache
+  getIDB().then(db => {
+    if (!db) return;
+    try {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.openCursor();
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          if (!cache[cursor.key] && !isLocalOnlyKey(cursor.key)) {
+            cache[cursor.key] = cursor.value;
+          }
+          cursor.continue();
+        }
+      };
+    } catch(e) {}
+  });
 
   // Track last local writes to prevent race conditions from overwriting active user edits
   const lastLocalWrites = {};
@@ -118,19 +194,151 @@
   // BroadcastChannel for instant real-time sync across open windows in the SAME browser
   const syncChannel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('vf_supabase_sync') : null;
 
+  // --- Universal Intelligent Merge Engine (Eliminates Concurrent Multi-User Overwrites) ---
+  function getItemIdentifier(item) {
+    if (!item || typeof item !== 'object') return null;
+    if (item.id !== undefined && item.id !== null && String(item.id).trim() !== '') {
+      return String(item.id).trim();
+    }
+    if (item._id !== undefined && item._id !== null && String(item._id).trim() !== '') {
+      return String(item._id).trim();
+    }
+    if (item.uuid !== undefined && item.uuid !== null && String(item.uuid).trim() !== '') {
+      return String(item.uuid).trim();
+    }
+    if (item.orderId || item.orderNo) {
+      return 'ord_' + String(item.orderId || item.orderNo).trim();
+    }
+    if (item.billNo || item.invoiceNo) {
+      return 'inv_' + String(item.billNo || item.invoiceNo).trim();
+    }
+    if (item.lotNo || item.lot) {
+      return 'lot_' + String(item.lotNo || item.lot).trim() + '_' + (item.date || '');
+    }
+    // Composite log key for shift entries without explicit ID
+    if (item.date && (item.shift || item.machine || item.machineNo || item.loom || item.loomNo || item.worker)) {
+      return `log_${item.date}_${item.shift || ''}_${item.machine || item.machineNo || item.loom || item.loomNo || ''}_${item.productName || item.worker || ''}`;
+    }
+    return null;
+  }
+
+  function getDeletedTombstones() {
+    let deleted = [];
+    try {
+      const raw = cache['vf_deleted_entity_ids'] || cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_entity_ids') || nativeLocalStorage.getItem('vf_deleted_costing_ids');
+      if (raw) deleted = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch(e) {}
+    return Array.isArray(deleted) ? deleted.map(String) : [];
+  }
+
+  function mergeDatasets(key, localVal, remoteVal) {
+    if (localVal === undefined || localVal === null) return remoteVal;
+    if (remoteVal === undefined || remoteVal === null) return localVal;
+
+    let parsedLocal = localVal;
+    let parsedRemote = remoteVal;
+
+    try {
+      if (typeof localVal === 'string' && (localVal.startsWith('[') || localVal.startsWith('{'))) {
+        parsedLocal = JSON.parse(localVal);
+      }
+    } catch(e) {}
+
+    try {
+      if (typeof remoteVal === 'string' && (remoteVal.startsWith('[') || remoteVal.startsWith('{'))) {
+        parsedRemote = JSON.parse(remoteVal);
+      }
+    } catch(e) {}
+
+    // Case 1: Both are Arrays -> Item-level Deduplicated Union Merge
+    if (Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
+      const tombstones = getDeletedTombstones();
+      const mergedMap = new Map();
+      const unkeyedRemoteItems = [];
+
+      // 1. Index remote items (server authoritative state)
+      parsedRemote.forEach(item => {
+        const id = getItemIdentifier(item);
+        if (id) {
+          if (!tombstones.includes(id)) {
+            mergedMap.set(id, item);
+          }
+        } else {
+          unkeyedRemoteItems.push(item);
+        }
+      });
+
+      // 2. Merge local items (client state + recent local additions/edits)
+      parsedLocal.forEach(localItem => {
+        const id = getItemIdentifier(localItem);
+        if (id) {
+          if (!tombstones.includes(id)) {
+            if (!mergedMap.has(id)) {
+              // Item added locally by this operator, not yet on server -> RETAIN IT!
+              mergedMap.set(id, localItem);
+            } else {
+              // Item exists in both -> compare timestamps/dates
+              const remoteItem = mergedMap.get(id);
+              const localTs = new Date(localItem.updated_at || localItem.timestamp || localItem.date || 0).getTime();
+              const remoteTs = new Date(remoteItem.updated_at || remoteItem.timestamp || remoteItem.date || 0).getTime();
+              if (localTs >= remoteTs) {
+                mergedMap.set(id, Object.assign({}, remoteItem, localItem));
+              }
+            }
+          }
+        } else {
+          // Compare objects by serialized string
+          const str = JSON.stringify(localItem);
+          const exists = unkeyedRemoteItems.some(r => JSON.stringify(r) === str);
+          if (!exists) {
+            unkeyedRemoteItems.push(localItem);
+          }
+        }
+      });
+
+      const finalMerged = Array.from(mergedMap.values()).concat(unkeyedRemoteItems);
+      return typeof remoteVal === 'string' ? JSON.stringify(finalMerged) : finalMerged;
+    }
+
+    // Case 2: Both are Plain Objects (Dictionaries / Settings)
+    if (parsedLocal && typeof parsedLocal === 'object' && !Array.isArray(parsedLocal) &&
+        parsedRemote && typeof parsedRemote === 'object' && !Array.isArray(parsedRemote)) {
+      const mergedObj = Object.assign({}, parsedRemote, parsedLocal);
+      return typeof remoteVal === 'string' ? JSON.stringify(mergedObj) : mergedObj;
+    }
+
+    // Case 3: Primitive values -> Prefer remote server value unless locally edited within 3s
+    const lastWrite = lastLocalWrites[key] || 0;
+    if (Date.now() - lastWrite < 3000) {
+      return localVal;
+    }
+    return remoteVal;
+  }
+
   function applyRemoteKeyUpdate(key, valStr) {
     if (isLocalOnlyKey(key)) return;
-    if (cache[key] !== valStr) {
-      cache[key] = valStr;
-      try { nativeLocalStorage.setItem(key, valStr); } catch(e) {}
-      lastSavedHashes[key] = computeHash(valStr);
+    const currentVal = cache[key] || nativeLocalStorage.getItem(key);
+    const finalVal = mergeDatasets(key, currentVal, valStr);
+    const finalValSerialized = typeof finalVal === 'string' ? finalVal : JSON.stringify(finalVal);
+
+    if (cache[key] !== finalValSerialized) {
+      cache[key] = finalValSerialized;
+      safeLocalStorageSet(key, finalValSerialized);
+      lastSavedHashes[key] = computeHash(finalValSerialized);
       lastKnownTimestamps[key] = new Date().toISOString();
 
-      window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key, value: valStr, isRemote: true } }));
+      window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key, value: finalValSerialized, isRemote: true } }));
       try {
-        window.dispatchEvent(new StorageEvent('storage', { key: key, newValue: valStr }));
+        window.dispatchEvent(new StorageEvent('storage', { key: key, newValue: finalValSerialized }));
       } catch(e) {
         window.dispatchEvent(new Event('storage'));
+      }
+
+      // If merge preserved local records that were not in incoming remote payload, sync union back
+      if (finalValSerialized !== valStr && activeConfig.isConfigured) {
+        let parsed = finalValSerialized;
+        try { parsed = JSON.parse(finalValSerialized); } catch(e) {}
+        supabaseApi.set(key, parsed);
       }
     }
   }
@@ -1031,30 +1239,32 @@
         }
       } catch(e) {}
     },
-    // Explicit Item Deletion Tombstone Tracking
-    async recordCostingDeletion(key, itemId) {
+    // Explicit Universal Item Deletion Tombstone Tracking
+    async recordDeletion(key, itemId) {
       try {
         const idStr = String(itemId);
         let deletedIds = [];
         try {
-          const raw = cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_costing_ids');
+          const raw = cache['vf_deleted_entity_ids'] || cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_entity_ids') || nativeLocalStorage.getItem('vf_deleted_costing_ids');
           if (raw) deletedIds = JSON.parse(raw);
         } catch (e) {}
         deletedIds = Array.isArray(deletedIds) ? deletedIds.map(String) : [];
 
         if (!deletedIds.includes(idStr)) {
           deletedIds.push(idStr);
-          // Prune tombstone array to most recent 2000 items to avoid memory leaks
-          if (deletedIds.length > 2000) {
-            deletedIds = deletedIds.slice(-2000);
+          // Prune tombstone array to most recent 5000 items to avoid memory leaks
+          if (deletedIds.length > 5000) {
+            deletedIds = deletedIds.slice(-5000);
           }
           const valStr = JSON.stringify(deletedIds);
+          cache['vf_deleted_entity_ids'] = valStr;
           cache['vf_deleted_costing_ids'] = valStr;
-          try { nativeLocalStorage.setItem('vf_deleted_costing_ids', valStr); } catch(e) {}
-          this.set('vf_deleted_costing_ids', deletedIds, true);
+          safeLocalStorageSet('vf_deleted_entity_ids', valStr);
+          safeLocalStorageSet('vf_deleted_costing_ids', valStr);
+          this.set('vf_deleted_entity_ids', deletedIds, true);
         }
 
-        // Delete from dedicated table
+        // Delete from dedicated table if costing key
         let table = null;
         if (key === 'costing-products-v4') table = 'vf_costing_products';
         else if (key === 'costing-tfo-products-v1') table = 'vf_costing_tfo_products';
@@ -1072,13 +1282,16 @@
         }
       } catch (e) {}
     },
-    // Explicit Item Undeletion / Restore Tracking (for Ctrl+Z Undo)
-    async unrecordCostingDeletion(key, itemId, itemData = null) {
+    async recordCostingDeletion(key, itemId) {
+      return this.recordDeletion(key, itemId);
+    },
+    // Explicit Universal Item Undeletion / Restore Tracking (for Ctrl+Z Undo)
+    async unrecordDeletion(key, itemId, itemData = null) {
       try {
         const idStr = String(itemId);
         let deletedIds = [];
         try {
-          const raw = cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_costing_ids');
+          const raw = cache['vf_deleted_entity_ids'] || cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_entity_ids') || nativeLocalStorage.getItem('vf_deleted_costing_ids');
           if (raw) deletedIds = JSON.parse(raw);
         } catch (e) {}
         deletedIds = Array.isArray(deletedIds) ? deletedIds.map(String) : [];
@@ -1086,9 +1299,11 @@
         if (deletedIds.includes(idStr)) {
           deletedIds = deletedIds.filter(id => id !== idStr);
           const valStr = JSON.stringify(deletedIds);
+          cache['vf_deleted_entity_ids'] = valStr;
           cache['vf_deleted_costing_ids'] = valStr;
-          try { nativeLocalStorage.setItem('vf_deleted_costing_ids', valStr); } catch(e) {}
-          this.set('vf_deleted_costing_ids', deletedIds, true);
+          safeLocalStorageSet('vf_deleted_entity_ids', valStr);
+          safeLocalStorageSet('vf_deleted_costing_ids', valStr);
+          this.set('vf_deleted_entity_ids', deletedIds, true);
         }
 
         // Immediate re-insertion to dedicated Supabase table if itemData exists
@@ -1115,6 +1330,9 @@
           }).catch(() => {});
         }
       } catch (e) {}
+    },
+    async unrecordCostingDeletion(key, itemId, itemData = null) {
+      return this.unrecordDeletion(key, itemId, itemData);
     },
     async clearAll() {
       try {
@@ -1368,19 +1586,30 @@
                 if (row.updated_at) lastKnownTimestamps[row.key] = row.updated_at;
                 const strValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
                 kvMap[row.key] = row.value;
-                lastSavedHashes[row.key] = computeHash(strValue);
+
+                const localVal = cache[row.key] || nativeLocalStorage.getItem(row.key);
+                const finalMerged = mergeDatasets(row.key, localVal, strValue);
+                const finalStr = typeof finalMerged === 'string' ? finalMerged : JSON.stringify(finalMerged);
+
+                lastSavedHashes[row.key] = computeHash(finalStr);
 
                 const lastWrite = lastLocalWrites[row.key] || 0;
                 if (Date.now() - lastWrite < 3000) {
-                  pendingRemoteUpdates[row.key] = strValue;
+                  pendingRemoteUpdates[row.key] = finalStr;
                   return;
                 }
 
-                if (cache[row.key] !== strValue || isInitial) {
-                  cache[row.key] = strValue;
-                  try { nativeLocalStorage.setItem(row.key, strValue); } catch(e) {}
+                if (cache[row.key] !== finalStr || isInitial) {
+                  cache[row.key] = finalStr;
+                  safeLocalStorageSet(row.key, finalStr);
                   updatedKeys.push(row.key);
                   hasChanges = true;
+
+                  if (finalStr !== strValue && activeConfig.isConfigured) {
+                    let parsed = finalStr;
+                    try { parsed = JSON.parse(finalStr); } catch(e) {}
+                    supabaseApi.set(row.key, parsed);
+                  }
                 }
               } catch (e) {
                 cache[row.key] = String(row.value);
@@ -1525,19 +1754,29 @@
               try {
                 if (row.updated_at) lastKnownTimestamps[row.key] = row.updated_at;
                 const strValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
-                lastSavedHashes[row.key] = computeHash(strValue);
+                const localVal = cache[row.key] || nativeLocalStorage.getItem(row.key);
+                const finalMerged = mergeDatasets(row.key, localVal, strValue);
+                const finalStr = typeof finalMerged === 'string' ? finalMerged : JSON.stringify(finalMerged);
+
+                lastSavedHashes[row.key] = computeHash(finalStr);
 
                 const lastWrite = lastLocalWrites[row.key] || 0;
                 if (Date.now() - lastWrite < 3000) {
-                  pendingRemoteUpdates[row.key] = strValue;
+                  pendingRemoteUpdates[row.key] = finalStr;
                   return;
                 }
 
-                if (cache[row.key] !== strValue) {
-                  cache[row.key] = strValue;
-                  try { nativeLocalStorage.setItem(row.key, strValue); } catch(e) {}
+                if (cache[row.key] !== finalStr) {
+                  cache[row.key] = finalStr;
+                  safeLocalStorageSet(row.key, finalStr);
                   updatedKeys.push(row.key);
                   hasChanges = true;
+
+                  if (finalStr !== strValue && activeConfig.isConfigured) {
+                    let parsed = finalStr;
+                    try { parsed = JSON.parse(finalStr); } catch(e) {}
+                    supabaseApi.set(row.key, parsed);
+                  }
                 }
               } catch (e) {
                 cache[row.key] = String(row.value);
@@ -1677,16 +1916,12 @@
     setItem: function(key, value) {
       const valStr = String(value);
       if (isLocalOnlyKey(key)) {
-        try {
-          nativeLocalStorage.setItem(key, valStr);
-        } catch(e) {}
+        safeLocalStorageSet(key, valStr);
         return;
       }
       cache[key] = valStr;
       lastLocalWrites[key] = Date.now();
-      try {
-        nativeLocalStorage.setItem(key, valStr);
-      } catch(e) {}
+      safeLocalStorageSet(key, valStr);
 
       if (syncChannel) {
         try { syncChannel.postMessage({ key: key, value: valStr, type: 'setItem', senderId: CLIENT_ID }); } catch(e) {}
@@ -1706,6 +1941,7 @@
         try {
           nativeLocalStorage.removeItem(key);
         } catch(e) {}
+        idbDelete(key);
         return;
       }
       delete cache[key];
@@ -1713,6 +1949,7 @@
       try {
         nativeLocalStorage.removeItem(key);
       } catch(e) {}
+      idbDelete(key);
       if (syncChannel) {
         try { syncChannel.postMessage({ key: key, value: null, type: 'removeItem', senderId: CLIENT_ID }); } catch(e) {}
       }

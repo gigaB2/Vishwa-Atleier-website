@@ -58,7 +58,7 @@ ALTER TABLE public.vf_costing_doubler_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_costing_covering_products ENABLE ROW LEVEL SECURITY;
 
 -- Allow anon public read/write access (matching client REST token authentication)
--- (You can customize these policies if you enforce strict Supabase Auth JWTs)
+-- (For strict Supabase JWT auth, replace 'true' with 'auth.role() = ''authenticated''')
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_kv_store' AND policyname = 'Allow public access to vf_kv_store') THEN
@@ -80,6 +80,23 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_covering_products' AND policyname = 'Allow public access to vf_costing_covering_products') THEN
         CREATE POLICY "Allow public access to vf_costing_covering_products" ON public.vf_costing_covering_products FOR ALL USING (true) WITH CHECK (true);
     END IF;
+END $$;
+
+-- ==============================================================================
+-- Storage Bucket Provisioning (For Design Cards, Beam Photos & Media Attachments)
+-- ==============================================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('vf_media_assets', 'vf_media_assets', true)
+ON CONFLICT (id) DO NOTHING;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Allow public access to vf_media_assets') THEN
+        CREATE POLICY "Allow public access to vf_media_assets" ON storage.objects
+        FOR ALL USING (bucket_id = 'vf_media_assets') WITH CHECK (bucket_id = 'vf_media_assets');
+    END IF;
+EXCEPTION
+    WHEN others THEN NULL;
 END $$;
 
 -- ==============================================================================

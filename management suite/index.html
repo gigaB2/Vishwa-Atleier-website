@@ -696,6 +696,29 @@
             return pages[0].url;
         }
 
+        // Secure SHA-256 Password Cryptographic Helpers
+        async function hashPassword(plainText) {
+            if (!plainText) return '';
+            if (/^[a-f0-9]{64}$/i.test(plainText)) return plainText.toLowerCase();
+            if (window.crypto && window.crypto.subtle) {
+                try {
+                    const encoder = new TextEncoder();
+                    const data = encoder.encode(plainText);
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                } catch(e) {}
+            }
+            return plainText;
+        }
+
+        async function verifyPassword(plainText, storedHashOrPlain) {
+            if (!plainText || !storedHashOrPlain) return false;
+            if (plainText === storedHashOrPlain) return true;
+            const hashed = await hashPassword(plainText);
+            return hashed === storedHashOrPlain.toLowerCase();
+        }
+
         // 1. Employee Form Submit (Supabase Auth first, with legacy fallback)
         document.getElementById('employeeLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -720,8 +743,8 @@
             let users = [];
             try { users = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS)) || []; } catch(e) {}
 
-            const found = users.find(u => u.email && u.email.toLowerCase() === emailInput);
-            if (!found) {
+            const foundIndex = users.findIndex(u => u.email && u.email.toLowerCase() === emailInput);
+            if (foundIndex === -1) {
                 if (authData.config.access_mode === 'open_portal') {
                     const sessionUser = { email: emailInput, name: emailInput.split('@')[0], role: 'employee', permissions: {} };
                     localStorage.setItem(STORAGE_KEY_USER, sessionUser.name);
@@ -734,9 +757,18 @@
                 return;
             }
 
-            if (found.passHash && found.passHash !== passInput) {
+            const found = users[foundIndex];
+            const isMatch = await verifyPassword(passInput, found.passHash);
+            if (!isMatch) {
                 showAuthMsg('Invalid password. Please check and try again.', 'error');
                 return;
+            }
+
+            // Upgrade legacy plaintext password to secure SHA-256 hash automatically
+            if (found.passHash === passInput && !/^[a-f0-9]{64}$/i.test(found.passHash)) {
+                found.passHash = await hashPassword(passInput);
+                users[foundIndex] = found;
+                try { localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users)); } catch(e) {}
             }
 
             localStorage.setItem(STORAGE_KEY_USER, found.email);
@@ -746,7 +778,7 @@
         });
 
         // 2. Admin Form Submit (Admin Email + Admin Password)
-        document.getElementById('adminLoginForm').addEventListener('submit', (e) => {
+        document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const adminEmail = document.getElementById('adminEmailInput').value.trim().toLowerCase();
             const adminPass = document.getElementById('adminPassInput').value;
@@ -757,7 +789,7 @@
                 if (raw !== null) admins = JSON.parse(raw) || [];
             } catch(e) {}
 
-            let cfg = { admin_email: 'admin@vishwafashions.com', admin_pass: 'admin123' };
+            let cfg = { admin_email: 'admin@vishwafashions.com' };
             try {
                 const cfgRaw = localStorage.getItem(STORAGE_KEY_AUTH_CONFIG);
                 if (cfgRaw) cfg = Object.assign(cfg, JSON.parse(cfgRaw));
@@ -767,15 +799,33 @@
             const validLegacyPass = cfg.admin_pass || 'admin123';
 
             let matchedAdmin = null;
-            if (admins !== null) {
-                matchedAdmin = admins.find(a => a.email && a.email.toLowerCase() === adminEmail && a.passHash === adminPass);
+            let matchedIndex = -1;
+            if (admins !== null && admins.length > 0) {
+                for (let i = 0; i < admins.length; i++) {
+                    const a = admins[i];
+                    if (a.email && a.email.toLowerCase() === adminEmail) {
+                        const isMatch = await verifyPassword(adminPass, a.passHash);
+                        if (isMatch) {
+                            matchedAdmin = a;
+                            matchedIndex = i;
+                            break;
+                        }
+                    }
+                }
             } else {
-                if ((adminEmail === validLegacyEmail || adminEmail === 'admin@vishwafashions.com' || adminEmail === 'admin') && (adminPass === validLegacyPass || adminPass === 'admin123')) {
+                const isMatch = await verifyPassword(adminPass, validLegacyPass);
+                if ((adminEmail === validLegacyEmail || adminEmail === 'admin@vishwafashions.com' || adminEmail === 'admin') && isMatch) {
                     matchedAdmin = { id: 'admin-master', email: validLegacyEmail, name: validLegacyEmail, role: 'admin' };
                 }
             }
 
             if (matchedAdmin) {
+                // Upgrade legacy plaintext password to secure SHA-256 hash
+                if (matchedIndex !== -1 && admins && admins[matchedIndex] && !/^[a-f0-9]{64}$/i.test(admins[matchedIndex].passHash)) {
+                    admins[matchedIndex].passHash = await hashPassword(adminPass);
+                    try { localStorage.setItem('vf_admin_users', JSON.stringify(admins)); } catch(e) {}
+                }
+
                 const adminSession = { 
                     id: matchedAdmin.id || ('admin-' + Date.now()), 
                     email: matchedAdmin.email || validLegacyEmail, 

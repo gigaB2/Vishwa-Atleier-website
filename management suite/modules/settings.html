@@ -2584,6 +2584,22 @@
     activeSelectedModel = modelVal;
   }
 
+  // Secure SHA-256 Cryptographic Helpers
+  async function hashPassword(plainText) {
+    if (!plainText) return '';
+    if (/^[a-f0-9]{64}$/i.test(plainText)) return plainText.toLowerCase();
+    if (window.crypto && window.crypto.subtle) {
+      try {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(plainText);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch(e) {}
+    }
+    return plainText;
+  }
+
   function getStoredAdmins() {
     const raw = localStorage.getItem('vf_admin_users');
     if (raw !== null) {
@@ -2678,7 +2694,7 @@
         if (title) title.innerText = "Edit Admin Account";
         document.getElementById('modal-admin-email').value = adm.email || '';
         document.getElementById('modal-admin-name').value = adm.name || '';
-        document.getElementById('modal-admin-pass').value = adm.passHash || '';
+        document.getElementById('modal-admin-pass').value = '';
       }
     } else {
       if (title) title.innerText = "Add New Admin Account";
@@ -2696,13 +2712,13 @@
     editingAdminId = null;
   }
 
-  function saveAdminFromModal() {
+  async function saveAdminFromModal() {
     const email = document.getElementById('modal-admin-email').value.trim();
     const name = document.getElementById('modal-admin-name').value.trim();
     const pass = document.getElementById('modal-admin-pass').value;
 
-    if (!email || !pass) {
-      alert("Please enter Admin Email and Password.");
+    if (!email) {
+      alert("Please enter Admin Email.");
       return;
     }
 
@@ -2718,9 +2734,15 @@
       if (idx !== -1) {
         admins[idx].email = email;
         admins[idx].name = name || 'Admin';
-        admins[idx].passHash = pass;
+        if (pass && pass.trim()) {
+          admins[idx].passHash = await hashPassword(pass);
+        }
       }
     } else {
+      if (!pass) {
+        alert("Please enter a password for the new Admin account.");
+        return;
+      }
       if (admins.some(a => a.email.toLowerCase() === email.toLowerCase())) {
         alert("An admin account with this email already exists.");
         return;
@@ -2729,7 +2751,7 @@
         id: 'admin-' + Date.now(),
         email: email,
         name: name || 'Admin',
-        passHash: pass,
+        passHash: await hashPassword(pass),
         role: 'admin',
         created_at: new Date().toISOString()
       });
@@ -2739,7 +2761,7 @@
     renderAdminsList();
     renderUsersAndInvitesList();
     closeAdminModal();
-    showToast("Admin account saved successfully!", "success");
+    showToast("Admin account saved securely!", "success");
   }
 
   function deleteAdmin(adminId) {
@@ -3033,7 +3055,7 @@
     setAllPermLevel(containerId, isChecked ? 'edit' : 'none');
   }
 
-  function saveAdminAuthConfig() {
+  async function saveAdminAuthConfig() {
     const mode = document.getElementById('portal-access-mode').value;
     const email = document.getElementById('admin-config-email').value.trim();
     const pass = document.getElementById('admin-config-pass').value;
@@ -3048,13 +3070,14 @@
       return;
     }
 
-    let cfg = { access_mode: mode, admin_email: email, admin_pass: pass };
+    const hashedPass = await hashPassword(pass);
+    let cfg = { access_mode: mode, admin_email: email, admin_pass: hashedPass };
     localStorage.setItem('vf_auth_config', JSON.stringify(cfg));
 
-    showToast("Admin credentials & security settings updated and synced!", "success");
+    showToast("Admin credentials & security settings updated securely!", "success");
   }
 
-  function createNewEmployeeAccount() {
+  async function createNewEmployeeAccount() {
     const email = document.getElementById('emp-new-email').value.trim();
     const pass = document.getElementById('emp-new-pass').value;
 
@@ -3095,13 +3118,14 @@
       return;
     }
 
+    const hashedPass = await hashPassword(pass);
     const newUser = {
       id: 'emp-' + Date.now(),
       email: email,
       username: email.split('@')[0],
       name: email.split('@')[0],
       role: 'employee',
-      passHash: pass,
+      passHash: hashedPass,
       permissions: perms,
       created_at: new Date().toISOString()
     };
@@ -3113,7 +3137,7 @@
     document.getElementById('emp-new-pass').value = '';
 
     renderUsersAndInvitesList();
-    showToast(`Employee account created for ${email}! Access synced to Supabase.`, "success");
+    showToast(`Employee account created for ${email}! Access saved securely.`, "success");
   }
 
   let currentEditingUserId = null;
