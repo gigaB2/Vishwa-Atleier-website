@@ -47,6 +47,29 @@
   let SUPABASE_URL = activeConfig.url;
   let SUPABASE_ANON_KEY = activeConfig.anonKey;
 
+  // Local-only keys that must NEVER sync across different computers/users in the cloud database
+  const LOCAL_ONLY_KEYS = new Set([
+    'vf_session',
+    'vf_user_name',
+    'vf_supabase_token',
+    'vf_supabase_session',
+    'vf_supabase_url',
+    'vf_supabase_anon_key',
+    'vf_sidebar_open_folders',
+    'vf_sidebar_collapsed',
+    'vishwa_fashions_sidebar_mode',
+    'vishwa_fashions_theme'
+  ]);
+
+  function isLocalOnlyKey(key) {
+    if (!key || typeof key !== 'string') return true;
+    if (LOCAL_ONLY_KEYS.has(key)) return true;
+    if (key.startsWith('user_theme_') || key.startsWith('bl_qr_session_') || key.startsWith('vf_device_') || key.startsWith('vf_local_')) {
+      return true;
+    }
+    return false;
+  }
+
   // Unique client session instance ID
   const CLIENT_ID = 'vf_client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
 
@@ -54,11 +77,11 @@
   const cache = {};
   window.__vf_supabase_cache = cache;
 
-  // Seed cache synchronously from native localStorage so page scripts have data instantly on page load
+  // Seed cache synchronously from native localStorage so page scripts have data instantly on page load (excluding local session keys)
   try {
     for (let i = 0; i < nativeLocalStorage.length; i++) {
       const k = nativeLocalStorage.key(i);
-      if (k) {
+      if (k && !isLocalOnlyKey(k)) {
         cache[k] = nativeLocalStorage.getItem(k);
       }
     }
@@ -96,6 +119,7 @@
   const syncChannel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('vf_supabase_sync') : null;
 
   function applyRemoteKeyUpdate(key, valStr) {
+    if (isLocalOnlyKey(key)) return;
     if (cache[key] !== valStr) {
       cache[key] = valStr;
       try { nativeLocalStorage.setItem(key, valStr); } catch(e) {}
@@ -112,6 +136,7 @@
   }
 
   function handleIncomingRemoteUpdate(key, valStr, isDelete = false) {
+    if (isLocalOnlyKey(key)) return;
     if (isDelete) {
       delete cache[key];
       delete lastKnownTimestamps[key];
@@ -195,9 +220,9 @@
       }
     } catch(e) {}
     
-    // Deterministic color assignment based on userId or name
+    // Deterministic color assignment based on userId or email or name
     let hash = 0;
-    const strForHash = (userId || name || CLIENT_ID).toLowerCase();
+    const strForHash = (email || userId || name || CLIENT_ID).toLowerCase();
     for (let i = 0; i < strForHash.length; i++) {
       hash = (hash << 5) - hash + strForHash.charCodeAt(i);
       hash |= 0;
@@ -205,9 +230,13 @@
     const colorIndex = Math.abs(hash) % AVATAR_COLORS.length;
     const userColor = AVATAR_COLORS[colorIndex];
     
-    // Compute user initials (up to 2 letters)
-    const cleanName = name.replace(/[^a-zA-Z0-9\s]/g, '').trim();
-    const parts = cleanName ? cleanName.split(/\s+/) : ['U'];
+    // Compute user initials cleanly (e.g., vishwa@vishwafashions -> VI, rajiv@vishwafashions.com -> RA)
+    let cleanName = name;
+    if (cleanName.includes('@')) {
+      cleanName = cleanName.split('@')[0];
+    }
+    cleanName = cleanName.replace(/[^a-zA-Z0-9\s]/g, ' ').trim();
+    const parts = cleanName ? cleanName.split(/\s+/).filter(Boolean) : ['U'];
     let initials = 'U';
     if (parts.length >= 2 && parts[0] && parts[1]) {
       initials = (parts[0][0] + parts[1][0]).toUpperCase();
@@ -786,6 +815,7 @@
   }
 
   function broadcastRealtimeUpdate(key, value) {
+    if (isLocalOnlyKey(key)) return;
     if (ws && ws.readyState === WebSocket.OPEN) {
       try {
         const broadcastMsg = {
@@ -880,6 +910,7 @@
     },
     // Debounced and Hash-Guarded Persistent Database Write (Zero Wasted POST Quota)
     set(key, value, isImmediate = false) {
+      if (isLocalOnlyKey(key)) return false;
       try {
         lastLocalWrites[key] = Date.now();
 
@@ -973,6 +1004,7 @@
       }
     },
     async delete(key) {
+      if (isLocalOnlyKey(key)) return;
       try {
         delete lastKnownTimestamps[key];
         delete lastSavedHashes[key];
@@ -1320,6 +1352,7 @@
             const kvMap = {};
 
             rows.forEach(row => {
+              if (!row || !row.key || isLocalOnlyKey(row.key)) return;
               try {
                 if (row.updated_at) lastKnownTimestamps[row.key] = row.updated_at;
                 const strValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
@@ -1445,9 +1478,10 @@
         const metaRows = await fetchAllRowsPaginated('vf_kv_store', 'key,updated_at');
         if (!Array.isArray(metaRows) || metaRows.length === 0) return;
 
-        // Identify keys that have actually changed on the server
+        // Identify keys that have actually changed on the server (excluding local session keys)
         const changedKeys = [];
         metaRows.forEach(row => {
+          if (!row || !row.key || isLocalOnlyKey(row.key)) return;
           const lastWrite = lastLocalWrites[row.key] || 0;
           const knownTs = lastKnownTimestamps[row.key];
           if (!knownTs || !row.updated_at || row.updated_at !== knownTs || !cache.hasOwnProperty(row.key)) {
@@ -1476,6 +1510,7 @@
           if (valRes.ok) {
             const rows = await valRes.json();
             rows.forEach(row => {
+              if (!row || !row.key || isLocalOnlyKey(row.key)) return;
               try {
                 if (row.updated_at) lastKnownTimestamps[row.key] = row.updated_at;
                 const strValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
@@ -1533,6 +1568,16 @@
 
   // Initial boot: start Realtime WS and initial load
   if (activeConfig.isConfigured) {
+    // Purge any accidental local-only keys previously stored in remote vf_kv_store
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=in.("vf_session","vf_user_name","vf_supabase_token","vf_supabase_session","vf_sidebar_open_folders","vf_sidebar_collapsed","vishwa_fashions_sidebar_mode","vishwa_fashions_theme")`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      }).catch(() => {});
+    }
     initRealtimeWebSocket();
     supabaseApi.loadAll(true).then(() => {
       console.log("Management Suite — Cloud Sync initialized.");
@@ -1599,6 +1644,13 @@
   // Override localStorage calls to point to Cloud Storage with synchronous native fallback
   const supabaseLocalStorage = {
     getItem: function(key) {
+      if (isLocalOnlyKey(key)) {
+        try {
+          return nativeLocalStorage.getItem(key);
+        } catch(e) {
+          return null;
+        }
+      }
       if (cache.hasOwnProperty(key)) {
         return cache[key];
       }
@@ -1613,6 +1665,12 @@
     },
     setItem: function(key, value) {
       const valStr = String(value);
+      if (isLocalOnlyKey(key)) {
+        try {
+          nativeLocalStorage.setItem(key, valStr);
+        } catch(e) {}
+        return;
+      }
       cache[key] = valStr;
       lastLocalWrites[key] = Date.now();
       try {
@@ -1633,17 +1691,37 @@
       supabaseApi.set(key, parsedVal);
     },
     removeItem: function(key) {
+      if (isLocalOnlyKey(key)) {
+        try {
+          nativeLocalStorage.removeItem(key);
+        } catch(e) {}
+        return;
+      }
       delete cache[key];
       lastLocalWrites[key] = Date.now();
-      try { nativeLocalStorage.removeItem(key); } catch(e) {}
+      try {
+        nativeLocalStorage.removeItem(key);
+      } catch(e) {}
       if (syncChannel) {
         try { syncChannel.postMessage({ key: key, value: null, type: 'removeItem', senderId: CLIENT_ID }); } catch(e) {}
       }
       supabaseApi.delete(key);
     },
     clear: function() {
-      Object.keys(cache).forEach(k => delete cache[k]);
-      try { nativeLocalStorage.clear(); } catch(e) {}
+      Object.keys(cache).forEach(k => {
+        if (!isLocalOnlyKey(k)) delete cache[k];
+      });
+      try {
+        const savedSession = nativeLocalStorage.getItem('vf_session');
+        const savedUserName = nativeLocalStorage.getItem('vf_user_name');
+        const savedToken = nativeLocalStorage.getItem('vf_supabase_token');
+        const savedSbSession = nativeLocalStorage.getItem('vf_supabase_session');
+        nativeLocalStorage.clear();
+        if (savedSession) nativeLocalStorage.setItem('vf_session', savedSession);
+        if (savedUserName) nativeLocalStorage.setItem('vf_user_name', savedUserName);
+        if (savedToken) nativeLocalStorage.setItem('vf_supabase_token', savedToken);
+        if (savedSbSession) nativeLocalStorage.setItem('vf_supabase_session', savedSbSession);
+      } catch(e) {}
       supabaseApi.clearAll();
     },
     key: function(index) {
@@ -1666,3 +1744,4 @@
     window.localStorage = supabaseLocalStorage;
   }
 })();
+
