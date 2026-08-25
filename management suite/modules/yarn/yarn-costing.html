@@ -6934,7 +6934,6 @@ const App = () => {
     setImportModalOpen(false);
   };
   const [activeFormulaModal, setActiveFormulaModal] = useState(null);
-  const [isFabricLocked, setIsFabricLocked] = useState(false);
   const [costingLinks, setCostingLinks] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('vishwa_fashions_costing_links') || '{}');
@@ -7177,9 +7176,6 @@ const App = () => {
     });
   };
 
-  const [isTfoLocked, setIsTfoLocked] = useState(false);
-  const [isDoublerLocked, setIsDoublerLocked] = useState(false);
-  const [isCoveringLocked, setIsCoveringLocked] = useState(false);
   const hasHydratedRef = useRef(false);
   const isInitialMountProductsRef = useRef(true);
   const isInitialMountTfoRef = useRef(true);
@@ -7537,6 +7533,11 @@ const App = () => {
   const currentTfoProduct = tfoProducts[tfoActiveIndex] || tfoProducts[0];
   const currentDoublerProduct = doublerProducts[doublerActiveIndex] || doublerProducts[0];
   const currentCoveringProduct = coveringProducts[coveringActiveIndex] || coveringProducts[0];
+
+  const isFabricLocked = Boolean(currentProduct && currentProduct.isLocked);
+  const isTfoLocked = Boolean(currentTfoProduct && currentTfoProduct.isLocked);
+  const isDoublerLocked = Boolean(currentDoublerProduct && currentDoublerProduct.isLocked);
+  const isCoveringLocked = Boolean(currentCoveringProduct && currentCoveringProduct.isLocked);
   useEffect(() => {
     if (currentProduct) setSearchTerm(getProductDisplayName(currentProduct, activeIndex));
   }, [activeIndex, currentProduct?.name]);
@@ -15008,12 +15009,12 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-sm font-bold text-slate-500 uppercase tracking-widest"
   }, "Input Parameters"), isCoveringLocked && /*#__PURE__*/React.createElement("span", {
-    className: "bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse"
+    className: "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse border border-rose-200 dark:border-rose-800"
   }, "Locked")), /*#__PURE__*/React.createElement("button", {
     type: "button",
-    onClick: () => setIsCoveringLocked(!isCoveringLocked),
-    className: `flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border shadow-sm active:scale-95 cursor-pointer ${isCoveringLocked ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`,
-    title: isCoveringLocked ? "Click to unlock input parameters" : "Click to lock input parameters"
+    onClick: () => updateCoveringProduct({ isLocked: !isCoveringLocked }),
+    className: `flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border shadow-sm active:scale-95 cursor-pointer ${isCoveringLocked ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'}`,
+    title: isCoveringLocked ? "Click to unlock this quality" : "Click to lock this quality"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-sm"
   }, isCoveringLocked ? '🔒' : '🔓'))), /*#__PURE__*/React.createElement("fieldset", {
@@ -17131,12 +17132,12 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-sm font-bold text-slate-500 uppercase tracking-widest"
   }, "Input Parameters"), isTfoLocked && /*#__PURE__*/React.createElement("span", {
-    className: "bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse"
+    className: "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse border border-rose-200 dark:border-rose-800"
   }, "Locked")), /*#__PURE__*/React.createElement("button", {
     type: "button",
-    onClick: () => setIsTfoLocked(!isTfoLocked),
-    className: `flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border shadow-sm active:scale-95 cursor-pointer ${isTfoLocked ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`,
-    title: isTfoLocked ? "Click to unlock input parameters" : "Click to lock input parameters"
+    onClick: () => updateTfoProduct({ isLocked: !isTfoLocked }),
+    className: `flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border shadow-sm active:scale-95 cursor-pointer ${isTfoLocked ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'}`,
+    title: isTfoLocked ? "Click to unlock this quality" : "Click to lock this quality"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-sm"
   }, isTfoLocked ? '🔒' : '🔓'))), /*#__PURE__*/React.createElement("fieldset", {
@@ -19100,12 +19101,12 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-sm font-bold text-slate-500 uppercase tracking-widest"
   }, "Input Parameters"), isDoublerLocked && /*#__PURE__*/React.createElement("span", {
-    className: "bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse"
+    className: "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse border border-rose-200 dark:border-rose-800"
   }, "Locked")), /*#__PURE__*/React.createElement("button", {
     type: "button",
-    onClick: () => setIsDoublerLocked(!isDoublerLocked),
-    className: `flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border shadow-sm active:scale-95 cursor-pointer ${isDoublerLocked ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`,
-    title: isDoublerLocked ? "Click to unlock input parameters" : "Click to lock input parameters"
+    onClick: () => updateDoublerProduct({ isLocked: !isDoublerLocked }),
+    className: `flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border shadow-sm active:scale-95 cursor-pointer ${isDoublerLocked ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'}`,
+    title: isDoublerLocked ? "Click to unlock this quality" : "Click to lock this quality"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-sm"
   }, isDoublerLocked ? '🔒' : '🔓'))), /*#__PURE__*/React.createElement("fieldset", {
@@ -21397,7 +21398,7 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-sm font-bold text-slate-500 uppercase tracking-widest"
   }, "Input Parameters"), isFabricLocked && /*#__PURE__*/React.createElement("span", {
-    className: "bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse"
+    className: "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse border border-rose-200 dark:border-rose-800"
   }, "Locked")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("button", {
@@ -21412,9 +21413,9 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
     className: "text-sm"
   }, "🔗")), /*#__PURE__*/React.createElement("button", {
     type: "button",
-    onClick: () => setIsFabricLocked(!isFabricLocked),
-    className: `flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border shadow-sm active:scale-95 cursor-pointer ${isFabricLocked ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`,
-    title: isFabricLocked ? "Click to unlock input parameters" : "Click to lock input parameters"
+    onClick: () => updateProduct({ isLocked: !isFabricLocked }),
+    className: `flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border shadow-sm active:scale-95 cursor-pointer ${isFabricLocked ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'}`,
+    title: isFabricLocked ? "Click to unlock this quality" : "Click to lock this quality"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-sm"
   }, isFabricLocked ? '🔒' : '🔓')))), /*#__PURE__*/React.createElement("fieldset", {
