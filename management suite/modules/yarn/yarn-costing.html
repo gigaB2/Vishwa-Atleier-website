@@ -2470,7 +2470,7 @@ const FormulaModal = ({
         className: "space-y-6"
       }, /*#__PURE__*/React.createElement("div", {
         className: "p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-800 font-medium"
-      }, isCovering ? "In Covering Costing, contraction is calculated for each yarn component separately. The Core yarn experiences its initial twist plus scientific secondary contraction (micro-crimping & radial compression) from the machine's covering TPM. The Wrapper yarn contracts due to its initial twist AND the covering machine's twist." : "In Doubler Costing, contraction is calculated for each yarn component separately. The yarns contract based on their initial twist and the Doubler's twist depending on the doubling profile configuration."), yarnsList.slice(0, currentProduct?.ply || 2).map((yarn, idx) => {
+      }, isCovering ? "In Covering Costing, contraction is calculated for each yarn component separately. The Core yarn experiences its initial twist plus scientific secondary contraction (micro-crimping & radial compression) from the machine's covering TPM. The Wrapper yarn contracts due to its initial twist AND the covering machine's twist." : "In Doubler/MX Costing, contraction is calculated for each yarn component separately. The yarns contract based on their initial twist and the Doubler's twist depending on the doubling profile configuration."), yarnsList.slice(0, currentProduct?.ply || 2).map((yarn, idx) => {
         const initialTpm = yarn.tpm !== undefined && yarn.tpm !== '' && !isNaN(yarn.tpm) ? Number(yarn.tpm) : 0;
         const configType = currentProduct?.configType || 'core_twisted';
         let contractsCovering = false;
@@ -6567,7 +6567,7 @@ const App = () => {
   useEffect(() => {
     const tabNames = {
       'tfo': 'TFO Costing — Yarn Costing',
-      'doubler': 'Doubler Costing — Yarn Costing',
+      'doubler': 'Doubler/MX Costing — Yarn Costing',
       'covering': 'Covering Costing — Yarn Costing',
       'compare-yarn': 'Compare Yarn Costing'
     };
@@ -9818,7 +9818,7 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
   const exportDoublerCSV = (product, calcs) => {
     if (!product || !calcs) return;
     let csv = [];
-    csv.push("VISHWA FASHIONS - DOUBLER COSTING CALCULATOR REPORT");
+    csv.push("VISHWA FASHIONS - DOUBLER/MX COSTING CALCULATOR REPORT");
     csv.push(`Quality Name,${getDoublerProductDisplayName(product, doublerActiveIndex)}`);
     csv.push("");
     csv.push("DOUBLER PARAMETERS");
@@ -12066,7 +12066,7 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     if (activeMainTab === 'tfo') {
       return renderYarnPrintReport("TFO Costing Calculator", currentTfoProduct, tfoCalcs, 'tfo');
     } else if (activeMainTab === 'doubler') {
-      return renderYarnPrintReport("Doubler Costing Calculator", currentDoublerProduct, doublerCalcs, 'doubler');
+      return renderYarnPrintReport("Doubler/MX Costing Calculator", currentDoublerProduct, doublerCalcs, 'doubler');
     } else if (activeMainTab === 'covering') {
       return renderYarnPrintReport("Covering Costing Calculator", currentCoveringProduct, coveringCalcs, 'covering');
     }
@@ -14949,9 +14949,9 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
     className: "text-xl font-black tracking-tight text-slate-800 uppercase"
   }, /*#__PURE__*/React.createElement("span", {
     className: "yc-title-full"
-  }, activeMainTab === 'fabric' ? "Fabric Costing Calculator" : activeMainTab === 'tfo' ? "TFO Costing Calculator" : activeMainTab === 'doubler' ? "Doubler Costing Calculator" : activeMainTab === 'covering' ? "Covering Costing Calculator" : activeMainTab === 'compare-weaving' ? "Compare Weaving Costing" : "Compare Yarn Costing"), /*#__PURE__*/React.createElement("span", {
+  }, activeMainTab === 'fabric' ? "Fabric Costing Calculator" : activeMainTab === 'tfo' ? "TFO Costing Calculator" : activeMainTab === 'doubler' ? "Doubler/MX Costing Calculator" : activeMainTab === 'covering' ? "Covering Costing Calculator" : activeMainTab === 'compare-weaving' ? "Compare Weaving Costing" : "Compare Yarn Costing"), /*#__PURE__*/React.createElement("span", {
     className: "yc-title-short"
-  }, activeMainTab === 'fabric' ? "Fabric Costing" : activeMainTab === 'tfo' ? "TFO Costing" : activeMainTab === 'doubler' ? "Doubler Costing" : activeMainTab === 'covering' ? "Covering Costing" : activeMainTab === 'compare-weaving' ? "Compare Weaving" : "Compare Yarn")), /*#__PURE__*/React.createElement("div", {
+  }, activeMainTab === 'fabric' ? "Fabric Costing" : activeMainTab === 'tfo' ? "TFO Costing" : activeMainTab === 'doubler' ? "Doubler/MX Costing" : activeMainTab === 'covering' ? "Covering Costing" : activeMainTab === 'compare-weaving' ? "Compare Weaving" : "Compare Yarn")), /*#__PURE__*/React.createElement("div", {
     className: `inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-all ${
       syncStatus === 'syncing' ? 'bg-violet-50 text-violet-700 border-violet-200' :
       syncStatus === 'offline' ? 'bg-amber-50 text-amber-700 border-amber-200' :
@@ -23062,7 +23062,7 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
     key: tab,
     onClick: () => setImportModalTab(tab),
     className: `flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${importModalTab === tab ? 'bg-white text-[#8b5cf6] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`
-  }, tab === 'tfo' ? 'TFO Costing' : tab === 'doubler' ? 'Doubler Costing' : 'Covering Costing')))), /*#__PURE__*/React.createElement("div", {
+  }, tab === 'tfo' ? 'TFO Costing' : tab === 'doubler' ? 'Doubler/MX Costing' : 'Covering Costing')))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto p-6 min-h-[300px]"
   }, (() => {
     const list = importModalTab === 'tfo' ? tfoProducts : importModalTab === 'doubler' ? doublerProducts : coveringProducts;
