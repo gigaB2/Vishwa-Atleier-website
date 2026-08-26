@@ -849,7 +849,7 @@
     return clean.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  function showCollabJumpToast(message, userColor, initials) {
+  function showCollabJumpToast(toastData, userColor, initials) {
     let toast = document.getElementById('vfCollabJumpToast');
     if (!toast) {
       toast = document.createElement('div');
@@ -862,17 +862,79 @@
     const fg = userColor && userColor.fg ? userColor.fg : '#ffffff';
     const init = initials || '●';
 
+    let contentHtml = '';
+    if (typeof toastData === 'string') {
+      contentHtml = `<span class="vf-collab-toast-title">${escapeHtml(toastData)}</span>`;
+    } else if (toastData && typeof toastData === 'object') {
+      const title = toastData.title || 'Jumped to collaborator';
+      const tab = toastData.tab || '';
+      const quality = toastData.quality || toastData.qualityName || '';
+      contentHtml = `
+        <span class="vf-collab-toast-title">⚡ ${escapeHtml(title)}</span>
+        ${tab ? `<span class="vf-collab-toast-tab">${escapeHtml(tab)}</span>` : ''}
+        ${quality ? `<span class="vf-collab-toast-quality" title="${escapeHtml(quality)}">🧵 ${escapeHtml(quality)}</span>` : ''}
+      `;
+    }
+
     toast.innerHTML = `
       <div class="vf-collab-toast-avatar" style="background: ${bg}; color: ${fg};">${escapeHtml(init)}</div>
-      <span class="vf-collab-toast-text">${message}</span>
+      <div class="vf-collab-toast-content">${contentHtml}</div>
     `;
 
     toast.classList.add('show');
     clearTimeout(window.__vf_toast_timer);
     window.__vf_toast_timer = setTimeout(() => {
       toast.classList.remove('show');
-    }, 3400);
+    }, 3800);
   }
+
+  window.vfSwitchQuality = function(qualityIndex, qualityName, qualityId) {
+    if (qualityIndex === undefined && !qualityName && !qualityId) return false;
+    let switched = false;
+
+    // 1. Call global React hook/bridge if available
+    try {
+      if (typeof window.__vf_set_quality === 'function') {
+        window.__vf_set_quality(qualityIndex, qualityName, qualityId);
+        switched = true;
+      }
+    } catch(e) {}
+
+    // 2. Dispatch custom event for React components
+    try {
+      window.__vf_active_quality_index = qualityIndex;
+      window.__vf_active_quality_name = qualityName;
+      window.__vf_active_quality_id = qualityId;
+      window.dispatchEvent(new CustomEvent('vf-quality-changed', {
+        detail: { qualityIndex, qualityName, qualityId }
+      }));
+    } catch(e) {}
+
+    // 3. Fallback: Search in DOM quality footer tabs
+    try {
+      const footerTabs = document.querySelectorAll('.yc-quality-footer-scroll .gs-tab, .quality-tab, .sheet-tab, [data-quality-index]');
+      if (footerTabs.length > 0) {
+        let targetTabEl = null;
+        if (qualityIndex !== undefined && qualityIndex !== null && footerTabs[qualityIndex]) {
+          targetTabEl = footerTabs[qualityIndex];
+        } else if (qualityName) {
+          const cleanQ = String(qualityName).toLowerCase().trim();
+          for (const tabEl of footerTabs) {
+            if (tabEl.textContent.toLowerCase().trim().includes(cleanQ)) {
+              targetTabEl = tabEl;
+              break;
+            }
+          }
+        }
+        if (targetTabEl) {
+          targetTabEl.click();
+          switched = true;
+        }
+      }
+    } catch(e) {}
+
+    return switched;
+  };
 
   window.vfSwitchTab = function(targetTab) {
     if (!targetTab) return false;
@@ -1092,6 +1154,9 @@
 
     const targetPage = u.page ? u.page.toLowerCase().split('?')[0].split('#')[0] : currentPageFile;
     const targetTab = u.tab || '';
+    const targetQualityIndex = u.qualityIndex !== undefined && u.qualityIndex !== null ? u.qualityIndex : null;
+    const targetQualityName = u.qualityName || '';
+    const targetQualityId = u.qualityId || '';
     const targetField = u.field || '';
 
     const isSamePage = !targetPage || targetPage === currentPageFile || currentPath.endsWith(targetPage);
@@ -1102,12 +1167,19 @@
         switched = window.vfSwitchTab(targetTab);
       }
 
+      if (targetQualityIndex !== null || targetQualityName || targetQualityId) {
+        window.vfSwitchQuality(targetQualityIndex, targetQualityName, targetQualityId);
+      }
+
       setTimeout(() => {
         window.vfFocusCollaboratorField(targetField, u);
       }, switched ? 160 : 30);
 
-      const tabLabel = targetTab ? ` • Tab: ${formatTabName(targetTab)}` : '';
-      showCollabJumpToast(`⚡ Jumped to ${userName}'s view${tabLabel}`, userColor, userInitials);
+      showCollabJumpToast({
+        title: `Jumped to ${userName}`,
+        tab: targetTab ? formatTabName(targetTab) : '',
+        quality: targetQualityName || (targetQualityIndex !== null ? `Quality ${Number(targetQualityIndex) + 1}` : '')
+      }, userColor, userInitials);
     } else {
       let relPath = MODULE_PAGE_MAP[targetPage];
       if (!relPath) {
@@ -1122,16 +1194,25 @@
       let destUrl = rootPath + relPath;
       const params = new URLSearchParams();
       if (targetTab) params.set('tab', targetTab);
+      if (targetQualityIndex !== null) params.set('quality', targetQualityIndex);
 
       let queryStr = params.toString();
       if (queryStr) destUrl += '?' + queryStr;
 
       destUrl += '#vf-collab-jump=' + encodeURIComponent(u.clientId || '') +
                  (targetTab ? '&tab=' + encodeURIComponent(targetTab) : '') +
+                 (targetQualityIndex !== null ? '&qIdx=' + encodeURIComponent(targetQualityIndex) : '') +
+                 (targetQualityName ? '&qName=' + encodeURIComponent(targetQualityName) : '') +
+                 (targetQualityId ? '&qId=' + encodeURIComponent(targetQualityId) : '') +
                  (targetField ? '&field=' + encodeURIComponent(targetField) : '') +
                  '&name=' + encodeURIComponent(userName);
 
-      showCollabJumpToast(`🚀 Opening ${userName}'s sheet (${formatPageName(targetPage)})...`, userColor, userInitials);
+      showCollabJumpToast({
+        title: `Opening ${userName}'s sheet`,
+        tab: formatPageName(targetPage),
+        quality: targetQualityName || ''
+      }, userColor, userInitials);
+
       setTimeout(() => {
         window.location.href = destUrl;
       }, 220);
@@ -1146,6 +1227,9 @@
 
       const hashParams = new URLSearchParams(hash.replace(/^#/, ''));
       const jumpTab = hashParams.get('tab');
+      const jumpQualityIndex = hashParams.has('qIdx') ? Number(hashParams.get('qIdx')) : null;
+      const jumpQualityName = hashParams.get('qName') || '';
+      const jumpQualityId = hashParams.get('qId') || '';
       const jumpField = hashParams.get('field');
       const jumpName = hashParams.get('name') || 'Collaborator';
 
@@ -1153,11 +1237,18 @@
         if (jumpTab) {
           window.vfSwitchTab(jumpTab);
         }
+        if (jumpQualityIndex !== null || jumpQualityName || jumpQualityId) {
+          window.vfSwitchQuality(jumpQualityIndex, jumpQualityName, jumpQualityId);
+        }
         setTimeout(() => {
           window.vfFocusCollaboratorField(jumpField, {
             user: { name: jumpName, color: { bg: '#8b5cf6', fg: '#ffffff' } }
           });
-          showCollabJumpToast(`⚡ Jumped to ${jumpName}'s view • ${formatTabName(jumpTab || '')}`, { bg: '#8b5cf6', fg: '#ffffff' }, jumpName.slice(0, 2).toUpperCase());
+          showCollabJumpToast({
+            title: `Jumped to ${jumpName}`,
+            tab: formatTabName(jumpTab || ''),
+            quality: jumpQualityName || (jumpQualityIndex !== null ? `Quality ${jumpQualityIndex + 1}` : '')
+          }, { bg: '#8b5cf6', fg: '#ffffff' }, jumpName.slice(0, 2).toUpperCase());
         }, 250);
       }, 200);
 
@@ -1221,6 +1312,8 @@
           ${overflowUsers.map((u, idx) => {
             const uColor = u.user && u.user.color ? u.user.color : { bg: '#8b5cf6', fg: '#ffffff' };
             const uTab = u.tab ? formatTabName(u.tab) : (u.page ? formatPageName(u.page) : '');
+            const uQuality = u.qualityName || (u.qualityIndex !== undefined && u.qualityIndex !== null ? `Quality ${Number(u.qualityIndex) + 1}` : '');
+            const subText = [u.user ? u.user.role : 'Viewer', uTab, uQuality].filter(Boolean).join(' • ');
             return `
             <div class="vf-popover-overflow-item" data-overflow-idx="${idx}">
               <div class="vf-popover-avatar" style="background: ${uColor.bg}; color: ${uColor.fg}; width: 24px; height: 24px; font-size: 0.65rem;">
@@ -1230,7 +1323,7 @@
                 <div style="font-size: 0.76rem; font-weight: 700; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   ${escapeHtml(u.user ? u.user.name : 'User')}
                 </div>
-                <div style="font-size: 0.66rem; color: var(--muted);">${escapeHtml(u.user ? u.user.role : 'Viewer')}${uTab ? ' • ' + escapeHtml(uTab) : ''}</div>
+                <div style="font-size: 0.66rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(subText)}</div>
               </div>
               <span class="vf-overflow-jump-icon" title="Jump to view">↗</span>
             </div>
@@ -1270,6 +1363,7 @@
       const role = (u.user && u.user.role) || 'Operator';
       const initials = (u.user && u.user.initials) || name.slice(0, 2).toUpperCase();
       const tabName = u.tab ? formatTabName(u.tab) : (u.page ? formatPageName(u.page) : '');
+      const qualityName = u.qualityName || (u.qualityIndex !== undefined && u.qualityIndex !== null ? `Quality ${Number(u.qualityIndex) + 1}` : '');
       const actionText = u.isTyping ? 'Typing in costing sheet...' : (u.field ? `Editing field` : 'Viewing page');
 
       const avatarWrap = document.createElement('div');
@@ -1277,7 +1371,7 @@
       avatarWrap.setAttribute('tabindex', '0');
       avatarWrap.setAttribute('role', 'button');
       avatarWrap.setAttribute('data-client-id', u.clientId || '');
-      avatarWrap.setAttribute('title', isSelf ? 'Your active view' : `Click to jump to ${escapeHtml(name)}'s tab`);
+      avatarWrap.setAttribute('title', isSelf ? 'Your active view' : `Click to jump to ${escapeHtml(name)}'s view`);
 
       avatarWrap.innerHTML = `
         <div class="vf-presence-avatar" style="background: ${color.bg}; color: ${color.fg}; box-shadow: 0 0 10px ${color.glow};">
@@ -1297,9 +1391,10 @@
               <div class="vf-popover-role">${escapeHtml(role)}</div>
             </div>
           </div>
-          ${tabName ? `
-            <div style="margin-bottom: 4px;">
-              <span class="vf-popover-tab-badge">📍 ${escapeHtml(tabName)}</span>
+          ${tabName || qualityName ? `
+            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px;">
+              ${tabName ? `<span class="vf-popover-tab-badge">📍 ${escapeHtml(tabName)}</span>` : ''}
+              ${qualityName ? `<span class="vf-popover-tab-badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; border-color: rgba(16, 185, 129, 0.25);">🧵 ${escapeHtml(qualityName)}</span>` : ''}
             </div>
           ` : ''}
           <div class="vf-popover-meta-row">
@@ -1307,7 +1402,7 @@
             <span>${escapeHtml(actionText)}</span>
           </div>
           ${!isSelf ? `
-            <button type="button" class="vf-popover-jump-btn" title="Jump to ${escapeHtml(name)}'s active tab">
+            <button type="button" class="vf-popover-jump-btn" title="Jump to ${escapeHtml(name)}'s active view">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
                 <polyline points="15 3 21 3 21 9"/>

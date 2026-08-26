@@ -7500,6 +7500,13 @@ const App = () => {
       if (t && ['tfo', 'doubler', 'covering', 'compare-yarn', 'fabric', 'compare-weaving'].includes(t)) {
         setActiveMainTab(t);
       }
+      if (e && e.detail && (e.detail.qualityIndex !== undefined || e.detail.qualityName || e.detail.qualityId)) {
+        setTimeout(() => {
+          if (window.vfSwitchQuality) {
+            window.vfSwitchQuality(e.detail.qualityIndex, e.detail.qualityName, e.detail.qualityId);
+          }
+        }, 60);
+      }
     };
     window.addEventListener('popstate', handleTabSync);
     window.addEventListener('vf-tab-changed', handleTabSync);
@@ -7508,12 +7515,6 @@ const App = () => {
       window.removeEventListener('vf-tab-changed', handleTabSync);
     };
   }, []);
-
-  useEffect(() => {
-    if (window.VishwaSupabase && typeof window.VishwaSupabase.sendPresencePing === 'function') {
-      window.VishwaSupabase.sendPresencePing(activeMainTab);
-    }
-  }, [activeMainTab]);
 
   useEffect(() => {
     if (isInitialMountProductsRef.current) {
@@ -7595,6 +7596,89 @@ const App = () => {
   useEffect(() => {
     if (currentCoveringProduct) setCoveringSearchTerm(getCoveringProductDisplayName(currentCoveringProduct, coveringActiveIndex));
   }, [coveringActiveIndex, currentCoveringProduct?.name]);
+
+  // Dynamic presence sync with active tab and active quality details
+  useEffect(() => {
+    let qIdx = 0;
+    let qName = '';
+    let qId = null;
+
+    if (activeMainTab === 'tfo') {
+      qIdx = tfoActiveIndex;
+      qName = getTfoProductDisplayName(currentTfoProduct, tfoActiveIndex);
+      qId = currentTfoProduct ? currentTfoProduct.id : null;
+    } else if (activeMainTab === 'doubler') {
+      qIdx = doublerActiveIndex;
+      qName = getDoublerProductDisplayName(currentDoublerProduct, doublerActiveIndex);
+      qId = currentDoublerProduct ? currentDoublerProduct.id : null;
+    } else if (activeMainTab === 'covering') {
+      qIdx = coveringActiveIndex;
+      qName = getCoveringProductDisplayName(currentCoveringProduct, coveringActiveIndex);
+      qId = currentCoveringProduct ? currentCoveringProduct.id : null;
+    } else {
+      qIdx = activeIndex;
+      qName = getProductDisplayName(currentProduct, activeIndex);
+      qId = currentProduct ? currentProduct.id : null;
+    }
+
+    window.__vf_active_quality_index = qIdx;
+    window.__vf_active_quality_name = qName;
+    window.__vf_active_quality_id = qId;
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.sendPresencePing === 'function') {
+      window.VishwaSupabase.sendPresencePing(activeMainTab, '', false, qIdx, qName, qId);
+    }
+  }, [activeMainTab, activeIndex, tfoActiveIndex, doublerActiveIndex, coveringActiveIndex, currentProduct?.name, currentTfoProduct?.name, currentDoublerProduct?.name, currentCoveringProduct?.name]);
+
+  // Handle remote collaborator jump to specific quality tab
+  useEffect(() => {
+    const handleCollabQualitySwitch = (e) => {
+      const detail = e.detail || {};
+      const targetIdx = detail.qualityIndex !== undefined && detail.qualityIndex !== null ? Number(detail.qualityIndex) : null;
+      const targetName = (detail.qualityName || '').toLowerCase().trim();
+      const targetId = detail.qualityId;
+
+      if (activeMainTab === 'tfo') {
+        if (targetIdx !== null && !isNaN(targetIdx) && tfoProducts[targetIdx]) {
+          setTfoActiveIndex(targetIdx);
+        } else if (targetName || targetId) {
+          const idx = tfoProducts.findIndex((p, i) => (targetId && p.id == targetId) || (targetName && getTfoProductDisplayName(p, i).toLowerCase().includes(targetName)));
+          if (idx !== -1) setTfoActiveIndex(idx);
+        }
+      } else if (activeMainTab === 'doubler') {
+        if (targetIdx !== null && !isNaN(targetIdx) && doublerProducts[targetIdx]) {
+          setDoublerActiveIndex(targetIdx);
+        } else if (targetName || targetId) {
+          const idx = doublerProducts.findIndex((p, i) => (targetId && p.id == targetId) || (targetName && getDoublerProductDisplayName(p, i).toLowerCase().includes(targetName)));
+          if (idx !== -1) setDoublerActiveIndex(idx);
+        }
+      } else if (activeMainTab === 'covering') {
+        if (targetIdx !== null && !isNaN(targetIdx) && coveringProducts[targetIdx]) {
+          setCoveringActiveIndex(targetIdx);
+        } else if (targetName || targetId) {
+          const idx = coveringProducts.findIndex((p, i) => (targetId && p.id == targetId) || (targetName && getCoveringProductDisplayName(p, i).toLowerCase().includes(targetName)));
+          if (idx !== -1) setCoveringActiveIndex(idx);
+        }
+      } else {
+        if (targetIdx !== null && !isNaN(targetIdx) && products[targetIdx]) {
+          setActiveIndex(targetIdx);
+        } else if (targetName || targetId) {
+          const idx = products.findIndex((p, i) => (targetId && p.id == targetId) || (targetName && getProductDisplayName(p, i).toLowerCase().includes(targetName)));
+          if (idx !== -1) setActiveIndex(idx);
+        }
+      }
+    };
+
+    window.__vf_set_quality = (qIdx, qName, qId) => {
+      handleCollabQualitySwitch({ detail: { qualityIndex: qIdx, qualityName: qName, qualityId: qId } });
+    };
+
+    window.addEventListener('vf-quality-changed', handleCollabQualitySwitch);
+    return () => {
+      window.removeEventListener('vf-quality-changed', handleCollabQualitySwitch);
+      if (window.__vf_set_quality) delete window.__vf_set_quality;
+    };
+  }, [activeMainTab, products, tfoProducts, doublerProducts, coveringProducts]);
   // Synchronize gear selection from message events and local storage
   useEffect(() => {
     const handleMessage = event => {

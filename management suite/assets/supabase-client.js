@@ -495,11 +495,20 @@
     } catch (e) {}
   }
 
-  function sendPresencePing(tab, field, isTyping = false) {
+  function sendPresencePing(tab, field, isTyping = false, qualityIndex = undefined, qualityName = undefined, qualityId = undefined) {
+    if (typeof qualityIndex === 'object' && qualityIndex !== null) {
+      qualityName = qualityIndex.qualityName || qualityIndex.name;
+      qualityId = qualityIndex.qualityId || qualityIndex.id;
+      qualityIndex = qualityIndex.qualityIndex ?? qualityIndex.index;
+    }
+
     const user = getLocalUserInfo();
     const page = getCurrentPageKey();
     const currentTab = tab || window.__vf_active_tab || '';
     const currentField = field || window.__vf_active_field || '';
+    const qIdx = qualityIndex !== undefined ? qualityIndex : (window.__vf_active_quality_index !== undefined ? window.__vf_active_quality_index : null);
+    const qName = qualityName !== undefined ? qualityName : (window.__vf_active_quality_name || '');
+    const qId = qualityId !== undefined ? qualityId : (window.__vf_active_quality_id || null);
 
     const payload = {
       type: 'presence_ping',
@@ -510,6 +519,9 @@
       href: window.location.href,
       tab: currentTab,
       field: currentField,
+      qualityIndex: qIdx,
+      qualityName: qName,
+      qualityId: qId,
       isTyping: Boolean(isTyping),
       timestamp: Date.now()
     };
@@ -522,6 +534,9 @@
       href: window.location.href,
       tab: currentTab,
       field: currentField,
+      qualityIndex: qIdx,
+      qualityName: qName,
+      qualityId: qId,
       isTyping: Boolean(isTyping),
       lastPing: Date.now(),
       isSelf: true
@@ -602,6 +617,9 @@
       href: payload.href || '',
       tab: payload.tab || '',
       field: payload.field || '',
+      qualityIndex: payload.qualityIndex !== undefined ? payload.qualityIndex : null,
+      qualityName: payload.qualityName || '',
+      qualityId: payload.qualityId || null,
       isTyping: Boolean(payload.isTyping),
       lastPing: Date.now(),
       isSelf: false
