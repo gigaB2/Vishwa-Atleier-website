@@ -13,7 +13,8 @@ console.log('====================================================\n');
 const testFiles = [
   path.join(__dirname, 'fy-engine.test.js'),
   path.join(__dirname, 'sync-engine.test.js'),
-  path.join(__dirname, 'costing-math.test.js')
+  path.join(__dirname, 'costing-math.test.js'),
+  path.join(__dirname, 'presence-engine.test.js')
 ];
 
 const runner = spawn(process.execPath, ['--test', ...testFiles], {

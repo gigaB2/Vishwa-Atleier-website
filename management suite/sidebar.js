@@ -657,15 +657,22 @@
     }
 
     // Dock directly next to the active sheet title or header across all modules
+    function isCurrentlyDocked() {
+      if (!presenceBar || !presenceBar.parentElement) return false;
+      if (!document.body.contains(presenceBar)) return false;
+      const parent = presenceBar.parentElement;
+      if (parent.closest('#vfSidebar')) return false;
+      return Boolean(
+        parent.closest('header, .logo-section, .page-header, .salary-page-header, .dl-page-header, #vfPresenceBarSlot') ||
+        parent.querySelector('h1, h2, .logo, .title, #page-header-title, #division-title')
+      );
+    }
+
+    // Dock directly next to the active sheet title or header across all modules
     function dockNextToSheetTitle() {
-      if (document.body.contains(presenceBar) && presenceBar.parentElement && !presenceBar.parentElement.closest('#vfSidebar')) {
-        // If already nicely attached inside a header or next to title, keep it
-        const parent = presenceBar.parentElement;
-        if (parent.closest('header, .logo-section, .page-header, .salary-page-header, .dl-page-header, #vfPresenceBarSlot') ||
-            parent.querySelector('h1, h2, .logo, .title')) {
-          presenceBar.style.display = 'inline-flex';
-          return true;
-        }
+      if (isCurrentlyDocked()) {
+        presenceBar.style.display = 'inline-flex';
+        return true;
       }
 
       // 1. Direct explicit slot in Costing modules
@@ -735,9 +742,22 @@
       presenceBar.style.display = 'none';
     }
 
-    // Continuously observe DOM updates across React routes and tab transitions
-    const mo = new MutationObserver(() => {
-      dockNextToSheetTitle();
+    // Continuously observe DOM updates across React routes and tab transitions with debounced guard
+    let dockDebounceRaf = null;
+    const mo = new MutationObserver((mutations) => {
+      // If already securely docked, skip expensive search
+      if (isCurrentlyDocked()) return;
+
+      // Ignore mutations originating from within the presence bar itself
+      const onlyInternalMutations = mutations.every(m => presenceBar.contains(m.target));
+      if (onlyInternalMutations) return;
+
+      if (!dockDebounceRaf) {
+        dockDebounceRaf = requestAnimationFrame(() => {
+          dockDebounceRaf = null;
+          dockNextToSheetTitle();
+        });
+      }
     });
     mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
 
@@ -1265,6 +1285,9 @@
     handleInitialCollabJump();
   }
 
+  let lastRenderedPresenceSignature = '';
+  let presenceRenderRaf = null;
+
   function renderPresenceBarUI(presenceDetail) {
     const stack = document.getElementById('vfAvatarStack');
     const countText = document.getElementById('vfPresenceCountText');
@@ -1289,8 +1312,37 @@
 
     const selfId = (presenceDetail && presenceDetail.selfId) || (window.VishwaSupabase && window.VishwaSupabase.getCurrentUser && window.VishwaSupabase.getCurrentUser().clientId);
 
-    if (countText) {
-      countText.textContent = users.length === 1 ? '1 Online' : `${users.length} Online`;
+    // Update count text directly without triggering full avatar re-render
+    const expectedCountText = users.length === 1 ? '1 Online' : `${users.length} Online`;
+    if (countText && countText.textContent !== expectedCountText) {
+      countText.textContent = expectedCountText;
+    }
+
+    // Compute deterministic signature to skip redundant DOM teardown/rebuild
+    const currentSig = users.map(u => {
+      const cid = u.clientId || (u.user && u.user.clientId) || '';
+      const uname = (u.user && u.user.name) || '';
+      return `${cid}:${uname}:${u.page || ''}:${u.tab || ''}:${u.qualityIndex ?? ''}:${u.isTyping ? 1 : 0}:${u.isAway ? 1 : 0}`;
+    }).sort().join('|');
+
+    if (currentSig === lastRenderedPresenceSignature) {
+      return; // 0ms cost when state is unchanged!
+    }
+    lastRenderedPresenceSignature = currentSig;
+
+    // If user is currently hovering or interacting inside stack, preserve DOM and update in-place
+    if (stack.matches(':hover') || stack.querySelector('.vf-presence-avatar-wrap:hover') || (document.activeElement && stack.contains(document.activeElement))) {
+      users.forEach(u => {
+        const cid = u.clientId || (u.user && u.user.clientId);
+        const wrap = stack.querySelector(`[data-client-id="${CSS.escape(cid || '')}"]`);
+        if (wrap) {
+          const dot = wrap.querySelector('.vf-presence-status-dot');
+          if (dot) {
+            dot.classList.toggle('typing', Boolean(u.isTyping));
+          }
+        }
+      });
+      return;
     }
 
     stack.innerHTML = '';
@@ -1313,7 +1365,8 @@
             const uColor = u.user && u.user.color ? u.user.color : { bg: '#8b5cf6', fg: '#ffffff' };
             const uTab = u.tab ? formatTabName(u.tab) : (u.page ? formatPageName(u.page) : '');
             const uQuality = u.qualityName || (u.qualityIndex !== undefined && u.qualityIndex !== null ? `Quality ${Number(u.qualityIndex) + 1}` : '');
-            const subText = [u.user ? u.user.role : 'Viewer', uTab, uQuality].filter(Boolean).join(' • ');
+            const isAway = Boolean(u.isAway);
+            const subText = [u.user ? u.user.role : 'Viewer', isAway ? 'Away' : '', uTab, uQuality].filter(Boolean).join(' • ');
             return `
             <div class="vf-popover-overflow-item" data-overflow-idx="${idx}">
               <div class="vf-popover-avatar" style="background: ${uColor.bg}; color: ${uColor.fg}; width: 24px; height: 24px; font-size: 0.65rem;">
@@ -1322,6 +1375,7 @@
               <div style="flex: 1; min-width: 0;">
                 <div style="font-size: 0.76rem; font-weight: 700; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   ${escapeHtml(u.user ? u.user.name : 'User')}
+                  ${isAway ? '<span style="font-size: 0.6rem; opacity: 0.6; margin-left: 4px;">(Away)</span>' : ''}
                 </div>
                 <div style="font-size: 0.66rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(subText)}</div>
               </div>
@@ -1364,19 +1418,21 @@
       const initials = (u.user && u.user.initials) || name.slice(0, 2).toUpperCase();
       const tabName = u.tab ? formatTabName(u.tab) : (u.page ? formatPageName(u.page) : '');
       const qualityName = u.qualityName || (u.qualityIndex !== undefined && u.qualityIndex !== null ? `Quality ${Number(u.qualityIndex) + 1}` : '');
-      const actionText = u.isTyping ? 'Typing in costing sheet...' : (u.field ? `Editing field` : 'Viewing page');
+      const isAway = Boolean(u.isAway);
+      const actionText = u.isTyping ? 'Typing in costing sheet...' : (isAway ? 'Away (idle in other tab)' : (u.field ? 'Editing field' : 'Viewing page'));
+      const statusColor = u.isTyping ? '#f59e0b' : (isAway ? '#9ca3af' : '#10b981');
 
       const avatarWrap = document.createElement('div');
       avatarWrap.className = 'vf-presence-avatar-wrap';
       avatarWrap.setAttribute('tabindex', '0');
       avatarWrap.setAttribute('role', 'button');
-      avatarWrap.setAttribute('data-client-id', u.clientId || '');
+      avatarWrap.setAttribute('data-client-id', u.clientId || (u.user && u.user.clientId) || '');
       avatarWrap.setAttribute('title', isSelf ? 'Your active view' : `Click to jump to ${escapeHtml(name)}'s view`);
 
       avatarWrap.innerHTML = `
         <div class="vf-presence-avatar" style="background: ${color.bg}; color: ${color.fg}; box-shadow: 0 0 10px ${color.glow};">
           ${escapeHtml(initials)}
-          <span class="vf-presence-status-dot ${u.isTyping ? 'typing' : ''}"></span>
+          <span class="vf-presence-status-dot ${u.isTyping ? 'typing' : ''}" style="${isAway ? 'background: #9ca3af; box-shadow: 0 0 4px #9ca3af;' : ''}"></span>
         </div>
         <div class="vf-presence-popover">
           <div class="vf-popover-header">
@@ -1387,6 +1443,7 @@
               <div class="vf-popover-name">
                 ${escapeHtml(name)}
                 ${isSelf ? '<span class="vf-popover-self-chip">You</span>' : ''}
+                ${isAway ? '<span class="vf-popover-self-chip" style="background: rgba(156,163,175,0.15); color: #6b7280;">Away</span>' : ''}
               </div>
               <div class="vf-popover-role">${escapeHtml(role)}</div>
             </div>
@@ -1398,7 +1455,7 @@
             </div>
           ` : ''}
           <div class="vf-popover-meta-row">
-            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${u.isTyping ? '#f59e0b' : '#10b981'};"></span>
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${statusColor};"></span>
             <span>${escapeHtml(actionText)}</span>
           </div>
         </div>
@@ -1436,7 +1493,11 @@
   }
 
   window.addEventListener('supabase-presence', (e) => {
-    renderPresenceBarUI(e.detail);
+    if (presenceRenderRaf) cancelAnimationFrame(presenceRenderRaf);
+    presenceRenderRaf = requestAnimationFrame(() => {
+      presenceRenderRaf = null;
+      renderPresenceBarUI(e.detail);
+    });
   });
 
   // Automatically detect and broadcast active tab from URL params & tab clicks

@@ -479,23 +479,128 @@
   const presenceStore = {};
   window.__vf_presence_store = presenceStore;
 
+  let presenceNotifyRaf = null;
   function notifyPresenceListeners() {
-    const currentPage = getCurrentPageKey();
-    const allUsers = Object.values(presenceStore);
-    const pageUsers = allUsers.filter(u => !u.page || u.page === currentPage);
-    try {
-      window.dispatchEvent(new CustomEvent('supabase-presence', {
-        detail: {
-          users: allUsers,
-          pageUsers: pageUsers,
-          currentPage: currentPage,
-          selfId: CLIENT_ID
-        }
-      }));
-    } catch (e) {}
+    if (presenceNotifyRaf) return;
+    const schedule = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : (fn => setTimeout(fn, 16));
+    presenceNotifyRaf = schedule(() => {
+      presenceNotifyRaf = null;
+      const currentPage = getCurrentPageKey();
+      const allUsers = Object.values(presenceStore);
+      const pageUsers = allUsers.filter(u => !u.page || u.page === currentPage);
+      try {
+        window.dispatchEvent(new CustomEvent('supabase-presence', {
+          detail: {
+            users: allUsers,
+            pageUsers: pageUsers,
+            currentPage: currentPage,
+            selfId: CLIENT_ID
+          }
+        }));
+      } catch (e) {}
+    });
   }
 
-  function sendPresencePing(tab, field, isTyping = false, qualityIndex = undefined, qualityName = undefined, qualityId = undefined) {
+  function broadcastPresenceEvent(eventType, payload) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({
+          topic: WS_CHANNEL_TOPIC,
+          event: 'broadcast',
+          payload: {
+            type: 'broadcast',
+            event: eventType,
+            payload: payload
+          },
+          ref: 'pres_' + Date.now()
+        }));
+      } catch(e) {}
+    }
+
+    if (syncChannel) {
+      try {
+        syncChannel.postMessage({
+          type: eventType,
+          senderId: CLIENT_ID,
+          payload: payload
+        });
+      } catch(e) {}
+    }
+  }
+
+  function sendPresenceHello() {
+    const user = getLocalUserInfo();
+    const page = getCurrentPageKey();
+    const isAway = typeof document !== 'undefined' ? Boolean(document.hidden) : false;
+
+    presenceStore[CLIENT_ID] = {
+      clientId: CLIENT_ID,
+      user: user,
+      page: page,
+      fullPath: window.location.pathname,
+      href: window.location.href,
+      tab: window.__vf_active_tab || '',
+      field: window.__vf_active_field || '',
+      qualityIndex: window.__vf_active_quality_index !== undefined ? window.__vf_active_quality_index : null,
+      qualityName: window.__vf_active_quality_name || '',
+      qualityId: window.__vf_active_quality_id || null,
+      isTyping: false,
+      isAway: isAway,
+      lastPing: Date.now(),
+      isSelf: true
+    };
+
+    const payload = {
+      type: 'presence_hello',
+      clientId: CLIENT_ID,
+      user: user,
+      page: page,
+      fullPath: window.location.pathname,
+      href: window.location.href,
+      tab: window.__vf_active_tab || '',
+      field: window.__vf_active_field || '',
+      qualityIndex: window.__vf_active_quality_index !== undefined ? window.__vf_active_quality_index : null,
+      qualityName: window.__vf_active_quality_name || '',
+      qualityId: window.__vf_active_quality_id || null,
+      isTyping: false,
+      isAway: isAway,
+      timestamp: Date.now()
+    };
+
+    broadcastPresenceEvent('presence_hello', payload);
+    notifyPresenceListeners();
+  }
+
+  let announceJitterTimer = null;
+  function sendPresenceAnnounce(immediate = false) {
+    if (announceJitterTimer) return;
+    const delay = immediate ? 0 : Math.floor(Math.random() * 35) + 10;
+    announceJitterTimer = setTimeout(() => {
+      announceJitterTimer = null;
+      const self = presenceStore[CLIENT_ID];
+      if (!self) return;
+      self.lastPing = Date.now();
+      const payload = {
+        type: 'presence_announce',
+        clientId: CLIENT_ID,
+        user: self.user,
+        page: self.page,
+        fullPath: self.fullPath,
+        href: self.href,
+        tab: self.tab,
+        field: self.field,
+        qualityIndex: self.qualityIndex,
+        qualityName: self.qualityName,
+        qualityId: self.qualityId,
+        isTyping: Boolean(self.isTyping),
+        isAway: Boolean(self.isAway),
+        timestamp: Date.now()
+      };
+      broadcastPresenceEvent('presence_announce', payload);
+    }, delay);
+  }
+
+  function sendPresencePing(tab, field, isTyping = false, qualityIndex = undefined, qualityName = undefined, qualityId = undefined, isAway = undefined) {
     if (typeof qualityIndex === 'object' && qualityIndex !== null) {
       qualityName = qualityIndex.qualityName || qualityIndex.name;
       qualityId = qualityIndex.qualityId || qualityIndex.id;
@@ -504,11 +609,12 @@
 
     const user = getLocalUserInfo();
     const page = getCurrentPageKey();
-    const currentTab = tab || window.__vf_active_tab || '';
-    const currentField = field || window.__vf_active_field || '';
+    const currentTab = (tab !== undefined && tab !== null) ? tab : (window.__vf_active_tab || '');
+    const currentField = (field !== undefined && field !== null) ? field : (window.__vf_active_field || '');
     const qIdx = qualityIndex !== undefined ? qualityIndex : (window.__vf_active_quality_index !== undefined ? window.__vf_active_quality_index : null);
     const qName = qualityName !== undefined ? qualityName : (window.__vf_active_quality_name || '');
     const qId = qualityId !== undefined ? qualityId : (window.__vf_active_quality_id || null);
+    const awayStatus = isAway !== undefined ? Boolean(isAway) : (typeof document !== 'undefined' ? Boolean(document.hidden) : false);
 
     const payload = {
       type: 'presence_ping',
@@ -523,6 +629,7 @@
       qualityName: qName,
       qualityId: qId,
       isTyping: Boolean(isTyping),
+      isAway: awayStatus,
       timestamp: Date.now()
     };
 
@@ -538,35 +645,12 @@
       qualityName: qName,
       qualityId: qId,
       isTyping: Boolean(isTyping),
+      isAway: awayStatus,
       lastPing: Date.now(),
       isSelf: true
     };
 
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      try {
-        ws.send(JSON.stringify({
-          topic: WS_CHANNEL_TOPIC,
-          event: 'broadcast',
-          payload: {
-            type: 'broadcast',
-            event: 'presence_ping',
-            payload: payload
-          },
-          ref: 'pres_' + Date.now()
-        }));
-      } catch(e) {}
-    }
-
-    if (syncChannel) {
-      try {
-        syncChannel.postMessage({
-          type: 'presence_ping',
-          senderId: CLIENT_ID,
-          payload: payload
-        });
-      } catch(e) {}
-    }
-
+    broadcastPresenceEvent('presence_ping', payload);
     notifyPresenceListeners();
   }
 
@@ -579,35 +663,34 @@
       timestamp: Date.now()
     };
 
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      try {
-        ws.send(JSON.stringify({
-          topic: WS_CHANNEL_TOPIC,
-          event: 'broadcast',
-          payload: {
-            type: 'broadcast',
-            event: 'presence_leave',
-            payload: payload
-          },
-          ref: 'leave_' + Date.now()
-        }));
-      } catch(e) {}
-    }
-
-    if (syncChannel) {
-      try {
-        syncChannel.postMessage({
-          type: 'presence_leave',
-          senderId: CLIENT_ID,
-          payload: payload
-        });
-      } catch(e) {}
-    }
-
+    broadcastPresenceEvent('presence_leave', payload);
     notifyPresenceListeners();
   }
 
-  function handleIncomingPresencePing(payload) {
+  function handleIncomingPresenceHello(payload) {
+    if (!payload || !payload.clientId || payload.clientId === CLIENT_ID) return;
+    presenceStore[payload.clientId] = {
+      clientId: payload.clientId,
+      user: payload.user || { name: 'User', role: 'Viewer', color: AVATAR_COLORS[0], initials: 'U' },
+      page: payload.page || '',
+      fullPath: payload.fullPath || '',
+      href: payload.href || '',
+      tab: payload.tab || '',
+      field: payload.field || '',
+      qualityIndex: payload.qualityIndex !== undefined ? payload.qualityIndex : null,
+      qualityName: payload.qualityName || '',
+      qualityId: payload.qualityId || null,
+      isTyping: false,
+      isAway: Boolean(payload.isAway),
+      lastPing: Date.now(),
+      isSelf: false
+    };
+    notifyPresenceListeners();
+    // Mutual Discovery: Immediately announce self so the newcomer discovers us
+    sendPresenceAnnounce();
+  }
+
+  function handleIncomingPresenceAnnounce(payload) {
     if (!payload || !payload.clientId || payload.clientId === CLIENT_ID) return;
     presenceStore[payload.clientId] = {
       clientId: payload.clientId,
@@ -621,10 +704,37 @@
       qualityName: payload.qualityName || '',
       qualityId: payload.qualityId || null,
       isTyping: Boolean(payload.isTyping),
+      isAway: Boolean(payload.isAway),
       lastPing: Date.now(),
       isSelf: false
     };
     notifyPresenceListeners();
+  }
+
+  function handleIncomingPresencePing(payload) {
+    if (!payload || !payload.clientId || payload.clientId === CLIENT_ID) return;
+    const isNewPeer = !presenceStore[payload.clientId];
+    presenceStore[payload.clientId] = {
+      clientId: payload.clientId,
+      user: payload.user || { name: 'User', role: 'Viewer', color: AVATAR_COLORS[0], initials: 'U' },
+      page: payload.page || '',
+      fullPath: payload.fullPath || '',
+      href: payload.href || '',
+      tab: payload.tab || '',
+      field: payload.field || '',
+      qualityIndex: payload.qualityIndex !== undefined ? payload.qualityIndex : null,
+      qualityName: payload.qualityName || '',
+      qualityId: payload.qualityId || null,
+      isTyping: Boolean(payload.isTyping),
+      isAway: Boolean(payload.isAway),
+      lastPing: Date.now(),
+      isSelf: false
+    };
+    notifyPresenceListeners();
+    // If we receive a ping from someone not yet registered in our store, send back an announce
+    if (isNewPeer) {
+      sendPresenceAnnounce();
+    }
   }
 
   function handleIncomingPresenceLeave(payload) {
@@ -647,12 +757,12 @@
     } catch(e) {}
   }
 
-  // Purge disconnected users who haven't pinged in > 25 seconds
+  // Purge disconnected users who haven't pinged in > 35 seconds (3 missed 10s heartbeats)
   setInterval(() => {
     const now = Date.now();
     let changed = false;
     Object.keys(presenceStore).forEach(cid => {
-      if (cid !== CLIENT_ID && now - (presenceStore[cid].lastPing || 0) > 25000) {
+      if (cid !== CLIENT_ID && now - (presenceStore[cid].lastPing || 0) > 35000) {
         delete presenceStore[cid];
         changed = true;
       }
@@ -660,27 +770,52 @@
     if (changed) {
       notifyPresenceListeners();
     }
-  }, 4000);
+  }, 5000);
 
-  // Send periodic presence ping every 10 seconds while active
+  // Send periodic presence ping every 10 seconds to keep presence fresh
   setInterval(() => {
-    if (!document.hidden) {
-      sendPresencePing();
-    }
+    sendPresencePing();
   }, 10000);
 
   // Hook tab visibility & page unload
+  // Note: Tab visibility change sets 'away' state instead of abruptly dropping user offline
   window.addEventListener('beforeunload', sendPresenceLeave);
   window.addEventListener('pagehide', sendPresenceLeave);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      sendPresenceLeave();
-    } else {
-      sendPresencePing();
+    const isAway = Boolean(document.hidden);
+    if (presenceStore[CLIENT_ID]) {
+      presenceStore[CLIENT_ID].isAway = isAway;
+      presenceStore[CLIENT_ID].lastPing = Date.now();
     }
+    sendPresencePing(null, null, false, undefined, undefined, undefined, isAway);
   });
 
-  // Collaborative input & cell broadcasters
+  // Collaborative input & cell broadcasters with intelligent typing throttling
+  let lastTypingBroadcastTime = 0;
+  let typingResetTimer = null;
+  let lastBroadcastFieldId = null;
+
+  function handleLocalUserTyping(fieldId, tab) {
+    if (presenceStore[CLIENT_ID]) {
+      presenceStore[CLIENT_ID].isTyping = true;
+      presenceStore[CLIENT_ID].lastPing = Date.now();
+    }
+    clearTimeout(typingResetTimer);
+    typingResetTimer = setTimeout(() => {
+      if (presenceStore[CLIENT_ID]) {
+        presenceStore[CLIENT_ID].isTyping = false;
+        presenceStore[CLIENT_ID].lastPing = Date.now();
+      }
+      sendPresencePing(tab, fieldId, false);
+    }, 2500);
+
+    const now = Date.now();
+    if (now - lastTypingBroadcastTime > 1500) {
+      lastTypingBroadcastTime = now;
+      sendPresencePing(tab, fieldId, true);
+    }
+  }
+
   function broadcastFieldFocus(fieldId, isFocused, meta = {}) {
     const user = getLocalUserInfo();
     const page = getCurrentPageKey();
@@ -727,7 +862,10 @@
       } catch(e) {}
     }
 
-    sendPresencePing(payload.tab, window.__vf_active_field, false);
+    if (fieldId !== lastBroadcastFieldId) {
+      lastBroadcastFieldId = fieldId;
+      sendPresencePing(payload.tab, window.__vf_active_field, false);
+    }
   }
 
   function broadcastFieldChange(fieldId, value, meta = {}) {
@@ -770,7 +908,7 @@
       } catch(e) {}
     }
 
-    sendPresencePing(payload.tab, fieldId, true);
+    handleLocalUserTyping(fieldId, payload.tab);
   }
 
   // --- Realtime Collaborative Form & Input Field Synchronizer (Google Sheets Style) ---
@@ -945,7 +1083,11 @@
         const { key, value, type, senderId, payload } = msg.data;
         if (senderId === CLIENT_ID) return; // Skip own messages
 
-        if (type === 'presence_ping' && payload) {
+        if (type === 'presence_hello' && payload) {
+          handleIncomingPresenceHello(payload);
+        } else if (type === 'presence_announce' && payload) {
+          handleIncomingPresenceAnnounce(payload);
+        } else if (type === 'presence_ping' && payload) {
           handleIncomingPresencePing(payload);
         } else if (type === 'presence_leave' && payload) {
           handleIncomingPresenceLeave(payload);
@@ -998,8 +1140,8 @@
           }
         }, 25000);
 
-        // Immediate presence announcement on socket connect
-        sendPresencePing();
+        // Immediate presence announcement on socket connect with peer discovery
+        sendPresenceHello();
       };
 
       ws.onmessage = (e) => {
@@ -1011,7 +1153,11 @@
 
             const eventType = inner.type || data.payload.event;
 
-            if (eventType === 'presence_ping') {
+            if (eventType === 'presence_hello') {
+              handleIncomingPresenceHello(inner);
+            } else if (eventType === 'presence_announce') {
+              handleIncomingPresenceAnnounce(inner);
+            } else if (eventType === 'presence_ping') {
               handleIncomingPresencePing(inner);
             } else if (eventType === 'presence_leave') {
               handleIncomingPresenceLeave(inner);
@@ -1957,12 +2103,16 @@
       return Object.values(presenceStore).filter(u => !u.page || u.page === targetPage);
     },
     getAllPresence: () => Object.values(presenceStore),
+    sendPresenceHello: () => sendPresenceHello(),
     sendPresencePing: (tab, field, isTyping) => sendPresencePing(tab, field, isTyping),
     sendPresenceLeave: () => sendPresenceLeave(),
     broadcastFieldFocus: (fieldId, isFocused, meta) => broadcastFieldFocus(fieldId, isFocused, meta),
     broadcastFieldChange: (fieldId, value, meta) => broadcastFieldChange(fieldId, value, meta),
     getAvatarColors: () => AVATAR_COLORS
   };
+
+  // Initial local presence announcement across same-browser tabs
+  sendPresenceHello();
 
   // Initial boot: start Realtime WS and initial load
   if (activeConfig.isConfigured) {
