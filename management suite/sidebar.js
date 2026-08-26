@@ -563,6 +563,62 @@
       .replace(/'/g, '&#039;');
   }
 
+  function elevateAncestors(el) {
+    let curr = el;
+    while (curr && curr !== document.body && curr !== document.documentElement) {
+      if (curr.nodeType === 1) {
+        curr.classList.add('vf-presence-elevated');
+      }
+      curr = curr.parentElement;
+    }
+  }
+
+  function resetAncestorElevation(el) {
+    let curr = el;
+    while (curr && curr !== document.body && curr !== document.documentElement) {
+      if (curr.nodeType === 1) {
+        curr.classList.remove('vf-presence-elevated');
+      }
+      curr = curr.parentElement;
+    }
+  }
+
+  function positionPresencePopover(wrapEl) {
+    const popover = wrapEl.querySelector('.vf-presence-popover');
+    if (!popover) return;
+    const rect = wrapEl.getBoundingClientRect();
+    const popoverWidth = 260;
+
+    // Reset styles
+    popover.style.left = '';
+    popover.style.right = '';
+    popover.style.transform = '';
+    popover.style.top = '';
+    popover.style.bottom = '';
+
+    // Horizontal collision handling
+    const spaceRight = window.innerWidth - rect.left;
+    if (spaceRight < popoverWidth + 24 && rect.right > popoverWidth) {
+      popover.style.right = '0px';
+      popover.style.left = 'auto';
+    } else if (rect.left < 24) {
+      popover.style.left = '0px';
+      popover.style.right = 'auto';
+    } else {
+      popover.style.left = '0px';
+      popover.style.right = 'auto';
+    }
+
+    // Vertical collision handling
+    if (rect.bottom + 220 > window.innerHeight && rect.top > 220) {
+      popover.style.top = 'auto';
+      popover.style.bottom = 'calc(100% + 8px)';
+    } else {
+      popover.style.top = 'calc(100% + 8px)';
+      popover.style.bottom = 'auto';
+    }
+  }
+
   function injectPresenceBar() {
     // Avoid injecting on login screen
     const path = window.location.pathname.toLowerCase();
@@ -603,6 +659,7 @@
         if (!slot.contains(presenceBar)) {
           slot.appendChild(presenceBar);
         }
+        slot.classList.add('vf-presence-parent');
         presenceBar.style.display = 'inline-flex';
         return true;
       }
@@ -642,6 +699,8 @@
       for (const t of candidates) {
         if (t && t.offsetParent !== null && !t.closest('#vfSidebar') && !t.closest('.modal') && !t.closest('.vf-modal') && !t.closest('.dialog')) {
           if (!t.contains(presenceBar) && t.parentElement) {
+            t.parentElement.classList.add('vf-presence-parent');
+            t.classList.add('vf-presence-parent');
             if (t.classList && (t.classList.contains('logo-section') || t.classList.contains('salary-page-header') || t.classList.contains('dl-page-header'))) {
               t.appendChild(presenceBar);
             } else if (t.nextSibling) {
@@ -700,6 +759,7 @@
     if (overflowUsers.length > 0) {
       const moreWrap = document.createElement('div');
       moreWrap.className = 'vf-presence-avatar-wrap';
+      moreWrap.setAttribute('tabindex', '0');
       moreWrap.innerHTML = `
         <div class="vf-presence-overflow-badge">+${overflowUsers.length}</div>
         <div class="vf-presence-popover">
@@ -723,6 +783,22 @@
           `;}).join('')}
         </div>
       `;
+
+      moreWrap.addEventListener('mouseenter', () => {
+        elevateAncestors(moreWrap);
+        positionPresencePopover(moreWrap);
+      });
+      moreWrap.addEventListener('mouseleave', () => {
+        resetAncestorElevation(moreWrap);
+      });
+      moreWrap.addEventListener('focusin', () => {
+        elevateAncestors(moreWrap);
+        positionPresencePopover(moreWrap);
+      });
+      moreWrap.addEventListener('focusout', () => {
+        resetAncestorElevation(moreWrap);
+      });
+
       stack.appendChild(moreWrap);
     }
 
@@ -737,6 +813,7 @@
 
       const avatarWrap = document.createElement('div');
       avatarWrap.className = 'vf-presence-avatar-wrap';
+      avatarWrap.setAttribute('tabindex', '0');
       avatarWrap.setAttribute('data-client-id', u.clientId || '');
 
       avatarWrap.innerHTML = `
@@ -768,6 +845,21 @@
           </div>
         </div>
       `;
+
+      avatarWrap.addEventListener('mouseenter', () => {
+        elevateAncestors(avatarWrap);
+        positionPresencePopover(avatarWrap);
+      });
+      avatarWrap.addEventListener('mouseleave', () => {
+        resetAncestorElevation(avatarWrap);
+      });
+      avatarWrap.addEventListener('focusin', () => {
+        elevateAncestors(avatarWrap);
+        positionPresencePopover(avatarWrap);
+      });
+      avatarWrap.addEventListener('focusout', () => {
+        resetAncestorElevation(avatarWrap);
+      });
 
       stack.appendChild(avatarWrap);
     });
@@ -1230,6 +1322,122 @@
     if (subtitleEl) subtitleEl.textContent = 'Management Suite';
 
     applyViewOnlyEnforcer();
+    setupSidebarUserBadgeHover();
+  }
+
+  function setupSidebarUserBadgeHover() {
+    const badge = document.getElementById('vfSbUserBadge');
+    if (!badge) return;
+
+    let popover = document.getElementById('vfSbFloatingUserPopover');
+    if (!popover) {
+      popover = document.createElement('div');
+      popover.id = 'vfSbFloatingUserPopover';
+      popover.className = 'vf-sb-floating-popover';
+      document.body.appendChild(popover);
+    }
+
+    let hideTimeout = null;
+
+    function showPopover() {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+        hideTimeout = null;
+      }
+
+      let activeSession = null;
+      try {
+        const sessRaw = localStorage.getItem('vf_session');
+        if (sessRaw) activeSession = JSON.parse(sessRaw);
+      } catch (e) { }
+
+      const nameEl = document.getElementById('vfSbUserName');
+      const roleEl = document.getElementById('vfSbUserRole');
+      const userName = (nameEl ? nameEl.textContent : '') || (activeSession ? (activeSession.name || activeSession.username) : 'Operator');
+      const userRole = (roleEl ? roleEl.textContent : '') || (activeSession ? activeSession.role : 'Operator');
+      const userEmail = (activeSession && activeSession.email) || (userName.includes('@') ? userName : (activeSession ? activeSession.username : ''));
+      const initial = (userName || 'O').charAt(0).toUpperCase();
+      const isAdmin = (activeSession && activeSession.role === 'admin') || userRole.toLowerCase().includes('admin');
+      const roleBg = isAdmin ? 'rgba(236,72,153,0.15)' : 'rgba(139,92,246,0.15)';
+      const roleColor = isAdmin ? 'var(--accent2, #ec4899)' : 'var(--accent, #8b5cf6)';
+      const isDark = document.documentElement.classList.contains('dark-mode');
+
+      popover.innerHTML = `
+        <div class="vf-sb-popover-header">
+          <div class="vf-sb-popover-avatar">${escapeHtml(initial)}</div>
+          <div class="vf-sb-popover-meta">
+            <div class="vf-sb-popover-name">${escapeHtml(userName)}</div>
+            ${userEmail && userEmail !== userName ? `<div class="vf-sb-popover-email">${escapeHtml(userEmail)}</div>` : ''}
+          </div>
+        </div>
+        <div class="vf-sb-popover-divider"></div>
+        <div class="vf-sb-popover-row">
+          <span class="vf-sb-popover-label">Access Role</span>
+          <span class="vf-sb-popover-badge" style="background: ${roleBg}; color: ${roleColor}; font-weight: 700; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem;">${escapeHtml(userRole)}</span>
+        </div>
+        <div class="vf-sb-popover-row">
+          <span class="vf-sb-popover-label">Status</span>
+          <span class="vf-sb-popover-status" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; color: #10b981; font-weight: 600;">
+            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981;"></span>
+            Active Session
+          </span>
+        </div>
+        <div class="vf-sb-popover-row">
+          <span class="vf-sb-popover-label">Theme</span>
+          <span style="font-size: 0.72rem; color: var(--muted, #64748b); font-weight: 600;">${isDark ? '🌙 Dark Mode' : '☀️ Light Mode'}</span>
+        </div>
+        <div class="vf-sb-popover-footer" style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.06); display: flex; justify-content: flex-end;">
+          <button type="button" onclick="_vfLogout()" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #ef4444; font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign Out
+          </button>
+        </div>
+      `;
+
+      const rect = badge.getBoundingClientRect();
+      popover.style.display = 'block';
+      popover.style.position = 'fixed';
+      popover.style.zIndex = '2147483647';
+
+      // Position to the right of sidebar or below if narrow
+      if (rect.right + 260 <= window.innerWidth) {
+        popover.style.left = `${rect.right + 10}px`;
+        popover.style.top = `${Math.max(10, Math.min(rect.top, window.innerHeight - 240))}px`;
+      } else {
+        popover.style.left = `${Math.max(10, rect.left)}px`;
+        popover.style.top = `${rect.bottom + 8}px`;
+      }
+
+      requestAnimationFrame(() => {
+        popover.classList.add('active');
+      });
+    }
+
+    function hidePopover() {
+      hideTimeout = setTimeout(() => {
+        popover.classList.remove('active');
+        setTimeout(() => {
+          if (!popover.classList.contains('active')) {
+            popover.style.display = 'none';
+          }
+        }, 200);
+      }, 150);
+    }
+
+    if (!badge.__vfHoverAttached) {
+      badge.__vfHoverAttached = true;
+      badge.addEventListener('mouseenter', showPopover);
+      badge.addEventListener('mouseleave', hidePopover);
+      badge.addEventListener('focusin', showPopover);
+      badge.addEventListener('focusout', hidePopover);
+      popover.addEventListener('mouseenter', () => {
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = null;
+        }
+      });
+      popover.addEventListener('mouseleave', hidePopover);
+    }
   }
 
   // Listen to storage changes and page focus to keep identity updated live
@@ -1240,6 +1448,7 @@
     // Populate User Name and Company Name from localStorage
     updateSidebarIdentity();
     applyViewOnlyEnforcer();
+    setupSidebarUserBadgeHover();
 
     // Populate Financial Year Selector
     const select = document.getElementById('vfSidebarFYSelect');

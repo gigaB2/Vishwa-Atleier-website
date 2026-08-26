@@ -2036,7 +2036,7 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   gap: 0.5rem;
   padding: 3px 9px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -2045,14 +2045,53 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   user-select: none;
   margin-left: 12px;
   vertical-align: middle;
-  position: relative;
+  position: relative !important;
   max-width: fit-content;
+  z-index: 1000 !important;
+  isolation: auto !important;
 }
 
 .dark-mode .vf-presence-container {
-  background: rgba(24, 24, 28, 0.85);
+  background: rgba(24, 24, 28, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.vf-presence-container:hover,
+.vf-presence-container:focus-within,
+.vf-presence-avatar-wrap:hover,
+.vf-presence-popover:hover,
+.vf-presence-popover.active {
+  z-index: 2147483647 !important;
+}
+
+/* Ensure any ancestor header or card does not clip or paint over the popover */
+header:has(.vf-presence-container),
+.page-header:has(.vf-presence-container),
+.salary-page-header:has(.vf-presence-container),
+.dl-page-header:has(.vf-presence-container),
+.division-head:has(.vf-presence-container),
+.logo-section:has(.vf-presence-container),
+.header-container:has(.vf-presence-container),
+.header-title-area:has(.vf-presence-container),
+.vf-presence-parent {
+  position: relative;
+  z-index: 1000;
+  overflow: visible !important;
+}
+
+header:has(.vf-presence-container:hover),
+.page-header:has(.vf-presence-container:hover),
+.salary-page-header:has(.vf-presence-container:hover),
+.dl-page-header:has(.vf-presence-container:hover),
+.division-head:has(.vf-presence-container:hover),
+.logo-section:has(.vf-presence-container:hover),
+.header-container:has(.vf-presence-container:hover),
+.header-title-area:has(.vf-presence-container:hover),
+.vf-presence-parent.vf-presence-elevated,
+.vf-presence-elevated {
+  z-index: 2147483646 !important;
+  overflow: visible !important;
 }
 
 .vf-presence-label {
@@ -2096,9 +2135,10 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
-.vf-presence-avatar-wrap:hover {
-  transform: translateY(-3px) scale(1.12);
-  z-index: 50 !important;
+.vf-presence-avatar-wrap:hover,
+.vf-presence-avatar-wrap:focus-within {
+  transform: translateY(-2px) scale(1.1);
+  z-index: 2147483647 !important;
 }
 
 .vf-presence-avatar {
@@ -2174,31 +2214,32 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 /* Floating Presence Popover (Google Sheets Card) */
 .vf-presence-popover {
   position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  min-width: 240px;
-  padding: 12px 14px;
+  top: calc(100% + 8px);
+  min-width: 250px;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 13px 15px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
-  z-index: 99999;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  z-index: 2147483647 !important;
   opacity: 0;
   visibility: hidden;
   transform: translateY(6px);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
   pointer-events: none;
 }
 
 .dark-mode .vf-presence-popover {
-  background: rgba(22, 22, 26, 0.96);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  background: rgba(20, 20, 26, 0.98);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .vf-presence-avatar-wrap:hover .vf-presence-popover,
+.vf-presence-avatar-wrap:focus-within .vf-presence-popover,
 .vf-presence-popover.active {
   opacity: 1;
   visibility: visible;
@@ -2209,29 +2250,31 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 .vf-popover-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .vf-popover-avatar {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #ffffff;
+  flex-shrink: 0;
 }
 
 .vf-popover-name {
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   font-weight: 700;
   color: var(--fg, #1e293b);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  line-height: 1.2;
 }
 
 .dark-mode .vf-popover-name {
@@ -2239,31 +2282,32 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 }
 
 .vf-popover-self-chip {
-  font-size: 0.62rem;
-  font-weight: 700;
-  padding: 1px 5px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 6px;
   border-radius: 4px;
   background: rgba(16, 185, 129, 0.15);
   color: #10b981;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .vf-popover-role {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--muted, #64748b);
   text-transform: capitalize;
-  margin-bottom: 6px;
+  margin-top: 2px;
 }
 
 .vf-popover-meta-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   color: var(--muted, #64748b);
-  margin-top: 4px;
-  padding-top: 6px;
+  margin-top: 6px;
+  padding-top: 7px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
@@ -2274,17 +2318,131 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 
 .vf-popover-tab-badge {
   display: inline-block;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 6px;
   background: rgba(139, 92, 246, 0.1);
   color: var(--accent, #8b5cf6);
   font-weight: 600;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
 }
 
 .dark-mode .vf-popover-tab-badge {
-  background: rgba(139, 92, 246, 0.2);
+  background: rgba(139, 92, 246, 0.22);
   color: #c4b5fd;
+}
+
+/* ==========================================================================
+   FLOATING SIDEBAR USER DETAILS POPOVER
+   Renders over all main content and containers with maximum z-index
+   ========================================================================== */
+.vf-sb-floating-popover {
+  position: fixed;
+  min-width: 250px;
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  z-index: 2147483647 !important;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
+  pointer-events: none;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+.dark-mode .vf-sb-floating-popover {
+  background: rgba(20, 20, 26, 0.98);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.vf-sb-floating-popover.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.vf-sb-popover-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vf-sb-popover-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
+}
+
+.vf-sb-popover-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.vf-sb-popover-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dark-mode .vf-sb-popover-name {
+  color: #f1f5f9;
+}
+
+.vf-sb-popover-email {
+  font-size: 0.72rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dark-mode .vf-sb-popover-email {
+  color: #94a3b8;
+}
+
+.vf-sb-popover-divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.07);
+  margin: 10px 0;
+}
+
+.dark-mode .vf-sb-popover-divider {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.vf-sb-popover-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+}
+
+.vf-sb-popover-label {
+  color: var(--muted, #64748b);
+  font-weight: 500;
+}
+
+.dark-mode .vf-sb-popover-label {
+  color: #94a3b8;
 }
 
 /* Collaborative Cell & Input Focus Markers (Google Sheets Style) */
