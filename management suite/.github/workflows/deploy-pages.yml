@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages
+name: Deploy GitHub Pages & Automated Verification
 
 on:
   push:
@@ -15,7 +15,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    name: Run Automated Business Logic & Sync Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Test Suite
+        run: |
+          if [ -d "management suite/tests" ]; then
+            cd "management suite" && node tests/run-all-tests.js
+          else
+            node tests/run-all-tests.js
+          fi
+
   deploy:
+    name: Deploy to GitHub Pages
+    needs: test
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

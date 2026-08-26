@@ -1359,6 +1359,16 @@
       } catch(e) {}
     },
     // --- Supabase Authentication API Integration ---
+    getAuthHeaders(extraHeaders = {}) {
+      let token = null;
+      try { token = nativeLocalStorage.getItem('vf_supabase_token'); } catch(e) {}
+      const bearer = token || SUPABASE_ANON_KEY;
+      return Object.assign({
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${bearer}`,
+        'Content-Type': 'application/json'
+      }, extraHeaders);
+    },
     async signUp(email, password, metadata = {}) {
       try {
         const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
@@ -1377,6 +1387,7 @@
         if (!res.ok) {
           return { data: null, error: new Error(data.error_description || data.msg || data.message || 'Sign up failed') };
         }
+        this.logAuditTrail('signup', 'auth', email, { role: metadata.role || 'employee' });
         return { data: data, error: null };
       } catch (e) {
         return { data: null, error: e };
@@ -1425,12 +1436,42 @@
           
           cache['vf_session'] = JSON.stringify(sessionPayload);
           cache['vf_user_name'] = sessionPayload.username;
+
+          this.logAuditTrail('login', 'auth', user.id || email, { email, role: sessionPayload.role });
         }
         
         return { data: data, error: null };
       } catch (e) {
         return { data: null, error: e };
       }
+    },
+    async refreshToken() {
+      try {
+        let session = null;
+        try {
+          const raw = nativeLocalStorage.getItem('vf_supabase_session');
+          if (raw) session = JSON.parse(raw);
+        } catch(e) {}
+        if (!session || !session.refresh_token || !SUPABASE_URL) return null;
+        
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ refresh_token: session.refresh_token })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.access_token) {
+            nativeLocalStorage.setItem('vf_supabase_token', data.access_token);
+            nativeLocalStorage.setItem('vf_supabase_session', JSON.stringify(data));
+            return data.access_token;
+          }
+        }
+      } catch(e) {}
+      return null;
     },
     async signOut() {
       try {
@@ -1447,6 +1488,8 @@
         }
       } catch(e) {}
       
+      this.logAuditTrail('logout', 'auth', null, {});
+
       try {
         nativeLocalStorage.removeItem('vf_session');
         nativeLocalStorage.removeItem('vf_user_name');
@@ -1482,6 +1525,74 @@
         return sessRaw ? JSON.parse(sessRaw) : null;
       } catch(e) {
         return null;
+      }
+    },
+    // --- Enterprise Audit Logging API ---
+    async logAuditTrail(action, entityType, entityId = null, details = {}) {
+      if (!activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        const userInfo = getLocalUserInfo();
+        const payload = {
+          user_id: userInfo.userId || null,
+          user_email: userInfo.email || userInfo.name || 'operator',
+          role: userInfo.role || 'employee',
+          action: action,
+          entity_type: entityType,
+          entity_id: entityId ? String(entityId) : null,
+          details: details || {},
+          created_at: new Date().toISOString()
+        };
+        fetch(`${SUPABASE_URL}/rest/v1/vf_audit_logs`, {
+          method: 'POST',
+          headers: this.getAuthHeaders({ 'Prefer': 'return=minimal' }),
+          body: JSON.stringify(payload)
+        }).catch(() => {});
+      } catch(e) {}
+    },
+    async getAuditLogs(options = {}) {
+      if (!activeConfig.isConfigured || !SUPABASE_URL) return { data: [], error: 'Not configured' };
+      const limit = options.limit || 50;
+      let url = `${SUPABASE_URL}/rest/v1/vf_audit_logs?select=*&order=created_at.desc&limit=${limit}`;
+      if (options.entityType) url += `&entity_type=eq.${encodeURIComponent(options.entityType)}`;
+      if (options.userEmail) url += `&user_email=eq.${encodeURIComponent(options.userEmail)}`;
+      try {
+        const res = await fetch(url, { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          return { data: data || [], error: null };
+        }
+        return { data: [], error: `HTTP ${res.status}` };
+      } catch(e) {
+        return { data: [], error: e.message || String(e) };
+      }
+    },
+    // --- Server-Side RPC Health Check API ---
+    async ping() {
+      if (!activeConfig.isConfigured || !SUPABASE_URL) {
+        return { ok: false, error: 'Database not configured' };
+      }
+      const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/vf_ping`, {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({})
+        });
+        const elapsed = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        const latency = Math.round(elapsed - t0);
+        if (res.ok) {
+          const data = await res.json();
+          return { ok: true, latencyMs: latency, serverData: data };
+        } else {
+          // Fallback ping query if RPC not yet deployed
+          const fallbackRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?select=key&limit=1`, {
+            headers: this.getAuthHeaders()
+          });
+          const fallbackLatency = Math.round(((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - t0);
+          return { ok: fallbackRes.ok, latencyMs: fallbackLatency, fallback: true };
+        }
+      } catch(e) {
+        return { ok: false, error: e.message || String(e) };
       }
     },
     // Dynamic Configuration & Diagnostic APIs

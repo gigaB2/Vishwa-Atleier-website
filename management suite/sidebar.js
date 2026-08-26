@@ -42,6 +42,48 @@
     }
   })();
 
+  // Global Error Interceptor & Telemetry Boundary (Protects against unhandled script crashes)
+  window.addEventListener('error', function(event) {
+    try {
+      console.warn('[Vishwa Suite Error Boundary Captured]:', event.message, event.filename, event.lineno);
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.logAuditTrail === 'function') {
+        window.VishwaSupabase.logAuditTrail('error', 'client_exception', event.lineno, {
+          message: event.message,
+          source: event.filename,
+          line: event.lineno,
+          col: event.colno
+        });
+      }
+    } catch(e) {}
+  });
+
+  window.addEventListener('unhandledrejection', function(event) {
+    try {
+      console.warn('[Vishwa Suite Unhandled Promise]:', event.reason);
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.logAuditTrail === 'function') {
+        window.VishwaSupabase.logAuditTrail('error', 'unhandled_promise', null, {
+          reason: String(event.reason || 'Unknown error')
+        });
+      }
+    } catch(e) {}
+  });
+
+  // Background Token Refresh Scheduler (every 5 minutes)
+  setInterval(function() {
+    try {
+      const sessRaw = localStorage.getItem('vf_session');
+      if (sessRaw && window.VishwaSupabase && typeof window.VishwaSupabase.refreshToken === 'function') {
+        const sess = JSON.parse(sessRaw);
+        if (sess && sess.expires_at) {
+          const nowSec = Math.floor(Date.now() / 1000);
+          if (sess.expires_at - nowSec < 600) { // Less than 10 minutes left
+            window.VishwaSupabase.refreshToken();
+          }
+        }
+      }
+    } catch(e) {}
+  }, 300000);
+
   // Auto-inject Config & Supabase adapter if not present
   if (!window.APP_CONFIG) {
     const cfgScript = document.createElement('script');
