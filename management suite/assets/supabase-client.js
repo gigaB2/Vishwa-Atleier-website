@@ -127,8 +127,19 @@
     }
   }
 
-  // Unique client session instance ID
-  const CLIENT_ID = 'vf_client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+  // Unique client session instance ID (persisted across page reloads in the same tab via sessionStorage)
+  let CLIENT_ID;
+  try {
+    CLIENT_ID = (typeof window !== 'undefined' && window.sessionStorage) ? window.sessionStorage.getItem('vf_presence_client_id') : null;
+    if (!CLIENT_ID || typeof CLIENT_ID !== 'string' || !CLIENT_ID.startsWith('vf_client_')) {
+      CLIENT_ID = 'vf_client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.setItem('vf_presence_client_id', CLIENT_ID);
+      }
+    }
+  } catch (e) {
+    CLIENT_ID = 'vf_client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+  }
 
   // In-memory cache for instant synchronous reading across device sessions
   const cache = {};
@@ -479,6 +490,47 @@
   const presenceStore = {};
   window.__vf_presence_store = presenceStore;
 
+  function deduplicateUsers(users) {
+    if (!Array.isArray(users)) return [];
+    const userMap = new Map();
+    users.forEach(u => {
+      if (!u) return;
+      // Key by user id or email or name (or fallback to clientId)
+      const userKey = (u.user && (u.user.id || u.user.email || u.user.name)) || u.clientId;
+      if (!userKey) return;
+      const existing = userMap.get(userKey);
+      if (!existing) {
+        userMap.set(userKey, u);
+      } else {
+        // Prioritize active over away, typing over non-typing, and newer ping
+        const preferCurrent = (!u.isAway && existing.isAway) ||
+                              (u.isTyping && !existing.isTyping) ||
+                              ((u.lastPing || 0) > (existing.lastPing || 0));
+        if (preferCurrent) {
+          userMap.set(userKey, {
+            ...existing,
+            ...u,
+            isSelf: Boolean(existing.isSelf || u.isSelf)
+          });
+        }
+      }
+    });
+    return Array.from(userMap.values());
+  }
+
+  function purgeStaleClientsForUser(userKey, currentClientId) {
+    if (!userKey) return;
+    Object.keys(presenceStore).forEach(cid => {
+      if (cid !== currentClientId && cid !== CLIENT_ID) {
+        const u = presenceStore[cid];
+        const existingKey = (u.user && (u.user.id || u.user.email || u.user.name));
+        if (existingKey === userKey) {
+          delete presenceStore[cid];
+        }
+      }
+    });
+  }
+
   let presenceNotifyRaf = null;
   function notifyPresenceListeners() {
     if (presenceNotifyRaf) return;
@@ -486,8 +538,9 @@
     presenceNotifyRaf = schedule(() => {
       presenceNotifyRaf = null;
       const currentPage = getCurrentPageKey();
-      const allUsers = Object.values(presenceStore);
-      const pageUsers = allUsers.filter(u => !u.page || u.page === currentPage);
+      const rawUsers = Object.values(presenceStore);
+      const allUsers = deduplicateUsers(rawUsers);
+      const pageUsers = deduplicateUsers(rawUsers.filter(u => !u.page || u.page === currentPage));
       try {
         window.dispatchEvent(new CustomEvent('supabase-presence', {
           detail: {
@@ -669,6 +722,8 @@
 
   function handleIncomingPresenceHello(payload) {
     if (!payload || !payload.clientId || payload.clientId === CLIENT_ID) return;
+    const userKey = (payload.user && (payload.user.id || payload.user.email || payload.user.name));
+    purgeStaleClientsForUser(userKey, payload.clientId);
     presenceStore[payload.clientId] = {
       clientId: payload.clientId,
       user: payload.user || { name: 'User', role: 'Viewer', color: AVATAR_COLORS[0], initials: 'U' },
@@ -692,6 +747,8 @@
 
   function handleIncomingPresenceAnnounce(payload) {
     if (!payload || !payload.clientId || payload.clientId === CLIENT_ID) return;
+    const userKey = (payload.user && (payload.user.id || payload.user.email || payload.user.name));
+    purgeStaleClientsForUser(userKey, payload.clientId);
     presenceStore[payload.clientId] = {
       clientId: payload.clientId,
       user: payload.user || { name: 'User', role: 'Viewer', color: AVATAR_COLORS[0], initials: 'U' },
@@ -713,6 +770,8 @@
 
   function handleIncomingPresencePing(payload) {
     if (!payload || !payload.clientId || payload.clientId === CLIENT_ID) return;
+    const userKey = (payload.user && (payload.user.id || payload.user.email || payload.user.name));
+    purgeStaleClientsForUser(userKey, payload.clientId);
     const isNewPeer = !presenceStore[payload.clientId];
     presenceStore[payload.clientId] = {
       clientId: payload.clientId,
@@ -757,12 +816,12 @@
     } catch(e) {}
   }
 
-  // Purge disconnected users who haven't pinged in > 35 seconds (3 missed 10s heartbeats)
+  // Purge disconnected users who haven't pinged in > 22 seconds (2 missed 10s heartbeats)
   setInterval(() => {
     const now = Date.now();
     let changed = false;
     Object.keys(presenceStore).forEach(cid => {
-      if (cid !== CLIENT_ID && now - (presenceStore[cid].lastPing || 0) > 35000) {
+      if (cid !== CLIENT_ID && now - (presenceStore[cid].lastPing || 0) > 22000) {
         delete presenceStore[cid];
         changed = true;
       }
@@ -770,7 +829,7 @@
     if (changed) {
       notifyPresenceListeners();
     }
-  }, 5000);
+  }, 4000);
 
   // Send periodic presence ping every 10 seconds to keep presence fresh
   setInterval(() => {
@@ -2100,9 +2159,9 @@
     getPresenceStore: () => ({ ...presenceStore }),
     getPresence(page) {
       const targetPage = page || getCurrentPageKey();
-      return Object.values(presenceStore).filter(u => !u.page || u.page === targetPage);
+      return deduplicateUsers(Object.values(presenceStore).filter(u => !u.page || u.page === targetPage));
     },
-    getAllPresence: () => Object.values(presenceStore),
+    getAllPresence: () => deduplicateUsers(Object.values(presenceStore)),
     sendPresenceHello: () => sendPresenceHello(),
     sendPresencePing: (tab, field, isTyping) => sendPresencePing(tab, field, isTyping),
     sendPresenceLeave: () => sendPresenceLeave(),

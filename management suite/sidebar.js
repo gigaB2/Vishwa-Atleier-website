@@ -1288,6 +1288,26 @@
   let lastRenderedPresenceSignature = '';
   let presenceRenderRaf = null;
 
+  function deduplicateUsers(users) {
+    if (!Array.isArray(users)) return [];
+    const userMap = new Map();
+    users.forEach(u => {
+      if (!u) return;
+      const userKey = (u.user && (u.user.id || u.user.email || u.user.name)) || u.clientId || '';
+      if (!userKey) return;
+      const existing = userMap.get(userKey);
+      if (!existing) {
+        userMap.set(userKey, u);
+      } else {
+        const preferCurrent = (!u.isAway && existing.isAway) || (u.isTyping && !existing.isTyping) || ((u.lastPing || 0) > (existing.lastPing || 0));
+        if (preferCurrent) {
+          userMap.set(userKey, { ...existing, ...u, isSelf: Boolean(existing.isSelf || u.isSelf) });
+        }
+      }
+    });
+    return Array.from(userMap.values());
+  }
+
   function renderPresenceBarUI(presenceDetail) {
     const stack = document.getElementById('vfAvatarStack');
     const countText = document.getElementById('vfPresenceCountText');
@@ -1310,6 +1330,8 @@
       users = [{ user: selfUser, isSelf: true, lastPing: Date.now() }];
     }
 
+    users = deduplicateUsers(users);
+
     const selfId = (presenceDetail && presenceDetail.selfId) || (window.VishwaSupabase && window.VishwaSupabase.getCurrentUser && window.VishwaSupabase.getCurrentUser().clientId);
 
     // Update count text directly without triggering full avatar re-render
@@ -1320,9 +1342,9 @@
 
     // Compute deterministic signature to skip redundant DOM teardown/rebuild
     const currentSig = users.map(u => {
-      const cid = u.clientId || (u.user && u.user.clientId) || '';
+      const uKey = (u.user && (u.user.id || u.user.email || u.user.name)) || u.clientId || '';
       const uname = (u.user && u.user.name) || '';
-      return `${cid}:${uname}:${u.page || ''}:${u.tab || ''}:${u.qualityIndex ?? ''}:${u.isTyping ? 1 : 0}:${u.isAway ? 1 : 0}`;
+      return `${uKey}:${uname}:${u.page || ''}:${u.tab || ''}:${u.qualityIndex ?? ''}:${u.isTyping ? 1 : 0}:${u.isAway ? 1 : 0}`;
     }).sort().join('|');
 
     if (currentSig === lastRenderedPresenceSignature) {

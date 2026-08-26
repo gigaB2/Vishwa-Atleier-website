@@ -90,6 +90,20 @@ class PresenceManager {
   handleMessage(msg) {
     if (!msg || !msg.clientId || msg.clientId === this.clientId) return null;
 
+    // Clean up any stale client ID for the same user identity
+    const incomingUserKey = (msg.user && (msg.user.id || msg.user.email || msg.user.name));
+    if (incomingUserKey) {
+      Object.keys(this.presenceStore).forEach(cid => {
+        if (cid !== msg.clientId && cid !== this.clientId) {
+          const u = this.presenceStore[cid];
+          const existingUserKey = (u.user && (u.user.id || u.user.email || u.user.name));
+          if (existingUserKey === incomingUserKey) {
+            delete this.presenceStore[cid];
+          }
+        }
+      });
+    }
+
     if (msg.type === 'presence_hello') {
       // Store peer
       this.presenceStore[msg.clientId] = {
@@ -133,7 +147,7 @@ class PresenceManager {
     return null;
   }
 
-  cleanupStale(timeoutMs = 35000, now = Date.now()) {
+  cleanupStale(timeoutMs = 22000, now = Date.now()) {
     let purged = 0;
     Object.keys(this.presenceStore).forEach(cid => {
       if (cid !== this.clientId) {
@@ -146,14 +160,43 @@ class PresenceManager {
     return purged;
   }
 
+  static deduplicateUsers(users) {
+    if (!Array.isArray(users)) return [];
+    const userMap = new Map();
+    users.forEach(u => {
+      if (!u) return;
+      const userKey = (u.user && (u.user.id || u.user.email || u.user.name)) || u.clientId;
+      if (!userKey) return;
+      const existing = userMap.get(userKey);
+      if (!existing) {
+        userMap.set(userKey, u);
+      } else {
+        const preferCurrent = (!u.isAway && existing.isAway) ||
+                              (u.isTyping && !existing.isTyping) ||
+                              ((u.lastPing || 0) > (existing.lastPing || 0));
+        if (preferCurrent) {
+          userMap.set(userKey, {
+            ...existing,
+            ...u,
+            isSelf: Boolean(existing.isSelf || u.isSelf)
+          });
+        }
+      }
+    });
+    return Array.from(userMap.values());
+  }
+
   getOnlineUsers() {
-    return Object.values(this.presenceStore);
+    return PresenceManager.deduplicateUsers(Object.values(this.presenceStore));
   }
 
   computeSignature() {
     const users = this.getOnlineUsers();
     return users
-      .map(u => `${u.clientId}:${u.user?.name || ''}:${u.page || ''}:${u.tab || ''}:${u.isTyping ? 1 : 0}:${u.isAway ? 1 : 0}`)
+      .map(u => {
+        const uKey = (u.user && (u.user.id || u.user.email || u.user.name)) || u.clientId;
+        return `${uKey}:${u.user?.name || ''}:${u.page || ''}:${u.tab || ''}:${u.isTyping ? 1 : 0}:${u.isAway ? 1 : 0}`;
+      })
       .sort()
       .join('|');
   }
@@ -296,4 +339,36 @@ test('PresenceEngine — UI Render Signature Diffing', () => {
   alice.handleMessage(bob.createPingPayload());
   const sig4 = alice.computeSignature();
   assert.notEqual(sig3, sig4);
+});
+
+test('PresenceEngine — Refreshing Tab / Multi-tab Does Not Increment Online User Count', () => {
+  // Scenario 1: Rajiv opens tab (persisting clientId in sessionStorage)
+  const rajivClientId = 'client_rajiv_tab1';
+  const rajiv = new PresenceManager(rajivClientId, { id: 'user_rajiv', name: 'Rajiv', email: 'rajiv@vishwafashions.com' });
+  assert.equal(rajiv.getOnlineUsers().length, 1);
+
+  // Scenario 2: Rajiv refreshes the page multiple times
+  // On each refresh, sessionStorage provides the same client_rajiv_tab1
+  for (let i = 0; i < 5; i++) {
+    const refreshed = new PresenceManager(rajivClientId, { id: 'user_rajiv', name: 'Rajiv', email: 'rajiv@vishwafashions.com' });
+    assert.equal(refreshed.getOnlineUsers().length, 1, 'Refreshed instance must remain 1 online user');
+  }
+
+  // Scenario 3: Alice is connected in another tab/browser
+  const alice = new PresenceManager('client_alice', { id: 'user_alice', name: 'Alice', email: 'alice@vishwafashions.com' });
+  alice.handleMessage(rajiv.createHelloPayload());
+  assert.equal(alice.getOnlineUsers().length, 2, 'Alice sees 2 online users (Rajiv + Alice)');
+
+  // Scenario 4: Even if Rajiv opens a second tab with a different clientId, they deduplicate to 1 human user!
+  const rajivTab2 = new PresenceManager('client_rajiv_tab2', { id: 'user_rajiv', name: 'Rajiv', email: 'rajiv@vishwafashions.com' });
+  alice.handleMessage(rajivTab2.createHelloPayload());
+  assert.equal(alice.getOnlineUsers().length, 2, 'Alice still sees strictly 2 unique online users (Rajiv + Alice)');
+  assert.equal(alice.getOnlineUsers().filter(u => u.user.name === 'Rajiv').length, 1, 'Only 1 Rajiv entry exists');
+
+  // Scenario 5: Rapid refreshes with new random IDs (e.g. if storage blocked) still deduplicate by user identity
+  for (let i = 0; i < 5; i++) {
+    const ghostTab = new PresenceManager('ghost_tab_' + i, { id: 'user_rajiv', name: 'Rajiv', email: 'rajiv@vishwafashions.com' });
+    alice.handleMessage(ghostTab.createHelloPayload());
+  }
+  assert.equal(alice.getOnlineUsers().length, 2, 'Still strictly 2 online users after 5 rapid reloads');
 });
