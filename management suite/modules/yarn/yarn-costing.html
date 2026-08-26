@@ -7073,6 +7073,7 @@ const App = () => {
       ...DEFAULT_PRODUCT,
       id: Date.now(),
       name: "New Fabric Quality 1",
+      isLocked: false,
       sampleImages: [],
       warps: DEFAULT_PRODUCT.warps.map(w => ({ ...w })),
       wefts: DEFAULT_PRODUCT.wefts.map(w => ({ ...w })),
@@ -7084,6 +7085,8 @@ const App = () => {
       ...item,
       id: item.id || Date.now() + idx,
       name: (item.name && item.name.trim() && item.name !== "New Fabric Quality") ? item.name : `New Fabric Quality ${idx + 1}`,
+      isLocked: Boolean(item.isLocked),
+      updated_at: item.updated_at || null,
       sampleImages: item.sampleImages || [],
       warps: item.warps ? item.warps.map(w => ({ ...w })) : DEFAULT_PRODUCT.warps.map(w => ({ ...w })),
       wefts: item.wefts ? item.wefts.map(w => ({ ...w })) : DEFAULT_PRODUCT.wefts.map(w => ({ ...w })),
@@ -7096,7 +7099,8 @@ const App = () => {
     if (!Array.isArray(list) || list.length === 0) return [{
       ...DEFAULT_TFO_PRODUCT,
       id: Date.now(),
-      name: "New TFO Quality 1"
+      name: "New TFO Quality 1",
+      isLocked: false
     }];
     return list.map((item, idx) => {
       const loadedItem = {
@@ -7104,6 +7108,8 @@ const App = () => {
         ...item,
         id: item.id || Date.now() + idx,
         name: (item.name && item.name.trim() && item.name !== "New TFO Quality") ? item.name : `New TFO Quality ${idx + 1}`,
+        isLocked: Boolean(item.isLocked),
+        updated_at: item.updated_at || null,
         labors: item.labors || [],
         machineCost: item.machineCost !== undefined ? item.machineCost : 1000000,
         machineLifeYears: item.machineLifeYears !== undefined ? item.machineLifeYears : 10,
@@ -7138,6 +7144,7 @@ const App = () => {
       ...DEFAULT_DOUBLER_PRODUCT,
       id: Date.now(),
       name: "New Doubler Quality 1",
+      isLocked: false,
       yarns: DEFAULT_DOUBLER_PRODUCT.yarns.map(y => ({ ...y }))
     }];
     return list.map((item, idx) => {
@@ -7165,6 +7172,8 @@ const App = () => {
         ...item,
         id: item.id || Date.now() + idx,
         name: (item.name && item.name.trim() && item.name !== "New Doubler Quality") ? item.name : `New Doubler Quality ${idx + 1}`,
+        isLocked: Boolean(item.isLocked),
+        updated_at: item.updated_at || null,
         yarns: loadedYarns
       };
     });
@@ -7175,6 +7184,7 @@ const App = () => {
       ...DEFAULT_COVERING_PRODUCT,
       id: Date.now(),
       name: "New Covering Quality 1",
+      isLocked: false,
       yarns: DEFAULT_COVERING_PRODUCT.yarns.map(y => ({ ...y }))
     }];
     return list.map((item, idx) => {
@@ -7202,6 +7212,8 @@ const App = () => {
         ...item,
         id: item.id || Date.now() + idx,
         name: (item.name && item.name.trim() && item.name !== "New Covering Quality") ? item.name : `New Covering Quality ${idx + 1}`,
+        isLocked: Boolean(item.isLocked),
+        updated_at: item.updated_at || null,
         yarns: loadedYarns
       };
     });
@@ -7904,7 +7916,7 @@ const App = () => {
       const res = {};
       for (const k in val) {
         if (val.hasOwnProperty(k)) {
-          if (k === 'id' || k === 'name' || k === 'discountUnit' || k === 'yarnGloss' || k === 'material' || k === 'yarnType' || k === 'tensionProfile' || k === 'configType' || k === 'notes') {
+          if (k === 'id' || k === 'name' || k === 'discountUnit' || k === 'yarnGloss' || k === 'material' || k === 'yarnType' || k === 'tensionProfile' || k === 'configType' || k === 'notes' || k === 'isLocked' || k === 'updated_at' || k === 'timestamp' || k === 'date') {
             res[k] = val[k];
           } else {
             res[k] = clampNegativeNumbers(val[k]);
@@ -7917,16 +7929,25 @@ const App = () => {
   };
   const updateProduct = newData => {
     const sanitized = clampNegativeNumbers(newData);
-    const updated = [...products];
-    updated[activeIndex] = {
-      ...currentProduct,
-      ...sanitized
-    };
-    setProducts(updated);
+    const nowIso = new Date().toISOString();
+    setProducts(prev => {
+      const updated = [...prev];
+      const targetId = currentProduct?.id;
+      const idx = updated.findIndex(p => p.id === targetId);
+      const targetIdx = idx !== -1 ? idx : activeIndex;
+      if (updated[targetIdx]) {
+        updated[targetIdx] = {
+          ...updated[targetIdx],
+          ...sanitized,
+          updated_at: nowIso
+        };
+      }
+      return updated;
+    });
   };
   const updateTfoProduct = newData => {
     const sanitized = clampNegativeNumbers(newData);
-    const updated = [...tfoProducts];
+    const nowIso = new Date().toISOString();
     if (sanitized.hasOwnProperty('workingHours')) {
       if (sanitized.workingHours !== '' && !isNaN(sanitized.workingHours)) {
         const hrs = Number(sanitized.workingHours);
@@ -7974,29 +7995,56 @@ const App = () => {
     if (sanitized.hasOwnProperty('yarnType')) {
       sanitized.yarnGloss = '';
     }
-    updated[tfoActiveIndex] = {
-      ...currentTfoProduct,
-      ...sanitized
-    };
-    setTfoProducts(updated);
+    setTfoProducts(prev => {
+      const updated = [...prev];
+      const targetId = currentTfoProduct?.id;
+      const idx = updated.findIndex(p => p.id === targetId);
+      const targetIdx = idx !== -1 ? idx : tfoActiveIndex;
+      if (updated[targetIdx]) {
+        updated[targetIdx] = {
+          ...updated[targetIdx],
+          ...sanitized,
+          updated_at: nowIso
+        };
+      }
+      return updated;
+    });
   };
   const updateDoublerProduct = newData => {
     const sanitized = clampNegativeNumbers(newData);
-    const updated = [...doublerProducts];
-    updated[doublerActiveIndex] = {
-      ...currentDoublerProduct,
-      ...sanitized
-    };
-    setDoublerProducts(updated);
+    const nowIso = new Date().toISOString();
+    setDoublerProducts(prev => {
+      const updated = [...prev];
+      const targetId = currentDoublerProduct?.id;
+      const idx = updated.findIndex(p => p.id === targetId);
+      const targetIdx = idx !== -1 ? idx : doublerActiveIndex;
+      if (updated[targetIdx]) {
+        updated[targetIdx] = {
+          ...updated[targetIdx],
+          ...sanitized,
+          updated_at: nowIso
+        };
+      }
+      return updated;
+    });
   };
   const updateCoveringProduct = newData => {
     const sanitized = clampNegativeNumbers(newData);
-    const updated = [...coveringProducts];
-    updated[coveringActiveIndex] = {
-      ...currentCoveringProduct,
-      ...sanitized
-    };
-    setCoveringProducts(updated);
+    const nowIso = new Date().toISOString();
+    setCoveringProducts(prev => {
+      const updated = [...prev];
+      const targetId = currentCoveringProduct?.id;
+      const idx = updated.findIndex(p => p.id === targetId);
+      const targetIdx = idx !== -1 ? idx : coveringActiveIndex;
+      if (updated[targetIdx]) {
+        updated[targetIdx] = {
+          ...updated[targetIdx],
+          ...sanitized,
+          updated_at: nowIso
+        };
+      }
+      return updated;
+    });
   };
   const addNewProduct = () => {
     const newItem = {

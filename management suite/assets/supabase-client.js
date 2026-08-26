@@ -281,7 +281,7 @@
               const remoteItem = mergedMap.get(id);
               const localTs = new Date(localItem.updated_at || localItem.timestamp || localItem.date || 0).getTime();
               const remoteTs = new Date(remoteItem.updated_at || remoteItem.timestamp || remoteItem.date || 0).getTime();
-              if (localTs >= remoteTs) {
+              if (localTs > remoteTs) {
                 mergedMap.set(id, Object.assign({}, remoteItem, localItem));
               }
             }
@@ -1061,6 +1061,7 @@
 
   function broadcastRealtimeUpdate(key, value) {
     if (isLocalOnlyKey(key)) return;
+    const valStr = typeof value === 'string' ? value : JSON.stringify(value);
     if (ws && ws.readyState === WebSocket.OPEN) {
       try {
         const broadcastMsg = {
@@ -1080,6 +1081,16 @@
         };
         ws.send(JSON.stringify(broadcastMsg));
       } catch (e) {}
+    }
+    if (syncChannel) {
+      try {
+        syncChannel.postMessage({
+          key: key,
+          value: valStr,
+          type: 'setItem',
+          senderId: CLIENT_ID
+        });
+      } catch(e) {}
     }
   }
 
