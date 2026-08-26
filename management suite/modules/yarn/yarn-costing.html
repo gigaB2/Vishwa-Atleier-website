@@ -2895,9 +2895,15 @@ const FormulaModal = ({
       const noOfHeatSet = Number(currentProduct?.noOfHeatSet) || 0;
       const workingHoursHeatSet = currentProduct?.workingHoursHeatSet !== undefined && currentProduct?.workingHoursHeatSet !== '' ? Number(currentProduct.workingHoursHeatSet) : 0;
       const workingDaysHeatSet = currentProduct?.workingDaysHeatSet !== undefined && currentProduct?.workingDaysHeatSet !== '' ? Number(currentProduct.workingDaysHeatSet) : 0;
+      const workingDaysCops = currentProduct?.workingDaysCops !== undefined && currentProduct?.workingDaysCops !== '' ? Number(currentProduct.workingDaysCops) : 28;
       const powerKwTfo = isDoubler ? hp * 0.746 * (loadFactor / 100) : hp * 0.746 * (loadFactor / 100) / motorEfficiency;
-      const powerKwCops = isDoubler ? hpCops * 0.746 * (loadFactor / 100) : hpCops * 0.746 * noOfCops * (loadFactor / 100) / motorEfficiency;
-      const powerKwHeatSet = isDoubler ? hpHeatSet * 0.746 * (loadFactor / 100) : hpHeatSet * 0.746 * noOfHeatSet * (loadFactor / 100) / motorEfficiency;
+      const powerKwCops = isDoubler ? hpCops * 0.746 * (loadFactor / 100) / motorEfficiency : (isCovering ? hpCops * 0.746 * (loadFactor / 100) / motorEfficiency : hpCops * 0.746 * (loadFactor / 100));
+      const powerKwHeatSet = isDoubler ? hpHeatSet * 0.746 * (loadFactor / 100) / motorEfficiency : (isCovering ? hpHeatSet * 0.746 * (loadFactor / 100) / motorEfficiency : hpHeatSet * 0.746 * (loadFactor / 100));
+      const bMachine = calcs?.electricityBreakdown?.machine || {};
+      const bCops = calcs?.electricityBreakdown?.cops || {};
+      const bHeatSet = calcs?.electricityBreakdown?.heatSet || {};
+      const bTotal = calcs?.electricityBreakdown?.total || {};
+
       content = /*#__PURE__*/React.createElement("div", {
         className: "space-y-6"
       }, /*#__PURE__*/React.createElement("div", {
@@ -2916,9 +2922,9 @@ const FormulaModal = ({
         className: "formula-fraction"
       }, /*#__PURE__*/React.createElement("span", {
         className: "formula-numerator"
-      }, isDoubler ? "HP/Doubler x 0.746 x Load Factor %" : "HP/" + label + " x No. of " + label + " x 0.746 x Load Factor %"), /*#__PURE__*/React.createElement("span", {
+      }, "HP/" + label + " x 0.746 x (Load Factor / 100)"), /*#__PURE__*/React.createElement("span", {
         className: "formula-denominator"
-      }, isDoubler ? "100" : "100 x Motor Efficiency (90%)"))), /*#__PURE__*/React.createElement("div", {
+      }, isDoubler ? "1.00 (Direct)" : "0.90 (Motor Efficiency)"))), /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "font-bold"
@@ -2926,9 +2932,9 @@ const FormulaModal = ({
         className: "formula-fraction"
       }, /*#__PURE__*/React.createElement("span", {
         className: "formula-numerator"
-      }, isDoubler ? "HP/Cops x 0.746 x Load Factor %" : "HP/Cops x No. of Cops x 0.746 x Load Factor %"), /*#__PURE__*/React.createElement("span", {
+      }, "HP/Cops x 0.746 x (Load Factor / 100)"), /*#__PURE__*/React.createElement("span", {
         className: "formula-denominator"
-      }, isDoubler ? "100" : "100 x Motor Efficiency (90%)"))), /*#__PURE__*/React.createElement("div", {
+      }, (isDoubler || isCovering) ? "0.90 (Motor Efficiency)" : "1.00 (Standard)"))), /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "font-bold"
@@ -2936,17 +2942,17 @@ const FormulaModal = ({
         className: "formula-fraction"
       }, /*#__PURE__*/React.createElement("span", {
         className: "formula-numerator"
-      }, isDoubler ? "HP/Heat Set x 0.746 x Load Factor %" : "HP/Heat Set x No. of Heat Set x 0.746 x Load Factor %"), /*#__PURE__*/React.createElement("span", {
+      }, "HP/Heat Set x 0.746 x (Load Factor / 100)"), /*#__PURE__*/React.createElement("span", {
         className: "formula-denominator"
-      }, isDoubler ? "100" : "100 x Motor Efficiency (90%)"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+      }, (isDoubler || isCovering) ? "0.90 (Motor Efficiency)" : "1.00 (Standard)"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
         className: "font-bold"
       }, "Total Power Load (kW) = "), /*#__PURE__*/React.createElement("span", null, label, " Load + Cops Load + Heat Set Load"))), /*#__PURE__*/React.createElement("div", {
         className: "pt-1.5 border-t border-slate-100 space-y-0.5 text-[11px] text-slate-500"
       }, /*#__PURE__*/React.createElement("strong", {
         className: "text-slate-700 block mb-0.5"
-      }, "Values:"), /*#__PURE__*/React.createElement("div", null, "HP/", label, " machine = ", hp, " HP"), /*#__PURE__*/React.createElement("div", null, "HP/Cops Winder = ", hpCops, " HP"), !isDoubler && /*#__PURE__*/React.createElement("div", null, "No. of Cops winder = ", noOfCops), /*#__PURE__*/React.createElement("div", null, "HP/Heat Set = ", hpHeatSet, " HP"), !isDoubler && /*#__PURE__*/React.createElement("div", null, "No. of Heat Set = ", noOfHeatSet), /*#__PURE__*/React.createElement("div", null, "Load Factor = ", loadFactor, "%")), /*#__PURE__*/React.createElement("div", {
+      }, "Values:"), /*#__PURE__*/React.createElement("div", null, "HP/", label, " machine = ", hp, " HP"), /*#__PURE__*/React.createElement("div", null, "HP/Cops Winder = ", hpCops, " HP"), /*#__PURE__*/React.createElement("div", null, "HP/Heat Set = ", hpHeatSet, " HP"), /*#__PURE__*/React.createElement("div", null, "Load Factor = ", loadFactor, "%")), /*#__PURE__*/React.createElement("div", {
         className: "pt-1.5 border-t border-slate-100 flex flex-col gap-2 text-slate-800 font-bold"
-      }, /*#__PURE__*/React.createElement("div", null, "Calculation:"), /*#__PURE__*/React.createElement("div", null, isDoubler ? `Doubler Load = (${hp} x 0.746 x ${loadFactor}) \\xF7 100 = ${powerKwTfo.toFixed(2)} kW` : `${label} Load = (${hp} x 0.746 x ${loadFactor}) \\xF7 90 = ${powerKwTfo.toFixed(2)} kW`), /*#__PURE__*/React.createElement("div", null, isDoubler ? `Cops Load = (${hpCops} x 0.746 x ${loadFactor}) \\xF7 100 = ${powerKwCops.toFixed(2)} kW` : `Cops Load = (${hpCops} x ${noOfCops} x 0.746 x ${loadFactor}) \\xF7 90 = ${powerKwCops.toFixed(2)} kW`), /*#__PURE__*/React.createElement("div", null, isDoubler ? `Heat Set Load = (${hpHeatSet} x 0.746 x ${loadFactor}) \\xF7 100 = ${powerKwHeatSet.toFixed(2)} kW` : `Heat Set Load = (${hpHeatSet} x ${noOfHeatSet} x 0.746 x ${loadFactor}) \\xF7 90 = ${powerKwHeatSet.toFixed(2)} kW`), /*#__PURE__*/React.createElement("div", null, "Total Power = ", powerKwTfo.toFixed(2), " + ", powerKwCops.toFixed(2), " + ", powerKwHeatSet.toFixed(2), " = ", powerKw.toFixed(2), " kW")))), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("div", null, "Calculation:"), /*#__PURE__*/React.createElement("div", null, `${label} Load = ${powerKwTfo.toFixed(2)} kW`), /*#__PURE__*/React.createElement("div", null, `Cops Load = ${powerKwCops.toFixed(2)} kW`), /*#__PURE__*/React.createElement("div", null, `Heat Set Load = ${powerKwHeatSet.toFixed(2)} kW`), /*#__PURE__*/React.createElement("div", null, "Total Power = ", powerKwTfo.toFixed(2), " + ", powerKwCops.toFixed(2), " + ", powerKwHeatSet.toFixed(2), " = ", powerKw.toFixed(2), " kW")))), /*#__PURE__*/React.createElement("div", {
         className: "p-4 bg-slate-50 border border-slate-200/60 rounded-xl space-y-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-xs font-bold text-[#8b5cf6] uppercase tracking-wider"
@@ -2960,25 +2966,47 @@ const FormulaModal = ({
         className: "pt-1.5 border-t border-slate-100 space-y-0.5 text-[11px] text-slate-500"
       }, /*#__PURE__*/React.createElement("strong", {
         className: "text-slate-700 block mb-0.5"
-      }, "Values:"), /*#__PURE__*/React.createElement("div", null, label, " Load = ", powerKwTfo.toFixed(2), " kW"), /*#__PURE__*/React.createElement("div", null, label, " Working Hours = ", workingHours, " hrs"), /*#__PURE__*/React.createElement("div", null, "Cops Load = ", powerKwCops.toFixed(2), " kW"), /*#__PURE__*/React.createElement("div", null, "Cops Working Hours = ", workingHoursCops, " hrs"), /*#__PURE__*/React.createElement("div", null, "Heat Set Load = ", powerKwHeatSet.toFixed(2), " kW"), /*#__PURE__*/React.createElement("div", null, "Heat Set Working Hours = ", workingHoursHeatSet, " hrs")), /*#__PURE__*/React.createElement("div", {
+      }, "Values:"), /*#__PURE__*/React.createElement("div", null, label, " Load = ", powerKwTfo.toFixed(2), " kW, Working Hours = ", workingHours, " hrs"), /*#__PURE__*/React.createElement("div", null, "Cops Load = ", powerKwCops.toFixed(2), " kW, Cops Working Hours = ", workingHoursCops, " hrs"), /*#__PURE__*/React.createElement("div", null, "Heat Set Load = ", powerKwHeatSet.toFixed(2), " kW, Heat Set Working Hours = ", workingHoursHeatSet, " hrs")), /*#__PURE__*/React.createElement("div", {
         className: "pt-1.5 border-t border-slate-100 flex flex-col gap-2 text-slate-800 font-bold"
-      }, /*#__PURE__*/React.createElement("div", null, "Calculation:"), /*#__PURE__*/React.createElement("div", null, "Daily Units = (", powerKwTfo.toFixed(2), " x ", workingHours, ") + (", powerKwCops.toFixed(2), " x ", workingHoursCops, ") + (", powerKwHeatSet.toFixed(2), " x ", workingHoursHeatSet, ")"), /*#__PURE__*/React.createElement("div", null, "= ", (powerKwTfo * workingHours).toFixed(1), " + ", (powerKwCops * workingHoursCops).toFixed(1), " + ", (powerKwHeatSet * workingHoursHeatSet).toFixed(1)), /*#__PURE__*/React.createElement("div", null, "= ", unitsDay.toFixed(1), " Units")))), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("div", null, "Calculation:"), /*#__PURE__*/React.createElement("div", null, "Daily Units = (", powerKwTfo.toFixed(2), " x ", workingHours, ") + (", powerKwCops.toFixed(2), " x ", workingHoursCops, ") + (", powerKwHeatSet.toFixed(2), " x ", workingHoursHeatSet, ")"), /*#__PURE__*/React.createElement("div", null, "= ", (powerKwTfo * workingHours).toFixed(1), " + ", (powerKwCops * workingHoursCops).toFixed(1), " + ", (powerKwHeatSet * workingHoursHeatSet).toFixed(1)), /*#__PURE__*/React.createElement("div", null, "= ", unitsDay.toFixed(1), " Units/day")))), /*#__PURE__*/React.createElement("div", {
         className: "p-4 bg-slate-50 border border-slate-200/60 rounded-xl space-y-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-xs font-bold text-[#8b5cf6] uppercase tracking-wider"
-      }, "Step 3: Monthly Electricity Units"), /*#__PURE__*/React.createElement("div", {
+      }, "Step 3: Monthly Electricity Units (kWh)"), /*#__PURE__*/React.createElement("div", {
         className: "p-3 bg-white rounded-lg border border-slate-100 text-xs space-y-1.5 font-medium text-slate-600"
       }, /*#__PURE__*/React.createElement("div", {
         className: "formula-display flex flex-col gap-2 py-1 text-slate-800"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
         className: "font-bold"
-      }, "Formula:"), /*#__PURE__*/React.createElement("span", null, "Monthly Units = (", label, " Daily Units x ", label, " Days) + (Cops Daily Units x Cops Days) + (Heat Set Daily Units x Heat Set Days)"))), /*#__PURE__*/React.createElement("div", {
+      }, "Formula:"), /*#__PURE__*/React.createElement("span", null, "Monthly Units = (", label, " Daily Units x ", label, " Days) + (Cops Daily Units x Cops Working Days) + (Heat Set Daily Units x Heat Set Working Days)"))), /*#__PURE__*/React.createElement("div", {
         className: "pt-1.5 border-t border-slate-100 space-y-0.5 text-[11px] text-slate-500"
       }, /*#__PURE__*/React.createElement("strong", {
         className: "text-slate-700 block mb-0.5"
-      }, "Values:"), /*#__PURE__*/React.createElement("div", null, label, " Daily Units = ", (powerKwTfo * workingHours).toFixed(1), " kWh"), /*#__PURE__*/React.createElement("div", null, label, " Days = ", daysPerMonth, " days"), /*#__PURE__*/React.createElement("div", null, "Cops Daily Units = ", (powerKwCops * workingHoursCops).toFixed(1), " kWh"), /*#__PURE__*/React.createElement("div", null, "Cops Days = ", daysPerMonth, " days"), /*#__PURE__*/React.createElement("div", null, "Heat Set Daily Units = ", (powerKwHeatSet * workingHoursHeatSet).toFixed(1), " kWh"), /*#__PURE__*/React.createElement("div", null, "Heat Set Days = ", workingDaysHeatSet, " days")), /*#__PURE__*/React.createElement("div", {
+      }, "Values:"), /*#__PURE__*/React.createElement("div", null, label, " Daily Units = ", (powerKwTfo * workingHours).toFixed(1), " kWh, Days = ", daysPerMonth, " days"), /*#__PURE__*/React.createElement("div", null, "Cops Daily Units = ", (powerKwCops * workingHoursCops).toFixed(1), " kWh, Cops Days = ", workingDaysCops, " days"), /*#__PURE__*/React.createElement("div", null, "Heat Set Daily Units = ", (powerKwHeatSet * workingHoursHeatSet).toFixed(1), " kWh, Heat Set Days = ", workingDaysHeatSet, " days")), /*#__PURE__*/React.createElement("div", {
         className: "pt-1.5 border-t border-slate-100 flex flex-col gap-2 text-slate-800 font-bold"
-      }, /*#__PURE__*/React.createElement("div", null, "Calculation:"), /*#__PURE__*/React.createElement("div", null, "Monthly Units = (", (powerKwTfo * workingHours).toFixed(1), " x ", daysPerMonth, ") + (", (powerKwCops * workingHoursCops).toFixed(1), " x ", daysPerMonth, ") + (", (powerKwHeatSet * workingHoursHeatSet).toFixed(1), " x ", workingDaysHeatSet, ")"), /*#__PURE__*/React.createElement("div", null, "= ", unitsMonth.toFixed(0), " Units")))));
+      }, /*#__PURE__*/React.createElement("div", null, "Calculation:"), /*#__PURE__*/React.createElement("div", null, "Monthly Units = (", (powerKwTfo * workingHours).toFixed(1), " x ", daysPerMonth, ") + (", (powerKwCops * workingHoursCops).toFixed(1), " x ", workingDaysCops, ") + (", (powerKwHeatSet * workingHoursHeatSet).toFixed(1), " x ", workingDaysHeatSet, ")"), /*#__PURE__*/React.createElement("div", null, "= ", unitsMonth.toFixed(0), " Units/month")))), /*#__PURE__*/React.createElement("div", {
+        className: "p-4 bg-slate-50 border border-slate-200/60 rounded-xl space-y-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-xs font-bold text-[#8b5cf6] uppercase tracking-wider"
+      }, "Step 4: Individual Electricity Cost & Cost / Kg Breakdown"), /*#__PURE__*/React.createElement("div", {
+        className: "p-3 bg-white rounded-lg border border-slate-100 text-xs space-y-2 font-medium text-slate-600"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] text-slate-500 mb-1"
+      }, `Rate: ₹ ${electricityRate.toFixed(2)}/unit | Monthly Prod: ${(calcs?.prodMonthEff || calcs?.monthlyProduction || 0).toFixed(1)} kg`), /*#__PURE__*/React.createElement("div", {
+        className: "overflow-x-auto"
+      }, /*#__PURE__*/React.createElement("table", {
+        className: "w-full text-[11px] text-left border-collapse"
+      }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+        className: "border-b text-slate-500 bg-slate-50"
+      }, /*#__PURE__*/React.createElement("th", { className: "py-1.5 px-2" }, "Consumer"), /*#__PURE__*/React.createElement("th", { className: "py-1.5 px-2 text-right" }, "Load (kW)"), /*#__PURE__*/React.createElement("th", { className: "py-1.5 px-2 text-right" }, "Units/Mo"), /*#__PURE__*/React.createElement("th", { className: "py-1.5 px-2 text-right" }, "Cost/Mo (₹)"), /*#__PURE__*/React.createElement("th", { className: "py-1.5 px-2 text-right font-bold text-violet-700" }, "Cost/Kg (₹)"))), /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement("tr", {
+        className: "border-b border-slate-100"
+      }, /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 font-medium text-slate-800" }, bMachine.name || `${label} Machine`), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right" }, (bMachine.powerKw || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right" }, (bMachine.unitsMonth || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right" }, "₹ ", Math.round(bMachine.costMonth || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right font-bold text-slate-800" }, "₹ ", (bMachine.costPerKg || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+        className: "border-b border-slate-100"
+      }, /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 font-medium text-slate-800" }, "Cops Winder"), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right" }, (bCops.powerKw || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right" }, (bCops.unitsMonth || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right" }, "₹ ", Math.round(bCops.costMonth || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right font-bold text-slate-800" }, "₹ ", (bCops.costPerKg || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+        className: "border-b border-slate-100"
+      }, /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 font-medium text-slate-800" }, "Heat Setting"), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right" }, (bHeatSet.powerKw || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right" }, (bHeatSet.unitsMonth || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right" }, "₹ ", Math.round(bHeatSet.costMonth || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "py-1 px-2 text-right font-bold text-slate-800" }, "₹ ", (bHeatSet.costPerKg || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+        className: "bg-violet-50/50 font-bold text-violet-900"
+      }, /*#__PURE__*/React.createElement("td", { className: "py-1.5 px-2" }, "Total"), /*#__PURE__*/React.createElement("td", { className: "py-1.5 px-2 text-right" }, (bTotal.powerKw || powerKw || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "py-1.5 px-2 text-right" }, (bTotal.unitsMonth || unitsMonth || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "py-1.5 px-2 text-right" }, "₹ ", Math.round(bTotal.costMonth || costMonth || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "py-1.5 px-2 font-extrabold text-[#8b5cf6]" }, "₹ ", (bTotal.costPerKg || powerCostPerKg || 0).toFixed(2)))))))));
     }
   } else if (type === 'packagingMaterial') {
     title = 'Required Packaging Material Calculations';
@@ -4824,6 +4852,7 @@ const DEFAULT_TFO_PRODUCT = {
   hpCops: 0,
   noOfCops: 0,
   workingHoursCops: 24,
+  workingDaysCops: 28,
   hpHeatSet: 0,
   noOfHeatSet: 0,
   workingHoursHeatSet: 24,
@@ -4915,6 +4944,7 @@ const DEFAULT_DOUBLER_PRODUCT = {
   hpCops: 0,
   noOfCops: 0,
   workingHoursCops: 24,
+  workingDaysCops: 28,
   hpHeatSet: 0,
   noOfHeatSet: 0,
   workingHoursHeatSet: 24,
@@ -4986,6 +5016,7 @@ const DEFAULT_COVERING_PRODUCT = {
   hpCops: 0,
   noOfCops: 0,
   workingHoursCops: 24,
+  workingDaysCops: 28,
   hpHeatSet: 0,
   noOfHeatSet: 0,
   workingHoursHeatSet: 24,
@@ -7954,6 +7985,7 @@ const App = () => {
       hpCops: "",
       noOfCops: "",
       workingHoursCops: "",
+      workingDaysCops: "",
       hpHeatSet: "",
       noOfHeatSet: "",
       workingHoursHeatSet: "",
@@ -8049,6 +8081,7 @@ const App = () => {
       hpCops: "",
       noOfCops: "",
       workingHoursCops: "",
+      workingDaysCops: "",
       hpHeatSet: "",
       noOfHeatSet: "",
       workingHoursHeatSet: "",
@@ -8121,6 +8154,7 @@ const App = () => {
       hpCops: "",
       noOfCops: "",
       workingHoursCops: "",
+      workingDaysCops: "",
       hpHeatSet: "",
       noOfHeatSet: "",
       workingHoursHeatSet: "",
@@ -8837,13 +8871,31 @@ const App = () => {
     const noOfHeatSet = Number(currentTfoProduct.noOfHeatSet) || 0;
     const workingHoursHeatSet = currentTfoProduct.workingHoursHeatSet !== undefined && currentTfoProduct.workingHoursHeatSet !== '' ? Number(currentTfoProduct.workingHoursHeatSet) : 0;
     const workingDaysHeatSet = currentTfoProduct.workingDaysHeatSet !== undefined && currentTfoProduct.workingDaysHeatSet !== '' ? Number(currentTfoProduct.workingDaysHeatSet) : 0;
+    const workingDaysCops = currentTfoProduct.workingDaysCops !== undefined && currentTfoProduct.workingDaysCops !== '' ? Number(currentTfoProduct.workingDaysCops) : 28;
+
     const powerKwTfo = hp * 0.746 * (loadFactor / 100) / motorEfficiency;
     const powerKwCops = hpCops * 0.746 * (loadFactor / 100);
     const powerKwHeatSet = hpHeatSet * 0.746 * (loadFactor / 100);
     const powerKwHp = powerKwTfo + powerKwCops + powerKwHeatSet;
-    const unitsDayHp = powerKwTfo * workingHours + powerKwCops * workingHoursCops + powerKwHeatSet * workingHoursHeatSet;
-    const unitsMonthHp = powerKwTfo * workingHours * daysPerMonth + powerKwCops * workingHoursCops * daysPerMonth + powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet;
+
+    const unitsDayTfo = powerKwTfo * workingHours;
+    const unitsDayCops = powerKwCops * workingHoursCops;
+    const unitsDayHeatSet = powerKwHeatSet * workingHoursHeatSet;
+    const unitsDayHp = unitsDayTfo + unitsDayCops + unitsDayHeatSet;
+
+    const unitsMonthTfo = unitsDayTfo * daysPerMonth;
+    const unitsMonthCops = unitsDayCops * workingDaysCops;
+    const unitsMonthHeatSet = unitsDayHeatSet * workingDaysHeatSet;
+    const unitsMonthHp = unitsMonthTfo + unitsMonthCops + unitsMonthHeatSet;
+
+    const costMonthTfo = unitsMonthTfo * electricityRate;
+    const costMonthCops = unitsMonthCops * electricityRate;
+    const costMonthHeatSet = unitsMonthHeatSet * electricityRate;
     const costMonthHp = unitsMonthHp * electricityRate;
+
+    const costDayTfo = daysPerMonth > 0 ? costMonthTfo / daysPerMonth : 0;
+    const costDayCops = workingDaysCops > 0 ? costMonthCops / workingDaysCops : 0;
+    const costDayHeatSet = workingDaysHeatSet > 0 ? costMonthHeatSet / workingDaysHeatSet : 0;
     const costDayHp = daysPerMonth > 0 ? costMonthHp / daysPerMonth : 0;
 
     let powerKw, unitsDay, unitsMonth, costMonth, costDay;
@@ -8862,7 +8914,60 @@ const App = () => {
     }
     // Total production per day = prodDayEff
     const totalProdDayEff = prodDayEff;
+    const totalProdMonthKg = prodMonthEff;
     const powerCostPerKg = totalProdDayEff > 0 ? costDay / totalProdDayEff : 0;
+    const powerCostPerKgTfo = totalProdMonthKg > 0 ? costMonthTfo / totalProdMonthKg : (totalProdDayEff > 0 ? costDayTfo / totalProdDayEff : 0);
+    const powerCostPerKgCops = totalProdMonthKg > 0 ? costMonthCops / totalProdMonthKg : 0;
+    const powerCostPerKgHeatSet = totalProdMonthKg > 0 ? costMonthHeatSet / totalProdMonthKg : 0;
+
+    const electricityBreakdown = {
+      machine: {
+        name: 'TFO Machine',
+        hp: hp,
+        workingHours: workingHours,
+        workingDays: daysPerMonth,
+        powerKw: powerKwTfo,
+        unitsDay: unitsDayTfo,
+        unitsMonth: unitsMonthTfo,
+        costMonth: costMonthTfo,
+        costDay: costDayTfo,
+        costPerKg: powerCostPerKgTfo
+      },
+      cops: {
+        name: 'Cops Winder',
+        hp: hpCops,
+        workingHours: workingHoursCops,
+        workingDays: workingDaysCops,
+        powerKw: powerKwCops,
+        unitsDay: unitsDayCops,
+        unitsMonth: unitsMonthCops,
+        costMonth: costMonthCops,
+        costDay: costDayCops,
+        costPerKg: powerCostPerKgCops
+      },
+      heatSet: {
+        name: 'Heat Setting',
+        hp: hpHeatSet,
+        workingHours: workingHoursHeatSet,
+        workingDays: workingDaysHeatSet,
+        powerKw: powerKwHeatSet,
+        unitsDay: unitsDayHeatSet,
+        unitsMonth: unitsMonthHeatSet,
+        costMonth: costMonthHeatSet,
+        costDay: costDayHeatSet,
+        costPerKg: powerCostPerKgHeatSet
+      },
+      total: {
+        name: 'Total Electricity',
+        hp: hp + hpCops + hpHeatSet,
+        powerKw: powerKw,
+        unitsDay: unitsDay,
+        unitsMonth: unitsMonth,
+        costMonth: costMonth,
+        costDay: costDay,
+        costPerKg: powerCostPerKg
+      }
+    };
     // Labor calculations
     const labors = currentTfoProduct.labors || [];
     const totalLaborMonthly = labors.reduce((acc, l) => acc + (Number(l.salary) || 0), 0);
@@ -8951,9 +9056,8 @@ const App = () => {
     const resolvedDiscount = discountUnit === "%" ? discountValue / 100 * mySalePrice : discountValue;
     const netSalePrice = Math.max(0, mySalePrice - resolvedDiscount);
     const myProfitPercent = netSalePrice > 0 && grandTotalCostPerKg > 0 ? (netSalePrice - grandTotalCostPerKg) / grandTotalCostPerKg * 100 : 0;
-    const totalProdMonthKg = prodMonthEff;
     const turnoverMonth = totalProdMonthKg * netSalePrice;
-const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
+    const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     const profitMonth = totalProdMonthKg * (netSalePrice - grandTotalCostPerKg);
     const profitPerKg = netSalePrice - grandTotalCostPerKg;
     return {
@@ -9048,18 +9152,37 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       hpCops,
       noOfCops,
       workingHoursCops,
+      workingDaysCops,
       hpHeatSet,
       noOfHeatSet,
       workingHoursHeatSet,
       workingDaysHeatSet,
+      powerKwTfo,
+      powerKwCops,
       powerKwHeatSet,
+      unitsDayTfo,
+      unitsDayCops,
+      unitsDayHeatSet,
+      unitsMonthTfo,
+      unitsMonthCops,
+      unitsMonthHeatSet,
+      costMonthTfo,
+      costMonthCops,
+      costMonthHeatSet,
+      costDayTfo,
+      costDayCops,
+      costDayHeatSet,
+      powerCostPerKgTfo,
+      powerCostPerKgCops,
+      powerCostPerKgHeatSet,
+      electricityBreakdown,
       activeMiscCosts,
       requiredRawMaterialDay,
       requiredRawMaterialMonth,
       requiredRawMaterialOrder
     };
   };
-  const tfoCalcs = useMemo(() => computeTfoCalcs(currentTfoProduct), [currentTfoProduct?.rpm, currentTfoProduct?.workingHours, currentTfoProduct?.daysPerMonth, currentTfoProduct?.denier, currentTfoProduct?.noOfSpindles, currentTfoProduct?.tpm, currentTfoProduct?.efficiency, currentTfoProduct?.electricityMode, currentTfoProduct?.monthlyElectricityCost, currentTfoProduct?.hp, currentTfoProduct?.noOfMachines, currentTfoProduct?.hpCops, currentTfoProduct?.noOfCops, currentTfoProduct?.workingHoursCops, currentTfoProduct?.hpHeatSet, currentTfoProduct?.noOfHeatSet, currentTfoProduct?.workingHoursHeatSet, currentTfoProduct?.workingDaysHeatSet, currentTfoProduct?.loadFactor, currentTfoProduct?.electricityRate, currentTfoProduct?.yarnType, currentTfoProduct?.tensionProfile, currentTfoProduct?.material, currentTfoProduct?.yarnGloss, currentTfoProduct?.wastage, currentTfoProduct?.yarnRate, currentTfoProduct?.monthlyRent, currentTfoProduct?.maintenanceCost, currentTfoProduct?.takeUpTubeSize, currentTfoProduct?.paperTubeCost, currentTfoProduct?.rollsPerBox, currentTfoProduct?.boxCost, currentTfoProduct?.plasticBagCost, currentTfoProduct?.labors, currentTfoProduct?.profitPercent, currentTfoProduct?.mySalePrice, currentTfoProduct?.discountValue, currentTfoProduct?.discountUnit, currentTfoProduct?.miscCosts, currentTfoProduct?.orderSize]);
+  const tfoCalcs = useMemo(() => computeTfoCalcs(currentTfoProduct), [currentTfoProduct?.rpm, currentTfoProduct?.workingHours, currentTfoProduct?.daysPerMonth, currentTfoProduct?.denier, currentTfoProduct?.noOfSpindles, currentTfoProduct?.tpm, currentTfoProduct?.efficiency, currentTfoProduct?.electricityMode, currentTfoProduct?.monthlyElectricityCost, currentTfoProduct?.hp, currentTfoProduct?.noOfMachines, currentTfoProduct?.hpCops, currentTfoProduct?.noOfCops, currentTfoProduct?.workingHoursCops, currentTfoProduct?.workingDaysCops, currentTfoProduct?.hpHeatSet, currentTfoProduct?.noOfHeatSet, currentTfoProduct?.workingHoursHeatSet, currentTfoProduct?.workingDaysHeatSet, currentTfoProduct?.loadFactor, currentTfoProduct?.electricityRate, currentTfoProduct?.yarnType, currentTfoProduct?.tensionProfile, currentTfoProduct?.material, currentTfoProduct?.yarnGloss, currentTfoProduct?.wastage, currentTfoProduct?.yarnRate, currentTfoProduct?.monthlyRent, currentTfoProduct?.maintenanceCost, currentTfoProduct?.takeUpTubeSize, currentTfoProduct?.paperTubeCost, currentTfoProduct?.rollsPerBox, currentTfoProduct?.boxCost, currentTfoProduct?.plasticBagCost, currentTfoProduct?.labors, currentTfoProduct?.profitPercent, currentTfoProduct?.mySalePrice, currentTfoProduct?.discountValue, currentTfoProduct?.discountUnit, currentTfoProduct?.miscCosts, currentTfoProduct?.orderSize]);
   ;
   const computeDoublerCalcs = currentDoublerProduct => {
     if (!currentDoublerProduct) return null;
@@ -9171,13 +9294,31 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     const noOfHeatSet = Number(currentDoublerProduct.noOfHeatSet) || 0;
     const workingHoursHeatSet = currentDoublerProduct.workingHoursHeatSet !== undefined && currentDoublerProduct.workingHoursHeatSet !== '' ? Number(currentDoublerProduct.workingHoursHeatSet) : 0;
     const workingDaysHeatSet = currentDoublerProduct.workingDaysHeatSet !== undefined && currentDoublerProduct.workingDaysHeatSet !== '' ? Number(currentDoublerProduct.workingDaysHeatSet) : 0;
+    const workingDaysCops = currentDoublerProduct.workingDaysCops !== undefined && currentDoublerProduct.workingDaysCops !== '' ? Number(currentDoublerProduct.workingDaysCops) : 28;
+
     const powerKwDoubler = hp * 0.746 * (loadFactor / 100);
     const powerKwCops = hpCops * 0.746 * (loadFactor / 100) / motorEfficiency;
     const powerKwHeatSet = hpHeatSet * 0.746 * (loadFactor / 100) / motorEfficiency;
     const powerKwHp = powerKwDoubler + powerKwCops + powerKwHeatSet;
-    const unitsDayHp = powerKwDoubler * workingHours + powerKwCops * workingHoursCops + powerKwHeatSet * workingHoursHeatSet;
-    const unitsMonthHp = powerKwDoubler * workingHours * daysPerMonth + powerKwCops * workingHoursCops * daysPerMonth + powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet;
+
+    const unitsDayDoubler = powerKwDoubler * workingHours;
+    const unitsDayCops = powerKwCops * workingHoursCops;
+    const unitsDayHeatSet = powerKwHeatSet * workingHoursHeatSet;
+    const unitsDayHp = unitsDayDoubler + unitsDayCops + unitsDayHeatSet;
+
+    const unitsMonthDoubler = unitsDayDoubler * daysPerMonth;
+    const unitsMonthCops = unitsDayCops * workingDaysCops;
+    const unitsMonthHeatSet = unitsDayHeatSet * workingDaysHeatSet;
+    const unitsMonthHp = unitsMonthDoubler + unitsMonthCops + unitsMonthHeatSet;
+
+    const costMonthDoubler = unitsMonthDoubler * electricityRate;
+    const costMonthCops = unitsMonthCops * electricityRate;
+    const costMonthHeatSet = unitsMonthHeatSet * electricityRate;
     const costMonthHp = unitsMonthHp * electricityRate;
+
+    const costDayDoubler = daysPerMonth > 0 ? costMonthDoubler / daysPerMonth : 0;
+    const costDayCops = workingDaysCops > 0 ? costMonthCops / workingDaysCops : 0;
+    const costDayHeatSet = workingDaysHeatSet > 0 ? costMonthHeatSet / workingDaysHeatSet : 0;
     const costDayHp = daysPerMonth > 0 ? costMonthHp / daysPerMonth : 0;
 
     let powerKw, unitsDay, unitsMonth, costMonth, costDay;
@@ -9195,7 +9336,60 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       costDay = costDayHp;
     }
     const totalProdDayEff = prodDayEff;
+    const totalProdMonthKg = prodMonthEff;
     const powerCostPerKg = totalProdDayEff > 0 ? costDay / totalProdDayEff : 0;
+    const powerCostPerKgDoubler = totalProdMonthKg > 0 ? costMonthDoubler / totalProdMonthKg : (totalProdDayEff > 0 ? costDayDoubler / totalProdDayEff : 0);
+    const powerCostPerKgCops = totalProdMonthKg > 0 ? costMonthCops / totalProdMonthKg : 0;
+    const powerCostPerKgHeatSet = totalProdMonthKg > 0 ? costMonthHeatSet / totalProdMonthKg : 0;
+
+    const electricityBreakdown = {
+      machine: {
+        name: 'Doubler Machine',
+        hp: hp,
+        workingHours: workingHours,
+        workingDays: daysPerMonth,
+        powerKw: powerKwDoubler,
+        unitsDay: unitsDayDoubler,
+        unitsMonth: unitsMonthDoubler,
+        costMonth: costMonthDoubler,
+        costDay: costDayDoubler,
+        costPerKg: powerCostPerKgDoubler
+      },
+      cops: {
+        name: 'Cops Winder',
+        hp: hpCops,
+        workingHours: workingHoursCops,
+        workingDays: workingDaysCops,
+        powerKw: powerKwCops,
+        unitsDay: unitsDayCops,
+        unitsMonth: unitsMonthCops,
+        costMonth: costMonthCops,
+        costDay: costDayCops,
+        costPerKg: powerCostPerKgCops
+      },
+      heatSet: {
+        name: 'Heat Setting',
+        hp: hpHeatSet,
+        workingHours: workingHoursHeatSet,
+        workingDays: workingDaysHeatSet,
+        powerKw: powerKwHeatSet,
+        unitsDay: unitsDayHeatSet,
+        unitsMonth: unitsMonthHeatSet,
+        costMonth: costMonthHeatSet,
+        costDay: costDayHeatSet,
+        costPerKg: powerCostPerKgHeatSet
+      },
+      total: {
+        name: 'Total Electricity',
+        hp: hp + hpCops + hpHeatSet,
+        powerKw: powerKw,
+        unitsDay: unitsDay,
+        unitsMonth: unitsMonth,
+        costMonth: costMonth,
+        costDay: costDay,
+        costPerKg: powerCostPerKg
+      }
+    };
     const labors = currentDoublerProduct.labors || [];
     const totalLaborMonthly = labors.reduce((acc, l) => acc + (Number(l.salary) || 0), 0);
     const laborDaily = daysPerMonth > 0 ? totalLaborMonthly / daysPerMonth : 0;
@@ -9283,9 +9477,8 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     const resolvedDiscount = discountUnit === "%" ? discountValue / 100 * mySalePrice : discountValue;
     const netSalePrice = Math.max(0, mySalePrice - resolvedDiscount);
     const myProfitPercent = netSalePrice > 0 && grandTotalCostPerKg > 0 ? (netSalePrice - grandTotalCostPerKg) / grandTotalCostPerKg * 100 : 0;
-    const totalProdMonthKg = prodMonthEff;
     const turnoverMonth = totalProdMonthKg * netSalePrice;
-const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
+    const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     const profitMonth = totalProdMonthKg * (netSalePrice - grandTotalCostPerKg);
     const profitPerKg = netSalePrice - grandTotalCostPerKg;
     return {
@@ -9368,9 +9561,37 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       paperTubeCostMonthly,
       paperTubeCostDaily,
       paperTubeCostPerKg,
+      hpCops,
+      noOfCops,
+      workingHoursCops,
+      workingDaysCops,
+      hpHeatSet,
+      noOfHeatSet,
+      workingHoursHeatSet,
+      workingDaysHeatSet,
+      powerKwDoubler,
+      powerKwCops,
+      powerKwHeatSet,
+      unitsDayDoubler,
+      unitsDayCops,
+      unitsDayHeatSet,
+      unitsMonthDoubler,
+      unitsMonthCops,
+      unitsMonthHeatSet,
+      costMonthDoubler,
+      costMonthCops,
+      costMonthHeatSet,
+      costDayDoubler,
+      costDayCops,
+      costDayHeatSet,
+      powerCostPerKgDoubler,
+      powerCostPerKgCops,
+      powerCostPerKgHeatSet,
+      electricityBreakdown,
       boxesPerMonth,
       boxCostMonthly,
-boxCostPerKg,
+      boxCostDaily,
+      boxCostPerKg,
       plasticBagsPerMonth,
       plasticBagCostMonthly,
       plasticBagCostDaily,
@@ -9378,7 +9599,7 @@ boxCostPerKg,
       activeMiscCosts
     };
   };
-  const doublerCalcs = useMemo(() => computeDoublerCalcs(currentDoublerProduct), [currentDoublerProduct?.rpm, currentDoublerProduct?.workingHours, currentDoublerProduct?.daysPerMonth, currentDoublerProduct?.noOfSpindles, currentDoublerProduct?.tpm, currentDoublerProduct?.efficiency, currentDoublerProduct?.electricityMode, currentDoublerProduct?.monthlyElectricityCost, currentDoublerProduct?.hp, currentDoublerProduct?.noOfMachines, currentDoublerProduct?.hpCops, currentDoublerProduct?.noOfCops, currentDoublerProduct?.workingHoursCops, currentDoublerProduct?.hpHeatSet, currentDoublerProduct?.noOfHeatSet, currentDoublerProduct?.workingHoursHeatSet, currentDoublerProduct?.workingDaysHeatSet, currentDoublerProduct?.loadFactor, currentDoublerProduct?.electricityRate, currentDoublerProduct?.ply, currentDoublerProduct?.configType, currentDoublerProduct?.yarns, currentDoublerProduct?.labors, currentDoublerProduct?.wastage, currentDoublerProduct?.monthlyRent, currentDoublerProduct?.maintenanceCost, currentDoublerProduct?.takeUpTubeSize, currentDoublerProduct?.paperTubeCost, currentDoublerProduct?.rollsPerBox, currentDoublerProduct?.boxCost, currentDoublerProduct?.plasticBagCost, currentDoublerProduct?.profitPercent, currentDoublerProduct?.mySalePrice, currentDoublerProduct?.discountValue, currentDoublerProduct?.discountUnit, currentDoublerProduct?.miscCosts, currentDoublerProduct?.orderSize]);
+  const doublerCalcs = useMemo(() => computeDoublerCalcs(currentDoublerProduct), [currentDoublerProduct?.rpm, currentDoublerProduct?.workingHours, currentDoublerProduct?.daysPerMonth, currentDoublerProduct?.noOfSpindles, currentDoublerProduct?.tpm, currentDoublerProduct?.efficiency, currentDoublerProduct?.electricityMode, currentDoublerProduct?.monthlyElectricityCost, currentDoublerProduct?.hp, currentDoublerProduct?.noOfMachines, currentDoublerProduct?.hpCops, currentDoublerProduct?.noOfCops, currentDoublerProduct?.workingHoursCops, currentDoublerProduct?.workingDaysCops, currentDoublerProduct?.hpHeatSet, currentDoublerProduct?.noOfHeatSet, currentDoublerProduct?.workingHoursHeatSet, currentDoublerProduct?.workingDaysHeatSet, currentDoublerProduct?.loadFactor, currentDoublerProduct?.electricityRate, currentDoublerProduct?.ply, currentDoublerProduct?.configType, currentDoublerProduct?.yarns, currentDoublerProduct?.labors, currentDoublerProduct?.wastage, currentDoublerProduct?.monthlyRent, currentDoublerProduct?.maintenanceCost, currentDoublerProduct?.takeUpTubeSize, currentDoublerProduct?.paperTubeCost, currentDoublerProduct?.rollsPerBox, currentDoublerProduct?.boxCost, currentDoublerProduct?.plasticBagCost, currentDoublerProduct?.profitPercent, currentDoublerProduct?.mySalePrice, currentDoublerProduct?.discountValue, currentDoublerProduct?.discountUnit, currentDoublerProduct?.miscCosts, currentDoublerProduct?.orderSize]);
   const computeCoveringCalcs = currentCoveringProduct => {
     if (!currentCoveringProduct) return null;
     const ply = Number(currentCoveringProduct.ply) || 2;
@@ -9512,13 +9733,31 @@ boxCostPerKg,
     const noOfHeatSet = Number(currentCoveringProduct.noOfHeatSet) || 0;
     const workingHoursHeatSet = currentCoveringProduct.workingHoursHeatSet !== undefined && currentCoveringProduct.workingHoursHeatSet !== '' ? Number(currentCoveringProduct.workingHoursHeatSet) : 0;
     const workingDaysHeatSet = currentCoveringProduct.workingDaysHeatSet !== undefined && currentCoveringProduct.workingDaysHeatSet !== '' ? Number(currentCoveringProduct.workingDaysHeatSet) : 0;
+    const workingDaysCops = currentCoveringProduct.workingDaysCops !== undefined && currentCoveringProduct.workingDaysCops !== '' ? Number(currentCoveringProduct.workingDaysCops) : 28;
+
     const powerKwCovering = hp * 0.746 * (loadFactor / 100) / motorEfficiency;
     const powerKwCops = hpCops * 0.746 * (loadFactor / 100) / motorEfficiency;
     const powerKwHeatSet = hpHeatSet * 0.746 * (loadFactor / 100) / motorEfficiency;
     const powerKwHp = powerKwCovering + powerKwCops + powerKwHeatSet;
-    const unitsDayHp = powerKwCovering * workingHours + powerKwCops * workingHoursCops + powerKwHeatSet * workingHoursHeatSet;
-    const unitsMonthHp = powerKwCovering * workingHours * daysPerMonth + powerKwCops * workingHoursCops * daysPerMonth + powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet;
+
+    const unitsDayCovering = powerKwCovering * workingHours;
+    const unitsDayCops = powerKwCops * workingHoursCops;
+    const unitsDayHeatSet = powerKwHeatSet * workingHoursHeatSet;
+    const unitsDayHp = unitsDayCovering + unitsDayCops + unitsDayHeatSet;
+
+    const unitsMonthCovering = unitsDayCovering * daysPerMonth;
+    const unitsMonthCops = unitsDayCops * workingDaysCops;
+    const unitsMonthHeatSet = unitsDayHeatSet * workingDaysHeatSet;
+    const unitsMonthHp = unitsMonthCovering + unitsMonthCops + unitsMonthHeatSet;
+
+    const costMonthCovering = unitsMonthCovering * electricityRate;
+    const costMonthCops = unitsMonthCops * electricityRate;
+    const costMonthHeatSet = unitsMonthHeatSet * electricityRate;
     const costMonthHp = unitsMonthHp * electricityRate;
+
+    const costDayCovering = daysPerMonth > 0 ? costMonthCovering / daysPerMonth : 0;
+    const costDayCops = workingDaysCops > 0 ? costMonthCops / workingDaysCops : 0;
+    const costDayHeatSet = workingDaysHeatSet > 0 ? costMonthHeatSet / workingDaysHeatSet : 0;
     const costDayHp = daysPerMonth > 0 ? costMonthHp / daysPerMonth : 0;
 
     let powerKw, unitsDay, unitsMonth, costMonth, costDay;
@@ -9536,7 +9775,60 @@ boxCostPerKg,
       costDay = costDayHp;
     }
     const totalProdDayEff = prodDayEff;
+    const totalProdMonthKg = prodMonthEff;
     const powerCostPerKg = totalProdDayEff > 0 ? costDay / totalProdDayEff : 0;
+    const powerCostPerKgCovering = totalProdMonthKg > 0 ? costMonthCovering / totalProdMonthKg : (totalProdDayEff > 0 ? costDayCovering / totalProdDayEff : 0);
+    const powerCostPerKgCops = totalProdMonthKg > 0 ? costMonthCops / totalProdMonthKg : 0;
+    const powerCostPerKgHeatSet = totalProdMonthKg > 0 ? costMonthHeatSet / totalProdMonthKg : 0;
+
+    const electricityBreakdown = {
+      machine: {
+        name: 'Covering Machine',
+        hp: hp,
+        workingHours: workingHours,
+        workingDays: daysPerMonth,
+        powerKw: powerKwCovering,
+        unitsDay: unitsDayCovering,
+        unitsMonth: unitsMonthCovering,
+        costMonth: costMonthCovering,
+        costDay: costDayCovering,
+        costPerKg: powerCostPerKgCovering
+      },
+      cops: {
+        name: 'Cops Winder',
+        hp: hpCops,
+        workingHours: workingHoursCops,
+        workingDays: workingDaysCops,
+        powerKw: powerKwCops,
+        unitsDay: unitsDayCops,
+        unitsMonth: unitsMonthCops,
+        costMonth: costMonthCops,
+        costDay: costDayCops,
+        costPerKg: powerCostPerKgCops
+      },
+      heatSet: {
+        name: 'Heat Setting',
+        hp: hpHeatSet,
+        workingHours: workingHoursHeatSet,
+        workingDays: workingDaysHeatSet,
+        powerKw: powerKwHeatSet,
+        unitsDay: unitsDayHeatSet,
+        unitsMonth: unitsMonthHeatSet,
+        costMonth: costMonthHeatSet,
+        costDay: costDayHeatSet,
+        costPerKg: powerCostPerKgHeatSet
+      },
+      total: {
+        name: 'Total Electricity',
+        hp: hp + hpCops + hpHeatSet,
+        powerKw: powerKw,
+        unitsDay: unitsDay,
+        unitsMonth: unitsMonth,
+        costMonth: costMonth,
+        costDay: costDay,
+        costPerKg: powerCostPerKg
+      }
+    };
     const labors = currentCoveringProduct.labors || [];
     const totalLaborMonthly = labors.reduce((acc, l) => acc + (Number(l.salary) || 0), 0);
     const laborDaily = daysPerMonth > 0 ? totalLaborMonthly / daysPerMonth : 0;
@@ -9624,9 +9916,8 @@ boxCostPerKg,
     const resolvedDiscount = discountUnit === "%" ? discountValue / 100 * mySalePrice : discountValue;
     const netSalePrice = Math.max(0, mySalePrice - resolvedDiscount);
     const myProfitPercent = netSalePrice > 0 && grandTotalCostPerKg > 0 ? (netSalePrice - grandTotalCostPerKg) / grandTotalCostPerKg * 100 : 0;
-    const totalProdMonthKg = prodMonthEff;
     const turnoverMonth = totalProdMonthKg * netSalePrice;
-const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
+    const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     const profitMonth = totalProdMonthKg * (netSalePrice - grandTotalCostPerKg);
     const profitPerKg = netSalePrice - grandTotalCostPerKg;
     return {
@@ -9706,6 +9997,33 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       paperTubeCostMonthly,
       paperTubeCostDaily,
       paperTubeCostPerKg,
+      hpCops,
+      noOfCops,
+      workingHoursCops,
+      workingDaysCops,
+      hpHeatSet,
+      noOfHeatSet,
+      workingHoursHeatSet,
+      workingDaysHeatSet,
+      powerKwCovering,
+      powerKwCops,
+      powerKwHeatSet,
+      unitsDayCovering,
+      unitsDayCops,
+      unitsDayHeatSet,
+      unitsMonthCovering,
+      unitsMonthCops,
+      unitsMonthHeatSet,
+      costMonthCovering,
+      costMonthCops,
+      costMonthHeatSet,
+      costDayCovering,
+      costDayCops,
+      costDayHeatSet,
+      powerCostPerKgCovering,
+      powerCostPerKgCops,
+      powerCostPerKgHeatSet,
+      electricityBreakdown,
       boxesPerMonth,
       boxCostMonthly,
       boxCostDaily,
@@ -9786,7 +10104,7 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     }
     try { window.dispatchEvent(new StorageEvent('storage', { key: 'costing-covering-products-v1' })); } catch(e){}
   }, [coveringProducts]);
-  const coveringCalcs = useMemo(() => computeCoveringCalcs(currentCoveringProduct), [currentCoveringProduct?.rpm, currentCoveringProduct?.workingHours, currentCoveringProduct?.daysPerMonth, currentCoveringProduct?.noOfSpindles, currentCoveringProduct?.tpm, currentCoveringProduct?.efficiency, currentCoveringProduct?.electricityMode, currentCoveringProduct?.monthlyElectricityCost, currentCoveringProduct?.hp, currentCoveringProduct?.noOfMachines, currentCoveringProduct?.hpCops, currentCoveringProduct?.noOfCops, currentCoveringProduct?.workingHoursCops, currentCoveringProduct?.hpHeatSet, currentCoveringProduct?.noOfHeatSet, currentCoveringProduct?.workingHoursHeatSet, currentCoveringProduct?.workingDaysHeatSet, currentCoveringProduct?.loadFactor, currentCoveringProduct?.electricityRate, currentCoveringProduct?.ply, currentCoveringProduct?.configType, currentCoveringProduct?.yarns, currentCoveringProduct?.labors, currentCoveringProduct?.wastage, currentCoveringProduct?.monthlyRent, currentCoveringProduct?.maintenanceCost, currentCoveringProduct?.takeUpTubeSize, currentCoveringProduct?.paperTubeCost, currentCoveringProduct?.rollsPerBox, currentCoveringProduct?.boxCost, currentCoveringProduct?.plasticBagCost, currentCoveringProduct?.profitPercent, currentCoveringProduct?.mySalePrice, currentCoveringProduct?.discountValue, currentCoveringProduct?.discountUnit, currentCoveringProduct?.miscCosts, currentCoveringProduct?.orderSize]);
+  const coveringCalcs = useMemo(() => computeCoveringCalcs(currentCoveringProduct), [currentCoveringProduct?.rpm, currentCoveringProduct?.workingHours, currentCoveringProduct?.daysPerMonth, currentCoveringProduct?.noOfSpindles, currentCoveringProduct?.tpm, currentCoveringProduct?.efficiency, currentCoveringProduct?.electricityMode, currentCoveringProduct?.monthlyElectricityCost, currentCoveringProduct?.hp, currentCoveringProduct?.noOfMachines, currentCoveringProduct?.hpCops, currentCoveringProduct?.noOfCops, currentCoveringProduct?.workingHoursCops, currentCoveringProduct?.workingDaysCops, currentCoveringProduct?.hpHeatSet, currentCoveringProduct?.noOfHeatSet, currentCoveringProduct?.workingHoursHeatSet, currentCoveringProduct?.workingDaysHeatSet, currentCoveringProduct?.loadFactor, currentCoveringProduct?.electricityRate, currentCoveringProduct?.ply, currentCoveringProduct?.configType, currentCoveringProduct?.yarns, currentCoveringProduct?.labors, currentCoveringProduct?.wastage, currentCoveringProduct?.monthlyRent, currentCoveringProduct?.maintenanceCost, currentCoveringProduct?.takeUpTubeSize, currentCoveringProduct?.paperTubeCost, currentCoveringProduct?.rollsPerBox, currentCoveringProduct?.boxCost, currentCoveringProduct?.plasticBagCost, currentCoveringProduct?.profitPercent, currentCoveringProduct?.mySalePrice, currentCoveringProduct?.discountValue, currentCoveringProduct?.discountUnit, currentCoveringProduct?.miscCosts, currentCoveringProduct?.orderSize]);
   const doublerTotalConversionCostDay = doublerCalcs?.totalConversionCostDay || 0;
   const doublerTotalConversionCostMonth = doublerCalcs?.totalConversionCostMonth || 0;
   const doublerTotalConversionCostPerKg = doublerCalcs?.totalConversionCostPerKg || 0;
@@ -9838,6 +10156,7 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       csv.push(`Total HP of Doubler Machine in Use,${product.hp}`);
       csv.push(`Total HP of Cops Winder in Use,${product.hpCops !== undefined ? product.hpCops : 0}`);
       csv.push(`Cops Working Hours,${product.workingHoursCops !== undefined ? product.workingHoursCops : 24}`);
+      csv.push(`Cops Working Days,${product.workingDaysCops !== undefined ? product.workingDaysCops : 28}`);
       csv.push(`Total HP of Heat Set Machine,${product.hpHeatSet !== undefined ? product.hpHeatSet : 0}`);
       csv.push(`Heat Set Working Hours,${product.workingHoursHeatSet !== undefined ? product.workingHoursHeatSet : 24}`);
       csv.push(`Heat Set Working Days,${product.workingDaysHeatSet !== undefined ? product.workingDaysHeatSet : 28}`);
@@ -10022,6 +10341,7 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       csv.push(`Total HP of TFO Machine in Use,${product.hp}`);
       csv.push(`Total HP of Cops Winder in Use,${product.hpCops !== undefined ? product.hpCops : 0}`);
       csv.push(`Cops Working Hours,${product.workingHoursCops !== undefined ? product.workingHoursCops : 24}`);
+      csv.push(`Cops Working Days,${product.workingDaysCops !== undefined ? product.workingDaysCops : 28}`);
       csv.push(`Total HP of Heat Set Machine,${product.hpHeatSet !== undefined ? product.hpHeatSet : 0}`);
       csv.push(`Heat Set Working Hours,${product.workingHoursHeatSet !== undefined ? product.workingHoursHeatSet : 24}`);
       csv.push(`Heat Set Working Days,${product.workingDaysHeatSet !== undefined ? product.workingDaysHeatSet : 28}`);
@@ -11340,7 +11660,13 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
         className: "p-0.5 px-2 border-r font-semibold text-slate-500 bg-slate-50/30"
       }, "Working hours / day (cops)"), /*#__PURE__*/React.createElement("td", {
         className: "p-0.5 px-2 text-center text-slate-800 font-bold"
-      }, formatDoublerVal(product.workingHoursCops, ' hrs', '', 0)))), Number(product.hpHeatSet) > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("tr", {
+      }, formatDoublerVal(product.workingHoursCops, ' hrs', '', 0))), /*#__PURE__*/React.createElement("tr", {
+        className: "hover:bg-slate-50/30"
+      }, /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 border-r font-semibold text-slate-500 bg-slate-50/30"
+      }, "Working days / month (cops)"), /*#__PURE__*/React.createElement("td", {
+        className: "p-0.5 px-2 text-center text-slate-800 font-bold"
+      }, formatDoublerVal(product.workingDaysCops, ' days', '', 28)))), Number(product.hpHeatSet) > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("tr", {
         className: "hover:bg-slate-50/30"
       }, /*#__PURE__*/React.createElement("td", {
         className: "p-0.5 px-2 border-r font-semibold text-slate-500 bg-slate-50/30"
@@ -11755,29 +12081,39 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
         className: "formula-header !py-1.5 flex justify-between items-center border-b"
       }, /*#__PURE__*/React.createElement("span", {
         className: "font-bold uppercase tracking-wider text-[10px] text-white"
-      }, "Electricity Consumption")), /*#__PURE__*/React.createElement("div", {
-        className: "calc-body bg-white p-3"
+      }, "Electricity Consumption & Breakdown")), /*#__PURE__*/React.createElement("div", {
+        className: "calc-body bg-white p-2.5 space-y-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex flex-row gap-2 text-center text-xs font-semibold w-full"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-w-0 p-2 bg-slate-50 border border-slate-100 rounded-lg"
+        className: "flex-1 min-w-0 p-1.5 bg-slate-50 border border-slate-100 rounded-lg"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-400 font-bold uppercase mb-1"
-      }, "Total Power Load (kW)"), /*#__PURE__*/React.createElement("div", {
-        className: "text-slate-800 text-sm font-black"
+        className: "text-[8px] text-slate-400 font-bold uppercase mb-0.5"
+      }, "Total Power Load"), /*#__PURE__*/React.createElement("div", {
+        className: "text-slate-800 text-xs font-black"
       }, (subCalcs?.powerKw || 0).toFixed(2), " kW")), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-w-0 p-2 bg-slate-50 border border-slate-100 rounded-lg"
+        className: "flex-1 min-w-0 p-1.5 bg-slate-50 border border-slate-100 rounded-lg"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-400 font-bold uppercase mb-1"
-      }, "Daily Units"), /*#__PURE__*/React.createElement("div", {
-        className: "text-violet-700 text-sm font-black"
-      }, (subCalcs?.unitsDay || 0).toFixed(1), " Units")), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-w-0 p-2 bg-slate-50 border border-slate-100 rounded-lg"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-400 font-bold uppercase mb-1"
+        className: "text-[8px] text-slate-400 font-bold uppercase mb-0.5"
       }, "Monthly Units"), /*#__PURE__*/React.createElement("div", {
-        className: "text-violet-700 text-sm font-black"
-      }, (subCalcs?.unitsMonth || 0).toFixed(0), " Units")))))) , renderFooter()), /*#__PURE__*/React.createElement("div", {
+        className: "text-violet-700 text-xs font-black"
+      }, (subCalcs?.unitsMonth || 0).toFixed(0), " Units")), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-w-0 p-1.5 bg-slate-50 border border-slate-100 rounded-lg"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-slate-400 font-bold uppercase mb-0.5"
+      }, "Power Cost / Kg"), /*#__PURE__*/React.createElement("div", {
+        className: "text-violet-700 text-xs font-black"
+      }, "₹ ", (subCalcs?.powerCostPerKg || 0).toFixed(2)))), subCalcs?.electricityBreakdown && product.electricityMode !== 'lump_sum' && /*#__PURE__*/React.createElement("div", {
+        className: "overflow-hidden border border-slate-100 rounded-md"
+      }, /*#__PURE__*/React.createElement("table", {
+        className: "w-full text-[8.5px] text-left border-collapse"
+      }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+        className: "bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-100"
+      }, /*#__PURE__*/React.createElement("th", { className: "py-0.5 px-1.5" }, "Consumer"), /*#__PURE__*/React.createElement("th", { className: "py-0.5 px-1.5 text-right" }, "Load (kW)"), /*#__PURE__*/React.createElement("th", { className: "py-0.5 px-1.5 text-right" }, "Units/Mo"), /*#__PURE__*/React.createElement("th", { className: "py-0.5 px-1.5 text-right" }, "Cost/Mo (₹)"), /*#__PURE__*/React.createElement("th", { className: "py-0.5 px-1.5 text-right font-bold text-violet-700" }, "Cost/Kg (₹)"))), /*#__PURE__*/React.createElement("tbody", {
+        className: "divide-y divide-slate-50 text-slate-700"
+      }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 font-medium" }, subCalcs.electricityBreakdown.machine?.name || (isDoubler ? 'Doubler Machine' : isCovering ? 'Covering Machine' : 'TFO Machine')), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (subCalcs.electricityBreakdown.machine?.powerKw || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (subCalcs.electricityBreakdown.machine?.unitsMonth || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, "₹ ", Math.round(subCalcs.electricityBreakdown.machine?.costMonth || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right font-bold text-slate-800" }, "₹ ", (subCalcs.electricityBreakdown.machine?.costPerKg || 0).toFixed(2))), Number(product.hpCops) > 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 font-medium" }, "Cops Winder"), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (subCalcs.electricityBreakdown.cops?.powerKw || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (subCalcs.electricityBreakdown.cops?.unitsMonth || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, "₹ ", Math.round(subCalcs.electricityBreakdown.cops?.costMonth || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right font-bold text-slate-800" }, "₹ ", (subCalcs.electricityBreakdown.cops?.costPerKg || 0).toFixed(2))), Number(product.hpHeatSet) > 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 font-medium" }, "Heat Setting"), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (subCalcs.electricityBreakdown.heatSet?.powerKw || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (subCalcs.electricityBreakdown.heatSet?.unitsMonth || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, "₹ ", Math.round(subCalcs.electricityBreakdown.heatSet?.costMonth || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right font-bold text-slate-800" }, "₹ ", (subCalcs.electricityBreakdown.heatSet?.costPerKg || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+        className: "bg-violet-50/60 font-bold text-violet-900"
+      }, /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5" }, "Total"), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (subCalcs.electricityBreakdown.total?.powerKw || subCalcs?.powerKw || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (subCalcs.electricityBreakdown.total?.unitsMonth || subCalcs?.unitsMonth || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, "₹ ", Math.round(subCalcs.electricityBreakdown.total?.costMonth || subCalcs?.costMonth || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right font-extrabold text-violet-700" }, "₹ ", (subCalcs.electricityBreakdown.total?.costPerKg || subCalcs?.powerCostPerKg || 0).toFixed(2))))))))), renderFooter()), /*#__PURE__*/React.createElement("div", {
         className: "html2pdf__page-break"
       }), /*#__PURE__*/React.createElement("div", {
         className: "bg-white text-slate-800 p-8 w-[790px] border border-slate-200 relative pb-24",
@@ -12506,10 +12842,10 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       const daysPerMonth = Number(activeProd.daysPerMonth) || 0;
       const hp = Number(activeProd.hp) || 0;
       // noOfMachines removed
-      // displayNoOfMachines removed
       const hpCops = Number(activeProd.hpCops) || 0;
       const noOfCops = Number(activeProd.noOfCops) || 0;
       const workingHoursCops = activeProd.workingHoursCops !== undefined && activeProd.workingHoursCops !== '' ? Number(activeProd.workingHoursCops) : 0;
+      const workingDaysCops = activeProd.workingDaysCops !== undefined && activeProd.workingDaysCops !== '' ? Number(activeProd.workingDaysCops) : (activeProd.daysPerMonth || 28);
       const loadFactor = activeProd.loadFactor ? Number(activeProd.loadFactor) : 80;
       const electricityRate = Number(activeProd.electricityRate) || 0;
       const wastage = Number(activeProd.wastage) || 0;
@@ -12587,10 +12923,14 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       const workingHoursHeatSet = activeProd.workingHoursHeatSet !== undefined && activeProd.workingHoursHeatSet !== '' ? Number(activeProd.workingHoursHeatSet) : 0;
       const workingDaysHeatSet = activeProd.workingDaysHeatSet !== undefined && activeProd.workingDaysHeatSet !== '' ? Number(activeProd.workingDaysHeatSet) : 0;
       const powerKwTfo = isDoubler ? hp * 0.746 * (loadFactor / 100) : hp * 0.746 * (loadFactor / 100) / motorEfficiency;
-      const powerKwCops = isDoubler ? hpCops * 0.746 * (loadFactor / 100) : hpCops * 0.746 * noOfCops * (loadFactor / 100) / motorEfficiency;
-      const powerKwHeatSet = isDoubler ? hpHeatSet * 0.746 * (loadFactor / 100) : hpHeatSet * 0.746 * noOfHeatSet * (loadFactor / 100) / motorEfficiency;
+      const powerKwCops = isDoubler ? hpCops * 0.746 * (loadFactor / 100) : (isCovering ? hpCops * 0.746 * (loadFactor / 100) / motorEfficiency : hpCops * 0.746 * (loadFactor / 100));
+      const powerKwHeatSet = isDoubler ? hpHeatSet * 0.746 * (loadFactor / 100) : (isCovering ? hpHeatSet * 0.746 * (loadFactor / 100) / motorEfficiency : hpHeatSet * 0.746 * (loadFactor / 100));
       const hasCops = hpCops > 0;
       const hasHeatSet = hpHeatSet > 0;
+      const bMachine = activeCalcs?.electricityBreakdown?.machine || {};
+      const bCops = activeCalcs?.electricityBreakdown?.cops || {};
+      const bHeatSet = activeCalcs?.electricityBreakdown?.heatSet || {};
+      const bTotal = activeCalcs?.electricityBreakdown?.total || {};
       const orderTurnover = orderSize * (activeCalcs.netSalePrice || 0);
       const orderExpenditure = orderSize * grandTotalCostPerKg;
       const orderProfit = orderSize * (activeCalcs.profitPerKg || 0);
@@ -12857,7 +13197,7 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
                 ),
                 /*#__PURE__*/React.createElement("div", null, 
                   /*#__PURE__*/React.createElement("div", null, "Machine Hours = ", workingHours, hasCops && `, Cops Hours = ${workingHoursCops}`, hasHeatSet && `, HeatSet Hours = ${workingHoursHeatSet}`),
-                  /*#__PURE__*/React.createElement("div", null, "Days = ", daysPerMonth, hasHeatSet && ` (Machine & Cops), HeatSet Days = ${workingDaysHeatSet}`)
+                  /*#__PURE__*/React.createElement("div", null, "Days = ", daysPerMonth, " (Machine)", hasCops && `, Cops Days = ${workingDaysCops}`, hasHeatSet && `, HeatSet Days = ${workingDaysHeatSet}`)
                 ),
                 /*#__PURE__*/React.createElement("div", { className: "space-y-1.5" }, 
                   /*#__PURE__*/React.createElement("div", { className: "font-semibold text-slate-700 underline" }, "Daily Units Calculation:"),
@@ -12870,10 +13210,64 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
                   /*#__PURE__*/React.createElement("div", { className: "font-semibold text-slate-700 underline mt-2" }, "Monthly Units Calculation:"),
                   /*#__PURE__*/React.createElement("div", { className: "pl-2 text-slate-600 font-normal" }, 
                     /*#__PURE__*/React.createElement("div", null, `• ${label}: ${(powerKwTfo * workingHours).toFixed(1)} kWh/day \xD7 ${daysPerMonth} days = ${(powerKwTfo * workingHours * daysPerMonth).toFixed(0)} kWh`),
-                    hasCops && /*#__PURE__*/React.createElement("div", null, `• Cops Winder: ${(powerKwCops * workingHoursCops).toFixed(1)} kWh/day \xD7 ${daysPerMonth} days = ${(powerKwCops * workingHoursCops * daysPerMonth).toFixed(0)} kWh`),
+                    hasCops && /*#__PURE__*/React.createElement("div", null, `• Cops Winder: ${(powerKwCops * workingHoursCops).toFixed(1)} kWh/day \xD7 ${workingDaysCops} days = ${(powerKwCops * workingHoursCops * workingDaysCops).toFixed(0)} kWh`),
                     hasHeatSet && /*#__PURE__*/React.createElement("div", null, `• Heat Set: ${(powerKwHeatSet * workingHoursHeatSet).toFixed(1)} kWh/day \xD7 ${workingDaysHeatSet} days = ${(powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet).toFixed(0)} kWh`)
                   ),
-                  /*#__PURE__*/React.createElement("div", null, `Monthly Units Sum = ${(powerKwTfo * workingHours * daysPerMonth).toFixed(0)}` + (hasCops ? ` + ${(powerKwCops * workingHoursCops * daysPerMonth).toFixed(0)}` : '') + (hasHeatSet ? ` + ${(powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet).toFixed(0)}` : '') + ` = ${unitsMonth.toFixed(0)} kWh`)
+                  /*#__PURE__*/React.createElement("div", null, `Monthly Units Sum = ${(powerKwTfo * workingHours * daysPerMonth).toFixed(0)}` + (hasCops ? ` + ${(powerKwCops * workingHoursCops * workingDaysCops).toFixed(0)}` : '') + (hasHeatSet ? ` + ${(powerKwHeatSet * workingHoursHeatSet * workingDaysHeatSet).toFixed(0)}` : '') + ` = ${unitsMonth.toFixed(0)} kWh`)
+                )
+              ),
+              renderCard("3. Individual Electricity Cost & Cost / Kg Breakdown",
+                /*#__PURE__*/React.createElement("div", null, 
+                  `Rate: ₹ ${electricityRate.toFixed(2)}/unit | Monthly Prod: ${totalMonthlyProductionKg.toFixed(1)} kg`,
+                  /*#__PURE__*/React.createElement("br"),
+                  "Cost/Mo = Units/Mo \xD7 Rate | Cost/Kg = Cost/Mo \xF7 Monthly Prod"
+                ),
+                /*#__PURE__*/React.createElement("div", { className: "overflow-x-auto my-1" },
+                  /*#__PURE__*/React.createElement("table", { className: "w-full text-[9px] text-left border-collapse" },
+                    /*#__PURE__*/React.createElement("thead", null,
+                      /*#__PURE__*/React.createElement("tr", { className: "border-b border-slate-200 bg-slate-50 text-slate-600 font-bold" },
+                        /*#__PURE__*/React.createElement("th", { className: "py-1 px-1.5" }, "Consumer"),
+                        /*#__PURE__*/React.createElement("th", { className: "py-1 px-1.5 text-right" }, "Load (kW)"),
+                        /*#__PURE__*/React.createElement("th", { className: "py-1 px-1.5 text-right" }, "Units/Mo"),
+                        /*#__PURE__*/React.createElement("th", { className: "py-1 px-1.5 text-right" }, "Cost/Mo (₹)"),
+                        /*#__PURE__*/React.createElement("th", { className: "py-1 px-1.5 text-right font-bold text-violet-700" }, "Cost/Kg (₹)")
+                      )
+                    ),
+                    /*#__PURE__*/React.createElement("tbody", { className: "divide-y divide-slate-100" },
+                      /*#__PURE__*/React.createElement("tr", null,
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 font-medium" }, bMachine.name || `${label} Machine`),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (bMachine.powerKw || powerKwTfo || 0).toFixed(2)),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (bMachine.unitsMonth || 0).toFixed(0)),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, "₹ ", Math.round(bMachine.costMonth || 0).toLocaleString('en-IN')),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right font-bold text-slate-800" }, "₹ ", (bMachine.costPerKg || 0).toFixed(2))
+                      ),
+                      hasCops && /*#__PURE__*/React.createElement("tr", null,
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 font-medium" }, "Cops Winder"),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (bCops.powerKw || powerKwCops || 0).toFixed(2)),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (bCops.unitsMonth || 0).toFixed(0)),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, "₹ ", Math.round(bCops.costMonth || 0).toLocaleString('en-IN')),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right font-bold text-slate-800" }, "₹ ", (bCops.costPerKg || 0).toFixed(2))
+                      ),
+                      hasHeatSet && /*#__PURE__*/React.createElement("tr", null,
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 font-medium" }, "Heat Setting"),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (bHeatSet.powerKw || powerKwHeatSet || 0).toFixed(2)),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (bHeatSet.unitsMonth || 0).toFixed(0)),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, "₹ ", Math.round(bHeatSet.costMonth || 0).toLocaleString('en-IN')),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right font-bold text-slate-800" }, "₹ ", (bHeatSet.costPerKg || 0).toFixed(2))
+                      ),
+                      /*#__PURE__*/React.createElement("tr", { className: "bg-violet-50/60 font-bold text-violet-900" },
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5" }, "Total"),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (bTotal.powerKw || powerKw || 0).toFixed(2)),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, (bTotal.unitsMonth || unitsMonth || 0).toFixed(0)),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right" }, "₹ ", Math.round(bTotal.costMonth || costMonth || 0).toLocaleString('en-IN')),
+                        /*#__PURE__*/React.createElement("td", { className: "py-0.5 px-1.5 text-right font-extrabold text-violet-700" }, "₹ ", (bTotal.costPerKg || powerCostPerKg || 0).toFixed(2))
+                      )
+                    )
+                  )
+                ),
+                /*#__PURE__*/React.createElement("div", { className: "space-y-0.5 text-[10px]" },
+                  /*#__PURE__*/React.createElement("div", null, `• Monthly Total Power Cost = ₹ ${Math.round(costMonth).toLocaleString('en-IN')}`),
+                  /*#__PURE__*/React.createElement("div", null, `• Total Power Cost / Kg = ₹ ${costMonth.toFixed(2)} \xF7 ${totalMonthlyProductionKg.toFixed(1)} kg = ₹ ${powerCostPerKg.toFixed(2)}/kg`)
                 )
               )
             )
@@ -12929,9 +13323,9 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
                   /*#__PURE__*/React.createElement("div", null, `Monthly Cost = \u20B9 ${costMonth.toFixed(2)}`),
                   /*#__PURE__*/React.createElement("div", null, `Cost / Kg = \u20B9 ${costDay.toFixed(2)} \xF7 ${totalProdDayEff.toFixed(2)} kg = \u20B9 ${powerCostPerKg.toFixed(2)}/kg`)
                 ) : /*#__PURE__*/React.createElement(React.Fragment, null,
-                  /*#__PURE__*/React.createElement("div", null, `Daily Cost = ${unitsDay.toFixed(1)} kWh \xD7 \u20B9 ${electricityRate.toFixed(2)} = \u20B9 ${costDay.toFixed(0)}`),
-                  /*#__PURE__*/React.createElement("div", null, `Monthly Cost = \u20B9 ${costDay.toFixed(0)} \xD7 ${daysPerMonth} days = \u20B9 ${costMonth.toFixed(0)}`),
-                  /*#__PURE__*/React.createElement("div", null, `Cost / Kg = \u20B9 ${costDay.toFixed(0)} \xF7 ${totalProdDayEff.toFixed(2)} kg = \u20B9 ${powerCostPerKg.toFixed(2)}/kg`)
+                  /*#__PURE__*/React.createElement("div", null, `Daily Cost = ${unitsDay.toFixed(1)} kWh \xD7 \u20B9 ${electricityRate.toFixed(2)} = \u20B9 ${costDay.toFixed(2)}`),
+                  /*#__PURE__*/React.createElement("div", null, `Monthly Cost = ${unitsMonth.toFixed(0)} kWh \xD7 \u20B9 ${electricityRate.toFixed(2)} = \u20B9 ${Math.round(costMonth).toLocaleString('en-IN')}`),
+                  /*#__PURE__*/React.createElement("div", null, `Cost / Kg = \u20B9 ${costDay.toFixed(2)} \xF7 ${totalProdDayEff.toFixed(2)} kg = \u20B9 ${powerCostPerKg.toFixed(2)}/kg`)
                 )
               )
             ),
@@ -13810,6 +14204,7 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       csv.push(`Total HP of Covering Machine in Use,${product.hp}`);
       csv.push(`Total HP of Cops Winder in Use,${product.hpCops !== undefined ? product.hpCops : 0}`);
       csv.push(`Cops Working Hours,${product.workingHoursCops !== undefined ? product.workingHoursCops : 24}`);
+      csv.push(`Cops Working Days,${product.workingDaysCops !== undefined ? product.workingDaysCops : 28}`);
       csv.push(`Total HP of Heat Set Machine,${product.hpHeatSet !== undefined ? product.hpHeatSet : 0}`);
       csv.push(`Heat Set Working Hours,${product.workingHoursHeatSet !== undefined ? product.workingHoursHeatSet : 24}`);
       csv.push(`Heat Set Working Days,${product.workingDaysHeatSet !== undefined ? product.workingDaysHeatSet : 28}`);
@@ -15638,6 +16033,9 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
       label: 'Working hours / day (cops winder)',
       key: 'workingHoursCops'
     }, {
+      label: 'Working days / month (cops winder)',
+      key: 'workingDaysCops'
+    }, {
       isSeparator: true
     }, {
       label: 'Total HP of Heat Set Machine',
@@ -15676,17 +16074,21 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
         className: "p-2 px-3 border-r font-semibold text-slate-500 bg-slate-50/30 whitespace-nowrap"
       }, field.label), /*#__PURE__*/React.createElement("td", {
         className: "p-1 px-2"
-      }, /*#__PURE__*/React.createElement("input", {
+      }, /*#__PURE__*/React.createElement("input", _extends({
         type: "number",
         value: currentCoveringProduct[field.key] !== undefined ? currentCoveringProduct[field.key] : '',
         onChange: e => {
           let val = e.target.value === '' ? '' : Number(e.target.value);
+          if (field.key === 'workingHoursCops' && val > 24) val = 24;
+          if (field.key === 'workingHoursHeatSet' && val > 24) val = 24;
+          if (field.key === 'workingDaysCops' && val > 31) val = 31;
+          if (field.key === 'workingDaysHeatSet' && val > 31) val = 31;
           updateCoveringProduct({
             [field.key]: val
           });
         },
         className: "w-full bg-transparent border-0 focus:ring-0 font-bold text-slate-700 p-1 text-center"
-      })));
+      }, (field.key === 'workingHoursCops' || field.key === 'workingHoursHeatSet') ? { max: 24 } : (field.key === 'workingDaysCops' || field.key === 'workingDaysHeatSet') ? { max: 31 } : {}))));
     });
   })())))), /*#__PURE__*/React.createElement("div", {
     className: "input-card !p-0 overflow-hidden mt-4"
@@ -16433,14 +16835,14 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
     className: "formula-header !py-3 flex justify-between items-center border-b"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold uppercase tracking-wider text-xs text-white"
-  }, "Electricity Projections"), /*#__PURE__*/React.createElement("span", {
+  }, "Electricity Consumption & Breakdown"), /*#__PURE__*/React.createElement("span", {
     onClick: e => {
       e.stopPropagation();
       setActiveFormulaModal('electricity');
     },
     className: "text-[10px] text-white font-black bg-white/20 hover:bg-white/30 border border-white/10 px-2.5 py-1 rounded-full uppercase tracking-wider cursor-pointer transition-all active:scale-95"
   }, "Formula \uD83D\uDEC8")), /*#__PURE__*/React.createElement("div", {
-    className: "calc-body bg-white p-6"
+    className: "calc-body bg-white p-6 space-y-6"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap gap-6"
   }, /*#__PURE__*/React.createElement("div", {
@@ -16467,7 +16869,33 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
     className: "p-4 bg-[#8b5cf6] text-white rounded-xl text-center shadow-lg shadow-[#8b5cf6]/25"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-2xl md:text-3xl font-black break-words"
-  }, (coveringCalcs.unitsMonth || 0).toFixed(0), " Units")))))), /*#__PURE__*/React.createElement("div", {
+  }, (coveringCalcs.unitsMonth || 0).toFixed(0), " Units")))), (currentCoveringProduct?.electricityMode !== 'lump_sum') ? /*#__PURE__*/React.createElement("div", {
+    className: "overflow-hidden rounded-xl border border-slate-200"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex justify-between items-center"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-slate-700 uppercase tracking-wider"
+  }, "Individual Power & Cost Breakdown"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-semibold text-slate-500"
+  }, `Rate: ₹ ${Number(currentCoveringProduct?.electricityRate || 0).toFixed(2)}/unit`)), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-xs text-left border-collapse"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-slate-50/80 border-b border-slate-200 text-slate-400 font-bold uppercase"
+  }, /*#__PURE__*/React.createElement("th", { className: "p-3" }, "Consumer"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-center" }, "Rating / Schedule"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right" }, "Load (kW)"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right" }, "Units / Mo"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right" }, "Cost / Mo (₹)"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right font-bold text-violet-700" }, "Power Cost / Kg (₹)"))), /*#__PURE__*/React.createElement("tbody", {
+    className: "divide-y divide-slate-100 font-medium text-slate-700"
+  }, /*#__PURE__*/React.createElement("tr", {
+    className: "hover:bg-slate-50/50"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-semibold text-slate-800 flex items-center gap-2" }, /*#__PURE__*/React.createElement("span", { className: "text-violet-600 font-bold" }, "⚡"), "Covering Machine"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-slate-500" }, `${currentCoveringProduct?.hp || 0} HP · ${currentCoveringProduct?.workingHours || 0}h/d · ${currentCoveringProduct?.daysPerMonth || 28}d/mo`), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, (coveringCalcs?.powerKwCovering || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right" }, (coveringCalcs?.unitsMonthCovering || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, "₹ ", Math.round(coveringCalcs?.costMonthCovering || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-bold text-slate-900" }, "₹ ", (coveringCalcs?.powerCostPerKgCovering || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+    className: "hover:bg-slate-50/50"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-semibold text-slate-800 flex items-center gap-2" }, /*#__PURE__*/React.createElement("span", { className: "text-blue-600 font-bold" }, "🧵"), "Cops Winder"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-slate-500" }, `${currentCoveringProduct?.hpCops || 0} HP · ${currentCoveringProduct?.workingHoursCops || 0}h/d · ${currentCoveringProduct?.workingDaysCops !== undefined ? currentCoveringProduct?.workingDaysCops : 28}d/mo`), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, (coveringCalcs?.powerKwCops || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right" }, (coveringCalcs?.unitsMonthCops || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, "₹ ", Math.round(coveringCalcs?.costMonthCops || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-bold text-slate-900" }, "₹ ", (coveringCalcs?.powerCostPerKgCops || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+    className: "hover:bg-slate-50/50"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-semibold text-slate-800 flex items-center gap-2" }, /*#__PURE__*/React.createElement("span", { className: "text-amber-600 font-bold" }, "🔥"), "Heat Setting"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-slate-500" }, `${currentCoveringProduct?.hpHeatSet || 0} HP · ${currentCoveringProduct?.workingHoursHeatSet || 0}h/d · ${currentCoveringProduct?.workingDaysHeatSet || 0}d/mo`), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, (coveringCalcs?.powerKwHeatSet || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right" }, (coveringCalcs?.unitsMonthHeatSet || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, "₹ ", Math.round(coveringCalcs?.costMonthHeatSet || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-bold text-slate-900" }, "₹ ", (coveringCalcs?.powerCostPerKgHeatSet || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+    className: "bg-violet-50/60 font-bold border-t border-violet-100 text-slate-900"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-extrabold text-violet-900" }, "Total Electricity"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-violet-700 text-[11px]" }, "Combined Consumers"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-violet-900" }, (coveringCalcs?.powerKw || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-violet-900" }, (coveringCalcs?.unitsMonth || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-violet-900" }, "₹ ", Math.round(coveringCalcs?.costMonth || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-[#8b5cf6] text-sm" }, "₹ ", (coveringCalcs?.powerCostPerKg || 0).toFixed(2))))))) : /*#__PURE__*/React.createElement("div", {
+    className: "p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1 text-slate-600"
+  }, /*#__PURE__*/React.createElement("div", { className: "font-bold text-slate-800" }, "Mode: Monthly Lump Sum Electricity"), /*#__PURE__*/React.createElement("div", null, `Monthly Bill: ₹ ${Number(currentCoveringProduct?.monthlyElectricityCost || 0).toLocaleString('en-IN')} | Daily Cost: ₹ ${(coveringCalcs?.costDay || 0).toFixed(2)} / day | Power Cost/Kg: ₹ ${(coveringCalcs?.powerCostPerKg || 0).toFixed(2)} / kg`)))), /*#__PURE__*/React.createElement("div", {
     className: "calc-container mt-6"
   }, /*#__PURE__*/React.createElement("div", {
     className: "formula-header !py-3 flex justify-between items-center border-b"
@@ -17709,6 +18137,9 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
       label: 'Working hours / day (cops winder)',
       key: 'workingHoursCops'
     }, {
+      label: 'Working days / month (cops winder)',
+      key: 'workingDaysCops'
+    }, {
       isSeparator: true
     }, {
       label: 'Total HP of Heat Set Machine',
@@ -17747,17 +18178,21 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
         className: "p-2 px-3 border-r font-semibold text-slate-500 bg-slate-50/30 whitespace-nowrap"
       }, field.label), /*#__PURE__*/React.createElement("td", {
         className: "p-1 px-2"
-      }, /*#__PURE__*/React.createElement("input", {
+      }, /*#__PURE__*/React.createElement("input", _extends({
         type: "number",
         value: currentTfoProduct[field.key] !== undefined ? currentTfoProduct[field.key] : '',
         onChange: e => {
           let val = e.target.value === '' ? '' : Number(e.target.value);
+          if (field.key === 'workingHoursCops' && val > 24) val = 24;
+          if (field.key === 'workingHoursHeatSet' && val > 24) val = 24;
+          if (field.key === 'workingDaysCops' && val > 31) val = 31;
+          if (field.key === 'workingDaysHeatSet' && val > 31) val = 31;
           updateTfoProduct({
             [field.key]: val
           });
         },
         className: "w-full bg-transparent border-0 focus:ring-0 font-bold text-slate-700 p-1 text-center"
-      })));
+      }, (field.key === 'workingHoursCops' || field.key === 'workingHoursHeatSet') ? { max: 24 } : (field.key === 'workingDaysCops' || field.key === 'workingDaysHeatSet') ? { max: 31 } : {}))));
     });
   })())))), /*#__PURE__*/React.createElement("div", {
     className: "input-card !p-0 overflow-hidden mt-4"
@@ -18492,14 +18927,14 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
     className: "formula-header !py-3 flex justify-between items-center border-b"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold uppercase tracking-wider text-xs text-white"
-  }, "Electricity Consumption"), /*#__PURE__*/React.createElement("span", {
+  }, "Electricity Consumption & Breakdown"), /*#__PURE__*/React.createElement("span", {
     onClick: e => {
       e.stopPropagation();
       setActiveFormulaModal('electricity');
     },
     className: "text-[10px] text-white font-black bg-white/20 hover:bg-white/30 border border-white/10 px-2.5 py-1 rounded-full uppercase tracking-wider cursor-pointer transition-all active:scale-95"
   }, "Formula \uD83D\uDEC8")), /*#__PURE__*/React.createElement("div", {
-    className: "calc-body bg-white p-6"
+    className: "calc-body bg-white p-6 space-y-6"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap gap-6"
   }, /*#__PURE__*/React.createElement("div", {
@@ -18526,7 +18961,33 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
     className: "p-4 bg-[#8b5cf6] text-white rounded-xl text-center shadow-lg shadow-[#8b5cf6]/25"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-2xl md:text-3xl font-black break-words"
-  }, (tfoCalcs?.unitsMonth || 0).toFixed(0), " Units")))))), /*#__PURE__*/React.createElement("div", {
+  }, (tfoCalcs?.unitsMonth || 0).toFixed(0), " Units")))), (currentTfoProduct?.electricityMode !== 'lump_sum') ? /*#__PURE__*/React.createElement("div", {
+    className: "overflow-hidden rounded-xl border border-slate-200"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex justify-between items-center"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-slate-700 uppercase tracking-wider"
+  }, "Individual Power & Cost Breakdown"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-semibold text-slate-500"
+  }, `Rate: ₹ ${Number(currentTfoProduct?.electricityRate || 0).toFixed(2)}/unit`)), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-xs text-left border-collapse"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-slate-50/80 border-b border-slate-200 text-slate-400 font-bold uppercase"
+  }, /*#__PURE__*/React.createElement("th", { className: "p-3" }, "Consumer"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-center" }, "Rating / Schedule"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right" }, "Load (kW)"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right" }, "Units / Mo"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right" }, "Cost / Mo (₹)"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right font-bold text-violet-700" }, "Power Cost / Kg (₹)"))), /*#__PURE__*/React.createElement("tbody", {
+    className: "divide-y divide-slate-100 font-medium text-slate-700"
+  }, /*#__PURE__*/React.createElement("tr", {
+    className: "hover:bg-slate-50/50"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-semibold text-slate-800 flex items-center gap-2" }, /*#__PURE__*/React.createElement("span", { className: "text-violet-600 font-bold" }, "⚡"), "TFO Machine"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-slate-500" }, `${currentTfoProduct?.hp || 0} HP · ${currentTfoProduct?.workingHours || 0}h/d · ${currentTfoProduct?.daysPerMonth || 28}d/mo`), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, (tfoCalcs?.powerKwTfo || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right" }, (tfoCalcs?.unitsMonthTfo || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, "₹ ", Math.round(tfoCalcs?.costMonthTfo || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-bold text-slate-900" }, "₹ ", (tfoCalcs?.powerCostPerKgTfo || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+    className: "hover:bg-slate-50/50"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-semibold text-slate-800 flex items-center gap-2" }, /*#__PURE__*/React.createElement("span", { className: "text-blue-600 font-bold" }, "🧵"), "Cops Winder"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-slate-500" }, `${currentTfoProduct?.hpCops || 0} HP · ${currentTfoProduct?.workingHoursCops || 0}h/d · ${currentTfoProduct?.workingDaysCops !== undefined ? currentTfoProduct?.workingDaysCops : 28}d/mo`), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, (tfoCalcs?.powerKwCops || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right" }, (tfoCalcs?.unitsMonthCops || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, "₹ ", Math.round(tfoCalcs?.costMonthCops || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-bold text-slate-900" }, "₹ ", (tfoCalcs?.powerCostPerKgCops || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+    className: "hover:bg-slate-50/50"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-semibold text-slate-800 flex items-center gap-2" }, /*#__PURE__*/React.createElement("span", { className: "text-amber-600 font-bold" }, "🔥"), "Heat Setting"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-slate-500" }, `${currentTfoProduct?.hpHeatSet || 0} HP · ${currentTfoProduct?.workingHoursHeatSet || 0}h/d · ${currentTfoProduct?.workingDaysHeatSet || 0}d/mo`), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, (tfoCalcs?.powerKwHeatSet || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right" }, (tfoCalcs?.unitsMonthHeatSet || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, "₹ ", Math.round(tfoCalcs?.costMonthHeatSet || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-bold text-slate-900" }, "₹ ", (tfoCalcs?.powerCostPerKgHeatSet || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+    className: "bg-violet-50/60 font-bold border-t border-violet-100 text-slate-900"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-extrabold text-violet-900" }, "Total Electricity"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-violet-700 text-[11px]" }, "Combined Consumers"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-violet-900" }, (tfoCalcs?.powerKw || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-violet-900" }, (tfoCalcs?.unitsMonth || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-violet-900" }, "₹ ", Math.round(tfoCalcs?.costMonth || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-[#8b5cf6] text-sm" }, "₹ ", (tfoCalcs?.powerCostPerKg || 0).toFixed(2))))))) : /*#__PURE__*/React.createElement("div", {
+    className: "p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1 text-slate-600"
+  }, /*#__PURE__*/React.createElement("div", { className: "font-bold text-slate-800" }, "Mode: Monthly Lump Sum Electricity"), /*#__PURE__*/React.createElement("div", null, `Monthly Bill: ₹ ${Number(currentTfoProduct?.monthlyElectricityCost || 0).toLocaleString('en-IN')} | Daily Cost: ₹ ${(tfoCalcs?.costDay || 0).toFixed(2)} / day | Power Cost/Kg: ₹ ${(tfoCalcs?.powerCostPerKg || 0).toFixed(2)} / kg`)))), /*#__PURE__*/React.createElement("div", {
     className: "calc-container mt-6"
   }, /*#__PURE__*/React.createElement("div", {
     className: "formula-header !py-3 flex justify-between items-center border-b"
@@ -19927,6 +20388,9 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
       label: 'Working hours / day (cops winder)',
       key: 'workingHoursCops'
     }, {
+      label: 'Working days / month (cops winder)',
+      key: 'workingDaysCops'
+    }, {
       isSeparator: true
     }, {
       label: 'Total HP of Heat Set Machine',
@@ -19965,17 +20429,21 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
         className: "p-2 px-3 border-r font-semibold text-slate-500 bg-slate-50/30 whitespace-nowrap"
       }, field.label), /*#__PURE__*/React.createElement("td", {
         className: "p-1 px-2"
-      }, /*#__PURE__*/React.createElement("input", {
+      }, /*#__PURE__*/React.createElement("input", _extends({
         type: "number",
         value: currentDoublerProduct[field.key] !== undefined ? currentDoublerProduct[field.key] : '',
         onChange: e => {
           let val = e.target.value === '' ? '' : Number(e.target.value);
+          if (field.key === 'workingHoursCops' && val > 24) val = 24;
+          if (field.key === 'workingHoursHeatSet' && val > 24) val = 24;
+          if (field.key === 'workingDaysCops' && val > 31) val = 31;
+          if (field.key === 'workingDaysHeatSet' && val > 31) val = 31;
           updateDoublerProduct({
             [field.key]: val
           });
         },
         className: "w-full bg-transparent border-0 focus:ring-0 font-bold text-slate-700 p-1 text-center"
-      })));
+      }, (field.key === 'workingHoursCops' || field.key === 'workingHoursHeatSet') ? { max: 24 } : (field.key === 'workingDaysCops' || field.key === 'workingDaysHeatSet') ? { max: 31 } : {}))));
     });
   })())))), /*#__PURE__*/React.createElement("div", {
     className: "input-card !p-0 overflow-hidden mt-4"
@@ -20721,14 +21189,14 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
     className: "formula-header !py-3 flex justify-between items-center border-b"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold uppercase tracking-wider text-xs text-white"
-  }, "Electricity Projections"), /*#__PURE__*/React.createElement("span", {
+  }, "Electricity Consumption & Breakdown"), /*#__PURE__*/React.createElement("span", {
     onClick: e => {
       e.stopPropagation();
       setActiveFormulaModal('electricity');
     },
     className: "text-[10px] text-white font-black bg-white/20 hover:bg-white/30 border border-white/10 px-2.5 py-1 rounded-full uppercase tracking-wider cursor-pointer transition-all active:scale-95"
   }, "Formula \uD83D\uDEC8")), /*#__PURE__*/React.createElement("div", {
-    className: "calc-body bg-white p-6"
+    className: "calc-body bg-white p-6 space-y-6"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap gap-6"
   }, /*#__PURE__*/React.createElement("div", {
@@ -20755,7 +21223,33 @@ renderSectionHeader("Fabric Weight & GSM", colCount),
     className: "p-4 bg-[#8b5cf6] text-white rounded-xl text-center shadow-lg shadow-[#8b5cf6]/25"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-2xl md:text-3xl font-black break-words"
-  }, (doublerCalcs.unitsMonth || 0).toFixed(0), " Units")))))), /*#__PURE__*/React.createElement("div", {
+  }, (doublerCalcs.unitsMonth || 0).toFixed(0), " Units")))), (currentDoublerProduct?.electricityMode !== 'lump_sum') ? /*#__PURE__*/React.createElement("div", {
+    className: "overflow-hidden rounded-xl border border-slate-200"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex justify-between items-center"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-slate-700 uppercase tracking-wider"
+  }, "Individual Power & Cost Breakdown"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-semibold text-slate-500"
+  }, `Rate: ₹ ${Number(currentDoublerProduct?.electricityRate || 0).toFixed(2)}/unit`)), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-xs text-left border-collapse"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-slate-50/80 border-b border-slate-200 text-slate-400 font-bold uppercase"
+  }, /*#__PURE__*/React.createElement("th", { className: "p-3" }, "Consumer"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-center" }, "Rating / Schedule"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right" }, "Load (kW)"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right" }, "Units / Mo"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right" }, "Cost / Mo (₹)"), /*#__PURE__*/React.createElement("th", { className: "p-3 text-right font-bold text-violet-700" }, "Power Cost / Kg (₹)"))), /*#__PURE__*/React.createElement("tbody", {
+    className: "divide-y divide-slate-100 font-medium text-slate-700"
+  }, /*#__PURE__*/React.createElement("tr", {
+    className: "hover:bg-slate-50/50"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-semibold text-slate-800 flex items-center gap-2" }, /*#__PURE__*/React.createElement("span", { className: "text-violet-600 font-bold" }, "⚡"), "Doubler Machine"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-slate-500" }, `${currentDoublerProduct?.hp || 0} HP · ${currentDoublerProduct?.workingHours || 0}h/d · ${currentDoublerProduct?.daysPerMonth || 28}d/mo`), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, (doublerCalcs?.powerKwDoubler || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right" }, (doublerCalcs?.unitsMonthDoubler || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, "₹ ", Math.round(doublerCalcs?.costMonthDoubler || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-bold text-slate-900" }, "₹ ", (doublerCalcs?.powerCostPerKgDoubler || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+    className: "hover:bg-slate-50/50"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-semibold text-slate-800 flex items-center gap-2" }, /*#__PURE__*/React.createElement("span", { className: "text-blue-600 font-bold" }, "🧵"), "Cops Winder"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-slate-500" }, `${currentDoublerProduct?.hpCops || 0} HP · ${currentDoublerProduct?.workingHoursCops || 0}h/d · ${currentDoublerProduct?.workingDaysCops !== undefined ? currentDoublerProduct?.workingDaysCops : 28}d/mo`), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, (doublerCalcs?.powerKwCops || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right" }, (doublerCalcs?.unitsMonthCops || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, "₹ ", Math.round(doublerCalcs?.costMonthCops || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-bold text-slate-900" }, "₹ ", (doublerCalcs?.powerCostPerKgCops || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+    className: "hover:bg-slate-50/50"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-semibold text-slate-800 flex items-center gap-2" }, /*#__PURE__*/React.createElement("span", { className: "text-amber-600 font-bold" }, "🔥"), "Heat Setting"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-slate-500" }, `${currentDoublerProduct?.hpHeatSet || 0} HP · ${currentDoublerProduct?.workingHoursHeatSet || 0}h/d · ${currentDoublerProduct?.workingDaysHeatSet || 0}d/mo`), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, (doublerCalcs?.powerKwHeatSet || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right" }, (doublerCalcs?.unitsMonthHeatSet || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-semibold" }, "₹ ", Math.round(doublerCalcs?.costMonthHeatSet || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-bold text-slate-900" }, "₹ ", (doublerCalcs?.powerCostPerKgHeatSet || 0).toFixed(2))), /*#__PURE__*/React.createElement("tr", {
+    className: "bg-violet-50/60 font-bold border-t border-violet-100 text-slate-900"
+  }, /*#__PURE__*/React.createElement("td", { className: "p-3 font-extrabold text-violet-900" }, "Total Electricity"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-center text-violet-700 text-[11px]" }, "Combined Consumers"), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-violet-900" }, (doublerCalcs?.powerKw || 0).toFixed(2)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-violet-900" }, (doublerCalcs?.unitsMonth || 0).toFixed(0)), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-violet-900" }, "₹ ", Math.round(doublerCalcs?.costMonth || 0).toLocaleString('en-IN')), /*#__PURE__*/React.createElement("td", { className: "p-3 text-right font-extrabold text-[#8b5cf6] text-sm" }, "₹ ", (doublerCalcs?.powerCostPerKg || 0).toFixed(2))))))) : /*#__PURE__*/React.createElement("div", {
+    className: "p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1 text-slate-600"
+  }, /*#__PURE__*/React.createElement("div", { className: "font-bold text-slate-800" }, "Mode: Monthly Lump Sum Electricity"), /*#__PURE__*/React.createElement("div", null, `Monthly Bill: ₹ ${Number(currentDoublerProduct?.monthlyElectricityCost || 0).toLocaleString('en-IN')} | Daily Cost: ₹ ${(doublerCalcs?.costDay || 0).toFixed(2)} / day | Power Cost/Kg: ₹ ${(doublerCalcs?.powerCostPerKg || 0).toFixed(2)} / kg`)))), /*#__PURE__*/React.createElement("div", {
     className: "calc-container mt-6"
   }, /*#__PURE__*/React.createElement("div", {
     className: "formula-header !py-3 flex justify-between items-center border-b"
