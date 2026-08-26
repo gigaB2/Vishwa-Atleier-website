@@ -1302,11 +1302,20 @@
         }
         .yc-quality-footer {
             overflow: visible !important;
-            position: relative !important;
+            position: sticky !important;
+            bottom: 0 !important;
             z-index: 50 !important;
+            width: 100% !important;
         }
         .yc-quality-footer-scroll {
             min-width: 0;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            scrollbar-width: thin;
+        }
+        .yc-quality-footer-scroll::-webkit-scrollbar {
+            height: 4px;
+            width: 0px !important;
         }
         .yc-quality-footer .dropdown-list {
             position: absolute !important;
@@ -1320,52 +1329,50 @@
         }
         @media (max-width: 1024px) {
             .yc-quality-footer {
-                height: auto !important;
-                min-height: 0;
-                padding: 0.7rem 0.85rem calc(0.7rem + env(safe-area-inset-bottom, 0px)) !important;
-                position: relative !important;
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
                 width: 100% !important;
-                z-index: 50 !important;
+                height: 42px !important;
+                min-height: 42px !important;
+                max-height: 42px !important;
+                padding: 0 12px calc(env(safe-area-inset-bottom, 0px)) !important;
+                box-sizing: content-box !important;
+                z-index: 100 !important;
                 overflow: visible !important;
-                background: rgba(255, 255, 255, 0.96) !important;
+                background-color: rgba(248, 249, 250, 0.98) !important;
                 backdrop-filter: blur(12px);
                 -webkit-backdrop-filter: blur(12px);
-                box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.08);
+                border-top: 1px solid #dadce0 !important;
+                box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08) !important;
                 display: flex !important;
-                flex-wrap: wrap !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
                 align-items: center !important;
-                row-gap: 0.6rem !important;
+                gap: 8px !important;
             }
             .dark-mode .yc-quality-footer {
-                background: var(--surface) !important;
-            }
-            .yc-quality-footer > .relative {
-                order: 1;
-                flex: 1 1 12rem;
-                min-width: 0;
-                width: auto !important;
-            }
-            .yc-quality-footer > .tab-btn {
-                order: 2;
-                flex: 0 0 auto;
-                white-space: nowrap;
-            }
-            .yc-quality-footer > .h-6.w-px.bg-slate-200.flex-shrink-0 {
-                display: none !important;
+                background-color: rgba(17, 24, 39, 0.98) !important;
+                border-top-color: #374151 !important;
+                box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4) !important;
             }
             .yc-quality-footer-scroll {
                 position: relative;
-                order: 3;
-                flex: 1 1 100%;
-                width: 100%;
+                flex: 1 1 auto !important;
+                width: auto !important;
                 min-width: 0;
                 overflow-x: auto !important;
                 overflow-y: hidden !important;
                 -webkit-overflow-scrolling: touch;
                 scrollbar-width: thin;
-                margin-top: 0.15rem;
-                padding: 0.55rem 0.15rem 0.2rem 0;
-                border-top: 1px solid rgba(148, 163, 184, 0.18);
+                margin-top: 0 !important;
+                padding: 0 !important;
+                border-top: none !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 4px !important;
+                height: 100% !important;
             }
             .yc-quality-footer-scroll > * {
                 flex-shrink: 0 !important;
@@ -1379,7 +1386,7 @@
             }
             main.flex.flex-row,
             .main-content {
-                padding-bottom: 0 !important;
+                padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)) !important;
             }
         }
         .yc-margin-row {
@@ -1404,23 +1411,12 @@
         }
         @media (max-width: 640px) {
             .yc-quality-footer {
-                gap: 0.65rem !important;
-                padding-left: 0.75rem !important;
-                padding-right: 0.75rem !important;
-            }
-            .yc-quality-footer > .relative {
-                flex: 1 1 calc(100% - 8.5rem);
-            }
-            .yc-quality-footer > .tab-btn {
-                min-width: 7.25rem;
-                justify-content: center;
-                padding-left: 0.8rem !important;
-                padding-right: 0.8rem !important;
+                gap: 6px !important;
+                padding-left: 8px !important;
+                padding-right: 8px !important;
             }
             .yc-quality-footer-scroll {
-                gap: 0.5rem !important;
-                padding-right: 0.15rem;
-                padding-top: 0.55rem;
+                gap: 4px !important;
             }
         }
         .input-card {
@@ -1896,14 +1892,14 @@
 
         /* Google Sheets Style Navigation Footer */
         .yc-quality-footer {
-          height: 40px !important;
-          padding: 0 12px !important;
-          background-color: #f8f9fa !important;
-          border-top: 1px solid #dadce0 !important;
+          height: 40px;
+          padding: 0 12px;
+          background-color: #f8f9fa;
+          border-top: 1px solid #dadce0;
         }
         .dark-mode .yc-quality-footer {
-          background-color: #1f2937 !important;
-          border-top-color: #374151 !important;
+          background-color: #1f2937;
+          border-top-color: #374151;
         }
 
         .gs-tab {
@@ -13488,7 +13484,7 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
       });
     };
     return /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+      className: "fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100010] flex items-center justify-center p-4 overflow-y-auto"
     }, 
       /*#__PURE__*/React.createElement("div", {
         className: "yc-quotation-modal bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
@@ -22775,7 +22771,7 @@ const expenditureMonth = totalProdMonthKg * grandTotalCostPerKg;
     isDoubler: activeMainTab === 'doubler',
     isCovering: activeMainTab === 'covering'
   }), importModalOpen && /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
+    className: "fixed inset-0 z-[100010] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-slate-100 animate-slide-up"
   }, /*#__PURE__*/React.createElement("div", {
@@ -23438,6 +23434,26 @@ root.render(/*#__PURE__*/React.createElement(ErrorBoundary, null, /*#__PURE__*/R
         });
     })();
     // --- END Excel-Style Selection ---
+
+    // --- Quality Footer Horizontal Mouse Wheel Scrolling ---
+    (function initQualityFooterWheelScroll() {
+        document.addEventListener('wheel', function (e) {
+            const footer = e.target.closest('.yc-quality-footer');
+            if (!footer) return;
+
+            // Do not intercept if scrolling inside the quality dropdown search list
+            if (e.target.closest('.dropdown-list')) return;
+
+            const scrollContainer = footer.querySelector('.yc-quality-footer-scroll');
+            if (!scrollContainer) return;
+
+            // If mouse wheel is scrolled vertically, translate it directly to horizontal sideways scroll
+            if (Math.abs(e.deltaY) > 0) {
+                e.preventDefault();
+                scrollContainer.scrollLeft += e.deltaY;
+            }
+        }, { passive: false });
+    })();
   </script>
 </body>
 </html>
