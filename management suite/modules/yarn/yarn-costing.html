@@ -7495,11 +7495,25 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (window.VishwaSupabase && typeof window.VishwaSupabase.sendPresencePing === 'function') {
-      const currentTab = (new URLSearchParams(window.location.search)).get('tab') || 'tfo';
-      window.VishwaSupabase.sendPresencePing(currentTab);
-    }
+    const handleTabSync = (e) => {
+      let t = (e && e.detail && e.detail.tab) || (new URLSearchParams(window.location.search)).get('tab') || (new URLSearchParams(window.location.search)).get('view');
+      if (t && ['tfo', 'doubler', 'covering', 'compare-yarn', 'fabric', 'compare-weaving'].includes(t)) {
+        setActiveMainTab(t);
+      }
+    };
+    window.addEventListener('popstate', handleTabSync);
+    window.addEventListener('vf-tab-changed', handleTabSync);
+    return () => {
+      window.removeEventListener('popstate', handleTabSync);
+      window.removeEventListener('vf-tab-changed', handleTabSync);
+    };
   }, []);
+
+  useEffect(() => {
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.sendPresencePing === 'function') {
+      window.VishwaSupabase.sendPresencePing(activeMainTab);
+    }
+  }, [activeMainTab]);
 
   useEffect(() => {
     if (isInitialMountProductsRef.current) {

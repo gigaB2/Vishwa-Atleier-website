@@ -506,6 +506,8 @@
       clientId: CLIENT_ID,
       user: user,
       page: page,
+      fullPath: window.location.pathname,
+      href: window.location.href,
       tab: currentTab,
       field: currentField,
       isTyping: Boolean(isTyping),
@@ -513,8 +515,11 @@
     };
 
     presenceStore[CLIENT_ID] = {
+      clientId: CLIENT_ID,
       user: user,
       page: page,
+      fullPath: window.location.pathname,
+      href: window.location.href,
       tab: currentTab,
       field: currentField,
       isTyping: Boolean(isTyping),
@@ -590,8 +595,11 @@
   function handleIncomingPresencePing(payload) {
     if (!payload || !payload.clientId || payload.clientId === CLIENT_ID) return;
     presenceStore[payload.clientId] = {
+      clientId: payload.clientId,
       user: payload.user || { name: 'User', role: 'Viewer', color: AVATAR_COLORS[0], initials: 'U' },
       page: payload.page || '',
+      fullPath: payload.fullPath || '',
+      href: payload.href || '',
       tab: payload.tab || '',
       field: payload.field || '',
       isTyping: Boolean(payload.isTyping),

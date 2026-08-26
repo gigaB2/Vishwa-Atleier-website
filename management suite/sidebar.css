@@ -2331,6 +2331,175 @@ header:has(.vf-presence-container:hover),
   color: #c4b5fd;
 }
 
+/* Google Sheets Style Jump to Tab Button in Presence Popover */
+.vf-popover-jump-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 9px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--accent, #8b5cf6);
+  color: #ffffff;
+  border: none;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: 0.01em;
+}
+
+.vf-popover-jump-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.5);
+  filter: brightness(1.08);
+}
+
+.vf-popover-jump-btn:active {
+  transform: translateY(0);
+}
+
+.vf-popover-overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.vf-popover-overflow-item:hover {
+  background: rgba(139, 92, 246, 0.1);
+  transform: translateX(2px);
+}
+
+.dark-mode .vf-popover-overflow-item:hover {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.vf-overflow-jump-icon {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--accent, #8b5cf6);
+  opacity: 0.6;
+  transform: translateX(-2px);
+  transition: all 0.2s ease;
+}
+
+.vf-popover-overflow-item:hover .vf-overflow-jump-icon {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Google Sheets Style Realtime Collaborative Spotlight Halo & Name Pill */
+.vf-collab-spotlight-halo {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 6px;
+  border: 2px solid var(--vf-spotlight-color, #8b5cf6);
+  box-shadow: 0 0 0 4px var(--vf-spotlight-glow, rgba(139, 92, 246, 0.3)), 0 0 24px var(--vf-spotlight-glow, rgba(139, 92, 246, 0.25));
+  z-index: 99999 !important;
+  animation: vfSpotlightPulse 2s infinite ease-in-out;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s ease;
+}
+
+@keyframes vfSpotlightPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 4px var(--vf-spotlight-glow, rgba(139, 92, 246, 0.35)), 0 0 20px var(--vf-spotlight-glow, rgba(139, 92, 246, 0.25));
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px var(--vf-spotlight-glow, rgba(139, 92, 246, 0.15)), 0 0 32px var(--vf-spotlight-glow, rgba(139, 92, 246, 0.35));
+    transform: scale(1.02);
+  }
+}
+
+.vf-collab-spotlight-badge {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 0;
+  background: var(--vf-spotlight-color, #8b5cf6);
+  color: #ffffff;
+  font-family: var(--font-body, system-ui, sans-serif);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+  z-index: 100000 !important;
+  animation: vfBadgePop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes vfBadgePop {
+  0% { opacity: 0; transform: translateY(4px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Floating Collaborative Navigation Toast */
+.vf-collab-toast {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-24px);
+  background: rgba(20, 20, 26, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  font-family: var(--font-body, system-ui, sans-serif);
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  z-index: 2147483647 !important;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: min(90vw, 420px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dark-mode .vf-collab-toast {
+  background: rgba(12, 12, 16, 0.96);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.vf-collab-toast.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.vf-collab-toast-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
 /* ==========================================================================
    FLOATING SIDEBAR USER DETAILS POPOVER
    Renders over all main content and containers with maximum z-index

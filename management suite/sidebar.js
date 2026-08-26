@@ -633,12 +633,27 @@
       presenceBar.id = 'vfPresenceBar';
       presenceBar.className = 'vf-presence-container';
       presenceBar.innerHTML = `
-        <span class="vf-presence-label">
+        <span class="vf-presence-label" title="Live collaborators online (Google Sheets style)">
           <span class="vf-presence-live-dot" title="Live Realtime Collab Sync Active"></span>
           <span id="vfPresenceCountText">1 Online</span>
         </span>
         <div class="vf-avatar-stack" id="vfAvatarStack"></div>
       `;
+
+      const label = presenceBar.querySelector('.vf-presence-label');
+      if (label) {
+        label.style.cursor = 'pointer';
+        label.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const stack = document.getElementById('vfAvatarStack');
+          if (!stack) return;
+          const selfId = window.VishwaSupabase && window.VishwaSupabase.getCurrentUser ? window.VishwaSupabase.getCurrentUser().clientId : '';
+          const otherWrap = stack.querySelector(`.vf-presence-avatar-wrap:not([data-client-id="${selfId}"])`) || stack.querySelector('.vf-presence-avatar-wrap');
+          if (otherWrap) {
+            otherWrap.click();
+          }
+        });
+      }
     }
 
     // Dock directly next to the active sheet title or header across all modules
@@ -729,14 +744,451 @@
     renderPresenceBarUI();
   }
 
+  // --- Known Module File Mappings & Tab Aliases for Navigation ---
+  const MODULE_PAGE_MAP = {
+    'yarn-costing.html': 'modules/yarn/yarn-costing.html',
+    'yarn-production.html': 'modules/yarn/yarn-production.html',
+    'yarn-sales.html': 'modules/yarn/yarn-sales.html',
+    'yarn-stock-dashboard.html': 'modules/yarn/yarn-stock-dashboard.html',
+    'yarn-rm-stock.html': 'modules/yarn/yarn-rm-stock.html',
+    'weaving-costing.html': 'modules/weaving/weaving-costing.html',
+    'weaving-production.html': 'modules/weaving/weaving-production.html',
+    'order-book.html': 'modules/weaving/order-book.html',
+    'rm-weft-stock-book.html': 'modules/weaving/rm-weft-stock-book.html',
+    'rm-warp-stock-book.html': 'modules/weaving/rm-warp-stock-book.html',
+    'design-library.html': 'modules/weaving/design-library.html',
+    'dispatch.html': 'modules/weaving/dispatch.html',
+    'manage.html': 'modules/manage.html',
+    'salary-sheet.html': 'modules/salary-sheet.html',
+    'settings.html': 'modules/settings.html',
+    'index.html': 'index.html',
+    'jacquard-castout-calculator.html': 'modules/weaving/tools/jacquard-castout-calculator.html',
+    'ep-parser.html': 'modules/weaving/tools/ep-parser.html'
+  };
+
+  const TAB_ALIASES = {
+    'tfo': ['tfo', 'tfo costing', 'tfo costing calculator', 'tab-tfo', 'tab-btn-tfo'],
+    'doubler': ['doubler', 'doubler/mx', 'doubler costing', 'doubler/mx costing', 'doubler/mx costing calculator', 'tab-doubler', 'tab-btn-doubler'],
+    'covering': ['covering', 'covering costing', 'covering costing calculator', 'tab-covering', 'tab-btn-covering'],
+    'fabric': ['fabric', 'fabric costing', 'fabric costing calculator', 'tab-fabric', 'tab-btn-fabric'],
+    'compare-yarn': ['compare-yarn', 'compare yarn', 'compare yarn costing'],
+    'compare-weaving': ['compare-weaving', 'compare weaving', 'compare weaving costing'],
+    'production': ['production', 'daily production', 'tab-btn-production'],
+    'production-stock': ['production-stock', 'fabric stock', 'stock', 'tab-btn-stock'],
+    'sales': ['sales', 'yarn sales', 'tab-btn-sales'],
+    'stock-dashboard': ['stock-dashboard', 'stock', 'tab-btn-stock'],
+    'analytics': ['analytics', 'production analytics', 'rm order analytics', 'tab-btn-analytics'],
+    'orders': ['orders', 'rm orders'],
+    'heat-map': ['heat-map', 'heatmap', 'delivery heat map', 'rm delivery heat map'],
+    'item-detail': ['item-detail', 'weft stock register', 'stock register'],
+    'item-ledger-v2': ['item-ledger-v2', 'item-wise ledger v2', 'item-wise ledger', 'ledger'],
+    'challan-history': ['challan-history', 'challan register', 'challan history'],
+    'low-stock': ['low-stock', 'low stock', 'low stock alerts'],
+    'log': ['log', 'transaction log', 'log issue'],
+    'register': ['register', 'warp stock register'],
+    'ledger': ['ledger', 'warp yarn stock'],
+    'dashboard': ['dashboard', 'beams overview'],
+    'tracker': ['tracker', 'beam tracker'],
+    'dashboard-tab': ['dashboard-tab', 'dashboard overview', 'dashboard'],
+    'karigar-salary': ['karigar-salary', 'karigar salary'],
+    'beam-loading-tab': ['beam-loading-tab', 'beam loading'],
+    'tab-loans': ['tab-loans', 'loans for staff', 'loans'],
+    'machines': ['machines', 'machines list'],
+    'looms': ['looms', 'manage looms'],
+    'jacquards': ['jacquards', 'manage jacquards'],
+    'jalas': ['jalas', 'jala details', 'manage jalas'],
+    'fanis': ['fanis', 'manage fanis'],
+    'tab-manifest': ['tab-manifest', 'manifest'],
+    'tab-visualizer': ['tab-visualizer', 'visualizer'],
+    'tab-jala': ['tab-jala', 'jala'],
+    'tab-jacfile': ['tab-jacfile', 'jacfile'],
+    'tab-schedule': ['tab-schedule', 'schedule']
+  };
+
+  function formatTabName(tab) {
+    if (!tab) return '';
+    const map = {
+      'tfo': 'TFO Costing',
+      'doubler': 'Doubler/MX Costing',
+      'covering': 'Covering Costing',
+      'fabric': 'Fabric Costing',
+      'compare-yarn': 'Compare Yarn Costing',
+      'compare-weaving': 'Compare Weaving Costing',
+      'production': 'Daily Production',
+      'production-stock': 'Fabric Stock',
+      'analytics': 'Analytics',
+      'sales': 'Yarn Sales',
+      'stock-dashboard': 'Stock Dashboard',
+      'orders': 'RM Orders',
+      'heat-map': 'Delivery Heat Map',
+      'item-detail': 'Weft Stock Register',
+      'item-ledger-v2': 'Item-wise Ledger',
+      'challan-history': 'Challan History',
+      'low-stock': 'Low Stock Alerts',
+      'log': 'Transaction Log',
+      'register': 'Warp Stock Register',
+      'ledger': 'Warp Yarn Stock',
+      'dashboard': 'Beams Overview',
+      'tracker': 'Beam Tracker',
+      'dashboard-tab': 'Dashboard Overview',
+      'karigar-salary': 'Karigar Salary',
+      'beam-loading-tab': 'Beam Loading',
+      'tab-loans': 'Staff Loans',
+      'machines': 'Machines List',
+      'looms': 'Manage Looms',
+      'jacquards': 'Manage Jacquards',
+      'jalas': 'Jala Details',
+      'fanis': 'Manage Fanis'
+    };
+    return map[tab.toLowerCase()] || tab.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function formatPageName(page) {
+    if (!page) return '';
+    const clean = page.toLowerCase().split('?')[0].split('#')[0].replace('.html', '');
+    return clean.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function showCollabJumpToast(message, userColor, initials) {
+    let toast = document.getElementById('vfCollabJumpToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'vfCollabJumpToast';
+      toast.className = 'vf-collab-toast';
+      document.body.appendChild(toast);
+    }
+
+    const bg = userColor && userColor.bg ? userColor.bg : '#8b5cf6';
+    const fg = userColor && userColor.fg ? userColor.fg : '#ffffff';
+    const init = initials || '●';
+
+    toast.innerHTML = `
+      <div class="vf-collab-toast-avatar" style="background: ${bg}; color: ${fg};">${escapeHtml(init)}</div>
+      <span class="vf-collab-toast-text">${message}</span>
+    `;
+
+    toast.classList.add('show');
+    clearTimeout(window.__vf_toast_timer);
+    window.__vf_toast_timer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3400);
+  }
+
+  window.vfSwitchTab = function(targetTab) {
+    if (!targetTab) return false;
+    const cleanTarget = String(targetTab).toLowerCase().trim();
+    const cleanNoDash = cleanTarget.replace(/[-_\s]+/g, '');
+
+    let switched = false;
+
+    // 1. Direct attribute matches
+    let el = document.querySelector(`[data-tab="${CSS.escape(targetTab)}"], [data-view="${CSS.escape(targetTab)}"], [data-division="${CSS.escape(targetTab)}"], [data-target="${CSS.escape(targetTab)}"], [aria-controls="${CSS.escape(targetTab)}"]`);
+
+    // 2. Direct ID matches
+    if (!el) {
+      el = document.getElementById(targetTab) || 
+           document.getElementById('tab-btn-' + targetTab) || 
+           document.getElementById('btn-tab-' + targetTab) || 
+           document.getElementById('btn-' + targetTab) || 
+           document.getElementById('tab-' + targetTab);
+    }
+
+    // 3. Check onclick attribute containing targetTab
+    if (!el) {
+      const onclickBtns = document.querySelectorAll('button[onclick], [role="tab"][onclick], .tab-btn[onclick], .nav-tab[onclick], .sub-tab-btn[onclick], .main-tab-btn[onclick]');
+      for (const b of onclickBtns) {
+        const oc = b.getAttribute('onclick') || '';
+        if (oc.includes(`'${targetTab}'`) || oc.includes(`"${targetTab}"`) || oc.includes(`(${targetTab})`)) {
+          el = b;
+          break;
+        }
+      }
+    }
+
+    // 4. Check all tab buttons by text content or dataset or aliases
+    if (!el) {
+      const allTabCandidates = document.querySelectorAll('.tab-btn, .nav-tab, .main-tab-btn, .sub-tab-btn, [role="tab"], .salary-tabs .tab-btn, .tabs button, .main-tabs button, .sub-tabs button');
+      for (const b of allTabCandidates) {
+        const bTab = (b.dataset.tab || b.dataset.view || b.dataset.division || '').toLowerCase().trim();
+        const bText = (b.textContent || '').toLowerCase().trim().replace(/\s+/g, ' ');
+        const bTextClean = bText.replace(/[^a-z0-9]/g, '');
+
+        if (bTab === cleanTarget || bTab.replace(/[-_\s]+/g, '') === cleanNoDash) {
+          el = b;
+          break;
+        }
+        if (bTextClean === cleanNoDash || bText === cleanTarget) {
+          el = b;
+          break;
+        }
+
+        const aliases = TAB_ALIASES[cleanTarget] || [];
+        for (const alias of aliases) {
+          const cleanAlias = alias.replace(/[^a-z0-9]/g, '');
+          if (bTab === alias || bText.includes(alias) || bTextClean === cleanAlias) {
+            el = b;
+            break;
+          }
+        }
+        if (el) break;
+      }
+    }
+
+    // 5. If found, invoke click
+    if (el) {
+      try {
+        el.click();
+        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+        switched = true;
+      } catch(e) {}
+    }
+
+    // 6. Invoke global page-specific tab functions if available
+    try {
+      if (typeof window.switchTab === 'function') {
+        window.switchTab(targetTab);
+        switched = true;
+      }
+      if (typeof window.switchSalaryTab === 'function') {
+        window.switchSalaryTab(targetTab);
+        switched = true;
+      }
+      if (typeof window.switchSubTab === 'function') {
+        window.switchSubTab(targetTab);
+        switched = true;
+      }
+      if (typeof window.switchDivision === 'function') {
+        window.switchDivision(targetTab);
+        switched = true;
+      }
+      if (typeof window.switchRosterTab === 'function') {
+        window.switchRosterTab(targetTab);
+        switched = true;
+      }
+    } catch(e) {}
+
+    // 7. Update URL query string without reloading & broadcast custom event
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('tab') !== targetTab && url.searchParams.get('view') !== targetTab) {
+        if (url.searchParams.has('view')) {
+          url.searchParams.set('view', targetTab);
+        } else {
+          url.searchParams.set('tab', targetTab);
+        }
+        window.history.pushState({}, '', url.toString());
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+      window.__vf_active_tab = targetTab;
+      window.dispatchEvent(new CustomEvent('vf-tab-changed', { detail: { tab: targetTab } }));
+    } catch(e) {}
+
+    return switched;
+  };
+
+  window.vfFocusCollaboratorField = function(fieldId, userData) {
+    let el = null;
+    if (fieldId) {
+      try {
+        el = document.querySelector(`[data-collab-id="${CSS.escape(fieldId)}"]`) ||
+             document.getElementById(fieldId) ||
+             document.querySelector(`[name="${CSS.escape(fieldId)}"]`) ||
+             document.querySelector(`[data-row-id="${CSS.escape(fieldId)}"]`) ||
+             document.querySelector(`[data-field="${CSS.escape(fieldId)}"]`) ||
+             document.querySelector(`tr[data-id="${CSS.escape(fieldId)}"]`);
+        
+        if (!el && fieldId.includes('__')) {
+          const [rowKey, fieldKey] = fieldId.split('__');
+          const row = document.querySelector(`[data-row-id="${CSS.escape(rowKey)}"], [data-item-id="${CSS.escape(rowKey)}"], #${CSS.escape(rowKey)}`);
+          if (row) {
+            el = row.querySelector(`[name="${CSS.escape(fieldKey)}"], [placeholder="${CSS.escape(fieldKey)}"], [aria-label="${CSS.escape(fieldKey)}"]`);
+          }
+        }
+      } catch(e) {}
+    }
+
+    const existingHalo = document.getElementById('vfCollabSpotlightHalo');
+    if (existingHalo) existingHalo.remove();
+
+    const user = userData ? (userData.user || userData) : {};
+    const userName = user.name || 'User';
+    const color = user.color || { bg: '#8b5cf6', fg: '#ffffff', glow: 'rgba(139,92,246,0.45)' };
+
+    if (el && el.offsetParent !== null) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      try {
+        if (typeof el.focus === 'function' && el.tagName !== 'TR' && el.tagName !== 'DIV') {
+          el.focus({ preventScroll: true });
+        }
+      } catch(e) {}
+
+      const rect = el.getBoundingClientRect();
+      const halo = document.createElement('div');
+      halo.id = 'vfCollabSpotlightHalo';
+      halo.className = 'vf-collab-spotlight-halo';
+      halo.style.setProperty('--vf-spotlight-color', color.bg);
+      halo.style.setProperty('--vf-spotlight-glow', color.glow || 'rgba(139,92,246,0.4)');
+      
+      halo.style.position = 'fixed';
+      halo.style.top = (rect.top - 4) + 'px';
+      halo.style.left = (rect.left - 4) + 'px';
+      halo.style.width = (rect.width + 8) + 'px';
+      halo.style.height = (rect.height + 8) + 'px';
+
+      const badge = document.createElement('div');
+      badge.className = 'vf-collab-spotlight-badge';
+      badge.style.setProperty('--vf-spotlight-color', color.bg);
+      badge.innerHTML = `
+        <span style="font-size: 0.6rem;">●</span>
+        <span>${escapeHtml(userName)} ${userData && userData.isTyping ? 'is typing...' : 'is active here'}</span>
+      `;
+      halo.appendChild(badge);
+      document.body.appendChild(halo);
+
+      const onScrollReposition = () => {
+        if (!document.body.contains(halo) || !document.body.contains(el)) {
+          window.removeEventListener('scroll', onScrollReposition, true);
+          return;
+        }
+        const r = el.getBoundingClientRect();
+        halo.style.top = (r.top - 4) + 'px';
+        halo.style.left = (r.left - 4) + 'px';
+        halo.style.width = (r.width + 8) + 'px';
+        halo.style.height = (r.height + 8) + 'px';
+      };
+      window.addEventListener('scroll', onScrollReposition, true);
+
+      setTimeout(() => {
+        if (halo && halo.parentElement) {
+          halo.style.opacity = '0';
+          setTimeout(() => halo.remove(), 400);
+        }
+        window.removeEventListener('scroll', onScrollReposition, true);
+      }, 3800);
+    } else {
+      const mainEl = document.querySelector('main, .main-content, .app-container, .container, #root');
+      if (mainEl) {
+        mainEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
+
+  window.vfJumpToCollaborator = function(u) {
+    if (!u) return;
+    const selfId = (window.VishwaSupabase && window.VishwaSupabase.getCurrentUser && window.VishwaSupabase.getCurrentUser().clientId);
+    const isSelf = u.isSelf || (u.user && u.user.clientId === selfId) || (u.clientId === selfId);
+    const userObj = u.user || {};
+    const userName = userObj.name || 'User';
+    const userInitials = userObj.initials || userName.slice(0, 2).toUpperCase();
+    const userColor = userObj.color || { bg: '#8b5cf6', fg: '#ffffff', glow: 'rgba(139,92,246,0.45)' };
+
+    if (isSelf) {
+      showCollabJumpToast('📍 You are currently viewing this sheet', userColor, userInitials);
+      return;
+    }
+
+    const currentPath = window.location.pathname.toLowerCase();
+    const currentPageFile = currentPath.split('/').pop().split('?')[0].split('#')[0] || 'index.html';
+
+    const targetPage = u.page ? u.page.toLowerCase().split('?')[0].split('#')[0] : currentPageFile;
+    const targetTab = u.tab || '';
+    const targetField = u.field || '';
+
+    const isSamePage = !targetPage || targetPage === currentPageFile || currentPath.endsWith(targetPage);
+
+    if (isSamePage) {
+      let switched = false;
+      if (targetTab) {
+        switched = window.vfSwitchTab(targetTab);
+      }
+
+      setTimeout(() => {
+        window.vfFocusCollaboratorField(targetField, u);
+      }, switched ? 160 : 30);
+
+      const tabLabel = targetTab ? ` • Tab: ${formatTabName(targetTab)}` : '';
+      showCollabJumpToast(`⚡ Jumped to ${userName}'s view${tabLabel}`, userColor, userInitials);
+    } else {
+      let relPath = MODULE_PAGE_MAP[targetPage];
+      if (!relPath) {
+        if (u.fullPath && u.fullPath.includes('/modules/')) {
+          const idx = u.fullPath.indexOf('/modules/');
+          relPath = u.fullPath.substring(idx + 1);
+        } else {
+          relPath = targetPage;
+        }
+      }
+
+      let destUrl = rootPath + relPath;
+      const params = new URLSearchParams();
+      if (targetTab) params.set('tab', targetTab);
+
+      let queryStr = params.toString();
+      if (queryStr) destUrl += '?' + queryStr;
+
+      destUrl += '#vf-collab-jump=' + encodeURIComponent(u.clientId || '') +
+                 (targetTab ? '&tab=' + encodeURIComponent(targetTab) : '') +
+                 (targetField ? '&field=' + encodeURIComponent(targetField) : '') +
+                 '&name=' + encodeURIComponent(userName);
+
+      showCollabJumpToast(`🚀 Opening ${userName}'s sheet (${formatPageName(targetPage)})...`, userColor, userInitials);
+      setTimeout(() => {
+        window.location.href = destUrl;
+      }, 220);
+    }
+  };
+
+  // Check URL hash for collaborator jump on arrival
+  function handleInitialCollabJump() {
+    try {
+      const hash = window.location.hash;
+      if (!hash || !hash.includes('vf-collab-jump=')) return;
+
+      const hashParams = new URLSearchParams(hash.replace(/^#/, ''));
+      const jumpTab = hashParams.get('tab');
+      const jumpField = hashParams.get('field');
+      const jumpName = hashParams.get('name') || 'Collaborator';
+
+      setTimeout(() => {
+        if (jumpTab) {
+          window.vfSwitchTab(jumpTab);
+        }
+        setTimeout(() => {
+          window.vfFocusCollaboratorField(jumpField, {
+            user: { name: jumpName, color: { bg: '#8b5cf6', fg: '#ffffff' } }
+          });
+          showCollabJumpToast(`⚡ Jumped to ${jumpName}'s view • ${formatTabName(jumpTab || '')}`, { bg: '#8b5cf6', fg: '#ffffff' }, jumpName.slice(0, 2).toUpperCase());
+        }, 250);
+      }, 200);
+
+      if (window.history && window.history.replaceState) {
+        const cleanUrl = window.location.href.split('#')[0];
+        window.history.replaceState(null, '', cleanUrl);
+      }
+    } catch(e) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', handleInitialCollabJump);
+  } else {
+    handleInitialCollabJump();
+  }
+
   function renderPresenceBarUI(presenceDetail) {
     const stack = document.getElementById('vfAvatarStack');
     const countText = document.getElementById('vfPresenceCountText');
     if (!stack) return;
 
-    let users = presenceDetail && presenceDetail.pageUsers;
-    if (!users && window.VishwaSupabase && typeof window.VishwaSupabase.getPresence === 'function') {
-      users = window.VishwaSupabase.getPresence();
+    let users = presenceDetail && presenceDetail.users;
+    if (!users && window.VishwaSupabase && typeof window.VishwaSupabase.getAllPresence === 'function') {
+      users = window.VishwaSupabase.getAllPresence();
+    }
+    if (!users || !Array.isArray(users) || users.length === 0) {
+      if (presenceDetail && presenceDetail.pageUsers) {
+        users = presenceDetail.pageUsers;
+      } else if (window.VishwaSupabase && typeof window.VishwaSupabase.getPresence === 'function') {
+        users = window.VishwaSupabase.getPresence();
+      }
     }
     if (!users || !Array.isArray(users) || users.length === 0) {
       const selfUser = window.VishwaSupabase && typeof window.VishwaSupabase.getCurrentUser === 'function' ? 
@@ -761,28 +1213,37 @@
       moreWrap.className = 'vf-presence-avatar-wrap';
       moreWrap.setAttribute('tabindex', '0');
       moreWrap.innerHTML = `
-        <div class="vf-presence-overflow-badge">+${overflowUsers.length}</div>
+        <div class="vf-presence-overflow-badge" title="View all ${users.length} online employees">+${overflowUsers.length}</div>
         <div class="vf-presence-popover">
           <div class="vf-popover-header" style="font-size: 0.78rem; font-weight: 700; color: var(--fg); margin-bottom: 8px;">
-            Other Active Viewers (${overflowUsers.length})
+            Other Active Collaborators (${overflowUsers.length})
           </div>
-          ${overflowUsers.map(u => {
+          ${overflowUsers.map((u, idx) => {
             const uColor = u.user && u.user.color ? u.user.color : { bg: '#8b5cf6', fg: '#ffffff' };
+            const uTab = u.tab ? formatTabName(u.tab) : (u.page ? formatPageName(u.page) : '');
             return `
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-              <div class="vf-popover-avatar" style="background: ${uColor.bg}; color: ${uColor.fg}; width: 22px; height: 22px; font-size: 0.65rem;">
+            <div class="vf-popover-overflow-item" data-overflow-idx="${idx}">
+              <div class="vf-popover-avatar" style="background: ${uColor.bg}; color: ${uColor.fg}; width: 24px; height: 24px; font-size: 0.65rem;">
                 ${escapeHtml(u.user ? u.user.initials : 'U')}
               </div>
               <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 0.75rem; font-weight: 700; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <div style="font-size: 0.76rem; font-weight: 700; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   ${escapeHtml(u.user ? u.user.name : 'User')}
                 </div>
-                <div style="font-size: 0.65rem; color: var(--muted);">${escapeHtml(u.user ? u.user.role : 'Viewer')}${u.tab ? ' • ' + escapeHtml(u.tab) : ''}</div>
+                <div style="font-size: 0.66rem; color: var(--muted);">${escapeHtml(u.user ? u.user.role : 'Viewer')}${uTab ? ' • ' + escapeHtml(uTab) : ''}</div>
               </div>
+              <span class="vf-overflow-jump-icon" title="Jump to view">↗</span>
             </div>
           `;}).join('')}
         </div>
       `;
+
+      moreWrap.querySelectorAll('.vf-popover-overflow-item').forEach((itemEl, idx) => {
+        itemEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.vfJumpToCollaborator(overflowUsers[idx]);
+        });
+      });
 
       moreWrap.addEventListener('mouseenter', () => {
         elevateAncestors(moreWrap);
@@ -808,13 +1269,15 @@
       const name = (u.user && u.user.name) || 'User';
       const role = (u.user && u.user.role) || 'Operator';
       const initials = (u.user && u.user.initials) || name.slice(0, 2).toUpperCase();
-      const tabName = u.tab ? u.tab.replace(/[-_]/g, ' ') : '';
+      const tabName = u.tab ? formatTabName(u.tab) : (u.page ? formatPageName(u.page) : '');
       const actionText = u.isTyping ? 'Typing in costing sheet...' : (u.field ? `Editing field` : 'Viewing page');
 
       const avatarWrap = document.createElement('div');
       avatarWrap.className = 'vf-presence-avatar-wrap';
       avatarWrap.setAttribute('tabindex', '0');
+      avatarWrap.setAttribute('role', 'button');
       avatarWrap.setAttribute('data-client-id', u.clientId || '');
+      avatarWrap.setAttribute('title', isSelf ? 'Your active view' : `Click to jump to ${escapeHtml(name)}'s tab`);
 
       avatarWrap.innerHTML = `
         <div class="vf-presence-avatar" style="background: ${color.bg}; color: ${color.fg}; box-shadow: 0 0 10px ${color.glow};">
@@ -826,7 +1289,7 @@
             <div class="vf-popover-avatar" style="background: ${color.bg}; color: ${color.fg};">
               ${escapeHtml(initials)}
             </div>
-            <div>
+            <div style="flex: 1; min-width: 0;">
               <div class="vf-popover-name">
                 ${escapeHtml(name)}
                 ${isSelf ? '<span class="vf-popover-self-chip">You</span>' : ''}
@@ -836,15 +1299,37 @@
           </div>
           ${tabName ? `
             <div style="margin-bottom: 4px;">
-              <span class="vf-popover-tab-badge">📍 Tab: ${escapeHtml(tabName)}</span>
+              <span class="vf-popover-tab-badge">📍 ${escapeHtml(tabName)}</span>
             </div>
           ` : ''}
           <div class="vf-popover-meta-row">
             <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${u.isTyping ? '#f59e0b' : '#10b981'};"></span>
             <span>${escapeHtml(actionText)}</span>
           </div>
+          ${!isSelf ? `
+            <button type="button" class="vf-popover-jump-btn" title="Jump to ${escapeHtml(name)}'s active tab">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                <polyline points="15 3 21 3 21 9"/>
+                <line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+              <span>Jump to ${escapeHtml(name.split(' ')[0])}'s View</span>
+            </button>
+          ` : ''}
         </div>
       `;
+
+      avatarWrap.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.vfJumpToCollaborator(u);
+      });
+
+      avatarWrap.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          window.vfJumpToCollaborator(u);
+        }
+      });
 
       avatarWrap.addEventListener('mouseenter', () => {
         elevateAncestors(avatarWrap);
@@ -882,10 +1367,10 @@
   detectActiveTab();
 
   document.addEventListener('click', (e) => {
-    const tabEl = e.target.closest('[role="tab"], .tab-btn, button[data-tab], [data-view]');
+    const tabEl = e.target.closest('[role="tab"], .tab-btn, .nav-tab, .sub-tab-btn, .main-tab-btn, button[data-tab], [data-view]');
     if (tabEl) {
       const tabVal = tabEl.dataset.tab || tabEl.dataset.view || tabEl.getAttribute('aria-controls') || tabEl.textContent.trim();
-      if (tabVal && tabVal.length < 30) {
+      if (tabVal && tabVal.length < 40) {
         window.__vf_active_tab = tabVal;
         if (window.VishwaSupabase && typeof window.VishwaSupabase.sendPresencePing === 'function') {
           window.VishwaSupabase.sendPresencePing(tabVal);
