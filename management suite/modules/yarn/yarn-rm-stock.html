@@ -895,9 +895,9 @@
               <input type="text" class="form-control" id="c-challan" placeholder="e.g. CH-9921" required>
             </div>
             <div class="form-group">
-              <label>Supplier / Mill *</label>
+              <label>RM Supplier *</label>
               <select class="form-control" id="c-supplier" required>
-                <option value="">-- Select Supplier / Mill --</option>
+                <option value="">-- Select RM Supplier --</option>
               </select>
             </div>
             <div class="form-group">
@@ -1190,6 +1190,24 @@
           colorEl.value = validColors[0];
         }
       }
+
+      // If a quality is chosen, auto-select supplier if configured on that RM quality
+      if (selQuality) {
+        const matchedQuality = rawQualities.find(q => (q.quality || q.name) === selQuality && (!selType || (q.type || 'Polyester') === selType));
+        if (matchedQuality && matchedQuality.supplier) {
+          const sSelect = document.getElementById('c-supplier');
+          if (sSelect) {
+            let hasOpt = Array.from(sSelect.options).some(opt => opt.value === matchedQuality.supplier);
+            if (!hasOpt) {
+              const opt = document.createElement('option');
+              opt.value = matchedQuality.supplier;
+              opt.textContent = matchedQuality.supplier;
+              sSelect.appendChild(opt);
+            }
+            sSelect.value = matchedQuality.supplier;
+          }
+        }
+      }
     }
 
     function populateQualityDropdownByItemType(itemType = '') {
@@ -1204,11 +1222,7 @@
       updateYarnSpecDropdowns(field);
     }
 
-    function populateSupplierDropdown() {
-      const sSelect = document.getElementById('c-supplier');
-      if (!sSelect) return;
-      sSelect.innerHTML = '<option value="">-- Select Supplier / Mill --</option>';
-
+    function getStoredRMSuppliers() {
       let rawSuppliers = [];
       try {
         rawSuppliers = JSON.parse(localStorage.getItem('yarn-suppliers') || '[]');
@@ -1216,10 +1230,46 @@
         rawSuppliers = [];
       }
 
-      const supplierNames = [...new Set(rawSuppliers.map(s => typeof s === 'string' ? s : (s.name || s.supplier || '')).filter(Boolean))];
-      
+      const names = new Set();
+      if (Array.isArray(rawSuppliers)) {
+        rawSuppliers.forEach(s => {
+          const name = typeof s === 'string' ? s.trim() : (s.name || s.supplier || '').trim();
+          if (name) names.add(name);
+        });
+      }
+
+      // Also include any suppliers configured in RM Qualities
+      try {
+        const rawQualities = JSON.parse(localStorage.getItem('yarn-qualities') || '[]');
+        if (Array.isArray(rawQualities)) {
+          rawQualities.forEach(q => {
+            const sName = (q.supplier || '').trim();
+            if (sName) names.add(sName);
+          });
+        }
+      } catch (e) {}
+
+      // Also include any suppliers from existing stock lots so old records remain valid
+      if (Array.isArray(stockData)) {
+        stockData.forEach(lot => {
+          const sName = (lot.supplier || '').trim();
+          if (sName) names.add(sName);
+        });
+      }
+
+      return Array.from(names).sort((a, b) => a.localeCompare(b));
+    }
+
+    function populateSupplierDropdown(selectedVal = '') {
+      const sSelect = document.getElementById('c-supplier');
+      if (!sSelect) return;
+      const currentVal = selectedVal || sSelect.value;
+      sSelect.innerHTML = '<option value="">-- Select RM Supplier --</option>';
+
+      const supplierNames = getStoredRMSuppliers();
+
       if (supplierNames.length === 0) {
-        // Fallback default list if no suppliers stored yet
+        // Fallback default list if no RM suppliers stored yet
         const defaults = ['Reliance Industries Ltd', 'Vardhman Textiles', 'Wellknown Polyesters', 'Sanathan Textiles'];
         defaults.forEach(sup => {
           const opt = document.createElement('option');
@@ -1234,6 +1284,10 @@
           opt.textContent = sup;
           sSelect.appendChild(opt);
         });
+      }
+
+      if (currentVal && Array.from(sSelect.options).some(o => o.value === currentVal)) {
+        sSelect.value = currentVal;
       }
     }
 
@@ -1312,7 +1366,7 @@
       
       if (lot.itemType) document.getElementById('c-item-type').value = lot.itemType;
       populateQualityDropdownByItemType(lot.itemType || '');
-      populateSupplierDropdown();
+      populateSupplierDropdown(lot.supplier || '');
 
       if (lot.quality) document.getElementById('c-quality').value = lot.quality;
       handleQualitySelection(lot.quality || '');
@@ -1958,6 +2012,13 @@
     document.addEventListener('DOMContentLoaded', () => {
       initSeedData();
       renderStockBook();
+    });
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'yarn-suppliers' || e.key === 'yarn-qualities' || e.key === STORAGE_KEY) {
+        populateSupplierDropdown();
+        renderStockBook();
+      }
     });
   </script>
 </body>
