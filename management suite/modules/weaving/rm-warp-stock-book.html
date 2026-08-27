@@ -2157,11 +2157,7 @@
             }, [beams, selectedFY]);
 
             const [machines, setMachines] = useLocalStorage('machines', sampleMachines);
-            const [availableFanis] = useLocalStorage('manage-fanis', [
-                { id: "F1", name: "84 x 52" },
-                { id: "F2", name: "72 x 52" },
-                { id: "F3", name: "64 x 52" }
-            ]);
+            const [availableFanis] = useLocalStorage('manage-fanis', []);
             const [availableJalas] = useLocalStorage('manage-jalas', [
                 { id: "JA1", name: "Cotton", ends: 1440, breakdown: { selvedge: 40, leftBorder: 200, bodyEnds: 240, bodyRepeats: 4, rightBorder: 200, rightSelvedge: 40, remainingEmpty: 0 } },
                 { id: "JA2", name: "Nylon", ends: 2688, breakdown: { selvedge: 64, leftBorder: 400, bodyEnds: 440, bodyRepeats: 4, rightBorder: 400, rightSelvedge: 64, remainingEmpty: 0 } },

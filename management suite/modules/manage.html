@@ -2876,11 +2876,7 @@
 
   const defaultJalas = [];
 
-  const defaultFanis = [
-    { id: "fani-1", name: "84 x 52" },
-    { id: "fani-2", name: "96 x 56" },
-    { id: "fani-3", name: "72 x 48" }
-  ];
+  const defaultFanis = [];
 
 
 
@@ -5593,10 +5589,6 @@ function showToast(message, type = 'info') {
   let jacquards = loadInitialState('manage-jacquards', defaultJacquards);
   let jalas = loadInitialState('manage-jalas', defaultJalas);
   let fanis = loadInitialState('manage-fanis', defaultFanis);
-  if (fanis.length === 0 && defaultFanis.length > 0) {
-    fanis = [...defaultFanis];
-    localStorage.setItem('manage-fanis', JSON.stringify(fanis));
-  }
 
   const defaultQualities = [];
 
