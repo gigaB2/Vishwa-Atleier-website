@@ -879,6 +879,12 @@
       'analytics': 'Analytics',
       'sales': 'Yarn Sales',
       'stock-dashboard': 'Stock Dashboard',
+      'yarn-production': 'Yarn Production',
+      'yarn-sales': 'Yarn Sales',
+      'yarn-stock-dashboard': 'Yarn Stock',
+      'covering': 'Covering',
+      'tfo': 'TFO',
+      'doubler': 'Doubler',
       'orders': 'RM Orders',
       'heat-map': 'Delivery Heat Map',
       'item-detail': 'Weft Stock Register',
@@ -974,7 +980,17 @@
       }));
     } catch(e) {}
 
-    // 3. Fallback: Search in DOM quality footer tabs
+    // 3. Check if qualityName refers to yarn division
+    try {
+      if (qualityName && typeof window.switchDivision === 'function') {
+        const qLower = String(qualityName).toLowerCase();
+        if (qLower.includes('tfo')) { window.switchDivision('tfo'); switched = true; }
+        else if (qLower.includes('doubler')) { window.switchDivision('doubler'); switched = true; }
+        else if (qLower.includes('covering')) { window.switchDivision('covering'); switched = true; }
+      }
+    } catch(e) {}
+
+    // 4. Fallback: Search in DOM quality footer tabs
     try {
       const footerTabs = document.querySelectorAll('.yc-quality-footer-scroll .gs-tab, .quality-tab, .sheet-tab, [data-quality-index]');
       if (footerTabs.length > 0) {

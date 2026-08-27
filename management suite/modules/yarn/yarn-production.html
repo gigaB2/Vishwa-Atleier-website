@@ -1240,9 +1240,12 @@
 
   <div class="container">
     <header>
-      <div class="logo">
-        <span class="yt-title-full">YARN-TRACKER</span>
-        <span class="yt-title-short">YARN TRACKER</span>
+      <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
+        <div class="logo">
+          <span class="yt-title-full">YARN-TRACKER</span>
+          <span class="yt-title-short">YARN TRACKER</span>
+        </div>
+        <div id="vfPresenceBarSlot"></div>
       </div>
       <div id="current-time" class="muted" style="font-size: 0.9rem;"></div>
     </header>
@@ -1741,7 +1744,26 @@
       } catch (e) {
         console.warn('history.pushState not supported or restricted (e.g. file:// protocol):', e);
       }
+
+      broadcastYarnPresence();
     };
+
+    function broadcastYarnPresence() {
+      const divName = (typeof activeDivision !== 'undefined' && activeDivision) ? activeDivision.toUpperCase() : 'COVERING';
+      const tabName = (typeof activeSubTab !== 'undefined' && activeSubTab) ? activeSubTab : 'production';
+      const displayDivision = `${divName} Division`;
+
+      window.__vf_active_division = activeDivision;
+      window.__vf_active_tab = tabName;
+      window.__vf_active_quality_name = displayDivision;
+
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.sendPresencePing === 'function') {
+        window.VishwaSupabase.sendPresencePing(tabName, window.__vf_active_field || '', false, null, displayDivision);
+      }
+      window.dispatchEvent(new CustomEvent('vf-tab-switched', {
+        detail: { division: activeDivision, tab: activeSubTab }
+      }));
+    }
 
     function populateTwistDropdowns() {
       const prodSelect = document.getElementById('prod-twist');
@@ -1903,6 +1925,8 @@
       } catch (e) {
         console.warn('history.pushState not supported or restricted (e.g. file:// protocol):', e);
       }
+
+      broadcastYarnPresence();
     };
 
     // Initialize state from URL params
@@ -4414,6 +4438,7 @@
       loadLogs();
       initProdTwistCustomSelect();
       initFromUrl();
+      broadcastYarnPresence();
       setInterval(updateClock, 1000);
       updateClock();
 
@@ -4426,6 +4451,7 @@
         populateProductNameDropdown();
         renderProductionTable();
         renderStockDashboard();
+        broadcastYarnPresence();
       });
     });
   </script>

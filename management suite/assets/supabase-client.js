@@ -2143,7 +2143,7 @@
     },
     getAllPresence: () => deduplicateUsers(Object.values(presenceStore)),
     sendPresenceHello: () => sendPresenceHello(),
-    sendPresencePing: (tab, field, isTyping) => sendPresencePing(tab, field, isTyping),
+    sendPresencePing: (...args) => sendPresencePing(...args),
     sendPresenceLeave: () => sendPresenceLeave(),
     broadcastFieldFocus: (fieldId, isFocused, meta) => broadcastFieldFocus(fieldId, isFocused, meta),
     broadcastFieldChange: (fieldId, value, meta) => broadcastFieldChange(fieldId, value, meta),
