@@ -1061,7 +1061,7 @@
       }
     });
 
-    // Incoming Remote Field Change Handler (Live Keystrokes)
+    // Incoming Remote Field Change Handler (Live Keystrokes & Live Values)
     window.addEventListener('supabase-field-change', (e) => {
       const { fieldId, value } = e.detail || {};
       if (!fieldId) return;
@@ -1073,21 +1073,26 @@
       if (document.activeElement === el) return;
 
       if (el.value !== value) {
+        const tag = el.tagName.toLowerCase();
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value') ? 
           Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set : null;
         const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value') ?
           Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set : null;
+        const nativeSelectValueSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value') ?
+          Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set : null;
         
-        if (el.tagName.toLowerCase() === 'input' && nativeInputValueSetter) {
+        if (tag === 'input' && nativeInputValueSetter) {
           nativeInputValueSetter.call(el, value);
-        } else if (el.tagName.toLowerCase() === 'textarea' && nativeTextAreaValueSetter) {
+        } else if (tag === 'textarea' && nativeTextAreaValueSetter) {
           nativeTextAreaValueSetter.call(el, value);
+        } else if (tag === 'select' && nativeSelectValueSetter) {
+          nativeSelectValueSetter.call(el, value);
         } else {
           el.value = value;
         }
 
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
+        try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) {}
+        try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch(e) {}
       }
     });
   }
