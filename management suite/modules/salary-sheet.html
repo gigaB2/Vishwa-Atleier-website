@@ -2312,27 +2312,355 @@
             }
         }
 
+        /* Desktop Base Styles for Employee Card */
         .att-emp-card {
             width: 100% !important;
             max-width: 100% !important;
             box-sizing: border-box !important;
             display: flex !important;
             align-items: center !important;
-            flex-wrap: wrap !important;
+            justify-content: space-between !important;
             gap: 0.75rem !important;
+            padding: 0.65rem 1rem !important;
+            border-radius: 12px !important;
+            background: var(--surface) !important;
+            border: 1.5px solid var(--border) !important;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02) !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
-        @media (max-width: 900px) {
+        .att-emp-card:hover {
+            border-color: rgba(139, 92, 246, 0.35) !important;
+            box-shadow: 0 3px 10px rgba(139, 92, 246, 0.08) !important;
+        }
+
+        .att-card-row-top {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1 1 380px;
+        }
+
+        .att-card-col-emp {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            min-width: 150px;
+            flex: 1 1 150px;
+        }
+
+        .att-card-col-status {
+            min-width: 165px;
+            flex: 1 1 165px;
+            max-width: 195px;
+        }
+
+        .att-select-status {
+            width: 100%;
+            height: 36px;
+            border: 1.5px solid var(--border);
+            background: var(--bg);
+            border-radius: 9px;
+            padding: 0 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--fg);
+            outline: none;
+            cursor: pointer;
+            font-family: inherit;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        .att-card-row-bottom {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1 1 450px;
+        }
+
+        .att-card-col-timings {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex: 1 1 230px;
+            max-width: 250px;
+        }
+
+        .att-time-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            flex: 1 1 50%;
+            min-width: 90px;
+        }
+
+        .att-time-lbl {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .att-time-input {
+            height: 36px;
+            width: 100%;
+            border: 1.5px solid var(--border);
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0 4px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--fg);
+            outline: none;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+
+        .att-card-col-notes {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 2 1 200px;
+            min-width: 160px;
+        }
+
+        .att-hours-pill {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 7px;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1.5px solid rgba(139, 92, 246, 0.25);
+            color: var(--accent);
+            font-weight: 800;
+            font-size: 0.75rem;
+            font-family: monospace;
+            white-space: nowrap;
+        }
+
+        .att-remark-input {
+            width: 100%;
+            height: 36px;
+            border: 1.5px solid var(--border);
+            background: var(--bg);
+            padding: 0 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: var(--fg);
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        /* Responsive Tablet Design (768px - 1100px) */
+        @media (max-width: 1100px) {
             .att-emp-card {
+                display: grid !important;
+                grid-template-columns: 1.2fr 1fr !important;
+                gap: 0.5rem 0.85rem !important;
+                padding: 0.75rem 1rem !important;
+                border-radius: 14px !important;
+            }
+
+            .att-card-row-top,
+            .att-card-row-bottom {
+                display: contents !important;
+            }
+
+            .att-card-col-emp {
+                grid-column: 1 / 2 !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+            }
+
+            .att-card-col-status {
+                grid-column: 2 / 3 !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+            }
+
+            .att-card-col-timings {
+                grid-column: 1 / 2 !important;
+                max-width: 100% !important;
+            }
+
+            .att-card-col-notes {
+                grid-column: 2 / 3 !important;
+                max-width: 100% !important;
+            }
+        }
+
+        /* Mobile View (Below 680px): Stacked One Over The Other With Tight Spacing */
+        @media (max-width: 680px) {
+            #att-bulk-modal {
+                padding: 0.35rem !important;
+            }
+            #att-bulk-modal .modal {
+                max-height: 98vh !important;
+                width: 100% !important;
+                border-radius: 14px !important;
+            }
+            #att-bulk-modal .modal > div:first-child {
+                padding: 0.65rem 0.85rem !important;
+            }
+            .att-bulk-date-bar {
+                padding: 0.5rem 0.65rem !important;
+                gap: 0.4rem !important;
+            }
+            .att-bulk-date-field {
+                height: 36px !important;
+                padding: 0 0.75rem !important;
+                min-width: 0 !important;
+                width: 100% !important;
+                border-radius: 8px !important;
+            }
+            .att-bulk-date-field label {
+                font-size: 0.78rem !important;
+            }
+            .att-bulk-date-field input[type="date"] {
+                font-size: 0.9rem !important;
+                min-width: 0 !important;
+            }
+            .att-bulk-presets-wrap {
+                width: 100% !important;
+                display: flex !important;
                 flex-direction: column !important;
                 align-items: stretch !important;
-                gap: 0.75rem !important;
-                padding: 1rem !important;
+                gap: 0.35rem !important;
             }
-            .att-emp-card > div {
+            .att-bulk-presets-wrap > span {
+                font-size: 0.7rem !important;
+                font-weight: 800 !important;
+            }
+            .att-bulk-presets-grid {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
                 width: 100% !important;
+                gap: 0.35rem !important;
+            }
+            .att-bulk-preset-btn {
+                height: 32px !important;
+                padding: 0 6px !important;
+                font-size: 0.74rem !important;
+                font-weight: 700 !important;
+                border-radius: 7px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                text-align: center !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+            }
+            #att-modal-list-container {
+                padding: 0.35rem 0.45rem !important;
+                gap: 0.35rem !important;
+            }
+            .att-emp-card {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 0.25rem !important;
+                padding: 0.45rem 0.6rem !important;
+                border-radius: 10px !important;
+                background: var(--surface) !important;
+            }
+            .att-card-row-top {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 0.25rem !important;
+                width: 100% !important;
+                flex: none !important;
+            }
+            .att-card-col-emp {
+                display: flex !important;
+                align-items: center !important;
+                width: 100% !important;
+                gap: 0.4rem !important;
                 min-width: 0 !important;
-                flex: 1 1 100% !important;
+                flex: none !important;
+            }
+            .att-card-col-emp > div:first-child {
+                width: 26px !important;
+                height: 26px !important;
+                font-size: 0.78rem !important;
+                border-radius: 6px !important;
+            }
+            .att-card-col-emp .emp-title-name {
+                font-size: 0.85rem !important;
+            }
+            .att-card-col-emp .emp-title-sub {
+                font-size: 0.68rem !important;
+            }
+            .att-card-col-status {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                flex: none !important;
+            }
+            .att-select-status {
+                width: 100% !important;
+                height: 32px !important;
+                font-size: 0.78rem !important;
+                padding: 0 6px !important;
+                border-radius: 7px !important;
+            }
+            .att-card-row-bottom {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 0.25rem !important;
+                width: 100% !important;
+                flex: none !important;
+            }
+            .att-card-col-timings {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 0.35rem !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                flex: none !important;
+            }
+            .att-time-cell {
+                flex: 1 1 50% !important;
+                gap: 0.2rem !important;
+                min-width: 0 !important;
+            }
+            .att-time-lbl {
+                font-size: 0.68rem !important;
+            }
+            .att-time-input {
+                height: 30px !important;
+                font-size: 0.76rem !important;
+                padding: 0 3px !important;
+                border-radius: 6px !important;
+            }
+            .att-card-col-notes {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 0.35rem !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                flex: none !important;
+            }
+            .att-hours-pill {
+                padding: 3px 6px !important;
+                font-size: 0.7rem !important;
+                border-radius: 5px !important;
+            }
+            .att-remark-input {
+                height: 30px !important;
+                font-size: 0.76rem !important;
+                padding: 0 6px !important;
+                border-radius: 6px !important;
+                width: 100% !important;
+            }
+            #att-bulk-modal .modal > div:last-child {
+                padding: 0.55rem 0.75rem !important;
             }
         }
 
@@ -2362,39 +2690,6 @@
             .att-input-group {
                 width: 100% !important;
                 flex: 1 1 100% !important;
-            }
-            .att-bulk-date-bar {
-                flex-direction: column !important;
-                align-items: stretch !important;
-                padding: 1.15rem !important;
-                gap: 1rem !important;
-            }
-            .att-bulk-date-field {
-                width: 100% !important;
-                min-width: 0 !important;
-                box-sizing: border-box !important;
-            }
-            .att-bulk-presets-wrap {
-                width: 100% !important;
-                flex-direction: column !important;
-                align-items: stretch !important;
-                gap: 0.5rem !important;
-            }
-            .att-bulk-presets-grid {
-                display: grid !important;
-                grid-template-columns: repeat(2, 1fr) !important;
-                width: 100% !important;
-                gap: 0.45rem !important;
-            }
-            .att-bulk-preset-btn {
-                width: 100% !important;
-                padding: 8px 4px !important;
-                font-size: 0.72rem !important;
-                min-height: 40px !important;
-                justify-content: center !important;
-                text-align: center !important;
-                display: inline-flex !important;
-                align-items: center !important;
             }
         }
         .att-date-input:focus {
@@ -17257,63 +17552,58 @@
                     }
 
                     return `
-                        <div class="att-emp-card" data-emp-idx="${idx}" data-emp-name="${safeName}"
-                            style="background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; padding: 0.85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; box-shadow: 0 2px 5px rgba(0,0,0,0.02); width: 100%; box-sizing: border-box; flex-wrap: wrap;">
-                            
-                            <!-- 1. Employee Info -->
-                            <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 160px; flex: 1 1 160px; max-width: 210px;">
-                                <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(139, 92, 246, 0.12); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 800; flex-shrink: 0;">
-                                    ${(emp.name || 'E').charAt(0).toUpperCase()}
-                                </div>
-                                <div style="overflow: hidden; flex: 1 1 auto;">
-                                    <div style="font-weight: 800; font-size: 0.9rem; color: var(--fg); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                        ${emp.name}
+                        <div class="att-emp-card" data-emp-idx="${idx}" data-emp-name="${safeName}">
+                            <!-- Top Group / Left: Employee Info & Status Dropdown -->
+                            <div class="att-card-row-top">
+                                <div class="att-card-col-emp">
+                                    <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(139, 92, 246, 0.12); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 800; flex-shrink: 0;">
+                                        ${(emp.name || 'E').charAt(0).toUpperCase()}
                                     </div>
-                                    <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                        ${emp.role || 'Staff'}
+                                    <div style="overflow: hidden; flex: 1 1 auto;">
+                                        <div class="emp-title-name" style="font-weight: 800; font-size: 0.88rem; color: var(--fg); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            ${emp.name}
+                                        </div>
+                                        <div class="emp-title-sub" style="font-size: 0.7rem; color: var(--muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">
+                                            ${emp.role || 'Staff'} ${emp.salaryStyle ? `• <span style="opacity: 0.85;">${emp.salaryStyle}</span>` : ''}
+                                        </div>
                                     </div>
+                                </div>
+
+                                <div class="att-card-col-status">
+                                    <select id="att_status_select_${idx}" onchange="onAttStatusDropdownChange(${idx}, this)" class="att-select-status">
+                                        <option value="present" ${defaultStatus === 'present' ? 'selected' : ''}>✓ 1 Shift (Day)</option>
+                                        <option value="night_shift" ${defaultStatus === 'night_shift' ? 'selected' : ''}>🌙 1 Shift (Night)</option>
+                                        <option value="double_shift" ${defaultStatus === 'double_shift' ? 'selected' : ''}>⚡ 2 Shifts (Day+Night)</option>
+                                        <option value="half_day" ${defaultStatus === 'half_day' ? 'selected' : ''}>⏳ Half Day (0.5)</option>
+                                        <option value="leave" ${defaultStatus === 'leave' ? 'selected' : ''}>🏖️ Leave</option>
+                                        <option value="absent" ${defaultStatus === 'absent' ? 'selected' : ''}>✕ Absent</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <!-- 2. Shift / Leave Dropdown -->
-                            <div style="min-width: 165px; flex: 1 1 165px; max-width: 195px;">
-                                <select id="att_status_select_${idx}" onchange="onAttStatusDropdownChange(${idx}, this)"
-                                    style="width: 100%; height: 38px; border: 1.5px solid var(--border); background: var(--bg); border-radius: 9px; padding: 0 8px; font-size: 0.8rem; font-weight: 700; color: var(--fg); outline: none; cursor: pointer; font-family: inherit; box-sizing: border-box;">
-                                    <option value="present" ${defaultStatus === 'present' ? 'selected' : ''}>✓ 1 Shift (Day)</option>
-                                    <option value="night_shift" ${defaultStatus === 'night_shift' ? 'selected' : ''}>🌙 1 Shift (Night)</option>
-                                    <option value="double_shift" ${defaultStatus === 'double_shift' ? 'selected' : ''}>⚡ 2 Shifts (Day+Night)</option>
-                                    <option value="half_day" ${defaultStatus === 'half_day' ? 'selected' : ''}>⏳ Half Day (0.5)</option>
-                                    <option value="leave" ${defaultStatus === 'leave' ? 'selected' : ''}>🏖️ Leave</option>
-                                    <option value="absent" ${defaultStatus === 'absent' ? 'selected' : ''}>✕ Absent</option>
-                                </select>
-                            </div>
+                            <!-- Bottom Group / Right: In/Out Timings, Hours Badge & Remarks -->
+                            <div class="att-card-row-bottom">
+                                <div class="att-card-col-timings">
+                                    <div class="att-time-cell">
+                                        <span class="att-time-lbl">In:</span>
+                                        <input type="time" id="att_in_${idx}" value="${savedInTime}" onchange="calcAttRowHours(${idx})" class="att-time-input">
+                                    </div>
+                                    <div class="att-time-cell">
+                                        <span class="att-time-lbl">Out:</span>
+                                        <input type="time" id="att_out_${idx}" value="${savedOutTime}" onchange="calcAttRowHours(${idx})" class="att-time-input">
+                                    </div>
+                                </div>
 
-                            <!-- 3. Inward Time -->
-                            <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 120px; flex: 1 1 120px; max-width: 140px;">
-                                <span style="font-size: 0.72rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">In:</span>
-                                <input type="time" id="att_in_${idx}" value="${savedInTime}" onchange="calcAttRowHours(${idx})"
-                                    style="height: 38px; width: 100%; border: 1.5px solid var(--border); background: var(--bg); border-radius: 9px; padding: 0 4px; font-size: 0.8rem; font-weight: 700; color: var(--fg); outline: none; box-sizing: border-box; font-family: monospace;">
-                            </div>
-
-                            <!-- 4. Outward Time -->
-                            <div style="display: flex; align-items: center; gap: 0.35rem; min-width: 120px; flex: 1 1 120px; max-width: 140px;">
-                                <span style="font-size: 0.72rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Out:</span>
-                                <input type="time" id="att_out_${idx}" value="${savedOutTime}" onchange="calcAttRowHours(${idx})"
-                                    style="height: 38px; width: 100%; border: 1.5px solid var(--border); background: var(--bg); border-radius: 9px; padding: 0 4px; font-size: 0.8rem; font-weight: 700; color: var(--fg); outline: none; box-sizing: border-box; font-family: monospace;">
-                            </div>
-
-                            <!-- 5. Calculated Hours Badge -->
-                            <div style="min-width: 70px; flex: 0 0 70px; text-align: center;">
-                                <span id="att_hrs_${idx}" data-hours="${calcHoursVal}"
-                                    style="display: inline-block; padding: 4px 6px; border-radius: 7px; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.25); color: var(--accent); font-weight: 800; font-size: 0.74rem; font-family: monospace; white-space: nowrap;">
-                                    ${calcHoursText}
-                                </span>
-                            </div>
-
-                            <!-- 6. Optional Note (Single Line) -->
-                            <div style="flex: 2 1 160px; min-width: 140px;">
-                                <input type="text" id="att_remark_${idx}" value="${savedRemarks}" placeholder="Optional note..."
-                                    style="width: 100%; height: 38px; border: 1.5px solid var(--border); background: var(--bg); padding: 0 10px; border-radius: 9px; font-size: 0.8rem; color: var(--fg); outline: none; box-sizing: border-box;">
+                                <div class="att-card-col-notes">
+                                    <div style="flex-shrink: 0; text-align: center;">
+                                        <span id="att_hrs_${idx}" data-hours="${calcHoursVal}" class="att-hours-pill">
+                                            ${calcHoursText}
+                                        </span>
+                                    </div>
+                                    <div style="flex: 1 1 auto; min-width: 90px;">
+                                        <input type="text" id="att_remark_${idx}" value="${savedRemarks}" placeholder="Optional note..." class="att-remark-input">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     `;
