@@ -4353,6 +4353,164 @@
                 overflow: auto !important;
             }
         }
+
+        /* --- ATTENDANCE & LEAVES RESPONSIVE DESIGN (Laptop, Tablet, Mobile) --- */
+        .att-header-wrap {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.25rem;
+        }
+
+        .att-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .att-status-group {
+            display: flex;
+            justify-content: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+        }
+
+        .att-status-badge-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        /* Tablet View (< 1024px) */
+        @media only screen and (max-width: 1024px) {
+            .att-stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 0.75rem !important;
+            }
+
+            #att-bulk-modal .modal,
+            #att-employee-calendar-modal .modal {
+                width: 96% !important;
+                padding: 1.5rem !important;
+            }
+        }
+
+        /* Mobile View (< 768px) */
+        @media only screen and (max-width: 768px) {
+            .att-header-wrap {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 0.75rem !important;
+            }
+
+            .att-header-controls {
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100% !important;
+                gap: 0.6rem !important;
+            }
+
+            .att-header-controls .btn {
+                width: 100% !important;
+                justify-content: center !important;
+            }
+
+            .att-month-picker-wrap {
+                width: 100% !important;
+                justify-content: space-between !important;
+            }
+
+            .att-stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 0.6rem !important;
+            }
+
+            .att-stat-card {
+                padding: 0.75rem !important;
+            }
+
+            .att-stat-card .stat-num {
+                font-size: 1.25rem !important;
+            }
+
+            #att-bulk-modal .modal {
+                width: 98% !important;
+                padding: 1.2rem !important;
+                max-height: 94vh !important;
+                border-radius: 16px !important;
+            }
+
+            .att-modal-preset-row {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 0.5rem !important;
+            }
+
+            .att-modal-preset-row .btn {
+                width: 100% !important;
+                text-align: center !important;
+            }
+
+            .att-status-group {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 0.35rem !important;
+                width: 100% !important;
+            }
+
+            .att-status-badge-label {
+                font-size: 0.68rem !important;
+                padding: 6px 4px !important;
+                justify-content: center !important;
+                text-align: center !important;
+            }
+
+            #att-employee-calendar-modal .modal {
+                width: 98% !important;
+                padding: 1.2rem !important;
+            }
+
+            #att-cal-grid {
+                gap: 0.25rem !important;
+            }
+
+            #att-cal-grid > div {
+                min-height: 44px !important;
+                padding: 2px !important;
+            }
+
+            #att-cal-grid > div .cal-day-num {
+                font-size: 0.65rem !important;
+            }
+
+            #att-cal-grid > div .cal-day-status {
+                font-size: 0.58rem !important;
+            }
+        }
+
+        /* Small Phones (< 480px) */
+        @media only screen and (max-width: 480px) {
+            .att-stats-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .att-status-group {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
     <script src="../sidebar.js" defer></script>
 </head>
@@ -4471,6 +4629,10 @@
             <button type="button" class="tab-btn" onclick="switchSalaryTab('beam-loading-tab')">
                 <span class="tab-label-full">🏗️ Beam Loading</span>
                 <span class="tab-label-short">Beams</span>
+            </button>
+            <button type="button" class="tab-btn" onclick="switchSalaryTab('tab-attendance')">
+                <span class="tab-label-full">🗓️ Attendance & Leaves</span>
+                <span class="tab-label-short">Attendance</span>
             </button>
             <button type="button" class="tab-btn" onclick="switchSalaryTab('tab-loans')">
                 <span class="tab-label-full">💵 Staff Loans</span>
@@ -5647,8 +5809,8 @@
                                                 style="background: var(--surface); color: var(--muted);">Select Salary
                                                 Style</option>
 
-                                            <option value="Per Day"
-                                                style="background: var(--surface); color: var(--fg);">Per Day</option>
+                                            <option value="Per Shift"
+                                                style="background: var(--surface); color: var(--fg);">Per Shift</option>
 
                                             <option value="Per Machine/Month"
                                                 style="background: var(--surface); color: var(--fg);">Per Machine/Month
@@ -6130,6 +6292,218 @@
                         </div>
                     </div>
 
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB CONTENT 6: ATTENDANCE & LEAVES (Daily Bulk Logger & Pro-Rata Salary Summary) -->
+        <div id="tab-attendance" class="tab-content" style="margin-top: 1.5rem;">
+            <div class="card"
+                style="padding: 1.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-md); width: 100%;">
+                
+                <!-- Tab Header -->
+                <div class="att-header-wrap">
+                    <div>
+                        <h2 class="display-font text-2xl sm:text-3xl font-extrabold tracking-tight text-fg" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🗓️ Staff Attendance & Leaves</span>
+                        </h2>
+                        <p style="color: var(--muted); font-size: 0.85rem; margin: 0.25rem 0 0 0;">
+                            Track daily presence, day & night shifts, half days, leaves, and absences across all staff.
+                        </p>
+                    </div>
+
+                    <!-- Month Selector & Global Actions -->
+                    <div class="att-header-controls" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <div class="att-month-picker-wrap" style="display: flex; align-items: center; gap: 0.4rem; background: rgba(0,0,0,0.03); border: 1px solid var(--border); padding: 6px 12px; border-radius: 12px;">
+                            <label for="att-month-filter" style="font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Month:</label>
+                            <input type="month" id="att-month-filter" onchange="handleAttMonthChange()"
+                                style="border: none; background: transparent; font-size: 0.85rem; font-weight: 700; color: var(--fg); outline: none; cursor: pointer;">
+                        </div>
+
+                        <button type="button" class="btn btn-primary" onclick="openBulkAttendanceModal()"
+                            style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; padding: 0.6rem 1.2rem; border-radius: 10px;">
+                            <i class="ri-user-follow-line" style="font-size: 1rem;"></i> Log Daily Attendance
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary Stat Cards -->
+                <div class="att-stats-grid">
+                    <div class="card att-stat-card" style="padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: rgba(16, 185, 129, 0.05);">
+                        <div style="font-size: 0.7rem; font-weight: 700; color: var(--success); text-transform: uppercase; letter-spacing: 0.05em;">Total Shifts Worked</div>
+                        <div id="att-stat-total-shifts" class="stat-num" style="font-size: 1.5rem; font-weight: 800; color: var(--fg); margin-top: 0.25rem;">0</div>
+                        <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem;">All staff shifts this month</div>
+                    </div>
+                    <div class="card att-stat-card" style="padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: rgba(139, 92, 246, 0.05);">
+                        <div style="font-size: 0.7rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em;">Present Days Logged</div>
+                        <div id="att-stat-present-days" class="stat-num" style="font-size: 1.5rem; font-weight: 800; color: var(--fg); margin-top: 0.25rem;">0</div>
+                        <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem;">Full & double day presences</div>
+                    </div>
+                    <div class="card att-stat-card" style="padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: rgba(245, 158, 11, 0.05);">
+                        <div style="font-size: 0.7rem; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.05em;">Leaves / Half Days</div>
+                        <div id="att-stat-leaves-half" class="stat-num" style="font-size: 1.5rem; font-weight: 800; color: var(--fg); margin-top: 0.25rem;">0 / 0</div>
+                        <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem;">Approved leave & half days</div>
+                    </div>
+                    <div class="card att-stat-card" style="padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: rgba(239, 68, 68, 0.05);">
+                        <div style="font-size: 0.7rem; font-weight: 700; color: var(--error); text-transform: uppercase; letter-spacing: 0.05em;">Absences</div>
+                        <div id="att-stat-absences" class="stat-num" style="font-size: 1.5rem; font-weight: 800; color: var(--fg); margin-top: 0.25rem;">0</div>
+                        <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem;">Unpaid absent counts</div>
+                    </div>
+                </div>
+
+                <!-- Monthly Attendance Table Container -->
+                <div class="table-container" style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface);">
+                    <div style="padding: 0.75rem 1rem; background: rgba(0,0,0,0.02); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);">
+                            Staff Monthly Attendance & Shift Summary
+                        </span>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%; max-width: 240px;">
+                            <input type="text" id="att-search-input" placeholder="Filter employee / role..." oninput="renderAttendanceSummaryTable()"
+                                style="border: 1px solid var(--border); background: var(--surface); padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; color: var(--fg); width: 100%;">
+                        </div>
+                    </div>
+
+                    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; white-space: nowrap;">
+                            <thead>
+                                <tr style="background: rgba(0,0,0,0.03); border-bottom: 2px solid var(--border); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; color: var(--muted); white-space: nowrap;">
+                                    <th style="padding: 0.75rem 1rem; text-align: left; white-space: nowrap;">Employee</th>
+                                    <th style="padding: 0.75rem 0.6rem; text-align: left; white-space: nowrap;">Role</th>
+                                    <th style="padding: 0.75rem 0.6rem; text-align: center; white-space: nowrap;">Salary Style</th>
+                                    <th style="padding: 0.75rem 0.6rem; text-align: center; color: var(--success); font-weight: 800; white-space: nowrap;">Total Shifts</th>
+                                    <th style="padding: 0.75rem 0.6rem; text-align: center; white-space: nowrap;">Present Days</th>
+                                    <th style="padding: 0.75rem 0.6rem; text-align: center; white-space: nowrap;">Half Days</th>
+                                    <th style="padding: 0.75rem 0.6rem; text-align: center; color: #3b82f6; white-space: nowrap;">Leaves</th>
+                                    <th style="padding: 0.75rem 0.6rem; text-align: center; color: var(--error); white-space: nowrap;">Absent</th>
+                                    <th style="padding: 0.75rem 0.6rem; text-align: center; white-space: nowrap;" class="no-print">Calendar / Logs</th>
+                                </tr>
+                            </thead>
+                            <tbody id="att-summary-body" class="divide-y divide-border" style="white-space: nowrap;">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BULK DAILY ATTENDANCE MODAL OVERLAY -->
+        <div id="att-bulk-modal" class="modal-overlay"
+            style="display: none; align-items: center; justify-content: center; z-index: 10005; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 1rem;">
+            <div class="modal"
+                style="max-width: 960px; width: 100%; background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-xl); border: 1px solid var(--border); max-height: 92vh; display: flex; flex-direction: column; position: relative; overflow: hidden;">
+                
+                <!-- Modal Header -->
+                <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.015);">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(139, 92, 246, 0.12); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                            ⚡
+                        </div>
+                        <div>
+                            <h2 style="margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; color: var(--fg); letter-spacing: -0.01em;">
+                                Quick Daily Attendance Logger
+                            </h2>
+                            <p style="color: var(--muted); font-size: 0.78rem; margin: 2px 0 0 0;">
+                                Select date, set employee shift presence, leaves or absences.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <button type="button" onclick="closeBulkAttendanceModal()"
+                        style="width: 36px; height: 36px; border-radius: 10px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); font-size: 1.25rem; cursor: pointer; color: var(--muted); display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
+                        &times;
+                    </button>
+                </div>
+
+                <!-- Date Picker & Fast Presets Bar -->
+                <div style="padding: 1rem 1.5rem; background: rgba(0,0,0,0.02); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--surface); border: 1.5px solid var(--border); padding: 5px 12px; border-radius: 10px;">
+                        <label for="att-log-date" style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: var(--muted);">Date:</label>
+                        <input type="date" id="att-log-date" onchange="loadDateAttendanceIntoForm()"
+                            style="border: none; background: transparent; font-size: 0.88rem; font-weight: 700; color: var(--fg); outline: none; cursor: pointer;">
+                    </div>
+
+                    <!-- Fast Presets & Employee Search -->
+                    <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--muted); margin-right: 0.25rem;">Quick Set All:</span>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="setBulkAttendancePreset('present')"
+                            style="font-size: 0.7rem; font-weight: 700; border-color: rgba(16, 185, 129, 0.4); color: var(--success); padding: 4px 10px; border-radius: 8px;">
+                            ✓ Present (1 Shift)
+                        </button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="setBulkAttendancePreset('double_shift')"
+                            style="font-size: 0.7rem; font-weight: 700; border-color: rgba(139, 92, 246, 0.4); color: var(--accent); padding: 4px 10px; border-radius: 8px;">
+                            ⚡ Double (Day+Night)
+                        </button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="setBulkAttendancePreset('absent')"
+                            style="font-size: 0.7rem; font-weight: 700; border-color: rgba(239, 68, 68, 0.4); color: var(--error); padding: 4px 10px; border-radius: 8px;">
+                            ✕ Absent
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Employees List Container -->
+                <div id="att-modal-list-container" style="flex-grow: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <!-- Filled dynamically with employee attendance cards -->
+                </div>
+
+                <!-- Modal Footer -->
+                <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: var(--surface); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                    <div id="att-save-indicator" style="font-size: 0.8rem; color: var(--success); font-weight: 700;"></div>
+                    <div style="display: flex; gap: 0.6rem; align-items: center;">
+                        <button type="button" class="btn btn-outline" onclick="closeBulkAttendanceModal()"
+                            style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; padding: 0.6rem 1.2rem; border-radius: 10px;">
+                            Cancel
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="saveBulkAttendance()"
+                            style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; padding: 0.6rem 1.6rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.4rem;">
+                            <span>💾 Save Attendance</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EMPLOYEE MONTHLY ATTENDANCE DETAIL / CALENDAR MODAL -->
+        <div id="att-employee-calendar-modal" class="modal-overlay"
+            style="display: none; align-items: center; justify-content: center; z-index: 10006; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 1rem;">
+            <div class="modal" id="att-calendar-modal-content"
+                style="max-width: 800px; padding: 2rem; background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-xl); width: 95%; border: 1px solid var(--border); max-height: 90vh; overflow-y: auto; position: relative;">
+                
+                <div style="margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                    <div>
+                        <h2 id="att-cal-emp-name" style="margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; color: var(--fg);">
+                            Employee Attendance Breakdown
+                        </h2>
+                        <div id="att-cal-emp-sub" style="color: var(--muted); font-size: 0.8rem; margin-top: 0.25rem;">
+                            <!-- Role & Salary style info -->
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 0.5rem;" class="no-print">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="printEmployeeAttendanceCalendar()"
+                            style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; padding: 6px 12px; border-radius: 8px; border-color: var(--accent); color: var(--accent);">
+                            🖨️ Print Calendar
+                        </button>
+                        <button type="button" onclick="closeEmployeeCalendarModal()"
+                            style="width: 32px; height: 32px; border-radius: 8px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); font-size: 1.25rem; cursor: pointer; color: var(--muted); display: flex; align-items: center; justify-content: center;">
+                            &times;
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Calendar Days Grid -->
+                <div id="att-cal-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 1.5rem;">
+                    <!-- Filled dynamically -->
+                </div>
+
+                <!-- Monthly Log Breakdown -->
+                <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+                    <div style="padding: 0.6rem 1rem; background: rgba(0,0,0,0.02); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border);">
+                        Logged Days Detail
+                    </div>
+                    <div id="att-cal-logs-list" style="max-height: 200px; overflow-y: auto; padding: 0.5rem 1rem; font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                        <!-- List of logged items -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -6616,7 +6990,9 @@
 
             logs: [],
 
-            loans: []
+            loans: [],
+
+            attendance: {}
 
         };
 
@@ -6664,6 +7040,7 @@
                         state.tasks = Array.isArray(state.tasks) ? state.tasks : [];
                         state.logs = Array.isArray(state.logs) ? state.logs : [];
                         state.loans = Array.isArray(state.loans) ? state.loans : [];
+                        state.attendance = (state.attendance && typeof state.attendance === 'object') ? state.attendance : {};
                     }
                 }
 
@@ -6678,6 +7055,10 @@
 
                 if (state && !state.loans) {
                     state.loans = [];
+                }
+
+                if (state && !state.attendance) {
+                    state.attendance = {};
                 }
 
                 // Auto-migrate: check and add missing default employees if they aren't in state yet
@@ -8865,7 +9246,7 @@
             const role = getEmpDisplayRole(emp) || emp.role || 'Staff';
 
             let calculatedSalary = 0;
-            if (salaryStyle === 'Per Day') {
+            if (salaryStyle === 'Per Shift' || salaryStyle === 'Per Day') {
                 const daysWorked = shifts > 0 ? shifts : 26;
                 calculatedSalary = daysWorked * baseAmount;
             } else if (salaryStyle === 'Per Month Fixed') {
@@ -9059,50 +9440,63 @@
 
                 const blPay = beamLoadingPayments[name] || 0;
 
+                const salaryStyle = emp.salaryStyle || 'Per Month Fixed';
+                const baseAmount = parseFloat(emp.salaryAmount || 0);
+
                 let role = getEmpDisplayRole(emp) || emp.role || 'Staff';
                 if (blPay > 0 && logStats.salary === 0 && role.toLowerCase().includes('karigar')) {
                     role = 'Beam Loading';
                 }
 
-                const salaryStyle = emp.salaryStyle || 'Per Month Fixed';
-
-                const baseAmount = parseFloat(emp.salaryAmount || 0);
-
-
-
                 let calculatedSalary = 0;
 
                 let workMetricsStr = '';
 
+                // Check logged attendance module stats for this month
+                const attStats = (typeof getEmployeeMonthAttendanceStats === 'function') ? getEmployeeMonthAttendanceStats(name, monthFilter) : null;
+                const hasAttLogs = attStats && attStats.loggedDates && attStats.loggedDates.length > 0;
 
+                if (salaryStyle === 'Per Shift' || salaryStyle === 'Per Day') {
 
-                if (salaryStyle === 'Per Day') {
+                    const effectiveShifts = hasAttLogs ? attStats.totalShifts : (logStats.shifts > 0 ? logStats.shifts : 26);
 
-                    const daysWorked = logStats.shifts > 0 ? logStats.shifts : 26;
+                    calculatedSalary = effectiveShifts * baseAmount;
 
-                    calculatedSalary = daysWorked * baseAmount;
-
-                    workMetricsStr = logStats.shifts > 0 ? `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h)` : `${daysWorked} Working Days`;
+                    workMetricsStr = hasAttLogs 
+                        ? `${attStats.totalShifts} Shifts (Att Logged)` 
+                        : (logStats.shifts > 0 ? `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h)` : `26 Standard Shifts`);
 
                 } else if (salaryStyle === 'Per Month Fixed') {
 
-                    calculatedSalary = baseAmount;
-
-                    workMetricsStr = 'Fixed Monthly Contract';
+                    if (hasAttLogs && typeof calculateProRataSalary === 'function') {
+                        calculatedSalary = calculateProRataSalary(emp, monthFilter);
+                        workMetricsStr = `${attStats.presentDays} Days Present (Pro-Rata)`;
+                    } else {
+                        calculatedSalary = baseAmount;
+                        workMetricsStr = 'Fixed Monthly Contract';
+                    }
 
                 } else if (salaryStyle === 'Per Machine/Month') {
 
                     const machineCount = (emp.machines && emp.machines.length > 0) ? emp.machines.length : 1;
 
-                    calculatedSalary = machineCount * baseAmount;
-
-                    workMetricsStr = `${machineCount} Assigned Machine${machineCount > 1 ? 's' : ''}`;
+                    if (hasAttLogs && typeof calculateProRataSalary === 'function') {
+                        calculatedSalary = calculateProRataSalary(emp, monthFilter);
+                        workMetricsStr = `${machineCount} Machines • ${attStats.presentDays}d (Pro-Rata)`;
+                    } else {
+                        calculatedSalary = machineCount * baseAmount;
+                        workMetricsStr = `${machineCount} Assigned Machine${machineCount > 1 ? 's' : ''}`;
+                    }
 
                 } else if (salaryStyle === 'Per Spindle/Month') {
 
-                    calculatedSalary = baseAmount;
-
-                    workMetricsStr = 'Per Spindle Shift';
+                    if (hasAttLogs && typeof calculateProRataSalary === 'function') {
+                        calculatedSalary = calculateProRataSalary(emp, monthFilter);
+                        workMetricsStr = `${attStats.presentDays} Days Present (Pro-Rata)`;
+                    } else {
+                        calculatedSalary = baseAmount;
+                        workMetricsStr = 'Per Spindle Shift';
+                    }
 
                 } else if (salaryStyle.includes('Piece Rate') || salaryStyle.includes('Pick') || salaryStyle === 'Per Meter/Month') {
 
@@ -12458,6 +12852,7 @@
                 'karigar-salary': { full: 'Karigar Salary', short: 'Karigar' },
                 'staff-management': { full: 'Staff Management', short: 'Staff' },
                 'beam-loading-tab': { full: 'Beam Loading', short: 'Beams' },
+                'tab-attendance': { full: 'Attendance & Leaves', short: 'Attendance' },
                 'tab-loans': { full: 'Loans for Staff', short: 'Loans' }
             };
             const name = tabNames[tabId] || { full: 'Attendance and Salary Sheet', short: 'Salary Sheet' };
@@ -12478,6 +12873,12 @@
             if (tabId === 'beam-loading-tab' && typeof renderBeamLoadingTab === 'function') {
 
                 renderBeamLoadingTab();
+
+            }
+
+            if (tabId === 'tab-attendance' && typeof renderAttendanceTab === 'function') {
+
+                renderAttendanceTab();
 
             }
 
@@ -15865,7 +16266,7 @@
                             class="w-full bg-black/5 dark-mode:bg-black/40 border border-border rounded-xl px-3 py-2.5 text-xs text-fg focus:outline-none focus:border-accent/50 transition-all duration-300"
                             style="width: 100%; border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-size: 12px; background: rgba(0,0,0,0.03); color: var(--fg);">
 
-                            <option value="Per Day" style="background: var(--surface); color: var(--fg);">Per Day
+                            <option value="Per Shift" style="background: var(--surface); color: var(--fg);">Per Shift
                             </option>
 
                             <option value="Per Machine/Month" style="background: var(--surface); color: var(--fg);">Per
@@ -16246,6 +16647,675 @@
             if (loanStartMonthInput) {
                 loanStartMonthInput.value = new Date().toISOString().substring(0, 7);
             }
+            const attMonthInput = document.getElementById('att-month-filter');
+            if (attMonthInput) {
+                attMonthInput.value = new Date().toISOString().substring(0, 7);
+            }
+            const attLogDateInput = document.getElementById('att-log-date');
+            if (attLogDateInput) {
+                attLogDateInput.value = new Date().toISOString().substring(0, 10);
+            }
+
+            // --- ATTENDANCE & PRO-RATA PAYROLL MODULE ---
+            window.handleAttMonthChange = function () {
+                renderAttendanceSummaryTable();
+            };
+
+            window.renderAttendanceTab = function () {
+                const monthInput = document.getElementById('att-month-filter');
+                if (monthInput && !monthInput.value) {
+                    monthInput.value = new Date().toISOString().substring(0, 7);
+                }
+                renderAttendanceSummaryTable();
+            };
+
+            window.getAttendanceForDate = function (dateStr) {
+                if (!state || !state.attendance) return {};
+                return state.attendance[dateStr] || {};
+            };
+
+            window.getEmployeeMonthAttendanceStats = function (empName, monthKey) {
+                // monthKey format: 'YYYY-MM'
+                let presentDays = 0;
+                let totalShifts = 0;
+                let halfDays = 0;
+                let leaves = 0;
+                let absences = 0;
+                let loggedDates = [];
+
+                if (state && state.attendance) {
+                    Object.keys(state.attendance).forEach(dateStr => {
+                        if (dateStr.startsWith(monthKey)) {
+                            const dayData = state.attendance[dateStr];
+                            if (dayData && dayData[empName]) {
+                                const entry = dayData[empName];
+                                const status = entry.status || 'present';
+                                const shifts = (entry.shifts !== undefined && entry.shifts !== null) ? parseFloat(entry.shifts) : (status === 'double_shift' ? 2 : (status === 'half_day' ? 0.5 : (status === 'absent' || status === 'leave' ? 0 : 1)));
+                                
+                                if (status === 'present') {
+                                    presentDays += 1;
+                                    totalShifts += shifts;
+                                } else if (status === 'double_shift') {
+                                    presentDays += 1;
+                                    totalShifts += shifts;
+                                } else if (status === 'half_day') {
+                                    presentDays += 0.5;
+                                    halfDays += 1;
+                                    totalShifts += shifts;
+                                } else if (status === 'leave') {
+                                    leaves += 1;
+                                } else if (status === 'absent') {
+                                    absences += 1;
+                                }
+                                loggedDates.push({ date: dateStr, status: status, shifts: shifts, remarks: entry.remarks || '' });
+                            }
+                        }
+                    });
+                }
+
+                return {
+                    presentDays,
+                    totalShifts,
+                    halfDays,
+                    leaves,
+                    absences,
+                    loggedDates: loggedDates.sort((a, b) => a.date.localeCompare(b.date))
+                };
+            };
+
+            window.calculateProRataSalary = function (emp, monthKey) {
+                if (!emp || emp.status === 'Terminated') return 0;
+                const salaryStyle = emp.salaryStyle || 'Per Month Fixed';
+                const baseAmount = parseFloat(emp.salaryAmount || 0);
+                const stats = getEmployeeMonthAttendanceStats(emp.name, monthKey);
+
+                // Compute standard working days in month (standard default: 26 or calendar days - Sundays)
+                const [year, month] = monthKey.split('-').map(Number);
+                const totalDaysInMonth = new Date(year, month, 0).getDate();
+                let standardWorkingDays = 0;
+                for (let d = 1; d <= totalDaysInMonth; d++) {
+                    const dayOfWeek = new Date(year, month - 1, d).getDay();
+                    if (dayOfWeek !== 0) standardWorkingDays++; // exclude Sundays as default standard
+                }
+                if (standardWorkingDays <= 0) standardWorkingDays = 26;
+
+                // Fallback: If no attendance has been logged at all for this employee this month, default to standard full attendance
+                const hasAnyAttendanceLogged = stats.loggedDates.length > 0;
+                const effectivePresentDays = hasAnyAttendanceLogged ? stats.presentDays : standardWorkingDays;
+                const effectiveShifts = hasAnyAttendanceLogged ? stats.totalShifts : standardWorkingDays;
+
+                let proRataSalary = 0;
+
+                if (salaryStyle === 'Per Shift' || salaryStyle === 'Per Day') {
+                    // Total shifts worked * Shift Rate (e.g. 26 day + 10 night = 36 shifts * Rate)
+                    proRataSalary = effectiveShifts * baseAmount;
+                } else if (salaryStyle === 'Per Month Fixed') {
+                    // Pro-rata based on days present out of standard working days
+                    const dailyRate = baseAmount / standardWorkingDays;
+                    proRataSalary = Math.round(dailyRate * effectivePresentDays);
+                } else if (salaryStyle === 'Per Machine/Month') {
+                    const machineCount = (emp.machines && emp.machines.length > 0) ? emp.machines.length : 1;
+                    const monthlyBase = machineCount * baseAmount;
+                    const dailyRate = monthlyBase / standardWorkingDays;
+                    proRataSalary = Math.round(dailyRate * effectivePresentDays);
+                } else if (salaryStyle === 'Per Spindle/Month') {
+                    const dailyRate = baseAmount / standardWorkingDays;
+                    proRataSalary = Math.round(dailyRate * effectivePresentDays);
+                } else if (salaryStyle === 'Per Meter/Month' || (emp.role && emp.role.toLowerCase().includes('karigar'))) {
+                    // For meter-based karigars, if shift rate exists it uses shifts, else uses production log earnings
+                    const logSalary = getEmployeeSalaryForMonth(emp.name, monthKey);
+                    proRataSalary = logSalary > 0 ? logSalary : (effectiveShifts * (baseAmount > 0 ? baseAmount : 0));
+                } else {
+                    const dailyRate = baseAmount / standardWorkingDays;
+                    proRataSalary = Math.round(dailyRate * effectivePresentDays);
+                }
+
+                return Math.max(0, proRataSalary);
+            };
+
+            window.renderAttendanceSummaryTable = function () {
+                const monthInput = document.getElementById('att-month-filter');
+                const monthKey = monthInput ? monthInput.value : new Date().toISOString().substring(0, 7);
+                const searchInput = document.getElementById('att-search-input');
+                const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+                const tbody = document.getElementById('att-summary-body');
+                if (!tbody) return;
+
+                const staffList = (state && Array.isArray(state.employees)) ? state.employees.filter(e => e.status !== 'Terminated') : [];
+
+                let grandTotalShifts = 0;
+                let grandPresentDays = 0;
+                let grandLeaves = 0;
+                let grandHalfDays = 0;
+                let grandAbsences = 0;
+
+                const filteredStaff = staffList.filter(emp => {
+                    if (!searchTerm) return true;
+                    const nameMatch = (emp.name || '').toLowerCase().includes(searchTerm);
+                    const roleMatch = (emp.role || '').toLowerCase().includes(searchTerm);
+                    return nameMatch || roleMatch;
+                });
+
+                if (filteredStaff.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="9" style="padding: 2.5rem; text-align: center; color: var(--muted); font-weight: 600;">
+                                No active staff members found matching your search.
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    tbody.innerHTML = filteredStaff.map(emp => {
+                        const stats = getEmployeeMonthAttendanceStats(emp.name, monthKey);
+
+                        grandTotalShifts += stats.totalShifts;
+                        grandPresentDays += stats.presentDays;
+                        grandLeaves += stats.leaves;
+                        grandHalfDays += stats.halfDays;
+                        grandAbsences += stats.absences;
+
+                        const safeName = String(emp.name).replace(/'/g, "\\'");
+
+                        return `
+                            <tr class="hover:bg-black/5 dark-mode:hover:bg-white/5 transition-colors" style="white-space: nowrap;">
+                                <td style="padding: 0.65rem 1rem; font-weight: 700; color: var(--fg); white-space: nowrap;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;">
+                                        <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(139, 92, 246, 0.15); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; flex-shrink: 0;">
+                                            ${(emp.name || 'E').charAt(0).toUpperCase()}
+                                        </div>
+                                        <span style="white-space: nowrap;">${emp.name}</span>
+                                    </div>
+                                </td>
+                                <td style="padding: 0.65rem 0.6rem; color: var(--muted); font-weight: 600; white-space: nowrap;">
+                                    <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.04); border: 1px solid var(--border); white-space: nowrap;">
+                                        ${emp.role || 'Staff'}
+                                    </span>
+                                </td>
+                                <td style="padding: 0.65rem 0.6rem; text-align: center; white-space: nowrap;">
+                                    <span style="font-size: 0.72rem; font-weight: 700; color: var(--accent); padding: 2px 8px; border-radius: 6px; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); white-space: nowrap;">
+                                        ${emp.salaryStyle || 'Per Month Fixed'}
+                                    </span>
+                                </td>
+                                <td style="padding: 0.65rem 0.6rem; text-align: center; font-weight: 800; color: var(--success); font-family: monospace; font-size: 0.95rem; white-space: nowrap;">
+                                    ${stats.totalShifts} ${stats.totalShifts === 1 ? 'Shift' : 'Shifts'}
+                                </td>
+                                <td style="padding: 0.65rem 0.6rem; text-align: center; font-weight: 700; color: var(--fg); white-space: nowrap;">
+                                    ${stats.presentDays} Days
+                                </td>
+                                <td style="padding: 0.65rem 0.6rem; text-align: center; font-weight: 700; color: #f59e0b; white-space: nowrap;">
+                                    ${stats.halfDays > 0 ? `${stats.halfDays} Days` : '—'}
+                                </td>
+                                <td style="padding: 0.65rem 0.6rem; text-align: center; font-weight: 700; color: #3b82f6; white-space: nowrap;">
+                                    ${stats.leaves > 0 ? `${stats.leaves} Days` : '0'}
+                                </td>
+                                <td style="padding: 0.65rem 0.6rem; text-align: center; font-weight: 700; color: var(--error); white-space: nowrap;">
+                                    ${stats.absences > 0 ? `${stats.absences} Days` : '0'}
+                                </td>
+                                <td style="padding: 0.65rem 0.6rem; text-align: center; white-space: nowrap;" class="no-print">
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="openEmployeeCalendarModal('${safeName}')"
+                                        style="padding: 4px 10px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; border-radius: 8px; white-space: nowrap;">
+                                        🗓️ View Logs
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+
+                // Update summary stat indicators
+                const totalShiftsEl = document.getElementById('att-stat-total-shifts');
+                if (totalShiftsEl) totalShiftsEl.innerText = `${grandTotalShifts} Shifts`;
+
+                const presentDaysEl = document.getElementById('att-stat-present-days');
+                if (presentDaysEl) presentDaysEl.innerText = `${grandPresentDays} Days`;
+
+                const leavesHalfEl = document.getElementById('att-stat-leaves-half');
+                if (leavesHalfEl) leavesHalfEl.innerText = `${grandLeaves} Leaves / ${grandHalfDays} HD`;
+
+                const absencesEl = document.getElementById('att-stat-absences');
+                if (absencesEl) absencesEl.innerText = `${grandAbsences} Absences`;
+            };
+
+            // --- BULK DAILY MODAL CONTROLS ---
+            window.openBulkAttendanceModal = function () {
+                const modal = document.getElementById('att-bulk-modal');
+                if (!modal) return;
+                const logDateInput = document.getElementById('att-log-date');
+                if (logDateInput && !logDateInput.value) {
+                    logDateInput.value = new Date().toISOString().substring(0, 10);
+                }
+                loadDateAttendanceIntoForm();
+                modal.style.display = 'flex';
+            };
+
+            window.closeBulkAttendanceModal = function () {
+                const modal = document.getElementById('att-bulk-modal');
+                if (modal) modal.style.display = 'none';
+            };
+
+            window.loadDateAttendanceIntoForm = function () {
+                const logDateInput = document.getElementById('att-log-date');
+                if (!logDateInput) return;
+                const dateStr = logDateInput.value;
+                const existingAttendance = getAttendanceForDate(dateStr);
+
+                const container = document.getElementById('att-modal-list-container');
+                if (!container) return;
+
+                const staffList = (state && Array.isArray(state.employees)) ? state.employees.filter(e => e.status !== 'Terminated') : [];
+
+                if (staffList.length === 0) {
+                    container.innerHTML = `
+                        <div style="padding: 3rem 1rem; text-align: center; color: var(--muted); font-weight: 600;">
+                            No registered active employees found. Please add employees in Manage Staff first.
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = staffList.map((emp, idx) => {
+                    const savedEntry = existingAttendance[emp.name] || null;
+                    const defaultStatus = savedEntry ? savedEntry.status : 'present';
+                    const savedRemarks = savedEntry ? (savedEntry.remarks || '') : '';
+                    const safeName = String(emp.name).replace(/"/g, '&quot;');
+                    const safeNameEsc = String(emp.name).replace(/'/g, "\\'");
+
+                    return `
+                        <div class="att-emp-card" data-emp-idx="${idx}" data-emp-name="${safeName}"
+                            style="background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 1rem 1.2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                            
+                            <!-- Left: Employee Info -->
+                            <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 180px;">
+                                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(139, 92, 246, 0.15); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 800; flex-shrink: 0;">
+                                    ${(emp.name || 'E').charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 800; font-size: 0.92rem; color: var(--fg); line-height: 1.2;">
+                                        ${emp.name}
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 2px;">
+                                        <span style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">${emp.role || 'Staff'}</span>
+                                        <span style="font-size: 0.68rem; font-weight: 700; color: var(--accent); padding: 1px 6px; border-radius: 4px; background: rgba(139, 92, 246, 0.08);">
+                                            ${emp.salaryStyle || 'Per Month Fixed'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Middle: Status Selector Buttons -->
+                            <div class="att-status-button-group" style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center;">
+                                <button type="button" class="att-pill-btn ${defaultStatus === 'present' ? 'active-present' : ''}" onclick="selectAttCardStatus('${safeNameEsc}', 'present', this)"
+                                    style="padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; border: 1.5px solid ${defaultStatus === 'present' ? 'var(--success)' : 'var(--border)'}; background: ${defaultStatus === 'present' ? 'rgba(16, 185, 129, 0.15)' : 'transparent'}; color: ${defaultStatus === 'present' ? 'var(--success)' : 'var(--fg)'}; cursor: pointer; transition: all 0.15s ease;">
+                                    ✓ 1 Shift (Day)
+                                </button>
+                                <button type="button" class="att-pill-btn ${defaultStatus === 'double_shift' ? 'active-double' : ''}" onclick="selectAttCardStatus('${safeNameEsc}', 'double_shift', this)"
+                                    style="padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; border: 1.5px solid ${defaultStatus === 'double_shift' ? 'var(--accent)' : 'var(--border)'}; background: ${defaultStatus === 'double_shift' ? 'rgba(139, 92, 246, 0.15)' : 'transparent'}; color: ${defaultStatus === 'double_shift' ? 'var(--accent)' : 'var(--fg)'}; cursor: pointer; transition: all 0.15s ease;">
+                                    ⚡ 2 Shifts (Day+Night)
+                                </button>
+                                <button type="button" class="att-pill-btn ${defaultStatus === 'half_day' ? 'active-half' : ''}" onclick="selectAttCardStatus('${safeNameEsc}', 'half_day', this)"
+                                    style="padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; border: 1.5px solid ${defaultStatus === 'half_day' ? '#f59e0b' : 'var(--border)'}; background: ${defaultStatus === 'half_day' ? 'rgba(245, 158, 11, 0.15)' : 'transparent'}; color: ${defaultStatus === 'half_day' ? '#f59e0b' : 'var(--fg)'}; cursor: pointer; transition: all 0.15s ease;">
+                                    Half Day (0.5)
+                                </button>
+                                <button type="button" class="att-pill-btn ${defaultStatus === 'leave' ? 'active-leave' : ''}" onclick="selectAttCardStatus('${safeNameEsc}', 'leave', this)"
+                                    style="padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; border: 1.5px solid ${defaultStatus === 'leave' ? '#3b82f6' : 'var(--border)'}; background: ${defaultStatus === 'leave' ? 'rgba(59, 130, 246, 0.15)' : 'transparent'}; color: ${defaultStatus === 'leave' ? '#3b82f6' : 'var(--fg)'}; cursor: pointer; transition: all 0.15s ease;">
+                                    Leave
+                                </button>
+                                <button type="button" class="att-pill-btn ${defaultStatus === 'absent' ? 'active-absent' : ''}" onclick="selectAttCardStatus('${safeNameEsc}', 'absent', this)"
+                                    style="padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; border: 1.5px solid ${defaultStatus === 'absent' ? 'var(--error)' : 'var(--border)'}; background: ${defaultStatus === 'absent' ? 'rgba(239, 68, 68, 0.15)' : 'transparent'}; color: ${defaultStatus === 'absent' ? 'var(--error)' : 'var(--fg)'}; cursor: pointer; transition: all 0.15s ease;">
+                                    ✕ Absent
+                                </button>
+                            </div>
+
+                            <!-- Right: Remarks Input -->
+                            <div style="min-width: 140px; flex: 1 1 140px; max-width: 220px;">
+                                <input type="text" id="att_remark_${idx}" value="${savedRemarks}" placeholder="Optional note..."
+                                    style="width: 100%; border: 1px solid var(--border); background: rgba(0,0,0,0.02); padding: 6px 10px; border-radius: 8px; font-size: 0.75rem; color: var(--fg); outline: none;">
+                            </div>
+
+                            <!-- Hidden field to hold current selected status -->
+                            <input type="hidden" id="att_status_val_${idx}" value="${defaultStatus}" data-emp="${safeName}">
+                        </div>
+                    `;
+                }).join('');
+            };
+
+            window.selectAttCardStatus = function (empName, status, btnEl) {
+                const parentGroup = btnEl.closest('.att-status-button-group');
+                const parentCard = btnEl.closest('.att-emp-card');
+                if (!parentGroup || !parentCard) return;
+
+                const hiddenInput = parentCard.querySelector('input[type="hidden"]');
+                if (hiddenInput) hiddenInput.value = status;
+
+                const buttons = parentGroup.querySelectorAll('.att-pill-btn');
+                buttons.forEach(b => {
+                    b.style.background = 'transparent';
+                    b.style.borderColor = 'var(--border)';
+                    b.style.color = 'var(--fg)';
+                });
+
+                if (status === 'present') {
+                    btnEl.style.background = 'rgba(16, 185, 129, 0.15)';
+                    btnEl.style.borderColor = 'var(--success)';
+                    btnEl.style.color = 'var(--success)';
+                } else if (status === 'double_shift') {
+                    btnEl.style.background = 'rgba(139, 92, 246, 0.15)';
+                    btnEl.style.borderColor = 'var(--accent)';
+                    btnEl.style.color = 'var(--accent)';
+                } else if (status === 'half_day') {
+                    btnEl.style.background = 'rgba(245, 158, 11, 0.15)';
+                    btnEl.style.borderColor = '#f59e0b';
+                    btnEl.style.color = '#f59e0b';
+                } else if (status === 'leave') {
+                    btnEl.style.background = 'rgba(59, 130, 246, 0.15)';
+                    btnEl.style.borderColor = '#3b82f6';
+                    btnEl.style.color = '#3b82f6';
+                } else if (status === 'absent') {
+                    btnEl.style.background = 'rgba(239, 68, 68, 0.15)';
+                    btnEl.style.borderColor = 'var(--error)';
+                    btnEl.style.color = 'var(--error)';
+                }
+            };
+
+            window.setBulkAttendancePreset = function (presetValue) {
+                const container = document.getElementById('att-modal-list-container');
+                if (!container) return;
+                const cards = container.querySelectorAll('.att-emp-card');
+                cards.forEach(card => {
+                    const empName = card.getAttribute('data-emp-name');
+                    const hiddenInput = card.querySelector('input[type="hidden"]');
+                    if (hiddenInput) hiddenInput.value = presetValue;
+
+                    const group = card.querySelector('.att-status-button-group');
+                    if (group) {
+                        const buttons = group.querySelectorAll('.att-pill-btn');
+                        buttons.forEach(b => {
+                            b.style.background = 'transparent';
+                            b.style.borderColor = 'var(--border)';
+                            b.style.color = 'var(--fg)';
+                        });
+                        let targetBtn = null;
+                        if (presetValue === 'present') targetBtn = buttons[0];
+                        else if (presetValue === 'double_shift') targetBtn = buttons[1];
+                        else if (presetValue === 'half_day') targetBtn = buttons[2];
+                        else if (presetValue === 'leave') targetBtn = buttons[3];
+                        else if (presetValue === 'absent') targetBtn = buttons[4];
+
+                        if (targetBtn) {
+                            if (presetValue === 'present') {
+                                targetBtn.style.background = 'rgba(16, 185, 129, 0.15)';
+                                targetBtn.style.borderColor = 'var(--success)';
+                                targetBtn.style.color = 'var(--success)';
+                            } else if (presetValue === 'double_shift') {
+                                targetBtn.style.background = 'rgba(139, 92, 246, 0.15)';
+                                targetBtn.style.borderColor = 'var(--accent)';
+                                targetBtn.style.color = 'var(--accent)';
+                            } else if (presetValue === 'absent') {
+                                targetBtn.style.background = 'rgba(239, 68, 68, 0.15)';
+                                targetBtn.style.borderColor = 'var(--error)';
+                                targetBtn.style.color = 'var(--error)';
+                            }
+                        }
+                    }
+                });
+            };
+
+            window.saveBulkAttendance = function () {
+                const logDateInput = document.getElementById('att-log-date');
+                if (!logDateInput || !logDateInput.value) {
+                    alert("Please select a valid date for attendance logging.");
+                    return;
+                }
+                const dateStr = logDateInput.value;
+
+                const container = document.getElementById('att-modal-list-container');
+                if (!container) return;
+
+                if (!state.attendance) state.attendance = {};
+                if (!state.attendance[dateStr]) state.attendance[dateStr] = {};
+
+                const cards = container.querySelectorAll('.att-emp-card');
+                cards.forEach((card, idx) => {
+                    const hiddenInput = card.querySelector('input[type="hidden"]');
+                    const remarkInput = document.getElementById(`att_remark_${idx}`);
+                    if (hiddenInput) {
+                        const empName = hiddenInput.getAttribute('data-emp');
+                        const status = hiddenInput.value || 'present';
+                        const shifts = (status === 'double_shift') ? 2 : (status === 'half_day' ? 0.5 : (status === 'absent' || status === 'leave' ? 0 : 1));
+                        const remarks = remarkInput ? remarkInput.value.trim() : '';
+
+                        state.attendance[dateStr][empName] = {
+                            status: status,
+                            shifts: shifts,
+                            remarks: remarks,
+                            updatedAt: new Date().toISOString()
+                        };
+                    }
+                });
+
+                saveState();
+                closeBulkAttendanceModal();
+                renderAttendanceSummaryTable();
+                
+                // Show floating notification
+                const indicator = document.getElementById('att-save-indicator');
+                if (indicator) {
+                    indicator.innerText = `Saved attendance for ${dateStr}!`;
+                    setTimeout(() => { if (indicator) indicator.innerText = ''; }, 3000);
+                }
+                alert(`Attendance successfully logged & saved for ${dateStr}!`);
+            };
+
+            // --- EMPLOYEE CALENDAR MODAL CONTROLS ---
+            window.openEmployeeCalendarModal = function (empName) {
+                const modal = document.getElementById('att-employee-calendar-modal');
+                if (!modal) return;
+
+                const monthInput = document.getElementById('att-month-filter');
+                const monthKey = monthInput ? monthInput.value : new Date().toISOString().substring(0, 7);
+                const [year, month] = monthKey.split('-').map(Number);
+
+                const staffList = (state && Array.isArray(state.employees)) ? state.employees : [];
+                const emp = staffList.find(e => e.name === empName) || { name: empName, role: 'Staff', salaryStyle: 'Per Shift' };
+
+                const nameEl = document.getElementById('att-cal-emp-name');
+                if (nameEl) nameEl.innerText = `${emp.name} — Attendance Calendar`;
+
+                const subEl = document.getElementById('att-cal-emp-sub');
+                if (subEl) subEl.innerHTML = `Role: <strong>${emp.role || 'Staff'}</strong> | Salary Style: <strong>${emp.salaryStyle || 'Per Month Fixed'}</strong> | Month: <strong>${monthKey}</strong>`;
+
+                const stats = getEmployeeMonthAttendanceStats(emp.name, monthKey);
+                const totalDaysInMonth = new Date(year, month, 0).getDate();
+                const firstDayIndex = new Date(year, month - 1, 1).getDay(); // 0 = Sunday
+
+                const calGrid = document.getElementById('att-cal-grid');
+                if (calGrid) {
+                    let gridHtml = '';
+                    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    gridHtml += dayLabels.map(d => `
+                        <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--muted); text-align: center; padding: 4px;">${d}</div>
+                    `).join('');
+
+                    // Leading empty slots
+                    for (let i = 0; i < firstDayIndex; i++) {
+                        gridHtml += `<div style="height: 48px; background: rgba(0,0,0,0.01); border-radius: 8px;"></div>`;
+                    }
+
+                    // Day blocks
+                    for (let d = 1; d <= totalDaysInMonth; d++) {
+                        const dStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                        const logEntry = stats.loggedDates.find(l => l.date === dStr);
+                        
+                        let bgColor = 'rgba(0,0,0,0.02)';
+                        let borderColor = 'var(--border)';
+                        let statusText = '—';
+                        let statusColor = 'var(--muted)';
+
+                        if (logEntry) {
+                            if (logEntry.status === 'present') {
+                                bgColor = 'rgba(16, 185, 129, 0.15)';
+                                borderColor = 'rgba(16, 185, 129, 0.3)';
+                                statusText = '1 Shift';
+                                statusColor = 'var(--success)';
+                            } else if (logEntry.status === 'double_shift') {
+                                bgColor = 'rgba(139, 92, 246, 0.18)';
+                                borderColor = 'rgba(139, 92, 246, 0.4)';
+                                statusText = '2 Shifts';
+                                statusColor = 'var(--accent)';
+                            } else if (logEntry.status === 'half_day') {
+                                bgColor = 'rgba(245, 158, 11, 0.15)';
+                                borderColor = 'rgba(245, 158, 11, 0.3)';
+                                statusText = '0.5 HD';
+                                statusColor = '#f59e0b';
+                            } else if (logEntry.status === 'leave') {
+                                bgColor = 'rgba(59, 130, 246, 0.15)';
+                                borderColor = 'rgba(59, 130, 246, 0.3)';
+                                statusText = 'Leave';
+                                statusColor = '#3b82f6';
+                            } else if (logEntry.status === 'absent') {
+                                bgColor = 'rgba(239, 68, 68, 0.15)';
+                                borderColor = 'rgba(239, 68, 68, 0.3)';
+                                statusText = 'Absent';
+                                statusColor = 'var(--error)';
+                            }
+                        }
+
+                        gridHtml += `
+                            <div style="min-height: 48px; background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 8px; padding: 4px; display: flex; flex-direction: column; justify-content: space-between;">
+                                <div class="cal-day-num" style="font-size: 0.72rem; font-weight: 700; color: var(--fg);">${d}</div>
+                                <div class="cal-day-status" style="font-size: 0.65rem; font-weight: 800; color: ${statusColor}; text-align: right; line-height: 1.1;">${statusText}</div>
+                            </div>
+                        `;
+                    }
+                    calGrid.innerHTML = gridHtml;
+                }
+
+                // Fill list breakdown
+                const listEl = document.getElementById('att-cal-logs-list');
+                if (listEl) {
+                    if (stats.loggedDates.length === 0) {
+                        listEl.innerHTML = `<div style="color: var(--muted); text-align: center; padding: 1rem;">No individual date logs recorded for this month yet.</div>`;
+                    } else {
+                        listEl.innerHTML = stats.loggedDates.map(l => {
+                            // Format date from YYYY-MM-DD to DD-MM-YYYY
+                            let formattedDate = l.date;
+                            if (l.date && l.date.includes('-')) {
+                                const parts = l.date.split('-');
+                                if (parts.length === 3) {
+                                    formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                }
+                            }
+                            return `
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border); padding-bottom: 4px;">
+                                    <span style="font-weight: 700; color: var(--fg); font-family: monospace; font-size: 0.85rem;">${formattedDate}</span>
+                                    <span style="font-weight: 800; text-transform: uppercase; font-size: 0.75rem;">
+                                        ${l.status === 'double_shift' ? '⚡ 2 Shifts (Day+Night)' : (l.status === 'present' ? '✓ 1 Shift (Day)' : (l.status === 'half_day' ? 'Half Day' : (l.status === 'leave' ? 'Leave' : 'Absent')))}
+                                    </span>
+                                    ${l.remarks ? `<span style="font-size: 0.72rem; color: var(--muted); font-style: italic;">(${l.remarks})</span>` : ''}
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                modal.style.display = 'flex';
+            };
+
+            window.closeEmployeeCalendarModal = function () {
+                const modal = document.getElementById('att-employee-calendar-modal');
+                if (modal) modal.style.display = 'none';
+            };
+
+            window.printEmployeeAttendanceCalendar = function () {
+                const contentEl = document.getElementById('att-calendar-modal-content');
+                if (!contentEl) return;
+
+                const empTitle = document.getElementById('att-cal-emp-name') ? document.getElementById('att-cal-emp-name').innerText : 'Attendance Calendar';
+                const empSub = document.getElementById('att-cal-emp-sub') ? document.getElementById('att-cal-emp-sub').innerHTML : '';
+                const gridHtml = document.getElementById('att-cal-grid') ? document.getElementById('att-cal-grid').innerHTML : '';
+                const listHtml = document.getElementById('att-cal-logs-list') ? document.getElementById('att-cal-logs-list').innerHTML : '';
+
+                const printWindow = window.open('', '_blank', 'width=900,height=700');
+                if (!printWindow) {
+                    alert('Please allow popups to print the Attendance Calendar.');
+                    return;
+                }
+
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>${empTitle}</title>
+                        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+                        <style>
+                            body {
+                                font-family: 'Inter', sans-serif;
+                                margin: 20mm 15mm;
+                                color: #0f172a;
+                                background: #ffffff;
+                                -webkit-print-color-adjust: exact !important;
+                                print-color-adjust: exact !important;
+                            }
+                            h2 {
+                                font-family: 'Plus Jakarta Sans', sans-serif;
+                                margin: 0 0 4px 0;
+                                font-size: 1.4rem;
+                                font-weight: 800;
+                            }
+                            .sub-info {
+                                color: #475569;
+                                font-size: 0.85rem;
+                                margin-bottom: 1.5rem;
+                                border-bottom: 2px solid #e2e8f0;
+                                padding-bottom: 0.75rem;
+                            }
+                            .cal-grid {
+                                display: grid;
+                                grid-template-columns: repeat(7, 1fr);
+                                gap: 6px;
+                                margin-bottom: 1.5rem;
+                            }
+                            .section-header {
+                                font-size: 0.8rem;
+                                font-weight: 800;
+                                text-transform: uppercase;
+                                letter-spacing: 0.05em;
+                                color: #475569;
+                                margin-bottom: 0.5rem;
+                                border-bottom: 1px solid #e2e8f0;
+                                padding-bottom: 0.25rem;
+                            }
+                            .logs-list {
+                                display: flex;
+                                flex-direction: column;
+                                gap: 0.4rem;
+                                font-size: 0.8rem;
+                            }
+                            @page {
+                                size: A4 portrait;
+                                margin: 10mm;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <h2>${empTitle}</h2>
+                        <div class="sub-info">${empSub}</div>
+                        <div class="section-header">Monthly Calendar Matrix</div>
+                        <div class="cal-grid">${gridHtml}</div>
+                        <div class="section-header">Logged Days Detail (DD-MM-YYYY)</div>
+                        <div class="logs-list">${listHtml}</div>
+                        <script>
+                            window.onload = function() {
+                                window.print();
+                                setTimeout(function() { window.close(); }, 500);
+                            };
+                        <\/script>
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+            };
 
             // Intercept sidebar link clicks targeting the current page to switch tabs instantly without reload
             document.addEventListener('click', function (e) {
