@@ -2472,12 +2472,13 @@
 
                     
 
-                    <!-- Right controls: Filter row -->
-
-                    <div class="flex items-center gap-3 flex-wrap" style="width: 100%;">
-
-                      <div id="team-role-filter-row" class="flex flex-wrap gap-1.5" style="display: flex; flex-wrap: wrap; gap: 6px; width: 100%;"></div>
-
+                    <!-- Right controls: Filter row & Search -->
+                    <div class="flex items-center gap-3 flex-wrap" style="width: 100%; justify-content: space-between;">
+                      <div id="team-role-filter-row" class="flex flex-wrap gap-1.5" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                      <div style="position: relative; min-width: 220px; flex: 1; max-width: 320px;">
+                        <input type="text" id="roster-search-input" placeholder="Search staff by name, role, machine..." oninput="handleRosterSearch(this.value)" class="w-full bg-black/5 dark-mode:bg-black/40 border border-border rounded-xl px-3 py-1.5 text-xs text-fg focus:outline-none focus:border-accent/50 transition-all duration-300" style="width: 100%; border: 1px solid var(--border); border-radius: 12px; padding: 6px 12px 6px 30px; font-size: 11px; background: rgba(0,0,0,0.03); color: var(--fg);">
+                        <i class="ri-search-line" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--muted); pointer-events: none;"></i>
+                      </div>
                     </div>
 
                   </div>
@@ -3337,10 +3338,8 @@ function renderRosterSection(staffList, containerId, isTerminatedSection) {
                                       <span class="text-[10px] px-1.5 py-0.5 bg-accent/10 text-accent font-semibold rounded font-body" style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: rgba(139, 92, 246, 0.1); color: var(--accent); line-height: normal;">${emp.role}</span>
 
                                       <span class="text-[10px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark-mode:text-emerald-400 font-semibold rounded border border-emerald-500/20 font-body" style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #10b981; line-height: normal;">
-
-                                        ${emp.salaryStyle || 'Per Month Fixed'}
-
-                                      </span>
+                                         ${emp.salaryStyle || 'Per Month Fixed'}${emp.salaryStyle === 'Per Meter/Month' || emp.salaryStyle === 'Beam Loading Pay' || !emp.salaryAmount ? '' : ` (₹${parseFloat(emp.salaryAmount).toLocaleString('en-IN')})`}
+                                       </span>
 
                                       ${isTerminated ? `
 
@@ -3391,6 +3390,12 @@ function renderRosterSection(staffList, containerId, isTerminatedSection) {
 
         }
 
+let rosterSearchQuery = '';
+function handleRosterSearch(val) {
+    rosterSearchQuery = (val || '').toLowerCase().trim();
+    renderTeamRoster();
+}
+
 function renderTeamRoster() {
 
             const activeStaff = state.employees.filter(e => e.status !== 'Terminated');
@@ -3401,13 +3406,23 @@ function renderTeamRoster() {
 
             // Render Active Roster
 
-            const filteredActive = selectedRosterRole === 'All'
+            let filteredActive = selectedRosterRole === 'All'
 
                 ? activeStaff
 
                 : activeStaff.filter(e => e.role === selectedRosterRole);
 
             
+            if (rosterSearchQuery) {
+                filteredActive = filteredActive.filter(e => {
+                    const nameMatch = (e.name || '').toLowerCase().includes(rosterSearchQuery);
+                    const roleMatch = (e.role || '').toLowerCase().includes(rosterSearchQuery);
+                    const styleMatch = (e.salaryStyle || '').toLowerCase().includes(rosterSearchQuery);
+                    const machines = e.machines || (e.machine ? [e.machine] : []);
+                    const machMatch = machines.some(m => String(m).toLowerCase().includes(rosterSearchQuery));
+                    return nameMatch || roleMatch || styleMatch || machMatch;
+                });
+            }
 
             renderRosterSection(filteredActive, 'active-team-roster-container', false);
 
@@ -3415,13 +3430,23 @@ function renderTeamRoster() {
 
             // Render Terminated Roster
 
-            const filteredTerminated = selectedRosterRole === 'All'
+            let filteredTerminated = selectedRosterRole === 'All'
 
                 ? terminatedStaff
 
                 : terminatedStaff.filter(e => e.role === selectedRosterRole);
 
-                
+            
+            if (rosterSearchQuery) {
+                filteredTerminated = filteredTerminated.filter(e => {
+                    const nameMatch = (e.name || '').toLowerCase().includes(rosterSearchQuery);
+                    const roleMatch = (e.role || '').toLowerCase().includes(rosterSearchQuery);
+                    const styleMatch = (e.salaryStyle || '').toLowerCase().includes(rosterSearchQuery);
+                    const machines = e.machines || (e.machine ? [e.machine] : []);
+                    const machMatch = machines.some(m => String(m).toLowerCase().includes(rosterSearchQuery));
+                    return nameMatch || roleMatch || styleMatch || machMatch;
+                });
+            }
 
             renderRosterSection(filteredTerminated, 'terminated-team-roster-container', true);
 
@@ -3706,86 +3731,49 @@ function parseUserDateToIso(userStr) {
         }
 
 function handleAddEmployee(e) {
-
             e.preventDefault();
 
-            
-
-            const name = document.getElementById('team-emp-name').value;
-
+            const name = document.getElementById('team-emp-name').value.trim();
             const role = document.getElementById('team-emp-role').value;
-
-            const salaryStyle = document.getElementById('team-emp-salary-style').value;
-
-            const salaryAmount = parseFloat(document.getElementById('team-emp-salary-amount').value) || 0;
-
+            const salaryStyle = role === 'Beam Loading' ? 'Beam Loading Pay' : document.getElementById('team-emp-salary-style').value;
+            const salaryAmount = (role === 'Beam Loading' || salaryStyle === 'Per Meter/Month') ? 0 : (parseFloat(document.getElementById('team-emp-salary-amount').value) || 0);
             const joinDateInput = document.getElementById('team-emp-join-date').value;
 
-            
-
             if (role === 'Karigar' && tempSelectedMachines.length === 0) {
-
                 showToast("Please assign at least one machine for Karigar", "error");
-
                 return;
-
             }
-
-            
 
             pushUndoState();
 
-            
-
             const colorOption = document.querySelector('input[name="team-emp-color"]:checked')?.value || avatarGradientPool[0];
-
             const newId = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + `-${Date.now()}`;
-
             const machinesAssigned = role === 'Karigar' ? [...tempSelectedMachines] : [];
 
-            
-
-            const idFrontSrc = document.getElementById('team-front-preview').src || '';
-
-            const idBackSrc = document.getElementById('team-back-preview').src || '';
-
-
+            const tfImg = document.getElementById('team-front-preview');
+            const tbImg = document.getElementById('team-back-preview');
+            const idFrontSrc = (tfImg && tfImg.style.display !== 'none' && tfImg.src) ? tfImg.src : '';
+            const idBackSrc = (tbImg && tbImg.style.display !== 'none' && tbImg.src) ? tbImg.src : '';
 
             const newEmp = {
-
                 id: newId,
-
                 name: name,
-
                 role: role,
-
                 avatarColor: colorOption,
-
                 machines: machinesAssigned,
-
-                salaryStyle: role === 'Beam Loading' ? 'Beam Loading Pay' : salaryStyle,
-
-                salaryAmount: role === 'Beam Loading' ? 0 : salaryAmount,
-
+                salaryStyle: salaryStyle,
+                salaryAmount: salaryAmount,
                 idFront: idFrontSrc.startsWith('data:') ? idFrontSrc : '',
-
                 idBack: idBackSrc.startsWith('data:') ? idBackSrc : '',
                 joinDate: joinDateInput ? addTimestampToDate(joinDateInput) : new Date().toISOString(),
                 status: 'Active'
             };
 
-            
-
             state.employees.push(newEmp);
-
             state.logs.push({
-
                 id: `log-${Date.now()}`,
-
                 timestamp: new Date().toISOString(),
-
                 text: `Registered employee: ${name} (${role}${role === 'Karigar' ? ` on ${machinesAssigned.join(', ')}` : ''}, Salary Basis: ${salaryStyle}, Joined: ${newEmp.joinDate})`
-
             });
 
 
@@ -3809,31 +3797,16 @@ function handleAddEmployee(e) {
             
 
             // Reset ID Previews
-
-            const tfImg = document.getElementById('team-front-preview');
-
             tfImg.src = '';
-
             tfImg.style.display = 'none';
-
             document.getElementById('team-front-preview-text').style.display = 'block';
-
             document.getElementById('team-front-preview-icon').style.display = 'block';
-
             document.getElementById('team-emp-id-front').value = '';
 
-
-
-            const tbImg = document.getElementById('team-back-preview');
-
             tbImg.src = '';
-
             tbImg.style.display = 'none';
-
             document.getElementById('team-back-preview-text').style.display = 'block';
-
             document.getElementById('team-back-preview-icon').style.display = 'block';
-
             document.getElementById('team-emp-id-back').value = '';
 
 
@@ -3992,141 +3965,177 @@ function removeEmployee(empId) {
 
         }
 
-function openEditEmployeeModal(empId) {
-
-            const emp = state.employees.find(e => e.id === empId);
-
-            if (!emp) return;
-
-            
-
-            document.getElementById('edit-emp-id').value = emp.id;
-
-            document.getElementById('edit-emp-name').value = emp.name;
-
-            document.getElementById('edit-emp-role').value = emp.role;
-
-            document.getElementById('edit-emp-salary-style').value = emp.salaryStyle || 'Per Month Fixed';
-
-            document.getElementById('edit-emp-salary-amount').value = emp.salaryAmount !== undefined ? emp.salaryAmount : '';
-
-            document.getElementById('edit-emp-join-date').value = emp.joinDate || '';
-
-            
-
-            // Load ID Card Previews
-
-            const efImg = document.getElementById('edit-front-preview');
-
-            const efText = document.getElementById('edit-front-preview-text');
-
-            const efIcon = document.getElementById('edit-front-preview-icon');
-
-            if (emp.idFront) {
-
-                efImg.src = emp.idFront;
-
-                efImg.style.display = 'block';
-
-                efText.style.display = 'none';
-
-                efIcon.style.display = 'none';
-
-            } else {
-
-                efImg.src = '';
-
-                efImg.style.display = 'none';
-
-                efText.style.display = 'block';
-
-                efIcon.style.display = 'block';
-
-            }
-
-            document.getElementById('edit-emp-id-front').value = '';
-
-
-
-            const ebImg = document.getElementById('edit-back-preview');
-
-            const ebText = document.getElementById('edit-back-preview-text');
-
-            const ebIcon = document.getElementById('edit-back-preview-icon');
-
-            if (emp.idBack) {
-
-                ebImg.src = emp.idBack;
-
-                ebImg.style.display = 'block';
-
-                ebText.style.display = 'none';
-
-                ebIcon.style.display = 'none';
-
-            } else {
-
-                ebImg.src = '';
-
-                ebImg.style.display = 'none';
-
-                ebText.style.display = 'block';
-
-                ebIcon.style.display = 'block';
-
-            }
-
-            document.getElementById('edit-emp-id-back').value = '';
-
-
-
-            const editWeaving = document.getElementById('edit-weaving-group');
-
-            const editYarn = document.getElementById('edit-yarn-group');
-
-            if (editWeaving && editYarn) {
-
-                editWeaving.innerHTML = weavingMachines.map(m => `<option value="${m}" style="background: var(--surface); color: var(--fg);">${m}</option>`).join('');
-
-                editYarn.innerHTML = yarnMachines.map(m => `<option value="${m}" style="background: var(--surface); color: var(--fg);">${m}</option>`).join('');
-
-            }
-
-            
-
-            editSelectedMachines = emp.machines ? [...emp.machines] : (emp.machine ? [emp.machine] : []);
-
-            renderEditFormMachineBadges();
-
-            handleEditRoleChange(emp.role);
-
-            
-
-            const termGroup = document.getElementById('edit-termination-group');
-
-            const termInput = document.getElementById('edit-emp-termination-date');
-
-            if (emp.status === 'Terminated') {
-
-                termGroup.style.display = 'block';
-
-                termInput.value = emp.terminationDate || '';
-
-            } else {
-
-                termGroup.style.display = 'none';
-
-                termInput.value = '';
-
-            }
-
-            
-
-            handleSalaryStyleChange(true);
-
-            document.getElementById('edit-employee-modal').style.display = 'flex';
-
+function formatToDateInputValue(dateStr) {
+    if (!dateStr) return '';
+    const s = String(dateStr).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    if (s.includes('T')) return s.split('T')[0];
+    if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
+        const parts = s.split('-');
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    try {
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
         }
+    } catch (e) {}
+    return '';
+}
+
+function openEditEmployeeModal(empId) {
+    const targetId = String(empId || '').trim();
+    let emp = (state && Array.isArray(state.employees)) ? state.employees.find(e => 
+        String(e.id || '').trim() === targetId || 
+        String(e.name || '').trim() === targetId || 
+        (e.name && e.name.toLowerCase().trim() === targetId.toLowerCase())
+    ) : null;
+    if (!emp) return;
+
+    document.getElementById('edit-emp-id').value = emp.id || targetId;
+    document.getElementById('edit-emp-name').value = emp.name || '';
+
+    // Populate machine options
+    const editWeaving = document.getElementById('edit-weaving-group');
+    const editYarn = document.getElementById('edit-yarn-group');
+    if (editWeaving && editYarn) {
+        editWeaving.innerHTML = weavingMachines.map(m => `<option value="${m}" style="background: var(--surface); color: var(--fg);">${m}</option>`).join('');
+        editYarn.innerHTML = yarnMachines.map(m => `<option value="${m}" style="background: var(--surface); color: var(--fg);">${m}</option>`).join('');
+    }
+
+    // Load assigned machines
+    editSelectedMachines = emp.machines ? [...emp.machines] : (emp.machine ? [emp.machine] : []);
+    renderEditFormMachineBadges();
+
+    // Select role (dynamically add option if missing, or match Karigar variant)
+    const roleSelect = document.getElementById('edit-emp-role');
+    const empRole = (emp.role || '').trim();
+    if (roleSelect && empRole) {
+        let roleFound = false;
+        for (let i = 0; i < roleSelect.options.length; i++) {
+            if (roleSelect.options[i].value.toLowerCase().trim() === empRole.toLowerCase()) {
+                roleSelect.selectedIndex = i;
+                roleFound = true;
+                break;
+            }
+        }
+        if (!roleFound && empRole.toLowerCase().includes('karigar')) {
+            for (let i = 0; i < roleSelect.options.length; i++) {
+                if (roleSelect.options[i].value === 'Karigar') {
+                    roleSelect.selectedIndex = i;
+                    roleFound = true;
+                    break;
+                }
+            }
+        }
+        if (!roleFound) {
+            const opt = document.createElement('option');
+            opt.value = empRole;
+            opt.textContent = empRole;
+            opt.style.background = 'var(--surface)';
+            opt.style.color = 'var(--fg)';
+            roleSelect.appendChild(opt);
+            roleSelect.value = empRole;
+        }
+    }
+
+    const currentRole = roleSelect ? roleSelect.value : empRole;
+    handleEditRoleChange(currentRole, true);
+
+    // Select salary style (normalizing legacy names and dynamically adding if missing)
+    const styleSelect = document.getElementById('edit-emp-salary-style');
+    const meterOption = document.querySelector('#edit-emp-salary-style option[value="Per Meter/Month"]');
+    const isKarigar = empRole.toLowerCase().includes('karigar');
+
+    let styleVal = emp.salaryStyle || (isKarigar ? 'Per Meter/Month' : 'Per Month Fixed');
+    if (styleVal === 'Per Month') styleVal = 'Per Month Fixed';
+    if (styleVal === 'Per Day') styleVal = 'Per Shift';
+
+    if (isKarigar && styleVal === 'Per Meter/Month' && meterOption) {
+        meterOption.disabled = false;
+        meterOption.style.display = 'block';
+    }
+
+    if (styleSelect) {
+        let styleFound = false;
+        for (let i = 0; i < styleSelect.options.length; i++) {
+            if (styleSelect.options[i].value.toLowerCase().trim() === styleVal.toLowerCase().trim()) {
+                styleSelect.selectedIndex = i;
+                styleFound = true;
+                break;
+            }
+        }
+        if (!styleFound && styleVal) {
+            const opt = document.createElement('option');
+            opt.value = styleVal;
+            opt.textContent = styleVal;
+            opt.style.background = 'var(--surface)';
+            opt.style.color = 'var(--fg)';
+            styleSelect.appendChild(opt);
+            styleSelect.value = styleVal;
+        }
+    }
+
+    // Set salary amount
+    const amountInput = document.getElementById('edit-emp-salary-amount');
+    if (amountInput) {
+        amountInput.value = (emp.salaryAmount !== undefined && emp.salaryAmount !== null && emp.salaryAmount !== '') ? emp.salaryAmount : '';
+    }
+
+    // Set join date
+    const joinInput = document.getElementById('edit-emp-join-date');
+    if (joinInput) {
+        joinInput.value = formatToDateInputValue(emp.joinDate);
+    }
+
+    // Set termination date
+    const termGroup = document.getElementById('edit-termination-group');
+    const termInput = document.getElementById('edit-emp-termination-date');
+    if (emp.status === 'Terminated') {
+        if (termGroup) termGroup.style.display = 'block';
+        if (termInput) termInput.value = formatToDateInputValue(emp.terminationDate);
+    } else {
+        if (termGroup) termGroup.style.display = 'none';
+        if (termInput) termInput.value = '';
+    }
+
+    // Load ID Card Previews
+    const efImg = document.getElementById('edit-front-preview');
+    const efText = document.getElementById('edit-front-preview-text');
+    const efIcon = document.getElementById('edit-front-preview-icon');
+    if (emp.idFront) {
+        if (efImg) { efImg.src = emp.idFront; efImg.style.display = 'block'; }
+        if (efText) efText.style.display = 'none';
+        if (efIcon) efIcon.style.display = 'none';
+    } else {
+        if (efImg) { efImg.src = ''; efImg.style.display = 'none'; }
+        if (efText) efText.style.display = 'block';
+        if (efIcon) efIcon.style.display = 'block';
+    }
+    const editFrontInput = document.getElementById('edit-emp-id-front');
+    if (editFrontInput) editFrontInput.value = '';
+
+    const ebImg = document.getElementById('edit-back-preview');
+    const ebText = document.getElementById('edit-back-preview-text');
+    const ebIcon = document.getElementById('edit-back-preview-icon');
+    if (emp.idBack) {
+        if (ebImg) { ebImg.src = emp.idBack; ebImg.style.display = 'block'; }
+        if (ebText) ebText.style.display = 'none';
+        if (ebIcon) ebIcon.style.display = 'none';
+    } else {
+        if (ebImg) { ebImg.src = ''; ebImg.style.display = 'none'; }
+        if (ebText) ebText.style.display = 'block';
+        if (ebIcon) ebIcon.style.display = 'block';
+    }
+    const editBackInput = document.getElementById('edit-emp-id-back');
+    if (editBackInput) editBackInput.value = '';
+
+    handleSalaryStyleChange(true);
+    document.getElementById('edit-employee-modal').style.display = 'flex';
+}
 
 function closeEditEmployeeModal() {
 
@@ -4279,15 +4288,15 @@ function openEmployeeDetailsModal(empId) {
 
 
                 const basisEl = document.getElementById('detail-emp-basis');
-
                 if (basisEl) basisEl.textContent = emp.salaryStyle || 'Per Month Fixed';
 
-                
-
-                const salaryAmtText = emp.salaryStyle === 'Per Meter/Month' ? 'Calculated in Karigar salary' : `₹ ${(emp.salaryAmount !== undefined ? parseFloat(emp.salaryAmount) : 0).toFixed(2)}`;
+                const salaryAmtText = emp.salaryStyle === 'Per Meter/Month'
+                    ? 'Calculated via Production Meters'
+                    : (emp.salaryStyle === 'Beam Loading Pay'
+                        ? 'Calculated via Beam Loading Records'
+                        : `₹ ${(emp.salaryAmount !== undefined ? parseFloat(emp.salaryAmount) : 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
                 const amtEl = document.getElementById('detail-emp-amount');
-
                 if (amtEl) amtEl.textContent = salaryAmtText;
 
                 
@@ -4764,94 +4773,56 @@ function closeImageLightbox() {
 
         }
 
-function handleEditRoleChange(role) {
-
+function handleEditRoleChange(role, preserveMachines = false) {
             const machineGroup = document.getElementById('edit-machine-group');
-
             const machineSelect = document.getElementById('edit-emp-machine');
-
             const meterOption = document.querySelector('#edit-emp-salary-style option[value="Per Meter/Month"]');
-
             const styleGroup = document.getElementById('edit-salary-style-group');
-
             const styleSelect = document.getElementById('edit-emp-salary-style');
-
             const amountGroup = document.getElementById('edit-salary-amount-group');
-
             const amountInput = document.getElementById('edit-emp-salary-amount');
 
-            
+            const isKarigar = role && role.toLowerCase().includes('karigar');
 
             if (role === 'Beam Loading') {
-
                 if (styleGroup) styleGroup.style.display = 'none';
-
                 if (styleSelect) { styleSelect.removeAttribute('required'); styleSelect.value = ''; }
-
                 if (amountGroup) amountGroup.style.display = 'none';
-
                 if (amountInput) { amountInput.removeAttribute('required'); amountInput.value = ''; }
-
             } else {
-
                 if (styleGroup) styleGroup.style.display = 'block';
-
                 if (styleSelect) styleSelect.setAttribute('required', 'required');
-
                 if (amountGroup) amountGroup.style.display = 'block';
-
                 if (amountInput) amountInput.setAttribute('required', 'required');
-
             }
 
-            
-
-            if (role === 'Karigar') {
-
-                machineGroup.style.display = 'block';
-
-                machineSelect.removeAttribute('required');
-
+            if (isKarigar) {
+                if (machineGroup) machineGroup.style.display = 'block';
+                if (machineSelect) machineSelect.removeAttribute('required');
                 if (meterOption) {
-
                     meterOption.disabled = false;
-
                     meterOption.style.display = 'block';
-
                 }
-
             } else {
-
-                machineGroup.style.display = 'none';
-
-                machineSelect.removeAttribute('required');
-
-                machineSelect.value = '';
-
-                editSelectedMachines = [];
-
-                renderEditFormMachineBadges();
-
-                
-
+                if (machineGroup) machineGroup.style.display = 'none';
+                if (machineSelect) {
+                    machineSelect.removeAttribute('required');
+                    machineSelect.value = '';
+                }
+                if (!preserveMachines) {
+                    editSelectedMachines = [];
+                    renderEditFormMachineBadges();
+                }
                 if (styleSelect && styleSelect.value === 'Per Meter/Month') {
-
                     styleSelect.value = 'Per Month Fixed';
-
-                    handleSalaryStyleChange(true);
-
                 }
-
                 if (meterOption) {
-
                     meterOption.disabled = true;
-
                     meterOption.style.display = 'none';
-
                 }
-
             }
 
+            handleSalaryStyleChange(true);
         }
 
 function handleEditAddTempMachine(val) {
@@ -4953,22 +4924,22 @@ function handleSaveEmployeeEdit(e) {
             
 
             emp.name = name;
-
             emp.role = role;
+            emp.salaryStyle = role === 'Beam Loading' ? 'Beam Loading Pay' : salaryStyle;
+            emp.salaryAmount = (role === 'Beam Loading' || salaryStyle === 'Per Meter/Month') ? 0 : salaryAmount;
 
-            emp.salaryStyle = salaryStyle;
-
-            emp.salaryAmount = salaryAmount;
-
-            
-
-            const editFrontSrc = document.getElementById('edit-front-preview').src || '';
-
-            const editBackSrc = document.getElementById('edit-back-preview').src || '';
-
-            emp.idFront = editFrontSrc.startsWith('data:') ? editFrontSrc : '';
-
-            emp.idBack = editBackSrc.startsWith('data:') ? editBackSrc : '';
+            const efImg = document.getElementById('edit-front-preview');
+            const ebImg = document.getElementById('edit-back-preview');
+            if (efImg && efImg.style.display !== 'none' && efImg.src && !efImg.src.endsWith('/')) {
+                emp.idFront = efImg.src;
+            } else {
+                emp.idFront = '';
+            }
+            if (ebImg && ebImg.style.display !== 'none' && ebImg.src && !ebImg.src.endsWith('/')) {
+                emp.idBack = ebImg.src;
+            } else {
+                emp.idBack = '';
+            }
 
 
 
