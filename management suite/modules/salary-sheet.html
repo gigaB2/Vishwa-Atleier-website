@@ -17476,7 +17476,7 @@
                 }
 
                 const hours = diffM / 60;
-                const displayHrs = hours % 1 === 0 ? hours.toFixed(0) : hours.toFixed(1);
+                const displayHrs = hours % 1 === 0 ? hours.toFixed(0) : (hours * 10 % 1 === 0 ? hours.toFixed(1) : hours.toFixed(2));
                 hrsEl.innerText = `${displayHrs} hrs`;
                 hrsEl.setAttribute('data-hours', hours.toFixed(2));
             };
@@ -17545,10 +17545,10 @@
                         let diffM = (outH * 60 + outM) - (inH * 60 + inM);
                         if (diffM < 0) diffM += 24 * 60;
                         calcHoursVal = diffM / 60;
-                        calcHoursText = (calcHoursVal % 1 === 0 ? calcHoursVal.toFixed(0) : calcHoursVal.toFixed(1)) + ' hrs';
+                        calcHoursText = (calcHoursVal % 1 === 0 ? calcHoursVal.toFixed(0) : (calcHoursVal * 10 % 1 === 0 ? calcHoursVal.toFixed(1) : calcHoursVal.toFixed(2))) + ' hrs';
                     } else if (savedHours > 0) {
                         calcHoursVal = savedHours;
-                        calcHoursText = (savedHours % 1 === 0 ? savedHours.toFixed(0) : savedHours.toFixed(1)) + ' hrs';
+                        calcHoursText = (savedHours % 1 === 0 ? savedHours.toFixed(0) : (savedHours * 10 % 1 === 0 ? savedHours.toFixed(1) : savedHours.toFixed(2))) + ' hrs';
                     }
 
                     return `
@@ -17769,7 +17769,7 @@
 
                             if (logEntry.hours > 0) {
                                 const hVal = Number(logEntry.hours);
-                                const hDisplay = (hVal % 1 === 0 ? hVal.toFixed(0) : hVal.toFixed(1)) + 'h';
+                                const hDisplay = (hVal % 1 === 0 ? hVal.toFixed(0) : (hVal * 10 % 1 === 0 ? hVal.toFixed(1) : hVal.toFixed(2))) + 'h';
                                 hoursBadgeHtml = `<span style="font-size: 0.65rem; font-weight: 800; font-family: monospace; background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 4px; color: var(--fg);">${hDisplay}</span>`;
                             }
                         }
@@ -17811,7 +17811,9 @@
                             else if (l.status === 'leave') statusLabel = '🏖️ Leave';
                             else if (l.status === 'absent') statusLabel = '✕ Absent';
 
-                            const timeDetails = (l.inTime || l.outTime) ? `<span style="font-size: 0.74rem; color: var(--muted); font-family: monospace;">(${l.inTime || '--:--'} → ${l.outTime || '--:--'}${l.hours > 0 ? ` • <strong>${l.hours} hrs</strong>` : ''})</span>` : (l.hours > 0 ? `<span style="font-size: 0.74rem; color: var(--muted);"><strong>(${l.hours} hrs)</strong></span>` : '');
+                            const numHrs = Number(l.hours || 0);
+                            const formattedHrs = (numHrs % 1 === 0 ? numHrs.toFixed(0) : (numHrs * 10 % 1 === 0 ? numHrs.toFixed(1) : numHrs.toFixed(2)));
+                            const timeDetails = (l.inTime || l.outTime) ? `<span style="font-size: 0.74rem; color: var(--muted); font-family: monospace;">(${l.inTime || '--:--'} → ${l.outTime || '--:--'}${numHrs > 0 ? ` • <strong>${formattedHrs} hrs</strong>` : ''})</span>` : (numHrs > 0 ? `<span style="font-size: 0.74rem; color: var(--muted);"><strong>(${formattedHrs} hrs)</strong></span>` : '');
 
                             return `
                                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border); padding-bottom: 4px; gap: 0.5rem; flex-wrap: wrap;">
