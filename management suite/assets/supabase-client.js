@@ -261,79 +261,23 @@
       }
     } catch(e) {}
 
-    // Case 1: Both are Arrays -> Item-level Deduplicated Union Merge
+    // Case 1: Both are Arrays -> If remote state has been updated, remote state is authoritative unless local has recent edits
     if (Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
-      const tombstones = getDeletedTombstones();
-      const mergedMap = new Map();
-      const unkeyedRemoteItems = [];
-
-      // 1. Index remote items (server authoritative state)
-      parsedRemote.forEach(item => {
-        const id = getItemIdentifier(item);
-        if (id) {
-          if (!tombstones.includes(id)) {
-            mergedMap.set(id, item);
-          }
-        } else {
-          unkeyedRemoteItems.push(item);
-        }
-      });
-
-      // 2. Merge local items (client state + recent local additions/edits)
-      parsedLocal.forEach(localItem => {
-        const id = getItemIdentifier(localItem);
-        if (id) {
-          if (!tombstones.includes(id)) {
-            if (!mergedMap.has(id)) {
-              // Item added locally by this operator, not yet on server -> RETAIN IT!
-              mergedMap.set(id, localItem);
-            } else {
-              // Item exists in both -> compare timestamps/dates
-              const remoteItem = mergedMap.get(id);
-              const localTs = new Date(localItem.updated_at || localItem.timestamp || localItem.date || 0).getTime();
-              const remoteTs = new Date(remoteItem.updated_at || remoteItem.timestamp || remoteItem.date || 0).getTime();
-              if (localTs > remoteTs) {
-                mergedMap.set(id, Object.assign({}, remoteItem, localItem));
-              }
-            }
-          }
-        } else {
-          // Compare objects by serialized string
-          const str = JSON.stringify(localItem);
-          const exists = unkeyedRemoteItems.some(r => JSON.stringify(r) === str);
-          if (!exists) {
-            unkeyedRemoteItems.push(localItem);
-          }
-        }
-      });
-
-      const finalMerged = Array.from(mergedMap.values()).concat(unkeyedRemoteItems);
-      return typeof remoteVal === 'string' ? JSON.stringify(finalMerged) : finalMerged;
+      const lastWrite = lastLocalWrites[key] || 0;
+      if (Date.now() - lastWrite < 3000) {
+        return localVal;
+      }
+      return remoteVal;
     }
 
     // Case 2: Both are Plain Objects (Dictionaries / Settings / State Objects)
     if (parsedLocal && typeof parsedLocal === 'object' && !Array.isArray(parsedLocal) &&
         parsedRemote && typeof parsedRemote === 'object' && !Array.isArray(parsedRemote)) {
-      const mergedObj = Object.assign({}, parsedRemote, parsedLocal);
-      
-      // If object has array properties (like state.employees, state.loans, state.tasks, state.logs), merge them intelligently
-      const allPropKeys = new Set([...Object.keys(parsedRemote), ...Object.keys(parsedLocal)]);
-      allPropKeys.forEach(prop => {
-        const localProp = parsedLocal[prop];
-        const remoteProp = parsedRemote[prop];
-        if (Array.isArray(localProp) && Array.isArray(remoteProp)) {
-          if (localProp.length === 0 && remoteProp.length > 0) {
-            mergedObj[prop] = remoteProp;
-          } else if (remoteProp.length === 0 && localProp.length > 0) {
-            mergedObj[prop] = localProp;
-          } else if (localProp.length > 0 && remoteProp.length > 0) {
-            const propMerged = mergeDatasets(`${key}_${prop}`, localProp, remoteProp);
-            mergedObj[prop] = typeof propMerged === 'string' ? JSON.parse(propMerged) : propMerged;
-          }
-        }
-      });
-
-      return typeof remoteVal === 'string' ? JSON.stringify(mergedObj) : mergedObj;
+      const lastWrite = lastLocalWrites[key] || 0;
+      if (Date.now() - lastWrite < 3000) {
+        return localVal;
+      }
+      return remoteVal;
     }
 
     // Case 3: Primitive values -> Prefer remote server value unless locally edited within 3s

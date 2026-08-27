@@ -6694,14 +6694,6 @@
                         }
                     });
 
-                    if ("true" !== 'true') {
-                        [].forEach(defEmp => {
-                            if (!state.employees.some(e => e.name === defEmp.name)) {
-                                state.employees.push(defEmp);
-                                updatedEmployees = true;
-                            }
-                        });
-                    }
                     if (updatedEmployees) {
                         saveState();
                     }

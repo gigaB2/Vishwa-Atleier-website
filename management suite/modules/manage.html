@@ -8493,11 +8493,10 @@ function showToast(message, type = 'info') {
     if (!localStorage.getItem('yarn-qualities')) localStorage.setItem('yarn-qualities', JSON.stringify(rawMaterialQualities));
     if (!localStorage.getItem('yarn-suppliers')) localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
 
-    // Auto-migrate: check and add missing default employees if they aren't in localStorage yet
+    // Auto-migrate: migrate sub-roles to standard "Beam Loading"
     let currentEmployees = loadEmployeesState();
     let updatedEmployees = false;
     
-    // Migrate sub-roles to standard "Beam Loading"
     currentEmployees.forEach(e => {
       if (e.role && e.role.startsWith('Beam Loading -')) {
         e.role = 'Beam Loading';
@@ -8505,14 +8504,6 @@ function showToast(message, type = 'info') {
       }
     });
 
-    if ("true" !== 'true') {
-      [].forEach(defEmp => {
-        if (!currentEmployees.some(e => e.name === defEmp.name)) {
-          currentEmployees.push(defEmp);
-          updatedEmployees = true;
-        }
-      });
-    }
     if (updatedEmployees) {
       state.employees = currentEmployees;
       saveState();
