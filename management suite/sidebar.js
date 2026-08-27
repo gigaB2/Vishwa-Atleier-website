@@ -332,6 +332,10 @@
       <span class="vf-sb-icon vf-sb-icon-green"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
       Yarn RM Stock Book
     </a>
+    <a class="vf-sb-link" data-mode="yarn" href="modules/yarn/yarn-rm-analytics.html">
+      <span class="vf-sb-icon vf-sb-icon-pink"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+      Yarn RM Analytics
+    </a>
     <a class="vf-sb-link" data-mode="yarn" href="modules/yarn/yarn-production.html?tab=production">
       <span class="vf-sb-icon vf-sb-icon-blue"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
       Yarn Production
@@ -802,6 +806,7 @@
     'yarn-sales.html': 'modules/yarn/yarn-sales.html',
     'yarn-stock-dashboard.html': 'modules/yarn/yarn-stock-dashboard.html',
     'yarn-rm-stock.html': 'modules/yarn/yarn-rm-stock.html',
+    'yarn-rm-analytics.html': 'modules/yarn/yarn-rm-analytics.html',
     'weaving-costing.html': 'modules/weaving/weaving-costing.html',
     'weaving-production.html': 'modules/weaving/weaving-production.html',
     'order-book.html': 'modules/weaving/order-book.html',
@@ -1719,6 +1724,7 @@
 
     // Standalone Yarn Pages
     'yarn-rm-stock': 'yarn-rm-stock.html',
+    'yarn-rm-analytics': 'yarn-rm-analytics.html',
     'yarn-production': 'yarn-production.html',
     'yarn-sales': 'yarn-sales.html',
     'yarn-stock-dashboard': 'yarn-stock-dashboard.html',

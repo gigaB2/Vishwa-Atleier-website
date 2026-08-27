@@ -1904,12 +1904,12 @@
         window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: [] } }));
         return;
       }
+      let updatedKeys = [];
+      let hasChanges = false;
       try {
         if (isInitial || Object.keys(lastKnownTimestamps).length === 0) {
           const rows = await fetchAllRowsPaginated('vf_kv_store', 'key,value,updated_at');
           if (Array.isArray(rows)) {
-            let hasChanges = false;
-            const updatedKeys = [];
             const kvMap = {};
 
             rows.forEach(row => {
@@ -2047,6 +2047,8 @@
         }
 
         // Lightweight Polling: Fetch metadata with pagination for complete coverage
+        updatedKeys = [];
+        hasChanges = false;
         const metaRows = await fetchAllRowsPaginated('vf_kv_store', 'key,updated_at');
         if (!Array.isArray(metaRows) || metaRows.length === 0) return;
 
@@ -2067,8 +2069,6 @@
 
         // Fetch values in chunks of 50 keys to prevent URL overflow
         const chunkSize = 50;
-        let hasChanges = false;
-        const updatedKeys = [];
 
         for (let i = 0; i < changedKeys.length; i += chunkSize) {
           const chunk = changedKeys.slice(i, i + chunkSize);

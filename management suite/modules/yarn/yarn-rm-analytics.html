@@ -1,0 +1,2141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="../../assets/config.js"></script>
+  <script src="../../assets/supabase-client.js"></script>
+
+  <script>
+    (function() {
+      const isDark = localStorage.getItem('vishwa_fashions_theme') === 'true' || 
+                     (localStorage.getItem('vishwa_fashions_theme') === null && true);
+      if (isDark) {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
+      const isCollapsed = localStorage.getItem('vf_sidebar_collapsed') === 'true';
+      if (isCollapsed) {
+        document.documentElement.classList.add('vf-sidebar-collapsed');
+      }
+    })();
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yarn RM Analytics — Vishwa Fashions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../sidebar.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../../sidebar.js" defer></script>
+  
+  <style>
+    :root {
+      --bg: #f8f7fc;
+      --surface: #ffffff;
+      --surface-card: #ffffff;
+      --fg: #1a1a2e;
+      --muted: #8b8fa3;
+      --border: #e8e7f1;
+      --accent: #8b5cf6;
+      --accent-light: #a78bfa;
+      --accent-dark: #5b21b6;
+      --accent2: #ec4899;
+      --accent3: #f97316;
+      --info: #0ea5e9;
+      --error: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --font-display: 'Space Grotesk', -apple-system, sans-serif;
+      --font-body: 'Inter', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-lg: 22px;
+      --container: 1400px;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+      --primary-gradient: linear-gradient(135deg, var(--accent), var(--accent2));
+    }
+
+    body.dark-mode, .dark-mode {
+      --bg: #000000;
+      --surface: #0a0a0a;
+      --surface-card: #111115;
+      --fg: #ffffff;
+      --muted: #a1a1aa;
+      --border: #27272a;
+      --accent: #7c3aed;
+      --accent-light: #a78bfa;
+      --accent-dark: #5b21b6;
+      --accent2: #ec4899;
+      --accent3: #f97316;
+      --info: #38bdf8;
+      --error: #ef4444;
+      --success: #10b981;
+      --warning: #fbbf24;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .analytics-container {
+      max-width: var(--container);
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 4rem 1.25rem;
+      width: 100%;
+      box-sizing: border-box;
+      min-width: 0;
+    }
+
+    /* Page Header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .header-info h1 {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .header-info p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.55rem 1rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      min-height: 38px;
+      font-family: inherit;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+    }
+    .btn-primary:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+      background: rgba(139, 92, 246, 0.08);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Filter Bar Card */
+    .filter-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.15rem 1.25rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      min-width: 0;
+    }
+
+    .filter-presets {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-preset-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-right: 0.25rem;
+    }
+
+    .preset-pill {
+      padding: 0.3rem 0.75rem;
+      font-size: 0.775rem;
+      font-weight: 600;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--fg);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .preset-pill:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .preset-pill.active {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+    }
+
+    .filter-controls-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.75rem;
+      align-items: flex-end;
+      min-width: 0;
+    }
+
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      min-width: 0;
+    }
+
+    .filter-item label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .filter-control {
+      width: 100%;
+      padding: 0.5rem 0.65rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--fg);
+      font-family: inherit;
+      font-size: 0.825rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      min-width: 0;
+    }
+    .filter-control:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+    }
+
+    /* Tab Switcher */
+    .tabs-nav {
+      display: flex;
+      gap: 0.4rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+      min-width: 0;
+    }
+
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .tab-btn:hover {
+      color: var(--fg);
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-btn .tab-badge {
+      font-size: 0.68rem;
+      padding: 2px 6px;
+      border-radius: 12px;
+      background: rgba(139, 92, 246, 0.12);
+      color: var(--accent);
+    }
+
+    /* KPI Summary Row */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      min-width: 0;
+    }
+
+    .kpi-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.15rem 1.15rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      min-width: 0;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .kpi-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      min-width: 0;
+    }
+
+    .kpi-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kpi-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .kpi-value {
+      font-family: var(--font-display);
+      font-size: clamp(1.2rem, 2.2vw, 1.55rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--fg);
+      margin-bottom: 0.25rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kpi-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .kpi-sub strong {
+      color: var(--fg);
+    }
+
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+      min-width: 0;
+    }
+
+    .col-12 { grid-column: span 12; min-width: 0; }
+    .col-8 { grid-column: span 8; min-width: 0; }
+    .col-6 { grid-column: span 6; min-width: 0; }
+    .col-4 { grid-column: span 4; min-width: 0; }
+
+    @media (max-width: 1100px) {
+      .col-8, .col-6, .col-4 { grid-column: span 12 !important; }
+    }
+
+    .chart-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .chart-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
+    .chart-title-group h3 {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--fg);
+      margin-bottom: 0.15rem;
+    }
+
+    .chart-title-group p {
+      font-size: 0.775rem;
+      color: var(--muted);
+    }
+
+    .chart-container-wrapper {
+      position: relative;
+      width: 100%;
+      height: 300px;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .chart-container-wrapper.tall {
+      height: 360px;
+    }
+
+    /* Table Styling */
+    .table-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 2rem;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 0.75rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      display: block;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .analytics-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.825rem;
+      text-align: left;
+      min-width: 850px;
+    }
+
+    .analytics-table th {
+      background: rgba(139, 92, 246, 0.05);
+      padding: 0.65rem 0.85rem;
+      font-weight: 600;
+      color: var(--fg);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      font-size: 0.725rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .analytics-table td {
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--fg);
+      white-space: nowrap;
+    }
+
+    .analytics-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .analytics-table tbody tr:hover {
+      background: rgba(139, 92, 246, 0.04);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.55rem;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-primary { background: rgba(139, 92, 246, 0.15); color: var(--accent); }
+    .badge-success { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .badge-error { background: rgba(239, 68, 68, 0.15); color: var(--error); }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .badge-info { background: rgba(14, 165, 233, 0.15); color: var(--info); }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1.25rem;
+      color: var(--muted);
+    }
+    .empty-state-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+      opacity: 0.6;
+    }
+    .empty-state h4 {
+      font-size: 1.05rem;
+      color: var(--fg);
+      margin-bottom: 0.35rem;
+    }
+
+    /* Supplier Matrix Grid */
+    .supplier-matrix-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0.85rem;
+      margin-top: 0.85rem;
+      min-width: 0;
+    }
+
+    .supplier-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem;
+      transition: all 0.2s ease;
+      min-width: 0;
+    }
+    .supplier-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .supplier-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.6rem;
+      gap: 0.5rem;
+    }
+
+    .supplier-name {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--fg);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .supplier-stats-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.775rem;
+      margin-bottom: 0.3rem;
+      color: var(--muted);
+    }
+    .supplier-stats-row span:last-child {
+      font-weight: 600;
+      color: var(--fg);
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 5px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 0.4rem;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--primary-gradient);
+      border-radius: 3px;
+    }
+
+    /* Print styling */
+    @media print {
+      body { background: #ffffff !important; color: #000000 !important; margin-left: 0 !important; width: 100% !important; }
+      .btn, .filter-card, .tabs-nav { display: none !important; }
+      .chart-card, .table-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+      .analytics-container { padding: 0 !important; max-width: 100% !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="analytics-container">
+    
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div class="header-info">
+        <h1>
+          <span>📊</span> Yarn RM Analytics
+        </h1>
+        <p>Procurement, supplier performance, production consumption, and sales analytics</p>
+      </div>
+      <div class="header-actions">
+        <a href="yarn-rm-stock.html" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          RM Stock Book
+        </a>
+        <a href="yarn-production.html" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Yarn Production
+        </a>
+        <a href="yarn-sales.html" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          Yarn Sales
+        </a>
+        <button class="btn btn-primary" onclick="window.print()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Export Report
+        </button>
+      </div>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-card">
+      <div class="filter-presets">
+        <span class="filter-preset-label">Date Range:</span>
+        <button class="preset-pill active" onclick="setDatePreset('all', this)">All Time</button>
+        <button class="preset-pill" onclick="setDatePreset('this-month', this)">This Month</button>
+        <button class="preset-pill" onclick="setDatePreset('last-month', this)">Last Month</button>
+        <button class="preset-pill" onclick="setDatePreset('last-90', this)">Last 90 Days</button>
+        <button class="preset-pill" onclick="setDatePreset('this-year', this)">This Year</button>
+      </div>
+
+      <div class="filter-controls-row">
+        <div class="filter-item">
+          <label>From Date</label>
+          <input type="date" class="filter-control" id="filter-from-date" onchange="handleFilterChange()">
+        </div>
+        <div class="filter-item">
+          <label>To Date</label>
+          <input type="date" class="filter-control" id="filter-to-date" onchange="handleFilterChange()">
+        </div>
+        <div class="filter-item">
+          <label>Division</label>
+          <select class="filter-control" id="filter-division" onchange="handleFilterChange()">
+            <option value="all">All Divisions (Covering, TFO, Doubler)</option>
+            <option value="Covering">Covering</option>
+            <option value="TFO">TFO</option>
+            <option value="Doubler">Doubler</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>RM Supplier</label>
+          <select class="filter-control" id="filter-supplier" onchange="handleFilterChange()">
+            <option value="all">All Suppliers</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>Item Type</label>
+          <select class="filter-control" id="filter-item-type" onchange="handleFilterChange()">
+            <option value="all">All Item Types</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>Yarn Quality</label>
+          <select class="filter-control" id="filter-quality" onchange="handleFilterChange()">
+            <option value="all">All Qualities</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB NAVIGATION -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="switchAnalyticsTab('overview', this)">
+        <span>📈 Overview & KPIs</span>
+      </button>
+      <button class="tab-btn" onclick="switchAnalyticsTab('suppliers', this)">
+        <span>🏭 RM Suppliers & Purchases</span>
+        <span class="tab-badge" id="tab-suppliers-count">0</span>
+      </button>
+      <button class="tab-btn" onclick="switchAnalyticsTab('production', this)">
+        <span>⚙️ Production & Consumption</span>
+      </button>
+      <button class="tab-btn" onclick="switchAnalyticsTab('sales', this)">
+        <span>💰 Yarn Sales & Velocity</span>
+      </button>
+      <button class="tab-btn" onclick="switchAnalyticsTab('ledger', this)">
+        <span>📋 Detailed Records & Ledger</span>
+      </button>
+    </div>
+
+    <!-- EXECUTIVE KPI CARDS -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Total RM Inward</span>
+          <div class="kpi-icon" style="background: rgba(139, 92, 246, 0.15); color: var(--accent);">📦</div>
+        </div>
+        <div class="kpi-value" id="kpi-rm-inward">0.00 kg</div>
+        <div class="kpi-sub">
+          <span id="kpi-rm-boxes">0</span> total boxes received
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">RM Issued (Consumed)</span>
+          <div class="kpi-icon" style="background: rgba(14, 165, 233, 0.15); color: var(--info);">⚙️</div>
+        </div>
+        <div class="kpi-value" id="kpi-rm-issued" style="color: var(--info);">0.00 kg</div>
+        <div class="kpi-sub">
+          <span id="kpi-rm-issue-rate">0%</span> of received RM
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Available RM Stock</span>
+          <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--success);">✨</div>
+        </div>
+        <div class="kpi-value" id="kpi-rm-available" style="color: var(--success);">0.00 kg</div>
+        <div class="kpi-sub">
+          <span id="kpi-rm-available-boxes">0</span> boxes in stock
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Goods Return (GR)</span>
+          <div class="kpi-icon" style="background: rgba(239, 68, 68, 0.15); color: var(--error);">🔄</div>
+        </div>
+        <div class="kpi-value" id="kpi-rm-gr" style="color: var(--error);">0.00 kg</div>
+        <div class="kpi-sub">
+          <span id="kpi-gr-rate">0.0%</span> return rate (<span id="kpi-gr-boxes">0</span> boxes)
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Finished Production</span>
+          <div class="kpi-icon" style="background: rgba(249, 115, 22, 0.15); color: var(--accent3);">🏭</div>
+        </div>
+        <div class="kpi-value" id="kpi-prod-total" style="color: var(--accent3);">0.00 kg</div>
+        <div class="kpi-sub">
+          <span id="kpi-prod-bori">0</span> total bori produced
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Finished Yarn Sales</span>
+          <div class="kpi-icon" style="background: rgba(236, 72, 153, 0.15); color: var(--accent2);">💼</div>
+        </div>
+        <div class="kpi-value" id="kpi-sales-total" style="color: var(--accent2);">0.00 kg</div>
+        <div class="kpi-sub">
+          <strong id="kpi-sales-val">₹0.00</strong> total revenue
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: OVERVIEW & EXECUTIVE INSIGHTS -->
+    <div id="tab-content-overview" class="tab-content-panel">
+      <div class="charts-grid">
+        <div class="col-8">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Monthly Flow: Inward vs Consumption vs Sales</h3>
+                <p>Track month-wise raw material inward volume, production usage, and sales velocity</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper tall">
+              <canvas id="chart-monthly-flow"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-4">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>RM Stock Status Distribution</h3>
+                <p>Current split of In-Stock vs Issued vs Returned</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper tall">
+              <canvas id="chart-stock-distribution"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Top RM Suppliers by Volume</h3>
+                <p>Volume (Kg) received per raw material vendor</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper">
+              <canvas id="chart-overview-suppliers"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Department-wise RM Issuance Share</h3>
+                <p>Issuance allocation to Covering, TFO, and Doubler</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper">
+              <canvas id="chart-dept-share"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: RM SUPPLIERS & PROCUREMENT -->
+    <div id="tab-content-suppliers" class="tab-content-panel" style="display: none;">
+      <div class="charts-grid">
+        <div class="col-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Supplier Inward Volume Breakdown</h3>
+                <p>Total raw material received from each supplier (kg)</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper tall">
+              <canvas id="chart-supplier-volume"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Supplier Goods Return (GR) & Defect Rate</h3>
+                <p>Return percentage and returned weight per supplier</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper tall">
+              <canvas id="chart-supplier-gr"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>RM Item Types & Qualities per Supplier</h3>
+                <p>Yarn type breakdown (Polyester, Nylon, Viscose, Cotton, etc.)</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper">
+              <canvas id="chart-supplier-types"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Supplier Matrix KPI Scorecards -->
+      <div class="table-card">
+        <div class="chart-card-header">
+          <div class="chart-title-group">
+            <h3>Supplier Performance Matrix</h3>
+            <p>Summary of receipts, lot deliveries, GR rates, and average box weight</p>
+          </div>
+        </div>
+        <div id="supplier-scorecards-container" class="supplier-matrix-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: PRODUCTION & CONSUMPTION -->
+    <div id="tab-content-production" class="tab-content-panel" style="display: none;">
+      <div class="charts-grid">
+        <div class="col-8">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Department RM Issuance vs Finished Production</h3>
+                <p>Monthly comparison of raw materials issued to Covering / TFO / Doubler vs output produced</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper tall">
+              <canvas id="chart-prod-conversion"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-4">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Finished Output by Division</h3>
+                <p>Covering vs TFO vs Doubler production share</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper tall">
+              <canvas id="chart-prod-division-pie"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Top Consumed RM Qualities</h3>
+                <p>Qualities with highest issuance weight to production</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper">
+              <canvas id="chart-top-consumed-qualities"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Daily / Weekly Issuance Activity</h3>
+                <p>RM issuance velocity over selected timeframe</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper">
+              <canvas id="chart-issuance-timeline"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: YARN SALES & VELOCITY -->
+    <div id="tab-content-sales" class="tab-content-panel" style="display: none;">
+      <div class="charts-grid">
+        <div class="col-8">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Finished Yarn Sales Trend (Weight & Value)</h3>
+                <p>Monthly sales volume (kg) and revenue (₹) across divisions</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper tall">
+              <canvas id="chart-sales-trend"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-4">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Sales Share by Division</h3>
+                <p>Sales revenue distribution across Covering, TFO, and Doubler</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper tall">
+              <canvas id="chart-sales-division-pie"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Top Buyers / Customers by Volume</h3>
+                <p>Top purchasing parties and yarn demand</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper">
+              <canvas id="chart-top-customers"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-title-group">
+                <h3>Sales vs RM Inward Correlation</h3>
+                <p>Finished goods dispatched vs raw material received</p>
+              </div>
+            </div>
+            <div class="chart-container-wrapper">
+              <canvas id="chart-sales-vs-inward"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: DETAILED RECORDS & LEDGER -->
+    <div id="tab-content-ledger" class="tab-content-panel" style="display: none;">
+      <div class="table-card">
+        <div class="chart-card-header">
+          <div class="chart-title-group">
+            <h3>Raw Material Inward & Lot Summary</h3>
+            <p>Detailed log of RM challans, received boxes, issued status, and GR returns</p>
+          </div>
+          <button class="btn btn-secondary" onclick="exportTableToCSV('rm-inward-table', 'yarn-rm-inward-records.csv')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export Inwards CSV
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="analytics-table" id="rm-inward-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Supplier</th>
+                <th>Item Type</th>
+                <th>Quality / Spec</th>
+                <th>Code / Color</th>
+                <th>Lot #</th>
+                <th>Challan #</th>
+                <th>Total Boxes</th>
+                <th>Gross Wt (Kg)</th>
+                <th>Issued (Kg)</th>
+                <th>GR Wt (Kg)</th>
+                <th>Balance (Kg)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="rm-inward-tbody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Global Storage Keys
+    const RM_STORAGE_KEY = 'vishwa_yarn_rm_stock_data';
+    const QUALITIES_KEY = 'yarn-qualities';
+    const SUPPLIERS_KEY = 'yarn-suppliers';
+    
+    // State
+    let stockLots = [];
+    let storedQualities = [];
+    let storedSuppliers = [];
+    let productionLogs = { covering: [], tfo: [], doubler: [] };
+    let salesLogs = { covering: [], tfo: [], doubler: [] };
+
+    let currentTab = 'overview';
+    let chartInstances = {};
+
+    // Filter state
+    let filters = {
+      preset: 'all',
+      fromDate: '',
+      toDate: '',
+      division: 'all',
+      supplier: 'all',
+      itemType: 'all',
+      quality: 'all'
+    };
+
+    // Initialize Page
+    document.addEventListener('DOMContentLoaded', () => {
+      loadAllData();
+      populateFilterOptions();
+      refreshAnalytics();
+
+      // Listen for cross-tab or remote storage updates
+      window.addEventListener('storage', (e) => {
+        if (e.key === RM_STORAGE_KEY || e.key === QUALITIES_KEY || e.key === SUPPLIERS_KEY || (e.key && e.key.startsWith('yarn_'))) {
+          loadAllData();
+          populateFilterOptions();
+          refreshAnalytics();
+        }
+      });
+    });
+
+    // Load Data Stores
+    function loadAllData() {
+      // 1. RM Stock Lots
+      try {
+        const rmRaw = localStorage.getItem(RM_STORAGE_KEY);
+        stockLots = rmRaw ? JSON.parse(rmRaw) : [];
+      } catch (e) {
+        stockLots = [];
+      }
+
+      // 2. Qualities
+      try {
+        storedQualities = JSON.parse(localStorage.getItem(QUALITIES_KEY) || '[]');
+      } catch (e) {
+        storedQualities = [];
+      }
+
+      // 3. Suppliers
+      try {
+        const rawS = JSON.parse(localStorage.getItem(SUPPLIERS_KEY) || '[]');
+        storedSuppliers = Array.isArray(rawS) ? rawS.map(s => typeof s === 'string' ? s.trim() : (s.name || s.supplier || '').trim()).filter(Boolean) : [];
+      } catch (e) {
+        storedSuppliers = [];
+      }
+
+      // 4. Production Logs
+      ['covering', 'tfo', 'doubler'].forEach(div => {
+        try {
+          productionLogs[div] = JSON.parse(localStorage.getItem(`yarn_${div}_production_logs`) || '[]');
+        } catch (e) {
+          productionLogs[div] = [];
+        }
+      });
+
+      // 5. Sales Logs
+      ['covering', 'tfo', 'doubler'].forEach(div => {
+        try {
+          salesLogs[div] = JSON.parse(localStorage.getItem(`yarn_${div}_sales_logs`) || '[]');
+        } catch (e) {
+          salesLogs[div] = [];
+        }
+      });
+    }
+
+    // Populate Filter Dropdowns dynamically
+    function populateFilterOptions() {
+      // Suppliers
+      const supSet = new Set([...storedSuppliers, ...stockLots.map(l => l.supplier).filter(Boolean)]);
+      const supSelect = document.getElementById('filter-supplier');
+      const curSup = supSelect.value;
+      supSelect.innerHTML = '<option value="all">All Suppliers</option>';
+      Array.from(supSet).sort().forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        if (s === curSup) opt.selected = true;
+        supSelect.appendChild(opt);
+      });
+      document.getElementById('tab-suppliers-count').textContent = supSet.size;
+
+      // Item Types
+      const defaultTypes = ['Polyester', 'Nylon', 'Viscose', 'Cotton', 'Silk', 'Linen', 'Wool', 'Acrylic', 'Blend'];
+      const typeSet = new Set([...defaultTypes, ...storedQualities.map(q => q.type || q.itemType).filter(Boolean), ...stockLots.map(l => l.itemType).filter(Boolean)]);
+      const typeSelect = document.getElementById('filter-item-type');
+      const curType = typeSelect.value;
+      typeSelect.innerHTML = '<option value="all">All Item Types</option>';
+      Array.from(typeSet).sort().forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        if (t === curType) opt.selected = true;
+        typeSelect.appendChild(opt);
+      });
+
+      // Qualities
+      const qualSet = new Set([...storedQualities.map(q => q.quality || q.name).filter(Boolean), ...stockLots.map(l => l.quality).filter(Boolean)]);
+      const qualSelect = document.getElementById('filter-quality');
+      const curQual = qualSelect.value;
+      qualSelect.innerHTML = '<option value="all">All Qualities</option>';
+      Array.from(qualSet).sort().forEach(q => {
+        const opt = document.createElement('option');
+        opt.value = q;
+        opt.textContent = q;
+        if (q === curQual) opt.selected = true;
+        qualSelect.appendChild(opt);
+      });
+    }
+
+    // Date Preset Handler
+    function setDatePreset(preset, el) {
+      filters.preset = preset;
+      document.querySelectorAll('.preset-pill').forEach(btn => btn.classList.remove('active'));
+      if (el) el.classList.add('active');
+
+      const today = new Date();
+      const formatD = (d) => d.toISOString().split('T')[0];
+
+      if (preset === 'all') {
+        document.getElementById('filter-from-date').value = '';
+        document.getElementById('filter-to-date').value = '';
+      } else if (preset === 'this-month') {
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        document.getElementById('filter-from-date').value = formatD(firstDay);
+        document.getElementById('filter-to-date').value = formatD(today);
+      } else if (preset === 'last-month') {
+        const firstDayLast = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastDayLast = new Date(today.getFullYear(), today.getMonth(), 0);
+        document.getElementById('filter-from-date').value = formatD(firstDayLast);
+        document.getElementById('filter-to-date').value = formatD(lastDayLast);
+      } else if (preset === 'last-90') {
+        const past90 = new Date();
+        past90.setDate(today.getDate() - 90);
+        document.getElementById('filter-from-date').value = formatD(past90);
+        document.getElementById('filter-to-date').value = formatD(today);
+      } else if (preset === 'this-year') {
+        const firstDayYear = new Date(today.getFullYear(), 0, 1);
+        document.getElementById('filter-from-date').value = formatD(firstDayYear);
+        document.getElementById('filter-to-date').value = formatD(today);
+      }
+
+      handleFilterChange();
+    }
+
+    function handleFilterChange() {
+      filters.fromDate = document.getElementById('filter-from-date').value;
+      filters.toDate = document.getElementById('filter-to-date').value;
+      filters.division = document.getElementById('filter-division').value;
+      filters.supplier = document.getElementById('filter-supplier').value;
+      filters.itemType = document.getElementById('filter-item-type').value;
+      filters.quality = document.getElementById('filter-quality').value;
+
+      refreshAnalytics();
+    }
+
+    // Tab switcher
+    function switchAnalyticsTab(tabId, el) {
+      currentTab = tabId;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      if (el) {
+        el.classList.add('active');
+      } else {
+        const matched = Array.from(document.querySelectorAll('.tab-btn')).find(b => (b.getAttribute('onclick') || '').includes(tabId));
+        if (matched) matched.classList.add('active');
+      }
+
+      document.querySelectorAll('.tab-content-panel').forEach(panel => panel.style.display = 'none');
+      const target = document.getElementById(`tab-content-${tabId}`);
+      if (target) target.style.display = 'block';
+
+      renderActiveTabCharts();
+    }
+
+    // Helper: Filter Verification
+    function matchesDateRange(dateStr) {
+      if (!dateStr) return true;
+      if (filters.fromDate && dateStr < filters.fromDate) return false;
+      if (filters.toDate && dateStr > filters.toDate) return false;
+      return true;
+    }
+
+    // Main Analytics Calculation Engine
+    function calculateAnalytics() {
+      // 1. Process RM Stock Lots
+      let totalRMReceivedKg = 0;
+      let totalRMBoxes = 0;
+      let totalRMIssuedKg = 0;
+      let totalRMIssuedBoxes = 0;
+      let totalRMAvailableKg = 0;
+      let totalRMAvailableBoxes = 0;
+      let totalRMGRKg = 0;
+      let totalRMGRBoxes = 0;
+
+      const monthlyData = {}; // 'YYYY-MM': { inward: 0, issued: 0, production: 0, sales: 0, salesValue: 0 }
+      const supplierMap = {}; // 'Supplier': { inwardKg: 0, boxes: 0, issuedKg: 0, grKg: 0, grBoxes: 0, lotsCount: 0, types: {}, qualities: {} }
+      const qualityConsumedMap = {}; // 'Quality': weight
+      const deptIssuanceMap = { 'Covering': 0, 'TFO': 0, 'Doubler': 0, 'Other': 0 };
+      const dailyIssuanceMap = {}; // 'YYYY-MM-DD': weight
+
+      const filteredLots = [];
+
+      stockLots.forEach(lot => {
+        // Dimension Filters
+        if (filters.supplier !== 'all' && lot.supplier !== filters.supplier) return;
+        if (filters.itemType !== 'all' && lot.itemType !== filters.itemType) return;
+        if (filters.quality !== 'all' && lot.quality !== filters.quality) return;
+
+        const lotDate = lot.receiveDate || '';
+        const lotDateMatches = matchesDateRange(lotDate);
+
+        let lotTotalBoxes = 0;
+        let lotTotalWeight = 0;
+        let lotIssuedWeight = 0;
+        let lotGRWeight = 0;
+        let lotAvailWeight = 0;
+
+        const supName = lot.supplier || 'Unspecified Supplier';
+        if (!supplierMap[supName]) {
+          supplierMap[supName] = { inwardKg: 0, boxes: 0, issuedKg: 0, grKg: 0, grBoxes: 0, lotsCount: 0, types: {}, qualities: {} };
+        }
+
+        if (lotDateMatches) {
+          supplierMap[supName].lotsCount++;
+          const typeName = lot.itemType || 'Polyester';
+          supplierMap[supName].types[typeName] = (supplierMap[supName].types[typeName] || 0);
+          supplierMap[supName].qualities[lot.quality || 'Standard'] = (supplierMap[supName].qualities[lot.quality || 'Standard'] || 0);
+        }
+
+        (lot.boxes || []).forEach(box => {
+          const boxWeight = box.weight || lot.boxWeight || 0;
+          const boxStatus = box.status || 'available';
+
+          // Check if box issuance or GR matches division filter
+          const boxDept = box.issuedTo || 'Other';
+          const matchesDivision = filters.division === 'all' || boxDept.toLowerCase() === filters.division.toLowerCase();
+
+          if (boxStatus === 'issued') {
+            if (matchesDivision && matchesDateRange(box.issueDate || lotDate)) {
+              totalRMIssuedKg += boxWeight;
+              totalRMIssuedBoxes++;
+              lotIssuedWeight += boxWeight;
+
+              const normDept = boxDept.includes('Covering') ? 'Covering' : boxDept.includes('TFO') ? 'TFO' : boxDept.includes('Doubler') ? 'Doubler' : 'Other';
+              deptIssuanceMap[normDept] = (deptIssuanceMap[normDept] || 0) + boxWeight;
+
+              const qName = lot.quality || 'Standard';
+              qualityConsumedMap[qName] = (qualityConsumedMap[qName] || 0) + boxWeight;
+
+              const issueDateKey = box.issueDate || lotDate;
+              if (issueDateKey) {
+                dailyIssuanceMap[issueDateKey] = (dailyIssuanceMap[issueDateKey] || 0) + boxWeight;
+                const mKey = issueDateKey.substring(0, 7);
+                if (!monthlyData[mKey]) monthlyData[mKey] = { inward: 0, issued: 0, production: 0, sales: 0, salesValue: 0 };
+                monthlyData[mKey].issued += boxWeight;
+              }
+
+              supplierMap[supName].issuedKg += boxWeight;
+            }
+          } else if (boxStatus === 'gr') {
+            if (matchesDateRange(box.grDate || lotDate)) {
+              totalRMGRKg += boxWeight;
+              totalRMGRBoxes++;
+              lotGRWeight += boxWeight;
+              supplierMap[supName].grKg += boxWeight;
+              supplierMap[supName].grBoxes++;
+            }
+          } else {
+            // Available
+            if (lotDateMatches) {
+              totalRMAvailableKg += boxWeight;
+              totalRMAvailableBoxes++;
+              lotAvailWeight += boxWeight;
+            }
+          }
+
+          if (lotDateMatches) {
+            totalRMReceivedKg += boxWeight;
+            totalRMBoxes++;
+            lotTotalBoxes++;
+            lotTotalWeight += boxWeight;
+
+            supplierMap[supName].inwardKg += boxWeight;
+            supplierMap[supName].boxes++;
+            const typeName = lot.itemType || 'Polyester';
+            supplierMap[supName].types[typeName] += boxWeight;
+            supplierMap[supName].qualities[lot.quality || 'Standard'] += boxWeight;
+
+            if (lotDate) {
+              const mKey = lotDate.substring(0, 7);
+              if (!monthlyData[mKey]) monthlyData[mKey] = { inward: 0, issued: 0, production: 0, sales: 0, salesValue: 0 };
+              monthlyData[mKey].inward += boxWeight;
+            }
+          }
+        });
+
+        if (lotDateMatches) {
+          filteredLots.push({
+            lot,
+            totalBoxes: lotTotalBoxes,
+            grossWeight: lotTotalWeight,
+            issuedWeight: lotIssuedWeight,
+            grWeight: lotGRWeight,
+            availWeight: lotAvailWeight
+          });
+        }
+      });
+
+      // 2. Process Finished Production Logs
+      let totalProdWeight = 0;
+      let totalProdBori = 0;
+      const divisionProdMap = { covering: 0, tfo: 0, doubler: 0 };
+
+      ['covering', 'tfo', 'doubler'].forEach(div => {
+        if (filters.division !== 'all' && filters.division.toLowerCase() !== div) return;
+
+        const logs = productionLogs[div] || [];
+        logs.forEach(log => {
+          const logDate = log.date || '';
+          if (!matchesDateRange(logDate)) return;
+
+          const wt = parseFloat(log.netWeight || log.weight || log.totalWeight || 0);
+          const bori = parseInt(log.bori || log.boris || log.boxes || 1, 10);
+
+          totalProdWeight += wt;
+          totalProdBori += bori;
+          divisionProdMap[div] += wt;
+
+          if (logDate) {
+            const mKey = logDate.substring(0, 7);
+            if (!monthlyData[mKey]) monthlyData[mKey] = { inward: 0, issued: 0, production: 0, sales: 0, salesValue: 0 };
+            monthlyData[mKey].production += wt;
+          }
+        });
+      });
+
+      // 3. Process Finished Sales Logs
+      let totalSalesWeight = 0;
+      let totalSalesRevenue = 0;
+      let totalSalesBori = 0;
+      const divisionSalesMap = { covering: 0, tfo: 0, doubler: 0 };
+      const customerSalesMap = {}; // 'Customer': { weight: 0, revenue: 0 }
+
+      ['covering', 'tfo', 'doubler'].forEach(div => {
+        if (filters.division !== 'all' && filters.division.toLowerCase() !== div) return;
+
+        const logs = salesLogs[div] || [];
+        logs.forEach(log => {
+          const logDate = log.date || '';
+          if (!matchesDateRange(logDate)) return;
+
+          const wt = parseFloat(log.netWeight || log.weight || log.totalWeight || 0);
+          const rate = parseFloat(log.rate || log.price || 0);
+          const rev = parseFloat(log.totalAmount || (wt * rate) || 0);
+          const bori = parseInt(log.bori || log.boris || log.boxes || 1, 10);
+          const cust = log.customer || log.partyName || log.party || 'Standard Buyer';
+
+          totalSalesWeight += wt;
+          totalSalesRevenue += rev;
+          totalSalesBori += bori;
+          divisionSalesMap[div] += wt;
+
+          if (!customerSalesMap[cust]) customerSalesMap[cust] = { weight: 0, revenue: 0 };
+          customerSalesMap[cust].weight += wt;
+          customerSalesMap[cust].revenue += rev;
+
+          if (logDate) {
+            const mKey = logDate.substring(0, 7);
+            if (!monthlyData[mKey]) monthlyData[mKey] = { inward: 0, issued: 0, production: 0, sales: 0, salesValue: 0 };
+            monthlyData[mKey].sales += wt;
+            monthlyData[mKey].salesValue += rev;
+          }
+        });
+      });
+
+      return {
+        kpis: {
+          totalRMReceivedKg,
+          totalRMBoxes,
+          totalRMIssuedKg,
+          totalRMIssuedBoxes,
+          totalRMAvailableKg,
+          totalRMAvailableBoxes,
+          totalRMGRKg,
+          totalRMGRBoxes,
+          grRate: totalRMReceivedKg > 0 ? (totalRMGRKg / totalRMReceivedKg) * 100 : 0,
+          issueRate: totalRMReceivedKg > 0 ? (totalRMIssuedKg / totalRMReceivedKg) * 100 : 0,
+          totalProdWeight,
+          totalProdBori,
+          totalSalesWeight,
+          totalSalesRevenue,
+          totalSalesBori
+        },
+        monthlyData,
+        supplierMap,
+        qualityConsumedMap,
+        deptIssuanceMap,
+        dailyIssuanceMap,
+        divisionProdMap,
+        divisionSalesMap,
+        customerSalesMap,
+        filteredLots
+      };
+    }
+
+    // Refresh UI & Visualizations
+    function refreshAnalytics() {
+      const data = calculateAnalytics();
+
+      // Update KPI Elements
+      document.getElementById('kpi-rm-inward').textContent = `${data.kpis.totalRMReceivedKg.toFixed(2)} kg`;
+      document.getElementById('kpi-rm-boxes').textContent = data.kpis.totalRMBoxes;
+      
+      document.getElementById('kpi-rm-issued').textContent = `${data.kpis.totalRMIssuedKg.toFixed(2)} kg`;
+      document.getElementById('kpi-rm-issue-rate').textContent = `${data.kpis.issueRate.toFixed(1)}%`;
+      
+      document.getElementById('kpi-rm-available').textContent = `${data.kpis.totalRMAvailableKg.toFixed(2)} kg`;
+      document.getElementById('kpi-rm-available-boxes').textContent = data.kpis.totalRMAvailableBoxes;
+      
+      document.getElementById('kpi-rm-gr').textContent = `${data.kpis.totalRMGRKg.toFixed(2)} kg`;
+      document.getElementById('kpi-gr-rate').textContent = `${data.kpis.grRate.toFixed(1)}%`;
+      document.getElementById('kpi-gr-boxes').textContent = data.kpis.totalRMGRBoxes;
+      
+      document.getElementById('kpi-prod-total').textContent = `${data.kpis.totalProdWeight.toFixed(2)} kg`;
+      document.getElementById('kpi-prod-bori').textContent = data.kpis.totalProdBori;
+      
+      document.getElementById('kpi-sales-total').textContent = `${data.kpis.totalSalesWeight.toFixed(2)} kg`;
+      document.getElementById('kpi-sales-val').textContent = `₹${data.kpis.totalSalesRevenue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+
+      // Render Active Tab Visualizations
+      renderActiveTabCharts(data);
+
+      // Render Supplier Cards Matrix
+      renderSupplierScorecards(data.supplierMap);
+
+      // Render Detailed Inwards Table
+      renderInwardsTable(data.filteredLots);
+    }
+
+    // Chart Helper (Safe Recreate)
+    function setupChart(canvasId, config) {
+      if (chartInstances[canvasId]) {
+        chartInstances[canvasId].destroy();
+      }
+      const ctx = document.getElementById(canvasId);
+      if (!ctx) return;
+      
+      const isDark = document.documentElement.classList.contains('dark-mode');
+      const textColor = isDark ? '#a1a1aa' : '#64748b';
+      const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
+
+      if (!config.options) config.options = {};
+      config.options.responsive = true;
+      config.options.maintainAspectRatio = false;
+      
+      if (!config.options.plugins) config.options.plugins = {};
+      if (!config.options.plugins.legend) {
+        config.options.plugins.legend = { 
+          position: 'bottom',
+          labels: { color: textColor, font: { family: 'Inter', size: 11 }, boxWidth: 12, padding: 10 } 
+        };
+      } else {
+        if (!config.options.plugins.legend.labels) config.options.plugins.legend.labels = {};
+        config.options.plugins.legend.labels.color = textColor;
+        config.options.plugins.legend.labels.font = { family: 'Inter', size: 11 };
+        config.options.plugins.legend.labels.boxWidth = 12;
+        config.options.plugins.legend.labels.padding = 10;
+      }
+      
+      if (config.options.scales) {
+        Object.keys(config.options.scales).forEach(s => {
+          if (config.options.scales[s].ticks) {
+            config.options.scales[s].ticks.color = textColor;
+            config.options.scales[s].ticks.font = { family: 'Inter', size: 10 };
+          } else {
+            config.options.scales[s].ticks = { color: textColor, font: { family: 'Inter', size: 10 } };
+          }
+          
+          if (config.options.scales[s].grid) config.options.scales[s].grid.color = gridColor;
+          else config.options.scales[s].grid = { color: gridColor };
+        });
+      }
+
+      chartInstances[canvasId] = new Chart(ctx, config);
+    }
+
+    // Render Charts per Tab
+    function renderActiveTabCharts(calcData = calculateAnalytics()) {
+      const isDark = document.documentElement.classList.contains('dark-mode');
+
+      // TAB 1: OVERVIEW
+      if (currentTab === 'overview') {
+        const sortedMonths = Object.keys(calcData.monthlyData).sort();
+        const inwardArr = sortedMonths.map(m => calcData.monthlyData[m].inward);
+        const issuedArr = sortedMonths.map(m => calcData.monthlyData[m].issued);
+        const prodArr = sortedMonths.map(m => calcData.monthlyData[m].production);
+        const salesArr = sortedMonths.map(m => calcData.monthlyData[m].sales);
+
+        setupChart('chart-monthly-flow', {
+          type: 'bar',
+          data: {
+            labels: sortedMonths.length > 0 ? sortedMonths : ['Current Period'],
+            datasets: [
+              {
+                label: 'RM Inward (Kg)',
+                data: sortedMonths.length > 0 ? inwardArr : [calcData.kpis.totalRMReceivedKg],
+                backgroundColor: 'rgba(139, 92, 246, 0.75)',
+                borderRadius: 4,
+                maxBarThickness: 36
+              },
+              {
+                label: 'RM Consumed (Kg)',
+                data: sortedMonths.length > 0 ? issuedArr : [calcData.kpis.totalRMIssuedKg],
+                backgroundColor: 'rgba(14, 165, 233, 0.75)',
+                borderRadius: 4,
+                maxBarThickness: 36
+              },
+              {
+                label: 'Finished Prod (Kg)',
+                data: sortedMonths.length > 0 ? prodArr : [calcData.kpis.totalProdWeight],
+                backgroundColor: 'rgba(249, 115, 22, 0.75)',
+                borderRadius: 4,
+                maxBarThickness: 36
+              },
+              {
+                label: 'Finished Sales (Kg)',
+                data: sortedMonths.length > 0 ? salesArr : [calcData.kpis.totalSalesWeight],
+                backgroundColor: 'rgba(236, 72, 153, 0.75)',
+                borderRadius: 4,
+                maxBarThickness: 36
+              }
+            ]
+          },
+          options: {
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: 'Kg' } }
+            }
+          }
+        });
+
+        // Stock Distribution Doughnut
+        setupChart('chart-stock-distribution', {
+          type: 'doughnut',
+          data: {
+            labels: ['In Stock', 'Issued / Consumed', 'Goods Return'],
+            datasets: [{
+              data: [
+                calcData.kpis.totalRMAvailableKg,
+                calcData.kpis.totalRMIssuedKg,
+                calcData.kpis.totalRMGRKg
+              ],
+              backgroundColor: ['#10b981', '#0ea5e9', '#ef4444'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            cutout: '65%',
+            plugins: {
+              legend: { position: 'bottom' }
+            }
+          }
+        });
+
+        // Overview Suppliers Bar
+        const topSuppliers = Object.entries(calcData.supplierMap)
+          .sort((a, b) => b[1].inwardKg - a[1].inwardKg)
+          .slice(0, 6);
+
+        setupChart('chart-overview-suppliers', {
+          type: 'bar',
+          data: {
+            labels: topSuppliers.map(s => s[0]),
+            datasets: [{
+              label: 'Inward Volume (Kg)',
+              data: topSuppliers.map(s => s[1].inwardKg),
+              backgroundColor: 'rgba(139, 92, 246, 0.8)',
+              borderRadius: 4,
+              maxBarThickness: 28
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            scales: { x: { beginAtZero: true } }
+          }
+        });
+
+        // Department Issuance Share
+        setupChart('chart-dept-share', {
+          type: 'pie',
+          data: {
+            labels: ['Covering', 'TFO', 'Doubler', 'Other'],
+            datasets: [{
+              data: [
+                calcData.deptIssuanceMap.Covering || 0,
+                calcData.deptIssuanceMap.TFO || 0,
+                calcData.deptIssuanceMap.Doubler || 0,
+                calcData.deptIssuanceMap.Other || 0
+              ],
+              backgroundColor: ['#ec4899', '#8b5cf6', '#3b82f6', '#94a3b8'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            plugins: { legend: { position: 'bottom' } }
+          }
+        });
+      }
+
+      // TAB 2: RM SUPPLIERS
+      if (currentTab === 'suppliers') {
+        const suppliersList = Object.entries(calcData.supplierMap).sort((a, b) => b[1].inwardKg - a[1].inwardKg);
+        
+        setupChart('chart-supplier-volume', {
+          type: 'bar',
+          data: {
+            labels: suppliersList.map(s => s[0]),
+            datasets: [
+              {
+                label: 'Inward (Kg)',
+                data: suppliersList.map(s => s[1].inwardKg),
+                backgroundColor: 'rgba(139, 92, 246, 0.8)',
+                borderRadius: 4,
+                maxBarThickness: 32
+              },
+              {
+                label: 'Consumed (Kg)',
+                data: suppliersList.map(s => s[1].issuedKg),
+                backgroundColor: 'rgba(14, 165, 233, 0.8)',
+                borderRadius: 4,
+                maxBarThickness: 32
+              }
+            ]
+          },
+          options: {
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+
+        setupChart('chart-supplier-gr', {
+          type: 'bar',
+          data: {
+            labels: suppliersList.map(s => s[0]),
+            datasets: [
+              {
+                type: 'bar',
+                label: 'Returned (Kg)',
+                data: suppliersList.map(s => s[1].grKg),
+                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                yAxisID: 'y',
+                borderRadius: 4,
+                maxBarThickness: 28
+              },
+              {
+                type: 'line',
+                label: 'GR Rate (%)',
+                data: suppliersList.map(s => s[1].inwardKg > 0 ? (s[1].grKg / s[1].inwardKg) * 100 : 0),
+                borderColor: '#f59e0b',
+                backgroundColor: '#f59e0b',
+                borderWidth: 2,
+                pointRadius: 4,
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: 'Returned Kg' } },
+              y1: { position: 'right', beginAtZero: true, max: 100, title: { display: true, text: 'GR %' }, grid: { drawOnChartArea: false } }
+            }
+          }
+        });
+
+        // Supplier Item Types Distribution (Stacked Bar)
+        const allTypes = Array.from(new Set(suppliersList.flatMap(s => Object.keys(s[1].types))));
+        const typeColors = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#06b6d4', '#64748b'];
+        
+        const typeDatasets = allTypes.map((tName, tIdx) => ({
+          label: tName,
+          data: suppliersList.map(s => s[1].types[tName] || 0),
+          backgroundColor: typeColors[tIdx % typeColors.length],
+          maxBarThickness: 36
+        }));
+
+        setupChart('chart-supplier-types', {
+          type: 'bar',
+          data: {
+            labels: suppliersList.map(s => s[0]),
+            datasets: typeDatasets
+          },
+          options: {
+            scales: {
+              x: { stacked: true },
+              y: { stacked: true, beginAtZero: true }
+            }
+          }
+        });
+      }
+
+      // TAB 3: PRODUCTION & CONSUMPTION
+      if (currentTab === 'production') {
+        const sortedMonths = Object.keys(calcData.monthlyData).sort();
+        setupChart('chart-prod-conversion', {
+          type: 'bar',
+          data: {
+            labels: sortedMonths.length > 0 ? sortedMonths : ['Current Period'],
+            datasets: [
+              {
+                label: 'RM Consumed (Kg)',
+                data: sortedMonths.length > 0 ? sortedMonths.map(m => calcData.monthlyData[m].issued) : [calcData.kpis.totalRMIssuedKg],
+                backgroundColor: 'rgba(14, 165, 233, 0.75)',
+                borderRadius: 4,
+                maxBarThickness: 36
+              },
+              {
+                label: 'Finished Output (Kg)',
+                data: sortedMonths.length > 0 ? sortedMonths.map(m => calcData.monthlyData[m].production) : [calcData.kpis.totalProdWeight],
+                backgroundColor: 'rgba(249, 115, 22, 0.75)',
+                borderRadius: 4,
+                maxBarThickness: 36
+              }
+            ]
+          },
+          options: {
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+
+        setupChart('chart-prod-division-pie', {
+          type: 'doughnut',
+          data: {
+            labels: ['Covering Output', 'TFO Output', 'Doubler Output'],
+            datasets: [{
+              data: [
+                calcData.divisionProdMap.covering || 0,
+                calcData.divisionProdMap.tfo || 0,
+                calcData.divisionProdMap.doubler || 0
+              ],
+              backgroundColor: ['#ec4899', '#8b5cf6', '#3b82f6'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            cutout: '65%',
+            plugins: { legend: { position: 'bottom' } }
+          }
+        });
+
+        // Top Consumed Qualities
+        const topQualities = Object.entries(calcData.qualityConsumedMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6);
+
+        setupChart('chart-top-consumed-qualities', {
+          type: 'bar',
+          data: {
+            labels: topQualities.map(q => q[0]),
+            datasets: [{
+              label: 'Issued Weight (Kg)',
+              data: topQualities.map(q => q[1]),
+              backgroundColor: 'rgba(139, 92, 246, 0.8)',
+              borderRadius: 4,
+              maxBarThickness: 28
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            scales: { x: { beginAtZero: true } }
+          }
+        });
+
+        // Daily Issuance Timeline
+        const sortedDays = Object.keys(calcData.dailyIssuanceMap).sort();
+        setupChart('chart-issuance-timeline', {
+          type: 'line',
+          data: {
+            labels: sortedDays.length > 0 ? sortedDays : ['No Logs'],
+            datasets: [{
+              label: 'Daily RM Issued (Kg)',
+              data: sortedDays.length > 0 ? sortedDays.map(d => calcData.dailyIssuanceMap[d]) : [0],
+              borderColor: '#0ea5e9',
+              backgroundColor: 'rgba(14, 165, 233, 0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 4
+            }]
+          },
+          options: {
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+      }
+
+      // TAB 4: YARN SALES
+      if (currentTab === 'sales') {
+        const sortedMonths = Object.keys(calcData.monthlyData).sort();
+        setupChart('chart-sales-trend', {
+          type: 'bar',
+          data: {
+            labels: sortedMonths.length > 0 ? sortedMonths : ['Current Period'],
+            datasets: [
+              {
+                type: 'bar',
+                label: 'Sales Volume (Kg)',
+                data: sortedMonths.length > 0 ? sortedMonths.map(m => calcData.monthlyData[m].sales) : [calcData.kpis.totalSalesWeight],
+                backgroundColor: 'rgba(236, 72, 153, 0.75)',
+                yAxisID: 'y',
+                borderRadius: 4,
+                maxBarThickness: 36
+              },
+              {
+                type: 'line',
+                label: 'Revenue (₹)',
+                data: sortedMonths.length > 0 ? sortedMonths.map(m => calcData.monthlyData[m].salesValue) : [calcData.kpis.totalSalesRevenue],
+                borderColor: '#10b981',
+                backgroundColor: '#10b981',
+                borderWidth: 2,
+                pointRadius: 4,
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: 'Kg' } },
+              y1: { position: 'right', beginAtZero: true, title: { display: true, text: '₹ Revenue' }, grid: { drawOnChartArea: false } }
+            }
+          }
+        });
+
+        setupChart('chart-sales-division-pie', {
+          type: 'doughnut',
+          data: {
+            labels: ['Covering Sales', 'TFO Sales', 'Doubler Sales'],
+            datasets: [{
+              data: [
+                calcData.divisionSalesMap.covering || 0,
+                calcData.divisionSalesMap.tfo || 0,
+                calcData.divisionSalesMap.doubler || 0
+              ],
+              backgroundColor: ['#ec4899', '#8b5cf6', '#3b82f6'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            cutout: '65%',
+            plugins: { legend: { position: 'bottom' } }
+          }
+        });
+
+        // Top Customers
+        const topCust = Object.entries(calcData.customerSalesMap)
+          .sort((a, b) => b[1].weight - a[1].weight)
+          .slice(0, 6);
+
+        setupChart('chart-top-customers', {
+          type: 'bar',
+          data: {
+            labels: topCust.map(c => c[0]),
+            datasets: [{
+              label: 'Sales Volume (Kg)',
+              data: topCust.map(c => c[1].weight),
+              backgroundColor: 'rgba(236, 72, 153, 0.8)',
+              borderRadius: 4,
+              maxBarThickness: 28
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            scales: { x: { beginAtZero: true } }
+          }
+        });
+
+        // Sales vs RM Inward
+        setupChart('chart-sales-vs-inward', {
+          type: 'bar',
+          data: {
+            labels: ['RM Inward vs Sales'],
+            datasets: [
+              {
+                label: 'RM Inward (Kg)',
+                data: [calcData.kpis.totalRMReceivedKg],
+                backgroundColor: '#8b5cf6',
+                borderRadius: 4,
+                maxBarThickness: 45
+              },
+              {
+                label: 'Finished Sales (Kg)',
+                data: [calcData.kpis.totalSalesWeight],
+                backgroundColor: '#ec4899',
+                borderRadius: 4,
+                maxBarThickness: 45
+              }
+            ]
+          },
+          options: {
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+      }
+    }
+
+    // Render Supplier Performance Matrix Cards
+    function renderSupplierScorecards(supplierMap) {
+      const container = document.getElementById('supplier-scorecards-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const suppliers = Object.entries(supplierMap).sort((a, b) => b[1].inwardKg - a[1].inwardKg);
+      if (suppliers.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-state-icon">🏢</div>
+            <h4>No Supplier Records Found</h4>
+            <p>Add RM Inward Challans in Yarn RM Stock Book to view supplier performance metrics.</p>
+          </div>
+        `;
+        return;
+      }
+
+      suppliers.forEach(([name, sData]) => {
+        const grPct = sData.inwardKg > 0 ? ((sData.grKg / sData.inwardKg) * 100).toFixed(1) : 0;
+        const avgBoxWt = sData.boxes > 0 ? (sData.inwardKg / sData.boxes).toFixed(2) : 0;
+        const consumedPct = sData.inwardKg > 0 ? Math.min(100, (sData.issuedKg / sData.inwardKg) * 100).toFixed(0) : 0;
+
+        const card = document.createElement('div');
+        card.className = 'supplier-card';
+        card.innerHTML = `
+          <div class="supplier-card-header">
+            <span class="supplier-name" title="${name}">${name}</span>
+            <span class="badge ${grPct > 5 ? 'badge-error' : 'badge-success'}">${grPct}% GR</span>
+          </div>
+          <div class="supplier-stats-row">
+            <span>Total Inward:</span>
+            <span>${sData.inwardKg.toFixed(2)} kg</span>
+          </div>
+          <div class="supplier-stats-row">
+            <span>Lots / Boxes:</span>
+            <span>${sData.lotsCount} lots (${sData.boxes} boxes)</span>
+          </div>
+          <div class="supplier-stats-row">
+            <span>Avg Box Wt:</span>
+            <span>${avgBoxWt} kg</span>
+          </div>
+          <div class="supplier-stats-row">
+            <span>Consumed:</span>
+            <span>${sData.issuedKg.toFixed(2)} kg (${consumedPct}%)</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: ${consumedPct}%;"></div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Render Detailed Inwards Table
+    function renderInwardsTable(lotItems) {
+      const tbody = document.getElementById('rm-inward-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (lotItems.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="13" style="text-align: center; padding: 2.5rem; color: var(--muted);">
+              No RM Inward records match the selected filters.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      lotItems.forEach(item => {
+        const lot = item.lot;
+        const balance = Math.max(0, item.grossWeight - item.issuedWeight - item.grWeight);
+        
+        let statusBadge = '<span class="badge badge-success">Available</span>';
+        if (balance <= 0.05) {
+          statusBadge = '<span class="badge badge-primary">Completed</span>';
+        } else if (item.issuedWeight > 0) {
+          statusBadge = '<span class="badge badge-info">In Progress</span>';
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${lot.receiveDate || '-'}</td>
+          <td style="font-weight: 600;">${lot.supplier || '-'}</td>
+          <td><span class="badge badge-warning">${lot.itemType || 'Polyester'}</span></td>
+          <td style="font-weight: 600;">${lot.quality || '-'}</td>
+          <td>${lot.code || '-'} ${lot.color ? `(${lot.color})` : ''}</td>
+          <td><code>${lot.lotNumber || '-'}</code></td>
+          <td>${lot.challanNo || '-'}</td>
+          <td>${item.totalBoxes}</td>
+          <td style="font-weight: 600;">${item.grossWeight.toFixed(2)}</td>
+          <td style="color: var(--info);">${item.issuedWeight.toFixed(2)}</td>
+          <td style="color: var(--error);">${item.grWeight.toFixed(2)}</td>
+          <td style="font-weight: 700; color: var(--success);">${balance.toFixed(2)}</td>
+          <td>${statusBadge}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // CSV Exporter Helper
+    function exportTableToCSV(tableId, filename) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+
+      const rows = Array.from(table.querySelectorAll('tr'));
+      const csv = rows.map(row => {
+        const cells = Array.from(row.querySelectorAll('th, td'));
+        return cells.map(cell => `"${cell.innerText.replace(/"/g, '""').trim()}"`).join(',');
+      }).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
