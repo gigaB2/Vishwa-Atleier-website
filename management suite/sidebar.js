@@ -660,11 +660,15 @@
     function isCurrentlyDocked() {
       if (!presenceBar || !presenceBar.parentElement) return false;
       if (!document.body.contains(presenceBar)) return false;
-      const parent = presenceBar.parentElement;
-      if (parent.closest('#vfSidebar')) return false;
+      if (presenceBar.parentElement.closest('#vfSidebar')) return false;
+      // In manage.html, check if docked inside an active tab or visible header
+      const activeTabContent = document.querySelector('.tab-content.active');
+      if (activeTabContent) {
+        return activeTabContent.contains(presenceBar);
+      }
       return Boolean(
-        parent.closest('header, .logo-section, .page-header, .salary-page-header, .dl-page-header, #vfPresenceBarSlot') ||
-        parent.querySelector('h1, h2, .logo, .title, #page-header-title, #division-title')
+        presenceBar.closest('header, .logo-section, .page-header, .salary-page-header, .dl-page-header, .placeholder-header, #vfPresenceBarSlot') ||
+        presenceBar.parentElement.querySelector('h1, h2, .logo, .title, #page-header-title, #division-title')
       );
     }
 
@@ -686,8 +690,26 @@
         return true;
       }
 
-      // 2. Comprehensive sheet title selectors across all modules
+      // 2. Tab content headers (for manage.html and multi-tab modules)
+      const activeTabHeader = document.querySelector('.tab-content.active .placeholder-header-title-wrap, .tab-content.active .placeholder-header-inner, .tab-content.active .placeholder-header h1, .tab-content.active h1');
+      if (activeTabHeader) {
+        activeTabHeader.parentElement.classList.add('vf-presence-parent');
+        if (activeTabHeader.classList && activeTabHeader.classList.contains('placeholder-header-inner')) {
+          activeTabHeader.appendChild(presenceBar);
+        } else if (activeTabHeader.nextSibling) {
+          activeTabHeader.parentElement.insertBefore(presenceBar, activeTabHeader.nextSibling);
+        } else {
+          activeTabHeader.parentElement.appendChild(presenceBar);
+        }
+        presenceBar.style.display = 'inline-flex';
+        return true;
+      }
+
+      // 3. Comprehensive sheet title selectors across all modules
       const candidates = [
+        document.querySelector('.tab-content.active .placeholder-header h1'),
+        document.querySelector('.placeholder-header-title-wrap'),
+        document.querySelector('.placeholder-header-inner'),
         document.querySelector('.logo-section .logo'),
         document.querySelector('.logo-section'),
         document.querySelector('#page-header-title'),
@@ -723,7 +745,7 @@
           if (!t.contains(presenceBar) && t.parentElement) {
             t.parentElement.classList.add('vf-presence-parent');
             t.classList.add('vf-presence-parent');
-            if (t.classList && (t.classList.contains('logo-section') || t.classList.contains('salary-page-header') || t.classList.contains('dl-page-header'))) {
+            if (t.classList && (t.classList.contains('logo-section') || t.classList.contains('salary-page-header') || t.classList.contains('dl-page-header') || t.classList.contains('placeholder-header-inner'))) {
               t.appendChild(presenceBar);
             } else if (t.nextSibling) {
               t.parentElement.insertBefore(presenceBar, t.nextSibling);
@@ -741,6 +763,15 @@
     if (!dockNextToSheetTitle()) {
       presenceBar.style.display = 'none';
     }
+
+    window.addEventListener('vf-tab-switched', () => {
+      setTimeout(dockNextToSheetTitle, 50);
+    });
+    document.addEventListener('click', (e) => {
+      if (e.target && (e.target.closest('.tab-btn') || e.target.closest('[data-tab]') || e.target.closest('.gs-tab') || e.target.closest('.vf-sb-link'))) {
+        setTimeout(dockNextToSheetTitle, 60);
+      }
+    });
 
     // Continuously observe DOM updates across React routes and tab transitions with debounced guard
     let dockDebounceRaf = null;

@@ -6318,6 +6318,7 @@ function showToast(message, type = 'info') {
 
     // When navigating to the staff tab, reset to Active Roster so the button is always selected
     if (tabId === 'staff') {
+      refreshData();
       switchRosterTab('Active');
     }
     if (tabId === 'loans') {
@@ -6326,6 +6327,16 @@ function showToast(message, type = 'info') {
     if (tabId === 'fanis') {
       if (typeof renderFanis === 'function') renderFanis();
     }
+    if (tabId === 'raw-material-qualities') {
+      if (typeof renderQualities === 'function') renderQualities();
+    }
+    if (tabId === 'raw-material-suppliers') {
+      if (typeof renderSuppliers === 'function') renderSuppliers();
+    }
+
+    try {
+      window.dispatchEvent(new CustomEvent('vf-tab-switched', { detail: { tab: tabId } }));
+    } catch(e) {}
   }
 
   // --- LOANS MANAGEMENT ---
@@ -8455,6 +8466,27 @@ function showToast(message, type = 'info') {
       renderQualities();
     }
     if (e.key === STATE_KEY) {
+      refreshData();
+    }
+  });
+
+  // Re-sync all state when Supabase Cloud Client completes hydration
+  window.addEventListener('supabase-ready', (e) => {
+    state.machines = loadInitialState('machines', []);
+    state.productionLogs = loadInitialState('productionLogs', []);
+    looms = loadInitialState('manage-looms', []);
+    jacquards = loadInitialState('manage-jacquards', []);
+    jalas = loadInitialState('manage-jalas', []);
+    fanis = loadInitialState('manage-fanis', []);
+    rawMaterialQualities = loadInitialState('yarn-qualities', []);
+    rawMaterialSuppliers = loadInitialState('yarn-suppliers', []);
+    populateMachineDropdowns();
+    renderAll();
+    refreshData();
+  });
+
+  window.addEventListener('supabase-sync', (e) => {
+    if (e.detail && e.detail.key === STATE_KEY) {
       refreshData();
     }
   });
