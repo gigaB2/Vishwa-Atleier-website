@@ -1238,25 +1238,6 @@
         });
       }
 
-      // Also include any suppliers configured in RM Qualities
-      try {
-        const rawQualities = JSON.parse(localStorage.getItem('yarn-qualities') || '[]');
-        if (Array.isArray(rawQualities)) {
-          rawQualities.forEach(q => {
-            const sName = (q.supplier || '').trim();
-            if (sName) names.add(sName);
-          });
-        }
-      } catch (e) {}
-
-      // Also include any suppliers from existing stock lots so old records remain valid
-      if (Array.isArray(stockData)) {
-        stockData.forEach(lot => {
-          const sName = (lot.supplier || '').trim();
-          if (sName) names.add(sName);
-        });
-      }
-
       return Array.from(names).sort((a, b) => a.localeCompare(b));
     }
 
@@ -1269,14 +1250,11 @@
       const supplierNames = getStoredRMSuppliers();
 
       if (supplierNames.length === 0) {
-        // Fallback default list if no RM suppliers stored yet
-        const defaults = ['Reliance Industries Ltd', 'Vardhman Textiles', 'Wellknown Polyesters', 'Sanathan Textiles'];
-        defaults.forEach(sup => {
-          const opt = document.createElement('option');
-          opt.value = sup;
-          opt.textContent = sup;
-          sSelect.appendChild(opt);
-        });
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.disabled = true;
+        opt.textContent = '-- No RM Suppliers Found (Add in Manage RM Suppliers) --';
+        sSelect.appendChild(opt);
       } else {
         supplierNames.forEach(sup => {
           const opt = document.createElement('option');
@@ -1286,7 +1264,15 @@
         });
       }
 
-      if (currentVal && Array.from(sSelect.options).some(o => o.value === currentVal)) {
+      // If an existing lot has a supplier not in the current list, preserve it as an option
+      if (currentVal && !Array.from(sSelect.options).some(o => o.value === currentVal)) {
+        const opt = document.createElement('option');
+        opt.value = currentVal;
+        opt.textContent = currentVal;
+        sSelect.appendChild(opt);
+      }
+
+      if (currentVal) {
         sSelect.value = currentVal;
       }
     }
