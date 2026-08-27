@@ -1063,17 +1063,20 @@
 
     // Incoming Remote Field Change Handler (Live Keystrokes & Live Values)
     window.addEventListener('supabase-field-change', (e) => {
-      const { fieldId, value } = e.detail || {};
-      if (!fieldId) return;
+      const { fieldId, value, senderId } = e.detail || {};
+      if (!fieldId || value === undefined || value === null) return;
 
       const el = findElementByFieldId(fieldId);
       if (!el) return;
 
-      // Skip overwrite if local user is actively typing in this exact input
-      if (document.activeElement === el) return;
+      // If local user is currently focusing the element, only skip if they typed within the last 400ms
+      const lastWrite = lastLocalWrites[fieldId] || 0;
+      if (document.activeElement === el && (Date.now() - lastWrite < 400)) {
+        return;
+      }
 
       if (el.value !== value) {
-        const tag = el.tagName.toLowerCase();
+        const tag = el.tagName ? el.tagName.toLowerCase() : '';
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value') ? 
           Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set : null;
         const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value') ?
@@ -1081,18 +1084,23 @@
         const nativeSelectValueSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value') ?
           Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set : null;
         
-        if (tag === 'input' && nativeInputValueSetter) {
-          nativeInputValueSetter.call(el, value);
-        } else if (tag === 'textarea' && nativeTextAreaValueSetter) {
-          nativeTextAreaValueSetter.call(el, value);
-        } else if (tag === 'select' && nativeSelectValueSetter) {
-          nativeSelectValueSetter.call(el, value);
-        } else {
+        try {
+          if (tag === 'input' && nativeInputValueSetter) {
+            nativeInputValueSetter.call(el, value);
+          } else if (tag === 'textarea' && nativeTextAreaValueSetter) {
+            nativeTextAreaValueSetter.call(el, value);
+          } else if (tag === 'select' && nativeSelectValueSetter) {
+            nativeSelectValueSetter.call(el, value);
+          } else {
+            el.value = value;
+          }
+        } catch(err) {
           el.value = value;
         }
 
-        try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) {}
-        try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch(e) {}
+        // Notify input/change subscribers immediately
+        try { el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true })); } catch(e) {}
+        try { el.dispatchEvent(new Event('change', { bubbles: true, cancelable: true })); } catch(e) {}
       }
     });
   }
