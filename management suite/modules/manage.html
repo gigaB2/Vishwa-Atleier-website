@@ -65,6 +65,21 @@
   }
   .placeholder-header {
     margin-bottom: 2rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .placeholder-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .placeholder-header-title-wrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
   }
   .placeholder-header h1 {
     font-family: var(--font-display);
@@ -72,11 +87,14 @@
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--fg);
+    margin: 0;
+    line-height: 1.2;
   }
   .placeholder-header p {
     color: var(--muted);
     font-size: 0.95rem;
     margin-top: 0.4rem;
+    margin-bottom: 0;
   }
   
   /* Cards */
@@ -1799,6 +1817,16 @@
 
   <!-- TAB: MACHINES -->
   <div id="tab-machines" class="tab-content active">
+    <!-- Tab Header -->
+    <div class="placeholder-header">
+      <div class="placeholder-header-inner">
+        <div class="placeholder-header-title-wrap">
+          <h1>Machines List</h1>
+        </div>
+      </div>
+      <p>Configure factory looms, jacquard links & operational machinery roster</p>
+    </div>
+
     <!-- Form Card -->
     <div class="card">
       <h3 id="machine-form-title">Add New Machine</h3>
@@ -1844,6 +1872,16 @@
 
   <!-- TAB: LOOMS -->
   <div id="tab-looms" class="tab-content">
+    <!-- Tab Header -->
+    <div class="placeholder-header">
+      <div class="placeholder-header-inner">
+        <div class="placeholder-header-title-wrap">
+          <h1>Manage Looms</h1>
+        </div>
+      </div>
+      <p>Loom & rapier make specifications, configurations and registry</p>
+    </div>
+
     <div class="card">
       <h3 id="loom-form-title">Add New Loom Make</h3>
       <div class="form-grid" style="margin-top: 1.5rem;">
@@ -1878,6 +1916,16 @@
 
   <!-- TAB: JACQUARDS -->
   <div id="tab-jacquards" class="tab-content">
+    <!-- Tab Header -->
+    <div class="placeholder-header">
+      <div class="placeholder-header-inner">
+        <div class="placeholder-header-title-wrap">
+          <h1>Manage Jacquards</h1>
+        </div>
+      </div>
+      <p>Jacquard makes, hooks allocation and electronic jacquard controller registry</p>
+    </div>
+
     <div class="card">
       <h3 id="jacquard-form-title">Add New Jacquard</h3>
       <div class="form-grid jacquard-form-grid" style="margin-top: 1.5rem;">
@@ -1906,6 +1954,16 @@
 
   <!-- TAB: JALAS -->
   <div id="tab-jalas" class="tab-content">
+    <!-- Tab Header -->
+    <div class="placeholder-header">
+      <div class="placeholder-header-inner">
+        <div class="placeholder-header-title-wrap">
+          <h1>Jala Details</h1>
+        </div>
+      </div>
+      <p>Harness setup, pattern breakdown, repeats & cloth visualization</p>
+    </div>
+
     <!-- Standalone Jala Cloth Visualizer Card -->
     <div id="jala-visualizer-card" class="card" style="margin-bottom: 1.5rem; border: 1px solid var(--border); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02);">
       <div id="jala-visualizer-content">
@@ -2063,6 +2121,16 @@
 
   <!-- TAB: FANIS -->
   <div id="tab-fanis" class="tab-content">
+    <!-- Tab Header -->
+    <div class="placeholder-header">
+      <div class="placeholder-header-inner">
+        <div class="placeholder-header-title-wrap">
+          <h1>Fani Details</h1>
+        </div>
+      </div>
+      <p>Reed count, weaving width and density configurations</p>
+    </div>
+
     <div class="card">
       <h3 id="fani-form-title">Add New Fani</h3>
       <div class="form-grid" style="margin-top: 1.5rem;">
@@ -2115,8 +2183,13 @@
 <div id="tab-staff" class="tab-content">
   <div class="space-y-10 animate-fade-up" style="margin-top: 1.5rem;">
     <!-- HEADER -->
-    <div class="pt-6 border-b border-border pb-6" style="margin-bottom: 2rem;">
-      <h2 class="text-3xl font-extrabold tracking-tight text-fg font-display">Manage Staff</h2>
+    <div class="placeholder-header">
+      <div class="placeholder-header-inner">
+        <div class="placeholder-header-title-wrap">
+          <h1>Manage Staff</h1>
+        </div>
+      </div>
+      <p>Employee roster, roles, department allocations and active profiles</p>
     </div>
     <div class="staff-loans-layout">
 
@@ -2447,8 +2520,13 @@
   <!-- TAB: LOANS FOR STAFF -->
   <div id="tab-loans" class="tab-content">
     <div class="space-y-10 animate-fade-up" style="margin-top: 1.5rem;">
-      <div class="pt-6 border-b border-border pb-6" style="margin-bottom: 2rem;">
-        <h2 class="text-3xl font-extrabold tracking-tight text-fg font-display">Loans for Staff</h2>
+      <div class="placeholder-header">
+        <div class="placeholder-header-inner">
+          <div class="placeholder-header-title-wrap">
+            <h1>Loans for Staff</h1>
+          </div>
+        </div>
+        <p>Staff advances, active loans, repayment terms & installment ledger</p>
       </div>
       
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2rem; align-items: start;">
@@ -2555,6 +2633,16 @@
 
   <!-- TAB: RAW MATERIAL QUALITIES -->
   <div id="tab-raw-material-qualities" class="tab-content">
+    <!-- Tab Header -->
+    <div class="placeholder-header">
+      <div class="placeholder-header-inner">
+        <div class="placeholder-header-title-wrap">
+          <h1>Manage RM Qualities</h1>
+        </div>
+      </div>
+      <p>Raw material specifications, yarn types, codes and colors catalog</p>
+    </div>
+
     <div class="card">
       <h3 id="quality-form-title">Add New RM Quality</h3>
       <div class="form-grid" style="margin-top: 1.5rem;">
@@ -2615,6 +2703,16 @@
 
   <!-- TAB: RAW MATERIAL SUPPLIERS -->
   <div id="tab-raw-material-suppliers" class="tab-content">
+    <!-- Tab Header -->
+    <div class="placeholder-header">
+      <div class="placeholder-header-inner">
+        <div class="placeholder-header-title-wrap">
+          <h1>Manage RM Suppliers</h1>
+        </div>
+      </div>
+      <p>Vendor directory, supplier contact details & procurement references</p>
+    </div>
+
     <div class="card">
       <h3 id="supplier-form-title">Add New RM Supplier</h3>
       <div class="form-grid" style="margin-top: 1.5rem; grid-template-columns: repeat(3, 1fr);">
