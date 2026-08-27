@@ -1001,7 +1001,7 @@
         broadcastFieldChange(fid, val, {
           label: e.target.placeholder || e.target.name || ''
         });
-      }, 60);
+      }, 20);
     }, true);
 
     document.addEventListener('change', (e) => {
@@ -1169,10 +1169,13 @@
         try {
           const data = JSON.parse(e.data);
           if (data && data.event === 'broadcast' && data.payload) {
-            const inner = data.payload.payload || data.payload;
-            if (!inner || inner.senderId === CLIENT_ID || inner.clientId === CLIENT_ID) return;
+            const rawPayload = data.payload;
+            const inner = (rawPayload && rawPayload.payload && typeof rawPayload.payload === 'object') ? rawPayload.payload : rawPayload;
+            
+            const sender = inner.senderId || inner.clientId || rawPayload.senderId || rawPayload.clientId;
+            if (sender && sender === CLIENT_ID) return; // Skip own messages
 
-            const eventType = inner.type || data.payload.event;
+            const eventType = inner.type || rawPayload.event || rawPayload.type || data.event;
 
             if (eventType === 'presence_hello') {
               handleIncomingPresenceHello(inner);
@@ -1186,10 +1189,11 @@
               handleIncomingFieldFocus(inner);
             } else if (eventType === 'field_change') {
               handleIncomingFieldChange(inner);
-            } else if (inner.key) {
-              const { key, value } = inner;
-              const valStr = typeof value === 'string' ? value : JSON.stringify(value);
-              handleIncomingRemoteUpdate(key, valStr, false);
+            } else if (inner.key || rawPayload.key) {
+              const targetKey = inner.key || rawPayload.key;
+              const targetVal = inner.value !== undefined ? inner.value : rawPayload.value;
+              const valStr = typeof targetVal === 'string' ? targetVal : JSON.stringify(targetVal);
+              handleIncomingRemoteUpdate(targetKey, valStr, false);
             }
           }
         } catch (err) {}
