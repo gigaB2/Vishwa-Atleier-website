@@ -6645,41 +6645,30 @@
 
 
         function loadState() {
-
             try {
-
                 const stored = localStorage.getItem(STATE_KEY);
-
                 if (stored) {
-
                     const parsed = JSON.parse(stored);
-
-                    if (parsed.employees && parsed.tasks && parsed.logs) {
-
+                    if (parsed && typeof parsed === 'object') {
                         state = parsed;
-
+                        state.employees = Array.isArray(state.employees) ? state.employees : [];
+                        state.tasks = Array.isArray(state.tasks) ? state.tasks : [];
+                        state.logs = Array.isArray(state.logs) ? state.logs : [];
+                        state.loans = Array.isArray(state.loans) ? state.loans : [];
                     }
-
                 }
 
                 if (!state) {
-
                     state = { ...defaultData };
-
                     saveState();
-
                 }
 
                 if (state && !state.salaryPayments) {
-
                     state.salaryPayments = {};
-
                 }
 
                 if (state && !state.loans) {
-
                     state.loans = [];
-
                 }
 
                 // Auto-migrate: check and add missing default employees if they aren't in state yet

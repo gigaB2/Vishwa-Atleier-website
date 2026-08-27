@@ -311,10 +311,28 @@
       return typeof remoteVal === 'string' ? JSON.stringify(finalMerged) : finalMerged;
     }
 
-    // Case 2: Both are Plain Objects (Dictionaries / Settings)
+    // Case 2: Both are Plain Objects (Dictionaries / Settings / State Objects)
     if (parsedLocal && typeof parsedLocal === 'object' && !Array.isArray(parsedLocal) &&
         parsedRemote && typeof parsedRemote === 'object' && !Array.isArray(parsedRemote)) {
       const mergedObj = Object.assign({}, parsedRemote, parsedLocal);
+      
+      // If object has array properties (like state.employees, state.loans, state.tasks, state.logs), merge them intelligently
+      const allPropKeys = new Set([...Object.keys(parsedRemote), ...Object.keys(parsedLocal)]);
+      allPropKeys.forEach(prop => {
+        const localProp = parsedLocal[prop];
+        const remoteProp = parsedRemote[prop];
+        if (Array.isArray(localProp) && Array.isArray(remoteProp)) {
+          if (localProp.length === 0 && remoteProp.length > 0) {
+            mergedObj[prop] = remoteProp;
+          } else if (remoteProp.length === 0 && localProp.length > 0) {
+            mergedObj[prop] = localProp;
+          } else if (localProp.length > 0 && remoteProp.length > 0) {
+            const propMerged = mergeDatasets(`${key}_${prop}`, localProp, remoteProp);
+            mergedObj[prop] = typeof propMerged === 'string' ? JSON.parse(propMerged) : propMerged;
+          }
+        }
+      });
+
       return typeof remoteVal === 'string' ? JSON.stringify(mergedObj) : mergedObj;
     }
 
@@ -2151,6 +2169,7 @@
         console.error('Supabase loadAll failed:', e);
       } finally {
         isHydrated = true;
+        window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
       }
     },
     // --- Realtime User Presence & Live Collaborative Editing APIs ---
