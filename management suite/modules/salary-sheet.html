@@ -9529,22 +9529,26 @@
 
                 if (salaryStyle === 'Per Shift' || salaryStyle === 'Per Day') {
 
-                    const effectiveShifts = hasAttLogs ? attStats.totalShifts : (logStats.shifts > 0 ? logStats.shifts : 26);
+                    const effectiveShifts = hasAttLogs ? attStats.totalShifts : (logStats.shifts > 0 ? logStats.shifts : 0);
 
                     calculatedSalary = effectiveShifts * baseAmount;
 
                     workMetricsStr = hasAttLogs 
                         ? `${attStats.totalShifts} Shifts (Att Logged)` 
-                        : (logStats.shifts > 0 ? `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h)` : `26 Standard Shifts`);
+                        : (logStats.shifts > 0 ? `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h)` : `0 Shifts Logged`);
 
                 } else if (salaryStyle === 'Per Month Fixed') {
 
                     if (hasAttLogs && typeof calculateProRataSalary === 'function') {
                         calculatedSalary = calculateProRataSalary(emp, monthFilter);
                         workMetricsStr = `${attStats.presentDays} Days Present (Pro-Rata)`;
+                    } else if (hasAttLogs) {
+                        const dailyRate = baseAmount / 26;
+                        calculatedSalary = Math.round(dailyRate * attStats.presentDays);
+                        workMetricsStr = `${attStats.presentDays} Days Present (Pro-Rata)`;
                     } else {
-                        calculatedSalary = baseAmount;
-                        workMetricsStr = 'Fixed Monthly Contract';
+                        calculatedSalary = 0;
+                        workMetricsStr = '0 Days Logged';
                     }
 
                 } else if (salaryStyle === 'Per Machine/Month') {
@@ -9554,9 +9558,13 @@
                     if (hasAttLogs && typeof calculateProRataSalary === 'function') {
                         calculatedSalary = calculateProRataSalary(emp, monthFilter);
                         workMetricsStr = `${machineCount} Machines • ${attStats.presentDays}d (Pro-Rata)`;
+                    } else if (hasAttLogs) {
+                        const dailyRate = (machineCount * baseAmount) / 26;
+                        calculatedSalary = Math.round(dailyRate * attStats.presentDays);
+                        workMetricsStr = `${machineCount} Machines • ${attStats.presentDays}d (Pro-Rata)`;
                     } else {
-                        calculatedSalary = machineCount * baseAmount;
-                        workMetricsStr = `${machineCount} Assigned Machine${machineCount > 1 ? 's' : ''}`;
+                        calculatedSalary = 0;
+                        workMetricsStr = `${machineCount} Assigned Machine${machineCount > 1 ? 's' : ''} (0 Days)`;
                     }
 
                 } else if (salaryStyle === 'Per Spindle/Month') {
@@ -9564,9 +9572,13 @@
                     if (hasAttLogs && typeof calculateProRataSalary === 'function') {
                         calculatedSalary = calculateProRataSalary(emp, monthFilter);
                         workMetricsStr = `${attStats.presentDays} Days Present (Pro-Rata)`;
+                    } else if (hasAttLogs) {
+                        const dailyRate = baseAmount / 26;
+                        calculatedSalary = Math.round(dailyRate * attStats.presentDays);
+                        workMetricsStr = `${attStats.presentDays} Days Present (Pro-Rata)`;
                     } else {
-                        calculatedSalary = baseAmount;
-                        workMetricsStr = 'Per Spindle Shift';
+                        calculatedSalary = 0;
+                        workMetricsStr = '0 Days Logged';
                     }
 
                 } else if (salaryStyle.includes('Piece Rate') || salaryStyle.includes('Pick') || salaryStyle === 'Per Meter/Month') {
@@ -9577,9 +9589,14 @@
 
                 } else {
 
-                    calculatedSalary = baseAmount;
-
-                    workMetricsStr = 'Regular Contract';
+                    if (hasAttLogs) {
+                        const dailyRate = baseAmount / 26;
+                        calculatedSalary = Math.round(dailyRate * attStats.presentDays);
+                        workMetricsStr = `${attStats.presentDays} Days Present`;
+                    } else {
+                        calculatedSalary = 0;
+                        workMetricsStr = '0 Days Logged';
+                    }
 
                 }
 
@@ -10688,24 +10705,17 @@
                 let workMetricsStr = '';
 
                 if (salaryStyle === 'Per Shift' || salaryStyle === 'Per Day') {
-                    const effectiveShifts = hasAttLogs ? totalAttShifts : (logStats.shifts > 0 ? logStats.shifts : Math.min(daysCount || 26, 26));
+                    const effectiveShifts = hasAttLogs ? totalAttShifts : (logStats.shifts > 0 ? logStats.shifts : 0);
                     calculatedSalary = effectiveShifts * baseAmount;
-                    workMetricsStr = hasAttLogs ? `${totalAttShifts} Shifts (Att Logged)` : (logStats.shifts > 0 ? `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h)` : `${effectiveShifts} Standard Shifts`);
+                    workMetricsStr = hasAttLogs ? `${totalAttShifts} Shifts (Att Logged)` : (logStats.shifts > 0 ? `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h)` : `0 Shifts Logged`);
                 } else if (salaryStyle === 'Per Month Fixed') {
                     if (hasAttLogs) {
                         const dailyRate = baseAmount / 26;
                         calculatedSalary = Math.round(dailyRate * presentDays);
                         workMetricsStr = `${presentDays} Days Present (Pro-Rata)`;
-                    } else if (isSingleMonth) {
-                        calculatedSalary = baseAmount;
-                        workMetricsStr = 'Fixed Monthly Contract';
-                    } else if (fromDate && toDate && daysCount < 26) {
-                        const dailyRate = baseAmount / 26;
-                        calculatedSalary = Math.round(dailyRate * daysCount);
-                        workMetricsStr = `${daysCount} Days (Pro-Rata)`;
                     } else {
-                        calculatedSalary = baseAmount;
-                        workMetricsStr = 'Regular Contract';
+                        calculatedSalary = 0;
+                        workMetricsStr = '0 Days Logged';
                     }
                 } else if (salaryStyle === 'Per Machine/Month') {
                     const machineCount = (emp.machines && emp.machines.length > 0) ? emp.machines.length : 1;
@@ -10714,8 +10724,8 @@
                         calculatedSalary = Math.round(dailyRate * presentDays);
                         workMetricsStr = `${machineCount} Machines • ${presentDays}d (Pro-Rata)`;
                     } else {
-                        calculatedSalary = machineCount * baseAmount;
-                        workMetricsStr = `${machineCount} Assigned Machine${machineCount > 1 ? 's' : ''}`;
+                        calculatedSalary = 0;
+                        workMetricsStr = `${machineCount} Assigned Machine${machineCount > 1 ? 's' : ''} (0 Days)`;
                     }
                 } else if (salaryStyle === 'Per Spindle/Month') {
                     if (hasAttLogs) {
@@ -10723,15 +10733,21 @@
                         calculatedSalary = Math.round(dailyRate * presentDays);
                         workMetricsStr = `${presentDays} Days Present (Pro-Rata)`;
                     } else {
-                        calculatedSalary = baseAmount;
-                        workMetricsStr = 'Per Spindle Shift';
+                        calculatedSalary = 0;
+                        workMetricsStr = '0 Days Logged';
                     }
                 } else if (salaryStyle.includes('Piece Rate') || salaryStyle.includes('Pick') || salaryStyle === 'Per Meter/Month') {
                     calculatedSalary = logStats.salary;
                     workMetricsStr = `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h, ${logStats.meters.toFixed(1)}m)`;
                 } else {
-                    calculatedSalary = baseAmount;
-                    workMetricsStr = 'Regular Contract';
+                    if (hasAttLogs) {
+                        const dailyRate = baseAmount / 26;
+                        calculatedSalary = Math.round(dailyRate * presentDays);
+                        workMetricsStr = `${presentDays} Days Present`;
+                    } else {
+                        calculatedSalary = 0;
+                        workMetricsStr = '0 Days Logged';
+                    }
                 }
 
                 calculatedSalary += blPay;
@@ -17354,10 +17370,10 @@
                 }
                 if (standardWorkingDays <= 0) standardWorkingDays = 26;
 
-                // Fallback: If no attendance has been logged at all for this employee this month, default to standard full attendance
+                // Only count actual logged attendance days and shifts
                 const hasAnyAttendanceLogged = stats.loggedDates.length > 0;
-                const effectivePresentDays = hasAnyAttendanceLogged ? stats.presentDays : standardWorkingDays;
-                const effectiveShifts = hasAnyAttendanceLogged ? stats.totalShifts : standardWorkingDays;
+                const effectivePresentDays = hasAnyAttendanceLogged ? stats.presentDays : 0;
+                const effectiveShifts = hasAnyAttendanceLogged ? stats.totalShifts : 0;
 
                 let proRataSalary = 0;
 
@@ -17377,7 +17393,7 @@
                     const dailyRate = baseAmount / standardWorkingDays;
                     proRataSalary = Math.round(dailyRate * effectivePresentDays);
                 } else if (salaryStyle === 'Per Meter/Month' || salaryStyle.includes('Piece Rate') || salaryStyle.includes('Pick')) {
-                    // For meter-based karigars, if shift rate exists it uses shifts, else uses production log earnings
+                    // For meter-based karigars, use production log earnings (per meter / pick-wise) or shift rate if any
                     const logSalary = getEmployeeSalaryForMonth(emp.name, monthKey);
                     proRataSalary = logSalary > 0 ? logSalary : (effectiveShifts * (baseAmount > 0 ? baseAmount : 0));
                 } else {
