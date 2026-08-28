@@ -2462,6 +2462,50 @@
             box-sizing: border-box;
         }
 
+        #att-bulk-modal.modal-overlay,
+        #att-employee-calendar-modal.modal-overlay {
+            position: fixed !important;
+            inset: 0 !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            z-index: 100050 !important;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: max(1rem, env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-right, 0px)) max(1rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px)) !important;
+            background: rgba(0, 0, 0, 0.72) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+        }
+
+        #att-bulk-modal .modal {
+            max-width: min(1200px, calc(100vw - 2rem)) !important;
+            width: 100% !important;
+            max-height: min(92vh, 92dvh) !important;
+            padding: 0 !important;
+            background: var(--surface) !important;
+            border-radius: 20px !important;
+            box-shadow: var(--shadow-xl) !important;
+            border: 1px solid var(--border) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            position: relative !important;
+            overflow: hidden !important;
+            margin: auto !important;
+            box-sizing: border-box !important;
+        }
+
+        body.att-modal-open .vf-sb-toggle {
+            display: none !important;
+        }
+
         /* Responsive Tablet Design (768px - 1100px) */
         @media (max-width: 1100px) {
             .att-emp-card {
@@ -4345,7 +4389,13 @@
                 gap: 0.75rem !important;
             }
 
-            #att-bulk-modal .modal,
+            #att-bulk-modal .modal {
+                width: 100% !important;
+                max-width: min(1200px, calc(100vw - 1.5rem)) !important;
+                padding: 0 !important;
+                max-height: 94vh !important;
+                max-height: 94dvh !important;
+            }
             #att-employee-calendar-modal .modal {
                 width: 96% !important;
                 padding: 1.5rem !important;
@@ -4396,9 +4446,11 @@
             }
 
             #att-bulk-modal .modal {
-                width: 98% !important;
-                padding: 1.2rem !important;
-                max-height: 94vh !important;
+                width: 100% !important;
+                max-width: calc(100vw - 1rem) !important;
+                padding: 0 !important;
+                max-height: 96vh !important;
+                max-height: 96dvh !important;
                 border-radius: 16px !important;
             }
 
@@ -6394,9 +6446,9 @@
 
         <!-- BULK DAILY ATTENDANCE MODAL OVERLAY -->
         <div id="att-bulk-modal" class="modal-overlay"
-            style="display: none; align-items: center; justify-content: center; z-index: 10005; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 1rem;">
+            style="display: none; align-items: center; justify-content: center; z-index: 100050; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 1rem;">
             <div class="modal"
-                style="max-width: 1200px; width: 100%; background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-xl); border: 1px solid var(--border); max-height: 92vh; display: flex; flex-direction: column; position: relative; overflow: hidden;">
+                style="max-width: 1200px; width: 100%; background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-xl); border: 1px solid var(--border); max-height: 92vh; display: flex; flex-direction: column; position: relative; overflow: hidden; padding: 0;">
                 
                 <!-- Modal Header -->
                 <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.015);">
@@ -6478,7 +6530,7 @@
 
         <!-- EMPLOYEE MONTHLY ATTENDANCE DETAIL / CALENDAR MODAL -->
         <div id="att-employee-calendar-modal" class="modal-overlay"
-            style="display: none; align-items: center; justify-content: center; z-index: 10006; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 1rem;">
+            style="display: none; align-items: center; justify-content: center; z-index: 100050; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 1rem;">
             <div class="modal" id="att-calendar-modal-content"
                 style="max-width: 800px; padding: 2rem; background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-xl); width: 95%; border: 1px solid var(--border); max-height: 90vh; overflow-y: auto; position: relative;">
                 
@@ -17449,17 +17501,22 @@
             window.openBulkAttendanceModal = function () {
                 const modal = document.getElementById('att-bulk-modal');
                 if (!modal) return;
+                if (modal.parentElement !== document.body) {
+                    document.body.appendChild(modal);
+                }
                 const logDateInput = document.getElementById('att-log-date');
                 if (logDateInput && !logDateInput.value) {
                     logDateInput.value = new Date().toISOString().substring(0, 10);
                 }
                 loadDateAttendanceIntoForm();
+                document.body.classList.add('att-modal-open');
                 modal.style.display = 'flex';
             };
 
             window.closeBulkAttendanceModal = function () {
                 const modal = document.getElementById('att-bulk-modal');
                 if (modal) modal.style.display = 'none';
+                document.body.classList.remove('att-modal-open');
             };
 
             window.resetAttRowTimer = function (idx) {
@@ -17919,6 +17976,9 @@
             window.openEmployeeCalendarModal = function (empName) {
                 const modal = document.getElementById('att-employee-calendar-modal');
                 if (!modal) return;
+                if (modal.parentElement !== document.body) {
+                    document.body.appendChild(modal);
+                }
 
                 currentCalEmpName = empName;
                 const fromInput = document.getElementById('att-filter-date-from');
@@ -17949,12 +18009,14 @@
                     }, { passive: true });
                 }
 
+                document.body.classList.add('att-modal-open');
                 modal.style.display = 'flex';
             };
 
             window.closeEmployeeCalendarModal = function () {
                 const modal = document.getElementById('att-employee-calendar-modal');
                 if (modal) modal.style.display = 'none';
+                document.body.classList.remove('att-modal-open');
             };
 
             window.printEmployeeAttendanceCalendar = function () {
