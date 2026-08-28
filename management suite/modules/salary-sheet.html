@@ -2437,6 +2437,16 @@
             font-size: 0.75rem;
             font-family: monospace;
             white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s ease;
+        }
+
+        .att-hours-pill:hover {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: var(--error);
+            transform: scale(0.96);
         }
 
         .att-remark-input {
@@ -17452,6 +17462,18 @@
                 if (modal) modal.style.display = 'none';
             };
 
+            window.resetAttRowTimer = function (idx) {
+                const inEl = document.getElementById(`att_in_${idx}`);
+                const outEl = document.getElementById(`att_out_${idx}`);
+                const hrsEl = document.getElementById(`att_hrs_${idx}`);
+                if (inEl) inEl.value = '';
+                if (outEl) outEl.value = '';
+                if (hrsEl) {
+                    hrsEl.innerText = '0 hrs';
+                    hrsEl.setAttribute('data-hours', '0');
+                }
+            };
+
             window.calcAttRowHours = function (idx) {
                 const inEl = document.getElementById(`att_in_${idx}`);
                 const outEl = document.getElementById(`att_out_${idx}`);
@@ -17596,7 +17618,7 @@
 
                                 <div class="att-card-col-notes">
                                     <div style="flex-shrink: 0; text-align: center;">
-                                        <span id="att_hrs_${idx}" data-hours="${calcHoursVal}" class="att-hours-pill">
+                                        <span id="att_hrs_${idx}" data-hours="${calcHoursVal}" class="att-hours-pill" onclick="resetAttRowTimer(${idx})" title="Click to reset timer to 0">
                                             ${calcHoursText}
                                         </span>
                                     </div>
