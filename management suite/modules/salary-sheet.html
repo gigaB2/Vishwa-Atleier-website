@@ -4867,7 +4867,7 @@
 
                                         <th>Advance (₹)</th>
 
-                                        <th>Loan Repayment (₹)</th>
+                                        <th style="text-align: center;">Loan Repayment (₹)</th>
 
                                         <th>Salary Payment (₹)</th>
 
@@ -9977,15 +9977,15 @@
                     const hasLoan = state.loans && state.loans.some(l => l.employeeName === emp.name && l.status === 'Active');
 
                     const loanInputHtml = monthFilter
-                        ? `<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem;">
+                        ? `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem;">
                              <input type="number" min="0" step="any" value="${loan || ''}" placeholder="0" 
                                     oninput="updateSalaryPaymentDOM(this, '${monthFilter}', '${emp.name}', 'loan')"
                                     onchange="updateSalaryPayment('${monthFilter}', '${emp.name}', 'loan', this.value)"
                                     ${!hasLoan ? 'disabled' : ''}
-                                    style="width: 72px; height: 28px; font-size: 0.82rem; font-weight: 600; border-radius: 8px; border: 1px solid var(--border); padding: 0.2rem 0.4rem; text-align: right; background: ${hasLoan ? 'var(--surface)' : 'rgba(0,0,0,0.05)'}; color: var(--fg); opacity: ${hasLoan ? '1' : '0.6'};">
+                                    style="width: 72px; height: 28px; font-size: 0.82rem; font-weight: 600; border-radius: 8px; border: 1px solid var(--border); padding: 0.2rem 0.4rem; text-align: center; background: ${hasLoan ? 'var(--surface)' : 'rgba(0,0,0,0.05)'}; color: var(--fg); opacity: ${hasLoan ? '1' : '0.6'};">
                              ${hasLoan ? `<span style="font-size: 0.65rem; color: #eab308; font-weight: 700; background: rgba(234,179,8,0.12); padding: 1px 4px; border-radius: 4px; display: inline-block; white-space: nowrap; margin-top: 2px;">Bal: ₹${activeLoanAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>` : ''}
                            </div>`
-                        : `<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem;">
+                        : `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem;">
                              <span style="color: var(--muted);">₹ ${loan.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                              ${hasLoan ? `<span style="font-size: 0.65rem; color: #eab308; font-weight: 700; background: rgba(234,179,8,0.12); padding: 1px 4px; border-radius: 4px; display: inline-block; white-space: nowrap; margin-top: 2px;">Bal: ₹${activeLoanAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>` : ''}
                            </div>`;
@@ -10052,7 +10052,7 @@
 
                             <td>${advanceInputHtml}</td>
 
-                            <td>${loanInputHtml}</td>
+                            <td style="text-align: center;">${loanInputHtml}</td>
 
                             <td>${salaryPaymentInputHtml}</td>
 
@@ -10092,7 +10092,7 @@
 
                     </td>
 
-                    <td style="color: var(--muted); font-size: 0.95rem;">
+                    <td style="color: var(--muted); font-size: 0.95rem; text-align: center;">
 
                         ₹ ${grandTotalLoan.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 
@@ -10931,15 +10931,15 @@
                     const hasLoan = state.loans && state.loans.some(l => l.employeeName === emp.name && l.status === 'Active');
 
                     const loanInputHtml = singleMonthKey
-                        ? `<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem;">
+                        ? `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem;">
                              <input type="number" min="0" step="any" value="${loan || ''}" placeholder="0" 
                                     oninput="updateSalaryPaymentDOM(this, '${singleMonthKey}', '${emp.name}', 'loan')"
                                     onchange="updateSalaryPayment('${singleMonthKey}', '${emp.name}', 'loan', this.value); renderDashboardOverview();"
                                     ${!hasLoan ? 'disabled' : ''}
-                                    style="width: 72px; height: 28px; font-size: 0.82rem; font-weight: 600; border-radius: 8px; border: 1px solid var(--border); padding: 0.2rem 0.4rem; text-align: right; background: ${hasLoan ? 'var(--surface)' : 'rgba(0,0,0,0.05)'}; color: var(--fg); opacity: ${hasLoan ? '1' : '0.6'};">
+                                    style="width: 72px; height: 28px; font-size: 0.82rem; font-weight: 600; border-radius: 8px; border: 1px solid var(--border); padding: 0.2rem 0.4rem; text-align: center; background: ${hasLoan ? 'var(--surface)' : 'rgba(0,0,0,0.05)'}; color: var(--fg); opacity: ${hasLoan ? '1' : '0.6'};">
                              ${hasLoan ? `<span style="font-size: 0.65rem; color: #eab308; font-weight: 700; background: rgba(234,179,8,0.12); padding: 1px 4px; border-radius: 4px; display: inline-block; white-space: nowrap; margin-top: 2px;">Bal: ₹${activeLoanAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>` : ''}
                            </div>`
-                        : `<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem;">
+                        : `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem;">
                              <span style="color: var(--muted);">₹ ${loan.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                              ${hasLoan ? `<span style="font-size: 0.65rem; color: #eab308; font-weight: 700; background: rgba(234,179,8,0.12); padding: 1px 4px; border-radius: 4px; display: inline-block; white-space: nowrap; margin-top: 2px;">Bal: ₹${activeLoanAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>` : ''}
                            </div>`;
@@ -10971,7 +10971,7 @@
                                 ₹ ${emp.calculatedSalary.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td>${advanceInputHtml}</td>
-                            <td>${loanInputHtml}</td>
+                            <td style="text-align: center;">${loanInputHtml}</td>
                             <td>${salaryPaymentInputHtml}</td>
                             <td class="remaining-salary-cell" style="font-weight: 700; color: ${remaining <= 0 ? 'var(--success)' : 'var(--accent)'}; font-family: var(--font-display);">
                                 ₹ ${remaining.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -10987,7 +10987,7 @@
                         <td style="text-align: left; padding-left: 1.2rem; color: var(--muted);" colspan="2">Subtotal ${roleName}:</td>
                         <td style="color: var(--fg);">₹ ${roleSubtotalSalary.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td style="color: var(--muted);">₹ ${roleSubtotalAdvance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td style="color: var(--muted);">₹ ${roleSubtotalLoan.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td style="color: var(--muted); text-align: center;">₹ ${roleSubtotalLoan.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td style="color: var(--muted);">₹ ${roleSubtotalSalaryPayment.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td style="color: var(--success); font-family: var(--font-display);">₹ ${roleSubtotalRemaining.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td>-</td>
@@ -11005,7 +11005,7 @@
                     <td style="color: var(--muted); font-size: 0.95rem;">
                         ₹ ${grandTotalAdvance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td style="color: var(--muted); font-size: 0.95rem;">
+                    <td style="color: var(--muted); font-size: 0.95rem; text-align: center;">
                         ₹ ${grandTotalLoan.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td style="color: var(--muted); font-size: 0.95rem;">
