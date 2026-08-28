@@ -6519,6 +6519,10 @@
                             style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; padding: 0.6rem 1.2rem; border-radius: 10px;">
                             Cancel
                         </button>
+                        <button type="button" class="btn btn-outline" onclick="deleteDayAttendance()"
+                            style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; padding: 0.6rem 1.2rem; border-radius: 10px; border-color: rgba(239, 68, 68, 0.4); color: var(--error); display: inline-flex; align-items: center; gap: 0.4rem;">
+                            <span>🗑️ Delete Attendance</span>
+                        </button>
                         <button type="button" class="btn btn-primary" onclick="saveBulkAttendance()"
                             style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; padding: 0.6rem 1.6rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.4rem;">
                             <span>💾 Save Attendance</span>
@@ -17758,6 +17762,30 @@
                     setTimeout(() => { if (indicator) indicator.innerText = ''; }, 3000);
                 }
                 alert(`Attendance successfully logged & saved for ${dateStr}!`);
+            };
+
+            window.deleteDayAttendance = function () {
+                const logDateInput = document.getElementById('att-log-date');
+                if (!logDateInput || !logDateInput.value) {
+                    alert("Please select a valid date to delete attendance.");
+                    return;
+                }
+                const dateStr = logDateInput.value;
+
+                if (!state.attendance || !state.attendance[dateStr] || Object.keys(state.attendance[dateStr]).length === 0) {
+                    alert(`No recorded attendance found for ${dateStr} to delete.`);
+                    return;
+                }
+
+                const confirmed = confirm(`Are you sure you want to permanently delete all attendance records for ${dateStr}?`);
+                if (!confirmed) return;
+
+                delete state.attendance[dateStr];
+                saveState();
+                closeBulkAttendanceModal();
+                renderAttendanceSummaryTable();
+
+                alert(`Attendance records for ${dateStr} have been successfully deleted.`);
             };
 
             // --- EMPLOYEE CALENDAR MODAL CONTROLS & SWIPE GESTURES ---
