@@ -183,9 +183,11 @@ function initLookbookSlider() {
       if (i === currentIndex) {
         dot.classList.add('opacity-100', 'bg-primary');
         dot.classList.remove('opacity-40', 'bg-outline');
+        dot.setAttribute('aria-selected', 'true');
       } else {
         dot.classList.remove('opacity-100', 'bg-primary');
         dot.classList.add('opacity-40', 'bg-outline');
+        dot.setAttribute('aria-selected', 'false');
       }
     });
   }
@@ -225,23 +227,53 @@ function initLookbookSlider() {
     });
   }
 
-  // Auto-Rolling Saree Images Inside Each Lookbook Card
+  // Auto-Rolling Saree Images (Viewport Throttled for Performance)
   const rollingWraps = document.querySelectorAll('.rolling-wrap');
-  rollingWraps.forEach(wrap => {
-    const images = wrap.querySelectorAll('.rolling-img');
-    if (images.length <= 1) return;
+  if (rollingWraps.length) {
+    if ('IntersectionObserver' in window) {
+      const rollingObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const wrap = entry.target;
+          if (entry.isIntersecting) {
+            if (!wrap._rollingTimer) {
+              const images = wrap.querySelectorAll('.rolling-img');
+              if (images.length <= 1) return;
+              let imgIndex = 0;
+              wrap._rollingTimer = setInterval(() => {
+                images[imgIndex].classList.remove('active', 'opacity-100');
+                images[imgIndex].classList.add('opacity-0');
 
-    let imgIndex = 0;
-    setInterval(() => {
-      images[imgIndex].classList.remove('active', 'opacity-100');
-      images[imgIndex].classList.add('opacity-0');
+                imgIndex = (imgIndex + 1) % images.length;
 
-      imgIndex = (imgIndex + 1) % images.length;
+                images[imgIndex].classList.add('active', 'opacity-100');
+                images[imgIndex].classList.remove('opacity-0');
+              }, 3200);
+            }
+          } else {
+            if (wrap._rollingTimer) {
+              clearInterval(wrap._rollingTimer);
+              wrap._rollingTimer = null;
+            }
+          }
+        });
+      }, { threshold: 0.1 });
 
-      images[imgIndex].classList.add('active', 'opacity-100');
-      images[imgIndex].classList.remove('opacity-0');
-    }, 3200);
-  });
+      rollingWraps.forEach(wrap => rollingObserver.observe(wrap));
+    } else {
+      rollingWraps.forEach(wrap => {
+        const images = wrap.querySelectorAll('.rolling-img');
+        if (images.length <= 1) return;
+        let imgIndex = 0;
+        setInterval(() => {
+          images[imgIndex].classList.remove('active', 'opacity-100');
+          images[imgIndex].classList.add('opacity-0');
+          imgIndex = (imgIndex + 1) % images.length;
+          images[imgIndex].classList.add('active', 'opacity-100');
+          images[imgIndex].classList.remove('opacity-0');
+        }, 3200);
+      });
+    }
+  }
 }
 
 /* 3. Navbar Scrollspy & Dynamic Header Backdrop */
@@ -300,20 +332,42 @@ function initMobileMenu() {
 
   if (!toggleBtn || !navMenu) return;
 
+  function closeMenu() {
+    navMenu.classList.add('hidden');
+    toggleBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function openMenu() {
+    navMenu.classList.remove('hidden');
+    toggleBtn.setAttribute('aria-expanded', 'true');
+  }
+
   toggleBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    navMenu.classList.toggle('hidden');
+    const isHidden = navMenu.classList.contains('hidden');
+    if (isHidden) {
+      openMenu();
+    } else {
+      closeMenu();
+    }
   });
 
-  navMenu.querySelectorAll('a').forEach(link => {
+  navMenu.querySelectorAll('a, button').forEach(link => {
     link.addEventListener('click', () => {
-      navMenu.classList.add('hidden');
+      closeMenu();
     });
   });
 
   document.addEventListener('click', (e) => {
     if (!navMenu.contains(e.target) && !toggleBtn.contains(e.target)) {
-      navMenu.classList.add('hidden');
+      closeMenu();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !navMenu.classList.contains('hidden')) {
+      closeMenu();
+      toggleBtn.focus();
     }
   });
 }
@@ -366,9 +420,15 @@ function initGroupCompaniesSlider() {
 
     if (dotsContainer) {
       dotsContainer.innerHTML = '';
+      dotsContainer.setAttribute('role', 'tablist');
+      dotsContainer.setAttribute('aria-label', 'Group entities navigation');
       for (let i = 0; i <= maxIndex; i++) {
-        const dot = document.createElement('span');
-        dot.className = `w-2.5 h-2.5 rounded-full cursor-pointer transition-all duration-300 ${i === currentIndex ? 'bg-primary scale-110' : 'bg-outline/40 hover:bg-outline'}`;
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.setAttribute('role', 'tab');
+        dot.setAttribute('aria-label', `Go to Group Entities Slide ${i + 1}`);
+        dot.setAttribute('aria-selected', i === currentIndex ? 'true' : 'false');
+        dot.className = `w-2.5 h-2.5 rounded-full cursor-pointer transition-all duration-300 p-0 border-0 ${i === currentIndex ? 'bg-primary scale-110' : 'bg-outline/40 hover:bg-outline'}`;
         dot.addEventListener('click', () => {
           currentIndex = i;
           updateSlider();
@@ -517,7 +577,10 @@ function initInquiryModal() {
 
   if (!modal) return;
 
-  function openModal(presetInterest = '') {
+  let lastActiveTrigger = null;
+
+  function openModal(presetInterest = '', triggerEl = null) {
+    lastActiveTrigger = triggerEl;
     if (presetInterest) {
       const select = document.getElementById('lead-interest');
       if (select) {
@@ -541,6 +604,12 @@ function initInquiryModal() {
       inner.classList.add('scale-100');
     }
     document.body.classList.add('overflow-hidden');
+
+    // Autofocus first input after modal transition
+    setTimeout(() => {
+      const firstInput = document.getElementById('lead-name');
+      if (firstInput) firstInput.focus();
+    }, 100);
   }
 
   function closeModal() {
@@ -552,13 +621,17 @@ function initInquiryModal() {
       inner.classList.add('scale-95');
     }
     document.body.classList.remove('overflow-hidden');
+
+    if (lastActiveTrigger && typeof lastActiveTrigger.focus === 'function') {
+      lastActiveTrigger.focus();
+    }
   }
 
   triggers.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const interest = btn.getAttribute('data-interest') || '';
-      openModal(interest);
+      openModal(interest, btn);
     });
   });
 

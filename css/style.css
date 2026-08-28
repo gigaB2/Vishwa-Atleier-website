@@ -101,6 +101,15 @@ a {
   transition: var(--transition-smooth);
 }
 
+button, a, [role="button"], input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-gold-primary);
+  outline-offset: 2px;
+}
+
 button {
   cursor: pointer;
   border: none;
@@ -1312,8 +1321,20 @@ video::-webkit-media-controls-overlay-play-button {
 }
 
 /* Looms Journey Stepper Panes Swipe Touch Action */
-.process-pane {
+.process-pane, #lb-track-container, #gc-track-container {
   touch-action: pan-y;
   user-select: none;
+}
+
+/* Accessibility: Prefers Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
