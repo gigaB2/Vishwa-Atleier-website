@@ -562,17 +562,6 @@
     const YARN_STOCK_STORAGE_KEY = 'vishwa_yarn_rm_stock_data';
     const YARN_CATEGORIES = ['Polyester', 'Nylon', 'Viscose'];
 
-    const DEMO_QUALITIES = [
-      { id: '1', quality: '75/36 Bright', type: 'Polyester', code: '7536BR', color: 'Optic White', supplier: 'Reliance Industries' },
-      { id: '2', quality: '70/24 Semi Dull', type: 'Nylon', code: '7024SD', color: 'Raw White', supplier: 'Gujarat Polysol' },
-      { id: '3', quality: '120/48 Bright', type: 'Viscose', code: '12048BR', color: 'Jet Black', supplier: 'Grasim Industries' }
-    ];
-
-    const DEMO_SUPPLIERS = [
-      { id: '1', name: 'Reliance Industries', contact: 'Rajesh Shah', phone: '9825100001' },
-      { id: '2', name: 'Gujarat Polysol', contact: 'Ketan Patel', phone: '9825100002' },
-      { id: '3', name: 'Grasim Industries', contact: 'Suresh Verma', phone: '9825100003' }
-    ];
 
     const addTimestampToDate = (dateStr) => {
       if (!dateStr) return dateStr;
@@ -724,8 +713,8 @@
     // Main App Component
     const App = () => {
       const [orders, setOrders] = useSyncedStorage(YARN_ORDERS_STORAGE_KEY, []);
-      const [qualities, setQualities] = useSyncedStorage('yarn-qualities', DEMO_QUALITIES);
-      const [suppliers, setSuppliers] = useSyncedStorage('yarn-suppliers', DEMO_SUPPLIERS);
+      const [qualities, setQualities] = useSyncedStorage('yarn-qualities', []);
+      const [suppliers, setSuppliers] = useSyncedStorage('yarn-suppliers', []);
       const [geminiApiKey] = useSyncedStorage('gemini-api-key', '');
       const [selectedGeminiModel] = useSyncedStorage('selected-gemini-model', 'gemini-2.0-flash');
 
@@ -795,21 +784,26 @@
 
               const boxes = (batch.boxes || []).map((bx, idx) => {
                 const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
+                const grossWt = Number(bx.weight) || 0;
                 const retWt = Number(bx.returnedWeight) || 0;
-                const isGr = retWt > 0;
+                const remWt = Math.max(0, grossWt - retWt);
+                const isFullyGr = retWt >= grossWt && grossWt > 0;
+                const isPartialGr = retWt > 0 && !isFullyGr;
                 const oldB = existingBoxMap.get(bId);
 
                 return {
                   id: bId,
                   boxNumber: bId,
                   cones: Number(bx.cones) || 0,
-                  weight: Number(bx.weight) || 0,
-                  status: isGr ? 'gr' : (oldB?.status === 'issued' ? 'issued' : 'available'),
-                  issueDate: isGr ? null : (oldB?.issueDate || null),
-                  issuedTo: isGr ? null : (oldB?.issuedTo || null),
-                  grWeight: isGr ? retWt : 0,
-                  grDate: isGr ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
-                  grRemarks: isGr ? 'Returned in Challan GR' : null
+                  grossWeight: grossWt,
+                  remainingWeight: remWt,
+                  weight: isFullyGr ? grossWt : remWt,
+                  status: isFullyGr ? 'gr' : (oldB?.status === 'issued' ? 'issued' : 'available'),
+                  issueDate: isFullyGr ? null : (oldB?.issueDate || null),
+                  issuedTo: isFullyGr ? null : (oldB?.issuedTo || null),
+                  grWeight: retWt,
+                  grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
+                  grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(1)} kg)` : null)
                 };
               });
 

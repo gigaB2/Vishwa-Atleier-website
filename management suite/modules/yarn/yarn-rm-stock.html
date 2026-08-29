@@ -490,8 +490,9 @@
     }
 
     .box-item {
-      width: 72px;
-      height: 72px;
+      width: 76px;
+      height: 76px;
+      min-width: 76px;
       border-radius: 12px;
       display: flex;
       flex-direction: column;
@@ -503,6 +504,9 @@
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       border: 1.5px solid var(--border);
       background: var(--surface);
+      padding: 0.35rem 0.3rem;
+      box-sizing: border-box;
+      text-align: center;
     }
 
     .box-item:hover {
@@ -545,6 +549,29 @@
       font-weight: 700;
     }
 
+    .box-item.has-partial-gr {
+      border-color: rgba(249, 115, 22, 0.55);
+      background: linear-gradient(145deg, rgba(16, 185, 129, 0.08) 55%, rgba(249, 115, 22, 0.14) 100%);
+    }
+
+    .box-item.has-partial-gr:hover {
+      border-color: var(--accent3);
+    }
+
+    .box-gr-pill {
+      font-size: 0.62rem;
+      color: var(--accent3);
+      font-weight: 700;
+      line-height: 1;
+      margin-top: 1px;
+      letter-spacing: -0.02em;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+    }
+
     .box-item.selected {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
@@ -553,8 +580,18 @@
 
     .box-num {
       font-family: var(--font-mono);
-      font-size: 0.95rem;
-      font-weight: 600;
+      font-size: clamp(0.72rem, 1.8vw, 0.9rem);
+      font-weight: 700;
+      max-width: 100%;
+      width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+      text-align: center;
+      line-height: 1.15;
+      padding: 0 2px;
+      box-sizing: border-box;
     }
 
     .box-status-dot {
@@ -562,8 +599,8 @@
       height: 6px;
       border-radius: 50%;
       position: absolute;
-      top: 6px;
-      right: 6px;
+      top: 5px;
+      right: 5px;
     }
 
     .box-item.available .box-status-dot {
@@ -581,20 +618,58 @@
     }
 
     .box-weight {
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       color: var(--muted);
       margin-top: 2px;
+      max-width: 100%;
+      width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+      line-height: 1.15;
     }
 
     .box-issued-date {
-      font-size: 0.65rem;
+      font-size: 0.62rem;
       color: var(--error);
       font-weight: 500;
       margin-top: 1px;
+      max-width: 100%;
+      width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
     }
 
     .box-item.gr .box-issued-date {
       color: var(--accent3);
+    }
+
+    .box-tooltip {
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      color: #ffffff;
+      padding: 0.4rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-family: var(--font-sans);
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .box-item:hover .box-tooltip {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-2px);
     }
 
     /* Modal Overlay */
@@ -1009,25 +1084,34 @@
 
       const boxes = Array.isArray(lot.boxes) ? lot.boxes.map((b, bIdx) => {
         const boxId = String(b.id || b.boxNumber || `B${bIdx + 1}`).trim();
-        const weight = parseFloat(b.weight) || parseFloat(lot.boxWeight) || 0;
         const cones = parseInt(b.cones, 10) || 0;
         const grWeight = parseFloat(b.grWeight || b.returnedWeight) || 0;
-        // GR is strictly determined by positive GR returned weight from Yarn RM Orders
-        const isGr = grWeight > 0;
-        const status = isGr ? 'gr' : (b.status === 'issued' ? 'issued' : 'available');
+        const rawWeight = parseFloat(b.weight) || parseFloat(lot.boxWeight) || 0;
+        const grossWeight = parseFloat(b.grossWeight) || (b.remainingWeight !== undefined ? (parseFloat(b.remainingWeight) + grWeight) : (rawWeight + (b.status !== 'gr' && grWeight > 0 ? grWeight : 0))) || rawWeight;
+        const actualGross = Math.max(grossWeight, rawWeight, grWeight);
+        const remainingWeight = b.remainingWeight !== undefined 
+          ? parseFloat(b.remainingWeight) 
+          : Math.max(0, actualGross - grWeight);
+
+        const isFullyGr = grWeight > 0 && (grWeight >= actualGross || remainingWeight <= 0);
+        const isPartialGr = grWeight > 0 && !isFullyGr;
+        const status = isFullyGr ? 'gr' : (b.status === 'issued' ? 'issued' : 'available');
+        const activeWeight = isFullyGr ? actualGross : remainingWeight;
 
         return {
           ...b,
           id: boxId,
           boxNumber: boxId,
-          weight: weight,
           cones: cones,
+          grossWeight: actualGross,
+          remainingWeight: remainingWeight,
+          weight: activeWeight,
           status: status,
-          issueDate: isGr ? null : (b.issueDate || null),
-          issuedTo: isGr ? null : (b.issuedTo || null),
-          grDate: isGr ? (b.grDate || b.returnedDate || null) : null,
-          grRemarks: isGr ? (b.grRemarks || 'Returned in Challan GR') : null,
-          grWeight: isGr ? grWeight : 0
+          issueDate: isFullyGr ? null : (b.issueDate || null),
+          issuedTo: isFullyGr ? null : (b.issuedTo || null),
+          grDate: grWeight > 0 ? (b.grDate || b.returnedDate || null) : null,
+          grRemarks: isFullyGr ? (b.grRemarks || 'Fully Returned in Challan GR') : (isPartialGr ? `Partial GR (-${grWeight.toFixed(1)} kg)` : null),
+          grWeight: grWeight
         };
       }) : [];
 
@@ -1831,16 +1915,22 @@
 
         lot.boxes.forEach(box => {
           totalBoxesCount++;
-          totalBoxesWeight += (box.weight || lot.boxWeight || 0);
+          const gross = box.grossWeight || (box.weight + (box.grWeight || 0));
+          totalBoxesWeight += gross;
+          const rem = (box.remainingWeight !== undefined ? box.remainingWeight : box.weight);
+          const gr = box.grWeight || 0;
+
           if (box.status === 'issued') {
             issuedBoxesCount++;
-            issuedBoxesWeight += (box.weight || lot.boxWeight || 0);
+            issuedBoxesWeight += rem;
+            if (gr > 0) grBoxesWeight += gr;
           } else if (box.status === 'gr') {
             grBoxesCount++;
-            grBoxesWeight += (box.weight || lot.boxWeight || 0);
+            grBoxesWeight += (gr || gross || box.weight || 0);
           } else {
             availBoxesCount++;
-            availBoxesWeight += (box.weight || lot.boxWeight || 0);
+            availBoxesWeight += rem;
+            if (gr > 0) grBoxesWeight += gr;
           }
         });
       });
@@ -1911,14 +2001,17 @@
         lots.forEach(l => {
           l.boxes.forEach(b => {
             qTotalBoxes++;
-            const w = (b.weight || l.boxWeight || 0);
+            const rem = (b.remainingWeight !== undefined ? b.remainingWeight : b.weight);
+            const gr = b.grWeight || 0;
             if (b.status === 'available') {
               qAvailBoxes++;
-              qAvailWeight += w;
+              qAvailWeight += rem;
+              if (gr > 0) qGrWeight += gr;
             } else if (b.status === 'issued') {
-              qIssuedWeight += w;
+              qIssuedWeight += rem;
+              if (gr > 0) qGrWeight += gr;
             } else if (b.status === 'gr') {
-              qGrWeight += w;
+              qGrWeight += (gr || b.grossWeight || b.weight || 0);
             }
           });
         });
@@ -1963,24 +2056,43 @@
           let boxesGridHtml = '';
           filteredBoxes.forEach(box => {
             const isSelected = selectedBoxes.some(sb => sb.lotId === lot.id && sb.boxId === box.id);
-            const boxClass = `${box.status} ${isSelected ? 'selected' : ''}`;
-            const bw = (box.weight || lot.boxWeight || 0).toFixed(1);
+            const isPartialGr = box.grWeight > 0 && box.status !== 'gr';
+            const isFullyGr = box.status === 'gr';
+            const boxClass = `${box.status} ${isSelected ? 'selected' : ''} ${isPartialGr ? 'has-partial-gr' : ''}`;
 
-            const tooltipText = box.status === 'issued' 
-              ? `Issued to: ${box.issuedTo || 'Unknown'} on ${formatDateDisplay(box.issueDate)}`
-              : (box.status === 'gr'
-                ? `GR (Returned) on ${formatDateDisplay(box.grDate)} ${box.grRemarks ? `(${box.grRemarks})` : ''}`
-                : `Net Weight: ${bw} kg ${box.cones ? `(${box.cones} cones)` : ''} (Click to Select)`);
+            const rem = (box.remainingWeight !== undefined ? box.remainingWeight : box.weight);
+            const gr = box.grWeight || 0;
+            const gross = box.grossWeight || (rem + gr);
+
+            let weightHtml = '';
+            let tooltipText = '';
+
+            if (isFullyGr) {
+              weightHtml = `<span class="box-weight" style="color: var(--accent3); font-weight: 700;">-${gr.toFixed(1)} kg</span><span class="box-gr-pill">FULL GR</span>`;
+              tooltipText = `GR (Fully Returned): -${gr.toFixed(1)} kg on ${formatDateDisplay(box.grDate)} ${box.grRemarks ? `(${box.grRemarks})` : ''}`;
+            } else if (isPartialGr) {
+              weightHtml = `
+                <span class="box-weight" style="font-weight: 700; color: ${box.status === 'issued' ? 'var(--error)' : 'var(--success)'};">${rem.toFixed(1)} kg</span>
+                <span class="box-gr-pill">(-${gr.toFixed(1)} GR)</span>
+              `;
+              tooltipText = `Remaining Qty: ${rem.toFixed(1)} kg (Original Gross: ${gross.toFixed(1)} kg, Returned GR: -${gr.toFixed(1)} kg on ${formatDateDisplay(box.grDate)})`;
+            } else if (box.status === 'issued') {
+              weightHtml = `<span class="box-weight">${rem.toFixed(1)} kg</span>`;
+              tooltipText = `Issued to: ${box.issuedTo || 'Unknown'} on ${formatDateDisplay(box.issueDate)}`;
+            } else {
+              weightHtml = `<span class="box-weight">${rem.toFixed(1)} kg</span>`;
+              tooltipText = `Available Qty: ${rem.toFixed(1)} kg ${box.cones ? `(${box.cones} cones)` : ''} (Click to Select)`;
+            }
 
             const dateLabel = box.status === 'issued' 
               ? formatDateDisplay(box.issueDate) 
-              : (box.status === 'gr' ? formatDateDisplay(box.grDate) : '');
+              : (isFullyGr ? formatDateDisplay(box.grDate) : '');
 
             boxesGridHtml += `
               <div class="box-item ${boxClass}" onclick="toggleBoxSelection('${lot.id}', '${box.id}', '${box.status}')">
                 <span class="box-status-dot"></span>
                 <span class="box-num">${box.id}</span>
-                <span class="box-weight">${bw} kg</span>
+                ${weightHtml}
                 ${dateLabel ? `<span class="box-issued-date">${dateLabel}</span>` : ''}
                 <div class="box-tooltip">${tooltipText}</div>
               </div>
