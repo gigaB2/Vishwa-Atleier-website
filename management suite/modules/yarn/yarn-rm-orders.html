@@ -534,16 +534,21 @@
       cursor: grabbing;
     }
 
-    @media (max-width: 1024px) {
-      .app-container {
-        padding: 0.5rem 1rem 2rem;
-      }
-      .ob-summary-row {
-        grid-template-columns: 1fr;
-      }
-      .ob-filter-grid {
-        grid-template-columns: 1fr 1fr !important;
-      }
+    body.is-embedded {
+      background: transparent !important;
+      overflow-y: auto;
+    }
+    body.is-embedded .app-container > header,
+    body.is-embedded .app-container > .dashboard-grid,
+    body.is-embedded .app-container > .card,
+    body.is-embedded .app-container > .ob-summary-row {
+      display: none !important;
+    }
+    body.is-embedded .modal-overlay {
+      background: transparent !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      padding: 1rem;
     }
   </style>
 </head>
@@ -845,6 +850,14 @@
         }
       }, [orders]);
 
+      const isEmbedded = useMemo(() => new URLSearchParams(window.location.search).get('embedded') === '1', []);
+
+      useEffect(() => {
+        if (isEmbedded) {
+          document.body.classList.add('is-embedded');
+        }
+      }, [isEmbedded]);
+
       // Handle opening order modal from external link (e.g. Yarn RM Stock Book right click Edit)
       useEffect(() => {
         if (!Array.isArray(orders) || orders.length === 0) return;
@@ -862,14 +875,14 @@
           );
           if (match) {
             setSelectedOrder(match);
-            if (shouldOpenModal) {
+            if (shouldOpenModal && !isEmbedded) {
               const url = new URL(window.location.href);
               url.searchParams.delete('openModal');
               window.history.replaceState({}, '', url.pathname + '?' + url.searchParams.toString());
             }
           }
         }
-      }, [orders]);
+      }, [orders, isEmbedded]);
 
       // View URL sync
       useEffect(() => {
@@ -1504,9 +1517,24 @@
           {selectedOrder && (
             <OrderDetailsModal 
               order={selectedOrder}
-              onClose={() => setSelectedOrder(null)}
-              onUpdate={updateOrder}
-              onComplete={completeOrder}
+              onClose={() => {
+                setSelectedOrder(null);
+                if (window.parent && window.parent !== window) {
+                  window.parent.postMessage({ type: 'CLOSE_YARN_ORDER_MODAL' }, '*');
+                }
+              }}
+              onUpdate={(updated) => {
+                updateOrder(updated);
+                if (window.parent && window.parent !== window) {
+                  window.parent.postMessage({ type: 'YARN_ORDER_UPDATED', order: updated }, '*');
+                }
+              }}
+              onComplete={(completed) => {
+                completeOrder(completed);
+                if (window.parent && window.parent !== window) {
+                  window.parent.postMessage({ type: 'YARN_ORDER_UPDATED', order: completed }, '*');
+                }
+              }}
               qualities={qualities}
               suppliers={suppliers}
               geminiApiKey={geminiApiKey}
