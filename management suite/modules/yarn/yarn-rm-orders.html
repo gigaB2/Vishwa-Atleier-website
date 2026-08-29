@@ -506,8 +506,32 @@
       margin-bottom: 1rem;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .ob-timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .ob-timeline-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .ob-timeline-hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .ob-arrival-timeline {
+      overflow-x: auto;
+      padding: 6rem 0;
+      position: relative;
+      -webkit-overflow-scrolling: touch;
+      cursor: grab;
+    }
+    .ob-arrival-timeline:active {
+      cursor: grabbing;
     }
 
     @media (max-width: 1024px) {
@@ -716,6 +740,12 @@
 
       // Multi-column sorting
       const [orderSort, setOrderSort] = useState([{ key: 'orderDate', direction: 'desc' }]);
+
+      // Analytics Timeline & Isolation States (Matching weaving order analytics)
+      const [highlightedOrderId, setHighlightedOrderId] = useState(null);
+      const [isolatedOrderId, setIsolatedOrderId] = useState(null);
+      const [timelineDirection, setTimelineDirection] = useState('LTR');
+      const [timelineScrollPos, setTimelineScrollPos] = useState(0);
 
       // FY Synchronization
       useEffect(() => {
@@ -1394,7 +1424,39 @@
 
           {/* VIEW: ANALYTICS */}
           {view === 'analytics' && (
-            <AnalyticsView orders={orders} qualities={qualities} suppliers={suppliers} />
+            <AnalyticsView 
+              orders={orders} 
+              qualities={qualities} 
+              suppliers={suppliers}
+              selectedQuality={qualityFilter}
+              setSelectedQuality={setQualityFilter}
+              selectedSupplier={supplierFilter}
+              setSelectedSupplier={setSupplierFilter}
+              selectedCode={codeFilter}
+              setSelectedCode={setCodeFilter}
+              selectedColor={colorFilter}
+              setSelectedColor={setColorFilter}
+              fromDate={fromDate}
+              setFromDate={setFromDate}
+              toDate={toDate}
+              setToDate={setToDate}
+              filterType={filterType}
+              setFilterType={setFilterType}
+              setOrderSort={setOrderSort}
+              highlightedOrderId={highlightedOrderId}
+              setHighlightedOrderId={setHighlightedOrderId}
+              isolatedOrderId={isolatedOrderId}
+              setIsolatedOrderId={setIsolatedOrderId}
+              setSelectedOrder={setSelectedOrder}
+              setOrderSearch={setOrderSearch}
+              setView={setView}
+              onGRClick={() => { setOrderSearch('gr'); setView('orders'); }}
+              onCardClick={(status) => { setOrderSearch(status); setView('orders'); }}
+              timelineDirection={timelineDirection}
+              setTimelineDirection={setTimelineDirection}
+              timelineScrollPos={timelineScrollPos}
+              setTimelineScrollPos={setTimelineScrollPos}
+            />
           )}
 
           {/* VIEW: HEAT MAP */}
@@ -2479,53 +2541,950 @@
       );
     };
 
-    // Component: Analytics View
-    const AnalyticsView = ({ orders }) => {
-      const canvasRef = useRef(null);
+    // Component: Full Analytics View (Exact match of Weaving RM order analytics)
+    const AnalyticsView = ({
+      orders,
+      qualities,
+      suppliers,
+      selectedQuality,
+      setSelectedQuality,
+      selectedSupplier,
+      setSelectedSupplier,
+      selectedCode,
+      setSelectedCode,
+      selectedColor,
+      setSelectedColor,
+      fromDate,
+      setFromDate,
+      toDate,
+      setToDate,
+      filterType,
+      setFilterType,
+      setOrderSort,
+      highlightedOrderId,
+      setHighlightedOrderId,
+      isolatedOrderId,
+      setIsolatedOrderId,
+      setSelectedOrder,
+      setOrderSearch,
+      setView,
+      onGRClick,
+      onCardClick,
+      timelineDirection,
+      setTimelineDirection,
+      timelineScrollPos,
+      setTimelineScrollPos
+    }) => {
+      const chartRef = useRef(null);
       const chartInstance = useRef(null);
+      const timelineRef = useRef(null);
+      const savedScrollPos = useRef(timelineScrollPos);
 
-      const supplierTotals = useMemo(() => {
-        const map = {};
-        orders.forEach(o => {
-          const s = o.supplier || 'Unknown';
-          const wt = Number(o.orderedWeight) || 0;
-          map[s] = (map[s] || 0) + wt;
-        });
-        return map;
-      }, [orders]);
-
+      // Save scroll position in real-time
       useEffect(() => {
-        if (!canvasRef.current) return;
-        const ctx = canvasRef.current.getContext('2d');
-        if (chartInstance.current) chartInstance.current.destroy();
+        const container = timelineRef.current;
+        if (!container) return;
 
-        chartInstance.current = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: Object.keys(supplierTotals),
-            datasets: [{
-              label: 'Procurement Volume (Kg)',
-              data: Object.values(supplierTotals),
-              backgroundColor: 'rgba(139, 92, 246, 0.75)',
-              borderRadius: 8
-            }]
+        const handleScroll = () => {
+          setTimelineScrollPos(container.scrollLeft);
+        };
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+      }, [setTimelineScrollPos]);
+
+      const allCombinations = useMemo(() => {
+        const combos = [];
+        orders.forEach(o => combos.push({ 
+          quality: o.quality, 
+          supplier: o.supplier, 
+          code: o.code || '', 
+          color: o.color || '', 
+          type: o.category || o.type || 'Polyester' 
+        }));
+        (qualities || []).forEach(q => {
+          combos.push({ 
+            quality: q.quality, 
+            supplier: q.supplier, 
+            code: q.code || '', 
+            color: q.color || '', 
+            type: q.type || 'Polyester' 
+          });
+        });
+
+        const seen = new Set();
+        return combos.filter(c => {
+          const key = `${c.quality}|${c.supplier}|${c.code}|${c.color}|${c.type}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }, [qualities, orders]);
+
+      const getOptions = (field) => {
+        const otherFilters = {
+          quality: selectedQuality,
+          supplier: selectedSupplier,
+          code: selectedCode,
+          color: selectedColor,
+          type: filterType === 'All' ? null : filterType
+        };
+        delete otherFilters[field];
+
+        const relevantCombos = allCombinations.filter(c => 
+          Object.keys(otherFilters).every(k => !otherFilters[k] || c[k] === otherFilters[k])
+        );
+        return [...new Set(relevantCombos.map(c => c[field]).filter(Boolean))].sort();
+      };
+
+      const analyticsData = useMemo(() => {
+        if (!selectedQuality && !selectedSupplier && !selectedCode && !selectedColor && filterType === 'All') return [];
+        let data = orders.filter(o => {
+          const itemCat = o.category || o.type || 'Polyester';
+          const matchesFilters = (!selectedQuality || o.quality === selectedQuality) && 
+                                 (!selectedSupplier || o.supplier === selectedSupplier) &&
+                                 (!selectedCode || o.code === selectedCode) &&
+                                 (!selectedColor || o.color === selectedColor) &&
+                                 (filterType === 'All' || itemCat === filterType);
+
+          if (!matchesFilters) return false;
+
+          const oDate = o.orderDate || (o.createdAt ? o.createdAt.split('T')[0] : '');
+          if (fromDate && oDate < fromDate) return false;
+          if (toDate && oDate > toDate) return false;
+          return true;
+        });
+        
+        if (isolatedOrderId) {
+          data = data.filter(o => o.id === isolatedOrderId);
+        }
+
+        return data.sort((a, b) => new Date(a.orderDate || a.createdAt) - new Date(b.orderDate || b.createdAt));
+      }, [selectedQuality, selectedSupplier, selectedCode, selectedColor, fromDate, toDate, orders, filterType, isolatedOrderId]);
+
+      const lifecycleStats = useMemo(() => {
+        if (analyticsData.length === 0) return null;
+
+        const calculateWeights = (orderList) => {
+          let ordered = 0;
+          let received = 0;
+          let gr = 0;
+          orderList.forEach(o => {
+            ordered += Number(o.orderedWeight) || 0;
+            (o.batches || []).forEach(b => {
+              received += Number(b.totalWeight) || 0;
+              (b.boxes || []).forEach(box => {
+                gr += (Number(box.returnedWeight) || 0);
+              });
+            });
+          });
+          return { ordered, received, gr };
+        };
+
+        const active = analyticsData.filter(o => o.status === 'Active');
+        const completed = analyticsData.filter(o => o.status === 'Completed');
+
+        const activeWeights = calculateWeights(active);
+        const completedWeights = calculateWeights(completed);
+        const totalWeights = calculateWeights(analyticsData);
+
+        const activePending = Math.max(0, activeWeights.ordered - activeWeights.received);
+
+        return {
+          active: {
+            count: active.length,
+            load: activeWeights.ordered,
+            gr: activeWeights.gr,
+            pending: activePending
           },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } }
+          completed: {
+            count: completed.length,
+            load: completedWeights.ordered,
+            gr: completedWeights.gr,
+            received: completedWeights.received
+          },
+          total: {
+            count: analyticsData.length,
+            load: totalWeights.ordered,
+            gr: totalWeights.gr,
+            received: totalWeights.received
+          }
+        };
+      }, [analyticsData]);
+
+      const timelineEvents = useMemo(() => {
+        if (!selectedQuality && !selectedSupplier && !selectedCode && !selectedColor && filterType === 'All') return [];
+
+        const events = [];
+        const GROUP_COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#f59e0b', '#10b981', '#6366f1'];
+
+        const matchingOrders = orders.filter(o => {
+          const itemCat = o.category || o.type || 'Polyester';
+          return (!selectedQuality || o.quality === selectedQuality) && 
+                 (!selectedSupplier || o.supplier === selectedSupplier) &&
+                 (!selectedCode || o.code === selectedCode) &&
+                 (!selectedColor || o.color === selectedColor) &&
+                 (filterType === 'All' || itemCat === filterType);
+        }).sort((a, b) => new Date(a.orderDate || a.createdAt) - new Date(b.orderDate || b.createdAt));
+
+        matchingOrders.forEach((order, idx) => {
+          if (isolatedOrderId && order.id !== isolatedOrderId) return;
+          
+          const groupColor = GROUP_COLORS[idx % GROUP_COLORS.length];
+          const dealNum = idx + 1;
+
+          const oDateStr = order.orderDate || (order.createdAt ? order.createdAt.split('T')[0] : '');
+          const oDate = new Date(oDateStr);
+          const isOrderInRange = (!fromDate || oDateStr >= fromDate) && (!toDate || oDateStr <= toDate);
+
+          if (isOrderInRange) {
+            events.push({
+              type: 'order',
+              orderId: order.id,
+              groupColor,
+              dealNum,
+              date: oDate,
+              data: { ...order, status: order.status }
+            });
+          }
+
+          (order.batches || []).forEach(batch => {
+            const aDateStr = batch.receiveDate || (batch.receivedAt ? batch.receivedAt.split('T')[0] : '');
+            const aDate = new Date(aDateStr);
+            const effectiveADate = aDate < oDate ? oDate : aDate;
+
+            const isArrivalInRange = (!fromDate || aDateStr >= fromDate) && (!toDate || aDateStr <= toDate);
+            const grossWeight = (batch.boxes || []).reduce((acc, box) => acc + (Number(box.weight) || 0), 0);
+
+            if (isArrivalInRange) {
+              events.push({
+                type: 'arrival',
+                orderId: order.id,
+                groupColor,
+                dealNum,
+                date: effectiveADate,
+                data: { ...batch, quality: order.quality, code: order.code, color: order.color, grossWeight }
+              });
+            }
+
+            let totalBatchGRWeight = 0;
+            let latestGRDateStr = null;
+            (batch.boxes || []).forEach(box => {
+              const rw = Number(box.returnedWeight) || 0;
+              if (rw > 0 && box.returnedDate) {
+                totalBatchGRWeight += rw;
+                if (!latestGRDateStr || box.returnedDate > latestGRDateStr) {
+                  latestGRDateStr = box.returnedDate;
+                }
+              }
+            });
+
+            if (totalBatchGRWeight > 0 && latestGRDateStr) {
+              const grDate = new Date(latestGRDateStr);
+              const effectiveGRDate = grDate < oDate ? oDate : grDate;
+
+              const isGRInRange = (!fromDate || latestGRDateStr >= fromDate) && (!toDate || latestGRDateStr <= toDate);
+              if (isGRInRange) {
+                events.push({
+                  type: 'gr',
+                  orderId: order.id,
+                  groupColor,
+                  dealNum,
+                  date: effectiveGRDate,
+                  data: { 
+                    weight: totalBatchGRWeight, 
+                    quality: order.quality, 
+                    code: order.code, 
+                    color: order.color, 
+                    challanNumber: batch.challanNumber 
+                  }
+                });
+              }
+            }
+          });
+        });
+
+        return events.sort((a, b) => {
+          const dateDiff = timelineDirection === 'RTL' ? b.date - a.date : a.date - b.date;
+          if (dateDiff !== 0) return dateDiff;
+          const priority = { 'gr': 3, 'arrival': 2, 'order': 1 };
+          return timelineDirection === 'RTL' ? priority[b.type] - priority[a.type] : priority[a.type] - priority[b.type];
+        });
+      }, [selectedSupplier, selectedQuality, selectedCode, selectedColor, fromDate, toDate, orders, filterType, isolatedOrderId, timelineDirection]);
+
+      // Restoration effect for scroll
+      React.useLayoutEffect(() => {
+        if (timelineRef.current && !isolatedOrderId && timelineScrollPos > 0) {
+          const container = timelineRef.current;
+          container.scrollLeft = timelineScrollPos;
+          const timer = setTimeout(() => { if (container) container.scrollLeft = timelineScrollPos; }, 50);
+          const frame = requestAnimationFrame(() => { if (container) container.scrollLeft = timelineScrollPos; });
+          return () => { clearTimeout(timer); cancelAnimationFrame(frame); };
+        }
+      }, [timelineEvents, isolatedOrderId]);
+
+      const grStats = useMemo(() => {
+        if (!selectedQuality && !selectedSupplier && !selectedCode && !selectedColor && filterType === 'All') return null;
+
+        let ordersWithGRCount = 0;
+        let totalOrdered = 0;
+        let grossWeight = 0;
+        let returnedWeight = 0;
+
+        analyticsData.forEach(order => {
+          let hasGRInRange = false;
+          let orderGrossInRange = 0;
+          let orderReturnedInRange = 0;
+
+          (order.batches || []).forEach(batch => {
+            const aDate = batch.receiveDate || (batch.receivedAt ? batch.receivedAt.split('T')[0] : '');
+            const isArrivalInRange = (!fromDate || aDate >= fromDate) && (!toDate || aDate <= toDate);
+
+            if (isArrivalInRange) {
+              (batch.boxes || []).forEach(box => {
+                orderGrossInRange += (Number(box.weight) || 0);
+                const rw = (Number(box.returnedWeight) || 0);
+                orderReturnedInRange += rw;
+                if (rw > 0) hasGRInRange = true;
+              });
+            }
+          });
+
+          if (hasGRInRange) {
+            ordersWithGRCount++;
+            totalOrdered += Number(order.orderedWeight) || 0;
+            grossWeight += orderGrossInRange;
+            returnedWeight += orderReturnedInRange;
           }
         });
 
+        if (ordersWithGRCount === 0) return null;
+        const netWeight = grossWeight - returnedWeight;
+        const returnRate = grossWeight > 0 ? (returnedWeight / grossWeight) * 100 : 0;
+        return { ordersWithGRCount, totalOrdered, grossWeight, returnedWeight, netWeight, returnRate };
+      }, [analyticsData, fromDate, toDate]);
+
+      const chartData = useMemo(() => {
+        if (analyticsData.length === 0) return null;
+        const chartLabel = selectedQuality ? `Rate (₹) for ${selectedQuality}` : 'Rate (₹)';
+        return {
+          labels: analyticsData.map(o => new Date(o.orderDate || o.createdAt).toLocaleDateString('en-GB')),
+          datasets: [{
+            label: chartLabel,
+            data: analyticsData.map(o => Number(o.price) || 0),
+            borderColor: '#8b5cf6',
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.3,
+            pointBackgroundColor: '#ec4899',
+            pointBorderColor: '#fff',
+            pointRadius: 5,
+            pointHoverRadius: 8
+          }]
+        };
+      }, [analyticsData, selectedQuality]);
+
+      useEffect(() => {
+        if (chartRef.current && chartData) {
+          if (chartInstance.current) chartInstance.current.destroy();
+          const ctx = chartRef.current.getContext('2d');
+          chartInstance.current = new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              onHover: (event, chartElement) => {
+                event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
+              },
+              onClick: (event, elements) => {
+                if (elements.length > 0) {
+                  const index = elements[0].index;
+                  const order = analyticsData[index];
+                  if (order) {
+                    setSelectedQuality(order.quality);
+                    setSelectedSupplier(order.supplier);
+                    setSelectedCode(order.code || '');
+                    setSelectedColor(order.color || '');
+                    setFilterType(order.category || order.type || 'All');
+                    setFromDate('');
+                    setToDate('');
+                    
+                    setOrderSearch(order.id);
+                    
+                    setHighlightedOrderId(null);
+                    setIsolatedOrderId(null);
+                    setView('orders');
+                  }
+                }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (context) => {
+                      const order = analyticsData && analyticsData[context.dataIndex];
+                      if (!order) return `Rate: ₹${context.raw}`;
+                      const date = new Date(order.orderDate || order.createdAt).toLocaleDateString('en-GB');
+                      return [
+                        `Date: ${date}`,
+                        `Quality: ${order.quality}`,
+                        `Code: ${order.code || '-'}`,
+                        `Color: ${order.color || '-'}`,
+                        `Rate: ₹${context.raw}`
+                      ];
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { callback: (value) => '₹' + value } },
+                x: { grid: { display: false } }
+              }
+            }
+          });
+        }
         return () => { if (chartInstance.current) chartInstance.current.destroy(); };
-      }, [supplierTotals]);
+      }, [chartData]);
+
+      const handleEventClick = (event) => {
+        const orderId = event.orderId;
+        const parentOrder = orders.find(o => o.id === orderId);
+
+        if (parentOrder) {
+          setFromDate('');
+          setToDate('');
+          setSelectedQuality(parentOrder.quality);
+          setSelectedSupplier(parentOrder.supplier);
+          setSelectedCode(parentOrder.code || '');
+          setSelectedColor(parentOrder.color || '');
+          setFilterType(parentOrder.category || parentOrder.type || 'All');
+
+          if (event.type === 'order') {
+            setOrderSearch(parentOrder.id);
+          } else {
+            setOrderSearch(parentOrder.id);
+            setSelectedOrder(parentOrder);
+          }
+          setView('orders');
+        }
+      };
+
+      const handleNodeClick = (e, orderId) => {
+        e.stopPropagation();
+        
+        if (!highlightedOrderId) {
+          if (timelineRef.current) {
+            savedScrollPos.current = timelineRef.current.scrollLeft;
+          }
+        }
+
+        if (highlightedOrderId !== orderId) {
+          setHighlightedOrderId(orderId);
+          setIsolatedOrderId(null);
+        } else if (!isolatedOrderId) {
+          setIsolatedOrderId(orderId);
+        } else {
+          setIsolatedOrderId(null);
+          setHighlightedOrderId(null);
+        }
+      };
+
+      const handleSelect = (field, value) => {
+        const newFilters = {
+          quality: selectedQuality,
+          supplier: selectedSupplier,
+          code: selectedCode,
+          color: selectedColor,
+          [field]: value
+        };
+
+        let currentFiltered = allCombinations.filter(c => {
+          return (!newFilters.quality || c.quality === newFilters.quality) &&
+                 (!newFilters.code || c.code === newFilters.code) &&
+                 (!newFilters.color || c.color === newFilters.color) &&
+                 (!newFilters.supplier || c.supplier === newFilters.supplier) &&
+                 (filterType === 'All' || c.type === filterType);
+        });
+
+        const updated = { ...newFilters };
+        ['quality', 'supplier', 'code', 'color'].forEach(f => {
+          const options = [...new Set(currentFiltered.map(item => item[f]))].filter(Boolean);
+          if (options.length === 1) updated[f] = options[0];
+        });
+
+        setSelectedQuality(updated.quality || '');
+        setSelectedSupplier(updated.supplier || '');
+        setSelectedCode(updated.code || '');
+        setSelectedColor(updated.color || '');
+      };
 
       return (
-        <div className="card">
-          <h2 style={{marginBottom: '1.5rem'}}>Yarn Procurement Volume by Supplier</h2>
-          <div style={{height: '350px'}}>
-            <canvas ref={canvasRef}></canvas>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} onClick={(e) => {
+          if (e.target.closest('.timeline-container, .ob-arrival-timeline')) return;
+          setHighlightedOrderId(null);
+          setIsolatedOrderId(null);
+        }}>
+          <div className="card" style={{ overflow: 'visible', zIndex: 100 }}>
+            <div className="ob-filter-toolbar">
+              <h3>Analytics Filters</h3>
+              <div className="ob-filter-type-toggle">
+                {['All', 'Polyester', 'Nylon', 'Viscose'].map(type => (
+                  <button 
+                    key={type}
+                    className="btn" 
+                    style={{
+                      padding: '0.4rem 1rem', 
+                      fontSize: '0.85rem',
+                      background: filterType === type ? 'var(--surface)' : 'transparent',
+                      boxShadow: filterType === type ? 'var(--shadow-sm)' : 'none',
+                      color: filterType === type ? 'var(--accent)' : 'var(--muted)'
+                    }}
+                    onClick={() => {
+                      const currentFilters = { quality: selectedQuality, supplier: selectedSupplier, code: selectedCode, color: selectedColor };
+                      const newFilters = { ...currentFilters, type: type === 'All' ? null : type };
+                      let filtered = allCombinations.filter(c => {
+                        return (!newFilters.type || c.type === newFilters.type) &&
+                               (!newFilters.quality || c.quality === newFilters.quality) &&
+                               (!newFilters.code || c.code === newFilters.code) &&
+                               (!newFilters.color || c.color === newFilters.color) &&
+                               (!newFilters.supplier || c.supplier === newFilters.supplier);
+                      });
+                      
+                      const fields = ['quality', 'supplier', 'code', 'color'];
+                      fields.forEach(f => {
+                        const options = [...new Set(filtered.map(item => item[f]))].filter(Boolean);
+                        if (options.length === 1) {
+                          if (f === 'quality') setSelectedQuality(options[0]);
+                          else if (f === 'supplier') setSelectedSupplier(options[0]);
+                          else if (f === 'code') setSelectedCode(options[0]);
+                          else if (f === 'color') setSelectedColor(options[0]);
+                        }
+                      });
+                      setFilterType(type);
+                    }}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="ob-filter-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr) auto', gap: '1.25rem', alignItems: 'end' }}>
+              <SearchableDropdown 
+                label="Quality"
+                placeholder="Search quality..."
+                options={getOptions('quality')}
+                value={selectedQuality}
+                onChange={val => handleSelect('quality', val)}
+                emptyLabel="-- All Qualities --"
+              />
+              <SearchableDropdown 
+                label="Code"
+                placeholder="Search code..."
+                options={getOptions('code')}
+                value={selectedCode}
+                onChange={val => handleSelect('code', val)}
+                emptyLabel="-- All Codes --"
+              />
+              <SearchableDropdown 
+                label="Color"
+                placeholder="Search color..."
+                options={getOptions('color')}
+                value={selectedColor}
+                onChange={val => handleSelect('color', val)}
+                emptyLabel="-- All Colors --"
+              />
+              <SearchableDropdown 
+                label="Supplier"
+                placeholder="Search supplier..."
+                options={getOptions('supplier')}
+                value={selectedSupplier}
+                onChange={val => handleSelect('supplier', val)}
+                emptyLabel="-- All Suppliers --"
+              />
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <label>From Date</label>
+                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{ borderRadius: '12px' }} />
+              </div>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <label>To Date</label>
+                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={{ borderRadius: '12px' }} />
+              </div>
+              <button 
+                className="btn btn-outline" 
+                style={{padding: '0.75rem', borderRadius: '12px', alignSelf: 'end'}}
+                onClick={() => { 
+                  setFromDate(''); setToDate(''); 
+                  setSelectedQuality(''); setSelectedSupplier(''); setSelectedCode(''); setSelectedColor('');
+                  setFilterType('All');
+                  setOrderSort([{ key: 'orderDate', direction: 'desc' }]); 
+                }}
+                title="Clear Filters & Sort"
+              >
+                🔄
+              </button>
+            </div>
           </div>
+
+          {(selectedQuality || selectedSupplier || selectedCode || selectedColor || filterType !== 'All') ? (
+            <React.Fragment>
+              {lifecycleStats && (
+                <div className="ob-summary-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                  <div className="card" onClick={() => onCardClick('Active')} style={{ cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                      <h3 style={{ fontSize: '1rem' }}>Active orders</h3>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Current deals</div>
+                    </div>
+                    <div className="dashboard-grid" style={{ marginTop: '1rem', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: 0 }}>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{fontSize: '0.8rem'}}>Count</h3>
+                        <div className="value" style={{ fontSize: '1.5rem', color: 'var(--success)' }}>{lifecycleStats.active.count}</div>
+                      </div>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{fontSize: '0.8rem'}}>Load (kg)</h3>
+                        <div className="value" style={{ fontSize: '1.5rem', color: 'var(--accent2)' }}>{lifecycleStats.active.load.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                      </div>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{ color: 'var(--accent3)', fontSize: '0.8rem' }}>GR (kg)</h3>
+                        <div className="value" style={{ fontSize: '1.2rem', color: 'var(--accent3)' }}>{lifecycleStats.active.gr.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                      </div>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{fontSize: '0.8rem'}}>Pending (kg)</h3>
+                        <div className="value" style={{ fontSize: '1.5rem', color: 'var(--fg)' }}>{lifecycleStats.active.pending.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="card" onClick={() => onCardClick('Completed')} style={{ cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                      <h3 style={{ fontSize: '1rem' }}>Completed orders</h3>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>History</div>
+                    </div>
+                    <div className="dashboard-grid" style={{ marginTop: '1rem', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: 0 }}>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{fontSize: '0.8rem'}}>Count</h3>
+                        <div className="value" style={{ fontSize: '1.5rem', color: 'var(--muted)' }}>{lifecycleStats.completed.count}</div>
+                      </div>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{fontSize: '0.8rem'}}>Load (kg)</h3>
+                        <div className="value" style={{ fontSize: '1.5rem', color: 'var(--accent)' }}>{lifecycleStats.completed.load.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                      </div>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{ color: 'var(--accent3)', fontSize: '0.8rem' }}>GR (kg)</h3>
+                        <div className="value" style={{ fontSize: '1.2rem', color: 'var(--accent3)' }}>{lifecycleStats.completed.gr.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                      </div>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{fontSize: '0.8rem'}}>Net Received (kg)</h3>
+                        <div className="value" style={{ fontSize: '1.5rem', color: 'var(--success)' }}>{lifecycleStats.completed.received.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="card" onClick={() => onCardClick('')} style={{ cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                      <h3 style={{ fontSize: '1rem' }}>All orders</h3>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Total book</div>
+                    </div>
+                    <div className="dashboard-grid" style={{ marginTop: '1rem', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: 0 }}>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{fontSize: '0.8rem'}}>Total Count</h3>
+                        <div className="value" style={{ fontSize: '1.5rem', color: 'var(--fg)' }}>{lifecycleStats.total.count}</div>
+                      </div>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{fontSize: '0.8rem'}}>Total Load (kg)</h3>
+                        <div className="value" style={{ fontSize: '1.5rem', color: 'var(--accent)' }}>{lifecycleStats.total.load.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                      </div>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{ color: 'var(--accent3)', fontSize: '0.8rem' }}>Total GR (kg)</h3>
+                        <div className="value" style={{ fontSize: '1.2rem', color: 'var(--accent3)' }}>{lifecycleStats.total.gr.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                      </div>
+                      <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                        <h3 style={{fontSize: '0.8rem'}}>Total Net Received (kg)</h3>
+                        <div className="value" style={{ fontSize: '1.5rem', color: 'var(--success)' }}>{lifecycleStats.total.received.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="card" style={{ overflow: 'hidden', maxWidth: '100%' }}>
+                <div className="ob-timeline-header">
+                  <h3>Order & Arrival Timeline</h3>
+                  <div className="ob-timeline-header-actions">
+                    <button 
+                      className="btn-secondary ob-timeline-dir-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTimelineDirection(timelineDirection === 'LTR' ? 'RTL' : 'LTR');
+                      }}
+                      style={{ 
+                        padding: '0.6rem 1.2rem', 
+                        fontSize: '0.8rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.6rem',
+                        background: 'var(--surface)',
+                        border: '1.5px solid var(--border)',
+                        color: 'var(--fg)',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        transition: 'all 0.25s ease',
+                        whiteSpace: 'nowrap',
+                        fontWeight: '600',
+                        fontFamily: 'var(--font-body)',
+                        boxShadow: 'var(--shadow-sm)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--accent)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                      }}
+                    >
+                      <span style={{ 
+                        fontSize: '1.1rem',
+                        background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}>
+                        {timelineDirection === 'LTR' ? '➡️' : '⬅️'}
+                      </span>
+                      <span style={{ letterSpacing: '0.02em' }}>
+                        {timelineDirection === 'LTR' ? 'Oldest → Newest' : 'Newest → Oldest'}
+                      </span>
+                    </button>
+                    <div className="ob-timeline-hint">
+                      Click a node to highlight lifecycle
+                    </div>
+                  </div>
+                </div>
+                <div className="ob-arrival-timeline timeline-container" ref={timelineRef}>
+                  {timelineEvents.length > 0 ? (
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '3rem', 
+                      minWidth: 'max-content', 
+                      padding: '0 4rem',
+                      position: 'relative'
+                    }}>
+                      {/* Center Line */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: 0,
+                        right: 0,
+                        height: '2px',
+                        background: 'var(--border)',
+                        transform: 'translateY(-50%)',
+                        zIndex: 0
+                      }}></div>
+
+                      {timelineEvents.map((event, idx) => {
+                        const isHighlighted = highlightedOrderId === event.orderId;
+                        const isDimmed = highlightedOrderId && highlightedOrderId !== event.orderId;
+
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              position: 'relative',
+                              textAlign: 'center',
+                              width: '200px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              opacity: isDimmed ? 0.3 : 1,
+                              filter: isDimmed ? 'grayscale(0.5)' : 'none',
+                              transform: isHighlighted ? 'scale(1.05)' : 'scale(1)',
+                              zIndex: isHighlighted ? 10 : 1
+                            }}
+                          >
+                            {/* Top Content (Arrivals & GR) */}
+                            {event.type === 'arrival' && (
+                              <div
+                                onClick={(e) => { e.stopPropagation(); handleEventClick(event); }}
+                                style={{ position: 'absolute', bottom: 'calc(50% + 25px)', width: '100%', animation: 'fadeIn 0.3s ease', padding: '10px', background: 'rgba(16, 185, 129, 0.03)', borderRadius: '12px', border: '1px solid transparent' }}
+                                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--success)'}
+                                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                title="Click to view details"
+                              >
+                                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--success)', textTransform: 'uppercase', marginBottom: '4px' }}>Received</div>
+                                <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{event.date.toLocaleDateString('en-GB')}</div>
+                                <div style={{ fontSize: '0.8rem', fontWeight: '600' }}>{event.data.quality}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{event.data.code} / {event.data.color}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>Lot: {event.data.lotNumber || '-'}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>Ch: {event.data.challanNumber || '-'}</div>
+                                <div style={{ marginTop: '4px', fontSize: '0.9rem', fontWeight: '600', color: 'var(--success)' }}>
+                                  {event.data.grossWeight.toFixed(2)} kg
+                                </div>
+                                <div style={{ height: '15px', width: '2px', background: 'var(--success)', margin: '4px auto 0', opacity: 0.4 }}></div>
+                              </div>
+                            )}
+
+                            {event.type === 'gr' && (() => {
+                              const parentOrder = orders.find(o => o.id === event.orderId);
+                              const batch = parentOrder?.batches?.find(b => b.challanNumber === event.data.challanNumber);
+                              return (
+                                <div
+                                  onClick={(e) => { e.stopPropagation(); handleEventClick(event); }}
+                                  style={{ position: 'absolute', bottom: 'calc(50% + 25px)', width: '100%', animation: 'fadeIn 0.3s ease', padding: '10px', background: 'rgba(239, 68, 68, 0.03)', borderRadius: '12px', border: '1px solid transparent' }}
+                                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--error)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                  title="Click to view details"
+                                >
+                                  <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--error)', textTransform: 'uppercase', marginBottom: '4px' }}>GR Processed</div>
+                                  <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{event.date.toLocaleDateString('en-GB')}</div>
+                                  <div style={{ fontSize: '0.8rem', fontWeight: '600' }}>{event.data.quality}</div>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{event.data.code} / {event.data.color}</div>
+                                  {batch && <div style={{ fontSize: '0.8rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>Lot: {batch.lotNumber || '-'}</div>}
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>Ch: {event.data.challanNumber || '-'}</div>
+                                  <div style={{ marginTop: '4px', fontSize: '0.9rem', fontWeight: '600', color: 'var(--error)' }}>
+                                    -{event.data.weight.toFixed(2)} kg
+                                  </div>
+                                  <div style={{ height: '15px', width: '2px', background: 'var(--error)', margin: '4px auto 0', opacity: 0.4 }}></div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Center Node */}
+                            <div 
+                              onClick={(e) => handleNodeClick(e, event.orderId)}
+                              style={{ 
+                                width: isHighlighted ? '32px' : '24px', 
+                                height: isHighlighted ? '32px' : '24px', 
+                                borderRadius: '50%', 
+                                background: event.type === 'order' ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 
+                                            event.type === 'arrival' ? 'var(--success)' : 'var(--error)',
+                                position: 'relative',
+                                zIndex: 1,
+                                boxShadow: isHighlighted 
+                                  ? `0 0 0 4px var(--surface), 0 0 20px ${event.groupColor}`
+                                  : `0 0 0 4px var(--surface), 0 0 0 7px ${event.groupColor}33, 0 4px 12px rgba(0,0,0,0.1)`,
+                                border: isHighlighted ? `3px solid ${event.groupColor}` : `2px solid ${event.groupColor}`,
+                                transition: 'all 0.3s ease'
+                              }}
+                            ></div>
+
+                            {/* Bottom Content (Orders) */}
+                            {event.type === 'order' && (
+                              <div 
+                                onClick={(e) => { e.stopPropagation(); handleEventClick(event); }}
+                                style={{ position: 'absolute', top: 'calc(50% + 25px)', width: '100%', animation: 'fadeIn 0.3s ease', padding: '10px', background: 'rgba(139, 92, 246, 0.03)', borderRadius: '12px', border: '1px solid transparent' }}
+                                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent)'}
+                                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                title="Click to view details"
+                              >
+                                <div style={{ height: '15px', width: '2px', background: 'var(--accent)', margin: '0 auto 4px', opacity: 0.4 }}></div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent)', textTransform: 'uppercase', marginBottom: '4px' }}>Ordered</div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--accent)', marginBottom: '4px' }}>
+                                  {event.data.orderedWeight}kg {event.data.price ? `@ ₹${event.data.price}` : ''}
+                                </div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{event.data.code} / {event.data.color}</div>
+                                <div style={{ fontSize: '0.8rem', fontWeight: '600' }}>{event.data.quality}</div>
+                                <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{event.date.toLocaleDateString('en-GB')}</div>
+                                <div 
+                                  style={{ 
+                                    marginTop: '6px', 
+                                    display: 'inline-block',
+                                    padding: '2px 8px', 
+                                    borderRadius: '20px', 
+                                    fontSize: '0.7rem', 
+                                    fontWeight: '600',
+                                    color: event.data.status === 'Completed' ? 'var(--muted)' : 'var(--success)',
+                                    background: event.data.status === 'Completed' ? 'rgba(0,0,0,0.05)' : 'rgba(16, 185, 129, 0.1)',
+                                    border: `1px solid ${event.data.status === 'Completed' ? 'var(--border)' : 'var(--success)33'}`
+                                  }}
+                                >
+                                  {event.data.status}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', width: '100%', color: 'var(--muted)', fontSize: '1.1rem' }}>
+                      Select filters above to view the order lifecycle timeline
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <h3>Rate tracker</h3>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
+                    Price trend over time for all colors
+                  </div>
+                </div>
+                <div style={{ height: '400px', width: '100%', position: 'relative' }}>
+                  {analyticsData.length > 0 ? (
+                    <canvas ref={chartRef}></canvas>
+                  ) : (
+                    <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
+                      Select a quality with order history to view graph
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {grStats && (
+                <div className="card" onClick={onGRClick} style={{ cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <h3>GR Statistics</h3>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
+                      Goods Return analysis for the selected period
+                    </div>
+                  </div>
+                  <div className="dashboard-grid" style={{ marginTop: '1rem', gridTemplateColumns: 'repeat(6, 1fr)' }}>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <h3>Orders with GR</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--accent3)' }}>{grStats.ordersWithGRCount}</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <h3>Ordered</h3>
+                      <div className="value" style={{ fontSize: '1.5rem' }}>{grStats.totalOrdered.toFixed(2)} kg</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <h3>Gross Received</h3>
+                      <div className="value" style={{ fontSize: '1.5rem' }}>{grStats.grossWeight.toFixed(2)} kg</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', borderColor: 'rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.02)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <h3 style={{ color: 'var(--error)' }}>Total Returned (GR)</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--error)' }}>{grStats.returnedWeight.toFixed(2)} kg</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', borderColor: 'rgba(16, 185, 129, 0.2)', background: 'rgba(16, 185, 129, 0.02)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <h3 style={{ color: 'var(--success)' }}>Net Received</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--success)' }}>{grStats.netWeight.toFixed(2)} kg</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <h3>Return Rate</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: grStats.returnRate > 5 ? 'var(--error)' : 'inherit' }}>
+                        {grStats.returnRate.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
+          ) : (
+            <div className="card" style={{ textAlign: 'center', padding: '4rem', color: 'var(--muted)' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📈</div>
+              <h3>Select filters to view Yarn order analytics</h3>
+              <p style={{ marginTop: '0.5rem' }}>Analyze price trends, order timelines, and delivery lifecycles effectively.</p>
+            </div>
+          )}
         </div>
       );
     };
