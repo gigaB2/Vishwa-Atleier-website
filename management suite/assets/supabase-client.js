@@ -1310,7 +1310,8 @@
         const inputs = root.querySelectorAll('input:not([type="password"]):not([type="hidden"]):not([type="file"]), textarea, select');
         inputs.forEach(el => {
           const fid = getFieldIdentifier(el);
-          if (fid && el.value !== undefined && el.value !== null) {
+          // CRITICAL: Only broadcast NON-EMPTY values during snapshot catchup so blank/fresh forms never overwrite active peer data
+          if (fid && el.value !== undefined && el.value !== null && String(el.value).trim() !== '') {
             broadcastFieldChange(fid, el.value, {
               label: el.placeholder || el.name || '',
               isSnapshot: true
@@ -1319,7 +1320,7 @@
         });
         if (document.activeElement && (!container || container.contains(document.activeElement))) {
           const fid = getFieldIdentifier(document.activeElement);
-          if (fid) {
+          if (fid && document.activeElement.value && String(document.activeElement.value).trim() !== '') {
             broadcastFieldFocus(fid, true, {
               label: document.activeElement.placeholder || document.activeElement.name || ''
             });
