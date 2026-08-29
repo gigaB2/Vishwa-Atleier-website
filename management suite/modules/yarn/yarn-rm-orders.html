@@ -1050,19 +1050,11 @@
                                 <div style={{display: 'flex', gap: '0.4rem', justifyContent: 'center'}}>
                                   <button 
                                     className="btn btn-outline" 
-                                    style={{padding: '0.35rem 0.65rem', fontSize: '0.8rem'}} 
+                                    style={{padding: '0.35rem 0.65rem', fontSize: '0.8rem', whiteSpace: 'nowrap'}} 
                                     onClick={() => setSelectedOrder(order)}
-                                    title="View Delivery Batches & Inward Challans"
+                                    title="Add Inward Challan & Edit Order Details"
                                   >
-                                    📥 Inward
-                                  </button>
-                                  <button 
-                                    className="btn btn-outline" 
-                                    style={{padding: '0.35rem 0.65rem', fontSize: '0.8rem'}}
-                                    onClick={() => { setEditingOrder(order); setShowOrderModal(true); }}
-                                    title="Edit Order / Fill Rate"
-                                  >
-                                    ✏️
+                                    + Challan
                                   </button>
                                   <button 
                                     className="btn btn-outline" 
@@ -1110,6 +1102,8 @@
           {selectedOrder && (
             <OrderInwardModal 
               order={selectedOrder}
+              qualities={qualities}
+              suppliers={suppliers}
               onClose={() => setSelectedOrder(null)}
               onUpdate={handleUpdateBatches}
             />
@@ -1331,11 +1325,25 @@
       );
     };
 
-    // Component: Order Inward & Challan Modal
-    const OrderInwardModal = ({ order, onClose, onUpdate }) => {
+    // Component: Order Details & Inward Challans Modal (Unified + Challan Modal)
+    const OrderInwardModal = ({ order, qualities, suppliers, onClose, onUpdate }) => {
       const [showBatchForm, setShowBatchForm] = useState(false);
       const [editingBatch, setEditingBatch] = useState(null);
+      const [showEditOrder, setShowEditOrder] = useState(false);
       const [syncToStockBook, setSyncToStockBook] = useState(true);
+
+      // Order edit form state
+      const [orderForm, setOrderForm] = useState({
+        orderDate: order.orderDate || order.createdAt?.split('T')[0] || '',
+        supplier: order.supplier || '',
+        category: order.category || order.itemType || 'Polyester',
+        quality: order.quality || '',
+        code: order.code || '',
+        color: order.color || '',
+        orderedWeight: order.orderedWeight || '',
+        price: order.price || '',
+        status: order.status || 'Active'
+      });
 
       const netReceived = (order.batches || []).reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
       const totalGR = (order.batches || []).reduce((acc, b) => 
@@ -1345,10 +1353,84 @@
       const orderedWt = Number(order.orderedWeight) || 0;
       const pendingBalance = Math.max(0, orderedWt - netReceived);
 
+      // Filtered qualities for order edit
+      const validQualities = useMemo(() => {
+        return (qualities || []).filter(q => {
+          const qType = q.type || q.itemType || 'Polyester';
+          if (orderForm.category && qType !== orderForm.category) return false;
+          return true;
+        });
+      }, [qualities, orderForm.category]);
+
+      const validCodes = useMemo(() => {
+        const codes = (qualities || []).filter(q => {
+          const qType = q.type || q.itemType || 'Polyester';
+          const qQual = q.quality || q.name || '';
+          if (orderForm.category && qType !== orderForm.category) return false;
+          if (orderForm.quality && qQual !== orderForm.quality) return false;
+          return true;
+        }).map(q => q.code).filter(Boolean);
+        return [...new Set(codes)];
+      }, [qualities, orderForm.category, orderForm.quality]);
+
+      const validColors = useMemo(() => {
+        const colors = (qualities || []).filter(q => {
+          const qType = q.type || q.itemType || 'Polyester';
+          const qQual = q.quality || q.name || '';
+          if (orderForm.category && qType !== orderForm.category) return false;
+          if (orderForm.quality && qQual !== orderForm.quality) return false;
+          return true;
+        }).map(q => q.color).filter(Boolean);
+        return [...new Set(colors)];
+      }, [qualities, orderForm.category, orderForm.quality]);
+
+      const handleSaveOrderDetails = (e) => {
+        e.preventDefault();
+        const updated = {
+          ...order,
+          ...orderForm,
+          orderedWeight: Number(orderForm.orderedWeight) || order.orderedWeight
+        };
+
+        // Update corresponding lots in Yarn RM Stock Book if rate or details changed
+        try {
+          const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
+          let stockList = rawStock ? JSON.parse(rawStock) : [];
+          if (Array.isArray(stockList)) {
+            const orderRef = order.orderNumber || order.id;
+            let lotChanged = false;
+            stockList = stockList.map(lot => {
+              if (lot.orderRef === orderRef) {
+                lotChanged = true;
+                return {
+                  ...lot,
+                  supplier: updated.supplier,
+                  quality: updated.quality,
+                  itemType: updated.category,
+                  code: updated.code,
+                  color: updated.color,
+                  rate: updated.price || ''
+                };
+              }
+              return lot;
+            });
+            if (lotChanged) {
+              localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
+              if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
+              }
+            }
+          }
+        } catch(err) {}
+
+        onUpdate(updated);
+        setShowEditOrder(false);
+      };
+
       const handleSaveBatch = (batchData) => {
         let updatedBatches;
         if (editingBatch) {
-          updatedBatches = order.batches.map(b => b.id === editingBatch.id ? { ...b, ...batchData } : b);
+          updatedBatches = (order.batches || []).map(b => b.id === editingBatch.id ? { ...b, ...batchData } : b);
         } else {
           const newBatch = {
             ...batchData,
@@ -1367,7 +1449,7 @@
           status: newStatus
         };
 
-        // Transfer to Yarn RM Stock Book if enabled
+        // Transfer to Yarn RM Stock Book directly
         if (syncToStockBook && batchData.boxes && batchData.boxes.length > 0) {
           try {
             const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
@@ -1375,8 +1457,8 @@
             if (!Array.isArray(stockList)) stockList = [];
 
             const stockLot = {
-              id: batchData.lotNumber || ('LOT-' + Date.now().toString().slice(-4)),
-              lotNumber: batchData.lotNumber || 'LOT-AUTO',
+              id: batchData.lotNumber || ('LOT-' + (batchData.challanNumber || Date.now().toString().slice(-4))),
+              lotNumber: batchData.lotNumber || ('LOT-' + (batchData.challanNumber || 'AUTO')),
               challanNumber: batchData.challanNumber || '',
               date: batchData.receiveDate || new Date().toISOString().split('T')[0],
               supplier: order.supplier,
@@ -1397,9 +1479,12 @@
             };
 
             // Avoid duplicate lot addition
-            stockList = stockList.filter(s => s.id !== stockLot.id);
+            stockList = stockList.filter(s => s.id !== stockLot.id && s.lotNumber !== stockLot.lotNumber);
             stockList.unshift(stockLot);
             localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+              window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
+            }
           } catch(e) {
             console.error('Error syncing to yarn stock book:', e);
           }
@@ -1411,9 +1496,30 @@
       };
 
       const handleDeleteBatch = (batchId) => {
-        if (confirm('Delete this delivery batch?')) {
+        if (confirm('Delete this delivery batch and remove its boxes from Yarn RM Stock?')) {
+          const delBatch = (order.batches || []).find(b => b.id === batchId);
           const updatedBatches = (order.batches || []).filter(b => b.id !== batchId);
           const newNet = updatedBatches.reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
+
+          // Remove from stock book
+          if (delBatch) {
+            try {
+              const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
+              let stockList = rawStock ? JSON.parse(rawStock) : [];
+              if (Array.isArray(stockList)) {
+                stockList = stockList.filter(s => 
+                  s.id !== delBatch.lotNumber && 
+                  s.lotNumber !== delBatch.lotNumber && 
+                  s.challanNumber !== delBatch.challanNumber
+                );
+                localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                  window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
+                }
+              }
+            } catch(e) {}
+          }
+
           onUpdate({
             ...order,
             batches: updatedBatches,
@@ -1424,34 +1530,160 @@
 
       return (
         <div className="modal-overlay">
-          <div className="modal modal-lg">
+          <div className="modal modal-lg" style={{maxWidth: '1000px'}}>
             <div className="modal-header">
               <div>
-                <h2>📥 Inward Deliveries & Challans</h2>
+                <h2>📦 {order.quality} — {order.supplier}</h2>
                 <p style={{color: 'var(--muted)', fontSize: '0.85rem', marginTop: '0.2rem'}}>
-                  Order #{order.orderNumber} — <strong>{order.quality}</strong> ({order.supplier})
+                  Order #{order.orderNumber} | {order.category || 'Polyester'} | Code: {order.code || '-'} | Color: {order.color || '-'} | Rate: {order.price ? `₹${Number(order.price).toFixed(2)}` : 'Pending'}
                 </p>
               </div>
-              <button className="modal-close" onClick={onClose}>&times;</button>
+              <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>
+                <button 
+                  className="btn btn-outline" 
+                  style={{fontSize: '0.8rem', padding: '0.35rem 0.75rem'}}
+                  onClick={() => setShowEditOrder(!showEditOrder)}
+                >
+                  {showEditOrder ? '▲ Hide Order Edit' : '✏️ Edit Order Info / Rate'}
+                </button>
+                <button className="modal-close" onClick={onClose}>&times;</button>
+              </div>
             </div>
 
+            {/* Inline Order Edit Panel */}
+            {showEditOrder && (
+              <form onSubmit={handleSaveOrderDetails} style={{background: 'var(--bg)', border: '1.5px solid var(--accent)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem'}}>
+                <h4 style={{marginBottom: '1rem', color: 'var(--accent)'}}>✏️ Edit Order Properties</h4>
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem'}}>
+                  <div className="input-group" style={{marginBottom: 0}}>
+                    <label>Order Date</label>
+                    <input 
+                      type="date" 
+                      value={orderForm.orderDate} 
+                      onChange={e => setOrderForm({...orderForm, orderDate: e.target.value})} 
+                      required 
+                    />
+                  </div>
+                  <div className="input-group" style={{marginBottom: 0}}>
+                    <label>RM Supplier</label>
+                    <select 
+                      value={orderForm.supplier} 
+                      onChange={e => setOrderForm({...orderForm, supplier: e.target.value})}
+                      required
+                    >
+                      {suppliers.map((s, idx) => {
+                        const sName = s.name || s.supplier;
+                        return <option key={idx} value={sName}>{sName}</option>;
+                      })}
+                    </select>
+                  </div>
+                  <div className="input-group" style={{marginBottom: 0}}>
+                    <label>Item Type</label>
+                    <select 
+                      value={orderForm.category} 
+                      onChange={e => setOrderForm({...orderForm, category: e.target.value})}
+                      required
+                    >
+                      {YARN_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="input-group" style={{marginBottom: 0}}>
+                    <label>Yarn Quality</label>
+                    <select 
+                      value={orderForm.quality} 
+                      onChange={e => setOrderForm({...orderForm, quality: e.target.value})}
+                      required
+                    >
+                      {validQualities.map((q, idx) => {
+                        const qName = q.quality || q.name;
+                        return <option key={idx} value={qName}>{qName}{q.color ? ` (${q.color})` : ''}</option>;
+                      })}
+                    </select>
+                  </div>
+                  <div className="input-group" style={{marginBottom: 0}}>
+                    <label>Yarn Code</label>
+                    <select 
+                      value={orderForm.code} 
+                      onChange={e => setOrderForm({...orderForm, code: e.target.value})}
+                    >
+                      <option value="">-- Code --</option>
+                      {validCodes.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="input-group" style={{marginBottom: 0}}>
+                    <label>Color</label>
+                    <select 
+                      value={orderForm.color} 
+                      onChange={e => setOrderForm({...orderForm, color: e.target.value})}
+                    >
+                      <option value="">-- Color --</option>
+                      {validColors.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="input-group" style={{marginBottom: 0}}>
+                    <label>Total Ordered Qty (Kg)</label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={orderForm.orderedWeight} 
+                      onChange={e => setOrderForm({...orderForm, orderedWeight: e.target.value})} 
+                      required 
+                    />
+                  </div>
+                  <div className="input-group" style={{marginBottom: 0}}>
+                    <label>Rate (₹/Kg) <span style={{color: 'var(--muted)', fontWeight: 'normal'}}>(Optional)</span></label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      placeholder="₹ Rate"
+                      value={orderForm.price || ''} 
+                      onChange={e => setOrderForm({...orderForm, price: e.target.value})} 
+                    />
+                  </div>
+                  <div className="input-group" style={{marginBottom: 0}}>
+                    <label>Status</label>
+                    <select 
+                      value={orderForm.status} 
+                      onChange={e => setOrderForm({...orderForm, status: e.target.value})}
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{display: 'flex', gap: '0.75rem', justifyContent: 'flex-end'}}>
+                  <button type="button" className="btn btn-outline" onClick={() => setShowEditOrder(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary">Save Order Details</button>
+                </div>
+              </form>
+            )}
+
             {/* Order Summary Cards */}
-            <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem'}}>
-              <div className="card" style={{padding: '1rem', boxShadow: 'none'}}>
-                <div style={{fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Total Ordered</div>
-                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: '700'}}>{orderedWt.toLocaleString()} kg</div>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '1.5rem'}}>
+              <div className="card" style={{padding: '0.85rem', boxShadow: 'none'}}>
+                <div style={{fontSize: '0.72rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Total Ordered</div>
+                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '700'}}>{orderedWt.toLocaleString()} kg</div>
               </div>
-              <div className="card" style={{padding: '1rem', boxShadow: 'none'}}>
-                <div style={{fontSize: '0.75rem', color: 'var(--success)', textTransform: 'uppercase'}}>Net Received</div>
-                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: '700', color: 'var(--success)'}}>{netReceived.toFixed(1)} kg</div>
+              <div className="card" style={{padding: '0.85rem', boxShadow: 'none'}}>
+                <div style={{fontSize: '0.72rem', color: 'var(--success)', textTransform: 'uppercase'}}>Net Received</div>
+                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '700', color: 'var(--success)'}}>{netReceived.toFixed(1)} kg</div>
               </div>
-              <div className="card" style={{padding: '1rem', boxShadow: 'none'}}>
-                <div style={{fontSize: '0.75rem', color: 'var(--accent3)', textTransform: 'uppercase'}}>Goods Return (GR)</div>
-                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: '700', color: 'var(--accent3)'}}>{totalGR.toFixed(1)} kg</div>
+              <div className="card" style={{padding: '0.85rem', boxShadow: 'none'}}>
+                <div style={{fontSize: '0.72rem', color: 'var(--accent3)', textTransform: 'uppercase'}}>Goods Return (GR)</div>
+                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '700', color: 'var(--accent3)'}}>{totalGR.toFixed(1)} kg</div>
               </div>
-              <div className="card" style={{padding: '1rem', boxShadow: 'none'}}>
-                <div style={{fontSize: '0.75rem', color: 'var(--info)', textTransform: 'uppercase'}}>Pending Balance</div>
-                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: '700', color: 'var(--info)'}}>{pendingBalance.toFixed(1)} kg</div>
+              <div className="card" style={{padding: '0.85rem', boxShadow: 'none'}}>
+                <div style={{fontSize: '0.72rem', color: 'var(--info)', textTransform: 'uppercase'}}>Pending Balance</div>
+                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '700', color: 'var(--info)'}}>{pendingBalance.toFixed(1)} kg</div>
+              </div>
+              <div className="card" style={{padding: '0.85rem', boxShadow: 'none'}}>
+                <div style={{fontSize: '0.72rem', color: 'var(--accent)', textTransform: 'uppercase'}}>Rate (₹/Kg)</div>
+                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '700', color: 'var(--accent)'}}>
+                  {order.price ? `₹${Number(order.price).toFixed(2)}` : 'Pending'}
+                </div>
               </div>
             </div>
 
@@ -1493,7 +1725,7 @@
                       {(order.batches || []).length === 0 ? (
                         <tr>
                           <td colSpan="9" style={{textAlign: 'center', padding: '2rem', color: 'var(--muted)'}}>
-                            No challan deliveries recorded yet. Click "+ Record Incoming Challan" to add boxes.
+                            No challan deliveries recorded yet. Click "+ Record Incoming Challan" to add inward boxes.
                           </td>
                         </tr>
                       ) : (
