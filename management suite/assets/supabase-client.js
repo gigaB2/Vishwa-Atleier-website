@@ -1304,19 +1304,20 @@
     });
 
     // Function to broadcast all currently filled input fields so new/joining users immediately see active entry data
-    function broadcastActiveFormSnapshot() {
+    function broadcastActiveFormSnapshot(container) {
       try {
-        const inputs = document.querySelectorAll('input:not([type="password"]):not([type="hidden"]):not([type="file"]), textarea, select');
+        const root = (container && typeof container.querySelectorAll === 'function') ? container : document;
+        const inputs = root.querySelectorAll('input:not([type="password"]):not([type="hidden"]):not([type="file"]), textarea, select');
         inputs.forEach(el => {
           const fid = getFieldIdentifier(el);
-          if (fid && el.value !== undefined && el.value !== null && el.value.trim() !== '') {
+          if (fid && el.value !== undefined && el.value !== null) {
             broadcastFieldChange(fid, el.value, {
               label: el.placeholder || el.name || '',
               isSnapshot: true
             });
           }
         });
-        if (document.activeElement) {
+        if (document.activeElement && (!container || container.contains(document.activeElement))) {
           const fid = getFieldIdentifier(document.activeElement);
           if (fid) {
             broadcastFieldFocus(fid, true, {
@@ -2485,9 +2486,9 @@
     broadcastFieldFocus: (fieldId, isFocused, meta) => broadcastFieldFocus(fieldId, isFocused, meta),
     broadcastFieldChange: (fieldId, value, meta) => broadcastFieldChange(fieldId, value, meta),
     broadcastFormClear: (fieldIds) => broadcastFormClear(fieldIds),
-    broadcastActiveFormSnapshot: () => {
+    broadcastActiveFormSnapshot: (container) => {
       if (typeof window.__vf_broadcastActiveFormSnapshot === 'function') {
-        window.__vf_broadcastActiveFormSnapshot();
+        window.__vf_broadcastActiveFormSnapshot(container);
       }
     },
     getAvatarColors: () => AVATAR_COLORS

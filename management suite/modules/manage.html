@@ -4136,13 +4136,20 @@ function openEditEmployeeModal(empId) {
 
     handleSalaryStyleChange(true);
     document.getElementById('edit-employee-modal').style.display = 'flex';
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastActiveFormSnapshot === 'function') {
+      window.VishwaSupabase.broadcastActiveFormSnapshot(document.getElementById('edit-employee-modal'));
+    }
 }
 
 function closeEditEmployeeModal() {
-
-            document.getElementById('edit-employee-modal').style.display = 'none';
-
-        }
+    document.getElementById('edit-employee-modal').style.display = 'none';
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear([
+        'edit-emp-id', 'edit-emp-name', 'edit-emp-role', 'edit-emp-salary-style', 
+        'edit-emp-salary-amount', 'edit-emp-join-date', 'edit-emp-termination-date'
+      ]);
+    }
+}
 
 function handleSalaryStyleChange(isEdit) {
 
@@ -6028,6 +6035,10 @@ function showToast(message, type = 'info') {
     document.getElementById('btn-cancel-quality-edit').style.display = 'inline-block';
     
     document.getElementById('quality-form-title').scrollIntoView({ behavior: 'smooth' });
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastActiveFormSnapshot === 'function') {
+      window.VishwaSupabase.broadcastActiveFormSnapshot();
+    }
   }
 
   function cancelQualityEdit() {
@@ -6206,6 +6217,10 @@ function showToast(message, type = 'info') {
     document.getElementById('btn-cancel-supplier-edit').style.display = 'inline-block';
     
     document.getElementById('supplier-form-title').scrollIntoView({ behavior: 'smooth' });
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastActiveFormSnapshot === 'function') {
+      window.VishwaSupabase.broadcastActiveFormSnapshot();
+    }
   }
 
   function cancelSupplierEdit() {
@@ -6527,6 +6542,10 @@ function showToast(message, type = 'info') {
     document.getElementById('btn-cancel-loom-edit').style.display = 'inline-block';
     
     document.getElementById('loom-form-title').scrollIntoView({ behavior: 'smooth' });
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastActiveFormSnapshot === 'function') {
+      window.VishwaSupabase.broadcastActiveFormSnapshot();
+    }
   }
 
   function cancelLoomEdit() {
@@ -6647,6 +6666,10 @@ function showToast(message, type = 'info') {
     document.getElementById('btn-cancel-jacquard-edit').style.display = 'inline-block';
     
     document.getElementById('jacquard-form-title').scrollIntoView({ behavior: 'smooth' });
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastActiveFormSnapshot === 'function') {
+      window.VishwaSupabase.broadcastActiveFormSnapshot();
+    }
   }
 
   function cancelJacquardEdit() {
@@ -7913,6 +7936,10 @@ function showToast(message, type = 'info') {
     document.getElementById('btn-cancel-jala-edit').style.display = 'inline-block';
     
     document.getElementById('jala-form-title').scrollIntoView({ behavior: 'smooth' });
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastActiveFormSnapshot === 'function') {
+      window.VishwaSupabase.broadcastActiveFormSnapshot();
+    }
   }
 
   function cancelJalaEdit() {
@@ -8106,6 +8133,10 @@ function showToast(message, type = 'info') {
     document.getElementById('btn-cancel-fani-edit').style.display = 'inline-block';
     
     document.getElementById('fani-form-title').scrollIntoView({ behavior: 'smooth' });
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastActiveFormSnapshot === 'function') {
+      window.VishwaSupabase.broadcastActiveFormSnapshot();
+    }
   }
 
   function cancelFaniEdit() {
@@ -8410,6 +8441,10 @@ function showToast(message, type = 'info') {
     
     document.getElementById('btn-cancel-machine-edit').style.display = 'inline-block';
     document.getElementById('machine-form-title').scrollIntoView({ behavior: 'smooth' });
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastActiveFormSnapshot === 'function') {
+      window.VishwaSupabase.broadcastActiveFormSnapshot();
+    }
   }
 
   function cancelMachineEdit() {
