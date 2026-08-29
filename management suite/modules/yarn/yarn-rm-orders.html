@@ -168,9 +168,9 @@
     }
 
     .app-container {
-      max-width: 1350px;
+      max-width: 100%;
       margin: 0 auto;
-      padding: 2rem 1.5rem 4rem 1.5rem;
+      padding: 2rem;
       min-height: 100vh;
     }
 
@@ -232,7 +232,7 @@
     }
 
     .btn {
-      padding: 0.65rem 1.25rem;
+      padding: 0.75rem 1.5rem;
       border-radius: 12px;
       font-weight: 600;
       cursor: pointer;
@@ -242,7 +242,7 @@
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       text-decoration: none;
     }
 
@@ -253,24 +253,13 @@
     }
 
     .btn-primary:hover {
-      transform: translateY(-1px);
+      transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
-    }
-
-    .btn-secondary {
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      color: var(--fg);
-    }
-
-    .btn-secondary:hover {
-      border-color: var(--accent);
-      color: var(--accent);
     }
 
     .btn-outline {
       background: transparent;
-      border: 1.5px solid var(--border);
+      border: 2px solid var(--border);
       color: var(--fg);
     }
 
@@ -280,14 +269,14 @@
     }
 
     .input-group {
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.5rem;
     }
 
     .input-group label {
       display: block;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.75rem;
       font-weight: 600;
-      font-size: 0.8rem;
+      font-size: 0.9rem;
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -295,114 +284,63 @@
 
     input, select, textarea {
       width: 100%;
-      padding: 0.75rem 1rem;
-      border-radius: 10px;
-      border: 1.5px solid var(--border);
+      padding: 0.85rem 1.25rem;
+      border-radius: 12px;
+      border: 2px solid var(--border);
       background: var(--surface);
       color: var(--fg);
       font-family: var(--font-body);
       transition: all var(--transition-fast);
-      font-size: 0.95rem;
+      font-size: 1rem;
     }
 
     input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
+      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
     }
 
-    .metrics-grid {
+    .dashboard-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1.25rem;
-      margin-bottom: 2rem;
-    }
-
-    .metric-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-      box-shadow: var(--shadow-sm);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .metric-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 4px;
-      height: 100%;
-      background: var(--accent);
-    }
-
-    .metric-card.success-card::before { background: var(--success); }
-    .metric-card.danger-card::before { background: var(--error); }
-    .metric-card.gr-card::before { background: var(--accent3); }
-    .metric-card.info-card::before { background: var(--info); }
-
-    .metric-title {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.35rem;
-    }
-
-    .metric-val {
-      font-family: var(--font-display);
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: var(--fg);
-    }
-
-    .metric-sub {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-top: 0.35rem;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
     }
 
     .ob-filter-toolbar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
       gap: 1rem;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
     }
 
     .ob-filter-type-toggle {
       display: flex;
-      gap: 0.35rem;
+      gap: 0.5rem;
       background: var(--bg);
-      padding: 4px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
+      padding: 0.25rem;
+      border-radius: 10px;
       flex-wrap: wrap;
     }
 
-    .type-btn {
-      padding: 0.35rem 0.85rem;
-      font-size: 0.8rem;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all var(--transition-fast);
-      background: transparent;
-      color: var(--muted);
+    .ob-filter-grid {
+      display: grid;
+      gap: 1rem;
+      align-items: end;
+      margin-bottom: 1.5rem;
+      width: 100%;
+      max-width: 100%;
     }
 
-    .type-btn.active {
-      background: var(--surface);
-      color: var(--accent);
-      box-shadow: var(--shadow-sm);
+    .ob-summary-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      width: 100%;
+      max-width: 100%;
     }
 
     .table-responsive {
@@ -410,39 +348,57 @@
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       margin-top: 1rem;
-      border-radius: 12px;
-      border: 1px solid var(--border);
+      border-radius: 8px;
+      position: relative;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      text-align: left;
+      margin-top: 1rem;
     }
 
     th {
-      background: var(--bg);
-      color: var(--muted);
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 0.85rem 0.75rem;
+      text-align: center;
+      padding: 1rem 0.5rem;
       border-bottom: 2px solid var(--border);
+      font-family: var(--font-body);
+      font-weight: 700;
+      color: var(--fg);
+      background: linear-gradient(to bottom, rgba(139, 92, 246, 0.04), transparent);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-size: 0.8rem;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
       white-space: nowrap;
       cursor: pointer;
       user-select: none;
     }
 
     th:hover {
+      background: linear-gradient(to bottom, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.02));
       color: var(--accent);
     }
 
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
     td {
-      padding: 0.9rem 0.75rem;
+      padding: 1rem 0.5rem;
       border-bottom: 1px solid var(--border);
-      font-size: 0.88rem;
-      vertical-align: middle;
+      font-size: 0.9rem;
+      text-align: center;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      word-break: break-word;
+      max-width: 300px;
+      overflow: hidden;
     }
 
     tr:hover td {
@@ -451,176 +407,120 @@
 
     .badge {
       display: inline-flex;
-      align-items: center;
-      padding: 0.3rem 0.65rem;
+      padding: 0.35rem 0.75rem;
       border-radius: 20px;
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
     }
 
-    .badge-pending { background: rgba(249, 115, 22, 0.12); color: var(--accent3); }
-    .badge-active { background: rgba(59, 130, 246, 0.12); color: var(--info); }
-    .badge-partial { background: rgba(139, 92, 246, 0.12); color: var(--accent); }
-    .badge-completed { background: rgba(16, 185, 129, 0.12); color: var(--success); }
-    .badge-cancelled { background: rgba(239, 68, 68, 0.12); color: var(--error); }
-    .badge-yarn { background: rgba(16, 185, 129, 0.12); color: var(--success); }
+    .badge-polyester { background: rgba(139, 92, 246, 0.1); color: var(--accent); }
+    .badge-nylon     { background: rgba(236, 72, 153, 0.1); color: var(--accent2); }
+    .badge-viscose   { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+    .badge-active    { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+    .badge-completed { background: rgba(139, 143, 163, 0.1); color: var(--muted); }
+    .badge-cancelled { background: rgba(239, 68, 68, 0.1); color: var(--error); }
 
     .progress-mini-container {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      min-width: 140px;
     }
 
     .progress-mini-text {
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
     }
 
     .progress-mini-bar-bg {
       width: 100%;
-      height: 7px;
-      background: var(--border);
+      height: 8px;
+      background: rgba(0,0,0,0.05);
       border-radius: 4px;
       overflow: hidden;
       display: flex;
     }
 
-    /* Modals */
     .modal-overlay {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(10, 10, 20, 0.75);
+      background: rgba(10, 10, 26, 0.75);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       display: flex;
-      align-items: center;
       justify-content: center;
-      padding: 1.5rem;
-      z-index: 9999;
+      align-items: center;
+      overflow-y: auto;
+      padding: 1.25rem;
+      z-index: 100005;
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .modal {
       background: var(--surface);
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-xl);
-      max-width: 750px;
+      border-radius: 24px;
+      padding: 2.5rem;
       width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      padding: 2rem;
+      max-width: 800px;
+      max-height: calc(100dvh - 2.5rem);
+      box-shadow: var(--shadow-xl);
       position: relative;
+      overflow-y: auto;
     }
 
-    .modal-lg {
-      max-width: 1100px;
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .modal-header h2 {
-      font-family: var(--font-display);
-      font-size: 1.4rem;
-      color: var(--fg);
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: var(--muted);
-      transition: color 0.2s;
-    }
-
-    .modal-close:hover {
-      color: var(--error);
-    }
-
-    /* Heat Map Calendar Grid */
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 6px;
-      margin-top: 1rem;
-    }
-
-    .calendar-weekday {
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: var(--muted);
-      text-align: center;
-      padding: 0.5rem 0;
-    }
-
-    .calendar-day {
-      aspect-ratio: 1.1;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      padding: 6px;
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(var(--surface-rgb, 255, 255, 255), 0.85);
+      backdrop-filter: blur(4px);
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      transition: all var(--transition-fast);
-      position: relative;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      border-radius: var(--radius);
     }
 
-    .calendar-day:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-sm);
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(139, 92, 246, 0.2);
+      border-top: 3px solid var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 1rem;
     }
 
-    .calendar-day-empty {
-      background: transparent;
-      border: none;
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
-    .day-number {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--muted);
+    @media (max-width: 1024px) {
+      .app-container {
+        padding: 0.5rem 1rem 2rem;
+      }
+      .ob-summary-row {
+        grid-template-columns: 1fr;
+      }
+      .ob-filter-grid {
+        grid-template-columns: 1fr 1fr !important;
+      }
     }
-
-    .heat-level-0 { background: var(--surface); }
-    .heat-level-1 { background: rgba(139, 92, 246, 0.08); }
-    .heat-level-2 { background: rgba(139, 92, 246, 0.18); }
-    .heat-level-3 { background: rgba(139, 92, 246, 0.32); }
-    .heat-level-4 { background: rgba(139, 92, 246, 0.5); }
-    .heat-level-5 { background: rgba(139, 92, 246, 0.75); color: #fff; }
-
-    .day-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 3px;
-    }
-
-    .chip-sm {
-      font-size: 0.65rem;
-      padding: 2px 4px;
-      border-radius: 4px;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    .chip-order { background: rgba(59, 130, 246, 0.15); color: var(--info); }
-    .chip-inward { background: rgba(16, 185, 129, 0.15); color: var(--success); }
-    .chip-gr { background: rgba(249, 115, 22, 0.15); color: var(--accent3); }
   </style>
 </head>
 <body>
@@ -629,79 +529,193 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    const YARN_CATEGORIES = ['Polyester', 'Nylon', 'Viscose'];
-
     const YARN_ORDERS_STORAGE_KEY = 'yarn-rm-orders';
     const YARN_STOCK_STORAGE_KEY = 'vishwa_yarn_rm_stock_data';
+    const YARN_CATEGORIES = ['Polyester', 'Nylon', 'Viscose'];
 
-    // Hook for storage
-    function useSyncedStorage(key, defaultValue) {
+    const DEMO_QUALITIES = [
+      { id: '1', quality: '75/36 Bright', type: 'Polyester', code: '7536BR', color: 'Optic White', supplier: 'Reliance Industries' },
+      { id: '2', quality: '70/24 Semi Dull', type: 'Nylon', code: '7024SD', color: 'Raw White', supplier: 'Gujarat Polysol' },
+      { id: '3', quality: '120/48 Bright', type: 'Viscose', code: '12048BR', color: 'Jet Black', supplier: 'Grasim Industries' }
+    ];
+
+    const DEMO_SUPPLIERS = [
+      { id: '1', name: 'Reliance Industries', contact: 'Rajesh Shah', phone: '9825100001' },
+      { id: '2', name: 'Gujarat Polysol', contact: 'Ketan Patel', phone: '9825100002' },
+      { id: '3', name: 'Grasim Industries', contact: 'Suresh Verma', phone: '9825100003' }
+    ];
+
+    const addTimestampToDate = (dateStr) => {
+      if (!dateStr) return dateStr;
+      if (dateStr.includes('T') || dateStr.includes(':') || dateStr.length > 10) {
+        return dateStr;
+      }
+      const now = new Date();
+      const pad = (num) => String(num).padStart(2, '0');
+      const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${String(now.getMilliseconds()).padStart(3, '0')}`;
+      return `${dateStr}T${timeStr}`;
+    };
+
+    // Synced storage hook
+    const useSyncedStorage = (key, initialValue) => {
       const [data, setData] = useState(() => {
         try {
-          const stored = localStorage.getItem(key);
-          return stored ? JSON.parse(stored) : defaultValue;
+          const item = localStorage.getItem(key);
+          return item ? JSON.parse(item) : initialValue;
         } catch (e) {
-          return defaultValue;
+          return initialValue;
         }
       });
 
-      const updateData = (newVal) => {
-        const valueToStore = typeof newVal === 'function' ? newVal(data) : newVal;
-        setData(valueToStore);
+      useEffect(() => {
         try {
-          localStorage.setItem(key, JSON.stringify(valueToStore));
+          localStorage.setItem(key, JSON.stringify(data));
           if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
-            window.VishwaSupabase.saveToSupabase(key, valueToStore);
+            window.VishwaSupabase.saveToSupabase(key, data);
           }
-        } catch (e) {
-          console.error(`Error saving ${key}:`, e);
-        }
-      };
+        } catch(e) {}
+      }, [key, data]);
+
+      return [data, setData];
+    };
+
+    // Component: Searchable Dropdown
+    const SearchableDropdown = ({ label, placeholder, options, value, onChange, emptyLabel = "-- All --" }) => {
+      const [isOpen, setIsOpen] = useState(false);
+      const [search, setSearch] = useState('');
+      const wrapperRef = useRef(null);
+
+      const filteredOptions = useMemo(() => {
+        if (!search.trim()) return options;
+        return options.filter(opt => opt.toLowerCase().includes(search.toLowerCase()));
+      }, [options, search]);
 
       useEffect(() => {
-        const handleSync = (e) => {
-          if (e?.detail?.key === key && e?.detail?.value) {
-            setData(e.detail.value);
+        const handleClickOutside = (event) => {
+          if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+            setIsOpen(false);
           }
         };
-        window.addEventListener('supabase-synced', handleSync);
-        window.addEventListener('storage', (e) => {
-          if (e.key === key && e.newValue) {
-            try { setData(JSON.parse(e.newValue)); } catch(err) {}
-          }
-        });
-        return () => {
-          window.removeEventListener('supabase-synced', handleSync);
-        };
-      }, [key]);
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+      }, []);
 
-      return [data, updateData];
-    }
+      return (
+        <div className="input-group" ref={wrapperRef} style={{ position: 'relative', marginBottom: 0 }}>
+          {label && <label>{label}</label>}
+          <div 
+            onClick={() => setIsOpen(!isOpen)} 
+            style={{ 
+              padding: '0.85rem 1.25rem', 
+              borderRadius: '12px', 
+              border: '2px solid var(--border)', 
+              background: 'var(--surface)', 
+              color: value ? 'var(--fg)' : 'var(--muted)', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              fontSize: '0.95rem' 
+            }}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {value || emptyLabel}
+            </span>
+            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>▼</span>
+          </div>
+
+          {isOpen && (
+            <div style={{ 
+              position: 'absolute', 
+              top: '100%', 
+              left: 0, 
+              right: 0, 
+              background: 'var(--surface)', 
+              border: '2px solid var(--border)', 
+              borderRadius: '12px', 
+              marginTop: '4px', 
+              boxShadow: 'var(--shadow-lg)', 
+              zIndex: 1000, 
+              maxHeight: '220px', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              overflow: 'hidden' 
+            }}>
+              <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+                <input 
+                  type="text" 
+                  autoFocus 
+                  placeholder={placeholder} 
+                  value={search} 
+                  onChange={e => setSearch(e.target.value)} 
+                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }} 
+                  onClick={e => e.stopPropagation()} 
+                />
+              </div>
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                <div 
+                  onClick={() => { onChange(''); setIsOpen(false); setSearch(''); }} 
+                  style={{ 
+                    padding: '0.6rem 1rem', 
+                    cursor: 'pointer', 
+                    borderBottom: '1px solid var(--border)', 
+                    color: 'var(--muted)', 
+                    fontSize: '0.85rem' 
+                  }}
+                >
+                  {emptyLabel}
+                </div>
+                {filteredOptions.length === 0 ? (
+                  <div style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--muted)', fontSize: '0.85rem' }}>No results</div>
+                ) : (
+                  filteredOptions.map((opt, i) => (
+                    <div 
+                      key={i} 
+                      onClick={() => { onChange(opt); setIsOpen(false); setSearch(''); }} 
+                      style={{ 
+                        padding: '0.6rem 1rem', 
+                        cursor: 'pointer', 
+                        background: value === opt ? 'rgba(139, 92, 246, 0.1)' : 'transparent', 
+                        color: value === opt ? 'var(--accent)' : 'var(--fg)', 
+                        fontWeight: value === opt ? '600' : 'normal', 
+                        fontSize: '0.9rem' 
+                      }}
+                    >
+                      {opt}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
 
     // Main App Component
     const App = () => {
       const [orders, setOrders] = useSyncedStorage(YARN_ORDERS_STORAGE_KEY, []);
-      const [qualities, setQualities] = useSyncedStorage('yarn-qualities', []);
-      const [suppliers, setSuppliers] = useSyncedStorage('yarn-suppliers', []);
-      
+      const [qualities, setQualities] = useSyncedStorage('yarn-qualities', DEMO_QUALITIES);
+      const [suppliers, setSuppliers] = useSyncedStorage('yarn-suppliers', DEMO_SUPPLIERS);
+      const [geminiApiKey] = useSyncedStorage('gemini-api-key', '');
+      const [selectedGeminiModel] = useSyncedStorage('selected-gemini-model', 'gemini-2.0-flash');
+
       const [view, setView] = useState(() => (new URLSearchParams(window.location.search).get('view') || 'orders'));
       const [showOrderModal, setShowOrderModal] = useState(false);
       const [selectedOrder, setSelectedOrder] = useState(null);
-      const [editingOrder, setEditingOrder] = useState(null);
-      
+
       // Filters
-      const [categoryFilter, setCategoryFilter] = useState('All');
-      const [statusFilter, setStatusFilter] = useState('All');
+      const [filterType, setFilterType] = useState('All');
       const [qualityFilter, setQualityFilter] = useState('');
       const [supplierFilter, setSupplierFilter] = useState('');
       const [codeFilter, setCodeFilter] = useState('');
       const [colorFilter, setColorFilter] = useState('');
-      const [searchQuery, setSearchQuery] = useState('');
+      const [orderSearch, setOrderSearch] = useState('');
       const [fromDate, setFromDate] = useState('');
       const [toDate, setToDate] = useState('');
 
-      // Sorting
-      const [sortConfig, setSortConfig] = useState({ key: 'orderDate', direction: 'desc' });
+      // Multi-column sorting
+      const [orderSort, setOrderSort] = useState([{ key: 'orderDate', direction: 'desc' }]);
 
       // FY Synchronization
       useEffect(() => {
@@ -739,123 +753,248 @@
         }
       }, [view]);
 
-      // Calculate Metrics
-      const metrics = useMemo(() => {
-        let totalOrderedWeight = 0;
-        let totalReceivedWeight = 0;
-        let totalGRWeight = 0;
-        let activeOrdersCount = 0;
-        let completedOrdersCount = 0;
+      const allCombinations = useMemo(() => {
+        const combos = [];
+        orders.forEach(o => combos.push({ quality: o.quality, supplier: o.supplier, code: o.code, color: o.color, type: o.category || o.type || 'Polyester' }));
+        qualities.forEach(q => {
+          combos.push({ quality: q.quality, supplier: q.supplier, code: q.code, color: q.color, type: q.type || 'Polyester' });
+        });
+        const seen = new Set();
+        return combos.filter(c => {
+          const key = `${c.quality}|${c.supplier}|${c.code}|${c.color}|${c.type}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }, [qualities, orders]);
 
-        orders.forEach(o => {
-          const ordered = Number(o.orderedWeight) || 0;
-          totalOrderedWeight += ordered;
+      const getOrderOptions = (field) => {
+        const otherFilters = { quality: qualityFilter, supplier: supplierFilter, code: codeFilter, color: colorFilter, type: filterType === 'All' ? null : filterType };
+        delete otherFilters[field];
+        const relevantCombos = allCombinations.filter(c => Object.keys(otherFilters).every(k => !otherFilters[k] || c[k] === otherFilters[k]));
+        return [...new Set(relevantCombos.map(c => c[field]).filter(Boolean))].sort();
+      };
 
-          let receivedForOrder = 0;
-          (o.batches || []).forEach(b => {
-            receivedForOrder += Number(b.totalWeight) || 0;
-            (b.boxes || []).forEach(box => {
-              totalGRWeight += Number(box.returnedWeight) || 0;
-            });
-          });
-
-          totalReceivedWeight += receivedForOrder;
-
-          if (o.status === 'Completed' || (ordered > 0 && receivedForOrder >= ordered)) {
-            completedOrdersCount++;
-          } else if (o.status !== 'Cancelled') {
-            activeOrdersCount++;
-          }
+      const handleOrderFilterSelect = (field, value) => {
+        const newFilters = { 
+          quality: qualityFilter, 
+          supplier: supplierFilter, 
+          code: codeFilter, 
+          color: colorFilter,
+          [field]: value 
+        };
+        
+        let filtered = allCombinations.filter(q => {
+          return (!newFilters.quality || q.quality === newFilters.quality) &&
+                 (!newFilters.code || q.code === newFilters.code) &&
+                 (!newFilters.color || q.color === newFilters.color) &&
+                 (!newFilters.supplier || q.supplier === newFilters.supplier) &&
+                 (filterType === 'All' || q.type === filterType);
         });
 
-        const pendingWeight = Math.max(0, totalOrderedWeight - totalReceivedWeight);
-        const fulfillmentRate = totalOrderedWeight > 0 ? ((totalReceivedWeight / totalOrderedWeight) * 100).toFixed(1) : '0.0';
+        const fields = ['quality', 'supplier', 'code', 'color'];
+        const updated = { ...newFilters };
+        fields.forEach(f => {
+          const options = [...new Set(filtered.map(item => item[f]))].filter(Boolean);
+          if (options.length === 1) updated[f] = options[0];
+        });
 
-        return {
-          totalOrders: orders.length,
-          activeOrders: activeOrdersCount,
-          completedOrders: completedOrdersCount,
-          orderedWeight: totalOrderedWeight,
-          receivedWeight: totalReceivedWeight,
-          pendingWeight: pendingWeight,
-          grWeight: totalGRWeight,
-          fulfillmentRate: fulfillmentRate
-        };
-      }, [orders]);
+        setQualityFilter(updated.quality);
+        setSupplierFilter(updated.supplier);
+        setCodeFilter(updated.code);
+        setColorFilter(updated.color);
+      };
 
       // Filtered Orders
       const filteredOrders = useMemo(() => {
-        return orders.filter(o => {
-          if (categoryFilter !== 'All' && (o.category || o.itemType) !== categoryFilter) return false;
-          if (statusFilter !== 'All') {
-            if (statusFilter === 'Active' && o.status === 'Completed') return false;
-            if (statusFilter === 'Completed' && o.status !== 'Completed') return false;
-            if (statusFilter === 'Cancelled' && o.status !== 'Cancelled') return false;
+        let filtered = orders;
+        if (filterType !== 'All') filtered = filtered.filter(o => (o.category || o.type) === filterType);
+        if (qualityFilter) filtered = filtered.filter(o => o.quality === qualityFilter);
+        if (supplierFilter) filtered = filtered.filter(o => o.supplier === supplierFilter);
+        if (codeFilter) filtered = filtered.filter(o => o.code === codeFilter);
+        if (colorFilter) filtered = filtered.filter(o => o.color === colorFilter);
+        
+        if (fromDate || toDate) {
+          filtered = filtered.filter(o => {
+            const d = new Date(o.orderDate || o.createdAt);
+            d.setHours(0,0,0,0);
+            if (fromDate && d < new Date(fromDate)) return false;
+            if (toDate && d > new Date(toDate)) return false;
+            return true;
+          });
+        }
+
+        if (orderSearch.trim()) {
+          const isExact = orderSearch.includes(',');
+          const terms = orderSearch.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+          filtered = filtered.filter(o => {
+            const searchParts = [
+              o.id, o.orderNumber, o.quality, o.code, o.color, o.supplier, o.category || o.type, o.status, o.orderedWeight, o.price, 
+              new Date(o.orderDate || o.createdAt).toLocaleDateString('en-GB')
+            ];
+            
+            let hasActualGR = false;
+            (o.batches || []).forEach(b => {
+              searchParts.push(b.challanNumber, b.lotNumber, b.totalWeight);
+              if (b.receiveDate) searchParts.push(new Date(b.receiveDate).toLocaleDateString('en-GB'));
+              
+              (b.boxes || []).forEach(box => {
+                const weight = Number(box.weight) || 0;
+                const retWeight = Number(box.returnedWeight) || 0;
+                const netWeight = weight - retWeight;
+                searchParts.push(box.boxNumber, box.cones, box.weight, box.returnedWeight, netWeight.toFixed(1));
+                if (box.returnedDate) searchParts.push(new Date(box.returnedDate).toLocaleDateString('en-GB'));
+                if (retWeight > 0) hasActualGR = true;
+              });
+            });
+            
+            const searchPartsLower = searchParts.map(v => (v ?? '').toString().toLowerCase());
+            const finalContent = searchPartsLower.join(' ');
+            
+            return terms.every(term => {
+              if (isExact) {
+                return searchPartsLower.some(val => val === term) || (term === 'gr' && hasActualGR);
+              } else {
+                return finalContent.includes(term) || (term === 'gr' && hasActualGR);
+              }
+            });
+          });
+        }
+
+        return [...filtered].sort((a, b) => {
+          for (const sort of orderSort) {
+            let valA, valB;
+            if (sort.key === 'orderDate' || sort.key === 'createdAt') { 
+              valA = new Date(a[sort.key] || a.createdAt); 
+              valB = new Date(b[sort.key] || b.createdAt); 
+            }
+            else if (sort.key === 'received') { 
+              valA = (a.batches || []).reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0); 
+              valB = (b.batches || []).reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0); 
+            }
+            else if (sort.key === 'orderedWeight' || sort.key === 'price') { 
+              valA = Number(a[sort.key] || 0); 
+              valB = Number(b[sort.key] || 0); 
+            }
+            else { 
+              valA = (a[sort.key] || "").toString().toLowerCase(); 
+              valB = (b[sort.key] || "").toString().toLowerCase(); 
+            }
+            if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
           }
-          if (qualityFilter && o.quality !== qualityFilter) return false;
-          if (supplierFilter && o.supplier !== supplierFilter) return false;
-          if (codeFilter && o.code !== codeFilter) return false;
-          if (colorFilter && o.color !== colorFilter) return false;
-
-          const oDate = o.orderDate || o.createdAt?.split('T')[0];
-          if (fromDate && oDate < fromDate) return false;
-          if (toDate && oDate > toDate) return false;
-
-          if (searchQuery.trim()) {
-            const terms = searchQuery.toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
-            const searchable = [
-              o.orderNumber, o.quality, o.code, o.color, o.supplier, o.category, o.itemType,
-              o.status, o.orderedWeight, o.price, oDate
-            ].join(' ').toLowerCase();
-
-            return terms.every(term => searchable.includes(term));
-          }
-
-          return true;
-        }).sort((a, b) => {
-          let valA = a[sortConfig.key] || '';
-          let valB = b[sortConfig.key] || '';
-          if (sortConfig.key === 'orderDate') {
-            valA = new Date(a.orderDate || a.createdAt);
-            valB = new Date(b.orderDate || b.createdAt);
-          } else if (['orderedWeight', 'price'].includes(sortConfig.key)) {
-            valA = Number(valA) || 0;
-            valB = Number(valB) || 0;
-          }
-          if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-          if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-          return 0;
+          const dateA = new Date(a.orderDate || a.createdAt);
+          const dateB = new Date(b.orderDate || b.createdAt);
+          if (dateB - dateA !== 0) return dateB - dateA;
+          return new Date(b.createdAt) - new Date(a.createdAt);
         });
-      }, [orders, categoryFilter, statusFilter, qualityFilter, supplierFilter, codeFilter, colorFilter, searchQuery, fromDate, toDate, sortConfig]);
+      }, [orders, filterType, orderSearch, fromDate, toDate, orderSort, qualityFilter, supplierFilter, codeFilter, colorFilter]);
 
-      const handleSaveOrder = (orderData) => {
-        if (editingOrder) {
-          setOrders(prev => prev.map(o => o.id === editingOrder.id ? { ...o, ...orderData } : o));
-        } else {
-          const newOrder = {
-            ...orderData,
-            id: 'YRN-ORD-' + Date.now(),
-            orderNumber: orderData.orderNumber || ('YRN-' + Math.floor(1000 + Math.random() * 9000)),
-            createdAt: new Date().toISOString(),
-            status: 'Active',
-            batches: []
-          };
-          setOrders(prev => [newOrder, ...prev]);
-        }
+      // Summary statistics matching order-book.html
+      const stats = useMemo(() => {
+        const calc = (list) => {
+          let o = 0, r = 0, g = 0;
+          list.forEach(item => {
+            o += Number(item.orderedWeight) || 0;
+            (item.batches || []).forEach(b => {
+              r += Number(b.totalWeight) || 0;
+              (b.boxes || []).forEach(box => g += (Number(box.returnedWeight) || 0));
+            });
+          });
+          return { ordered: o, received: r, gr: g };
+        };
+        const active = filteredOrders.filter(o => o.status === 'Active');
+        const completed = filteredOrders.filter(o => o.status === 'Completed');
+        const sA = calc(active), sC = calc(completed), sT = calc(filteredOrders);
+        return {
+          active: { count: active.length, load: sA.ordered, gr: sA.gr, pending: Math.max(0, sA.ordered - sA.received) },
+          completed: { count: completed.length, load: sC.ordered, gr: sC.gr, received: sC.received },
+          total: { count: filteredOrders.length, load: sT.ordered, gr: sT.gr, received: sT.received }
+        };
+      }, [filteredOrders]);
+
+      const requestOrderSort = (key, event) => {
+        setOrderSort(prev => {
+          if (event && (event.shiftKey || event.ctrlKey || event.metaKey)) {
+            const existingIndex = prev.findIndex(s => s.key === key);
+            if (existingIndex > -1) {
+              const current = prev[existingIndex];
+              if (current.direction === 'desc') {
+                const next = [...prev];
+                next[existingIndex] = { key, direction: 'asc' };
+                return next;
+              } else {
+                return prev.filter(s => s.key !== key);
+              }
+            } else {
+              return [...prev, { key, direction: 'desc' }];
+            }
+          } else {
+            const existing = prev.find(s => s.key === key);
+            if (existing) {
+              return [{ key, direction: existing.direction === 'desc' ? 'asc' : 'desc' }];
+            } else {
+              return [{ key, direction: 'desc' }];
+            }
+          }
+        });
+      };
+
+      const SortIndicator = ({ sortConfig, columnKey }) => {
+        const config = sortConfig.find(s => s.key === columnKey);
+        const index = sortConfig.findIndex(s => s.key === columnKey);
+        if (!config) return <span style={{ opacity: 0.2, marginLeft: '0.4rem' }}>↕</span>;
+        return (
+          <span style={{ marginLeft: '0.4rem', color: 'var(--accent)', fontWeight: 'bold' }}>
+            {config.direction === 'asc' ? '↑' : '↓'}
+            {sortConfig.length > 1 && <small style={{fontSize: '0.6rem', marginLeft: '1px', opacity: 0.8}}>{index + 1}</small>}
+          </span>
+        );
+      };
+
+      const handleAddOrder = (orderData) => {
+        const newOrder = {
+          ...orderData,
+          id: 'YRN-ORD-' + Date.now(),
+          orderNumber: orderData.orderNumber || ('YRN-' + Math.floor(1000 + Math.random() * 9000)),
+          createdAt: new Date().toISOString(),
+          status: 'Active',
+          batches: []
+        };
+        setOrders(prev => [newOrder, ...prev]);
         setShowOrderModal(false);
-        setEditingOrder(null);
       };
 
-      const handleDeleteOrder = (orderId) => {
-        if (confirm('Are you sure you want to delete this yarn order?')) {
-          setOrders(prev => prev.filter(o => o.id !== orderId));
-        }
+      const updateOrder = (o) => {
+        const processed = { ...o, orderDate: addTimestampToDate(o.orderDate) };
+        setOrders(prev => prev.map(x => x.id === o.id ? processed : x));
+        if (selectedOrder?.id === o.id) setSelectedOrder(processed);
       };
 
-      const handleUpdateBatches = (updatedOrder) => {
-        setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
-        if (selectedOrder && selectedOrder.id === updatedOrder.id) {
-          setSelectedOrder(updatedOrder);
+      const completeOrder = (id) => {
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Completed' } : o));
+      };
+
+      const deleteOrder = (id) => {
+        const targetOrder = orders.find(o => o.id === id);
+        if (!targetOrder) return;
+        
+        if (confirm(`Delete order for ${targetOrder.quality} (${targetOrder.supplier})? Associated inward lots will be removed from Yarn RM Stock Book.`)) {
+          setOrders(prev => prev.filter(o => o.id !== id));
+          
+          // Remove linked stock lots from Yarn RM stock
+          try {
+            const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
+            let stockList = rawStock ? JSON.parse(rawStock) : [];
+            if (Array.isArray(stockList)) {
+              const orderRef = targetOrder.orderNumber || targetOrder.id;
+              stockList = stockList.filter(s => s.orderRef !== orderRef);
+              localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
+              if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
+              }
+            }
+          } catch(e) {}
         }
       };
 
@@ -869,198 +1008,297 @@
             </div>
             <div className="ob-header-actions">
               {view === 'orders' && (
-                <button className="btn btn-primary" onClick={() => { setEditingOrder(null); setShowOrderModal(true); }}>
-                  + Add New Yarn Order
+                <button className="btn btn-primary" onClick={() => setShowOrderModal(true)}>
+                  + Add New Order
                 </button>
               )}
             </div>
           </header>
 
-          {/* Metric KPIs */}
-          <div className="metrics-grid">
-            <div className="metric-card">
-              <div className="metric-title">Active Yarn Orders</div>
-              <div className="metric-val">{metrics.activeOrders}</div>
-              <div className="metric-sub">{metrics.totalOrders} total orders placed</div>
-            </div>
-            <div className="metric-card info-card">
-              <div className="metric-title">Pending Delivery (Kg)</div>
-              <div className="metric-val" style={{color: 'var(--info)'}}>{metrics.pendingWeight.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} kg</div>
-              <div className="metric-sub">Out of {metrics.orderedWeight.toLocaleString()} kg ordered</div>
-            </div>
-            <div className="metric-card success-card">
-              <div className="metric-title">Received Inward (Kg)</div>
-              <div className="metric-val" style={{color: 'var(--success)'}}>{metrics.receivedWeight.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} kg</div>
-              <div className="metric-sub">{metrics.fulfillmentRate}% overall fulfillment</div>
-            </div>
-            <div className="metric-card gr-card">
-              <div className="metric-title">GR / Returned (Kg)</div>
-              <div className="metric-val" style={{color: 'var(--accent3)'}}>{metrics.grWeight.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} kg</div>
-              <div className="metric-sub">Defective / returned yarn</div>
-            </div>
-            <div className="metric-card danger-card">
-              <div className="metric-title">Fulfillment Rate</div>
-              <div className="metric-val" style={{fontSize: '1.4rem', color: 'var(--accent)'}}>{metrics.fulfillmentRate}%</div>
-              <div className="metric-sub">{metrics.completedOrders} orders completed</div>
-            </div>
-          </div>
-
           {/* VIEW: ORDERS LIST */}
           {view === 'orders' && (
             <React.Fragment>
-              <div className="card" style={{ marginBottom: '2rem' }}>
+              {/* Order Filters Card */}
+              <div className="card" style={{ overflow: 'visible', zIndex: 100, marginBottom: '2rem' }}>
                 <div className="ob-filter-toolbar">
+                  <h3>Order Filters</h3>
                   <div className="ob-filter-type-toggle">
-                    {['All', ...YARN_CATEGORIES].map(cat => (
+                    {['All', ...YARN_CATEGORIES].map(type => (
                       <button 
-                        key={cat} 
-                        className={`type-btn ${categoryFilter === cat ? 'active' : ''}`}
-                        onClick={() => setCategoryFilter(cat)}
+                        key={type}
+                        className="btn" 
+                        style={{
+                          padding: '0.4rem 1rem', 
+                          fontSize: '0.85rem',
+                          background: filterType === type ? 'var(--surface)' : 'transparent',
+                          boxShadow: filterType === type ? 'var(--shadow-sm)' : 'none',
+                          color: filterType === type ? 'var(--accent)' : 'var(--muted)'
+                        }}
+                        onClick={() => {
+                          const currentFilters = { quality: qualityFilter, supplier: supplierFilter, code: codeFilter, color: colorFilter };
+                          const newFilters = { ...currentFilters, type: type === 'All' ? null : type };
+                          let filtered = allCombinations.filter(c => {
+                            return (!newFilters.type || c.type === newFilters.type) &&
+                                   (!newFilters.quality || c.quality === newFilters.quality) &&
+                                   (!newFilters.code || c.code === newFilters.code) &&
+                                   (!newFilters.color || c.color === newFilters.color) &&
+                                   (!newFilters.supplier || c.supplier === newFilters.supplier);
+                          });
+                          
+                          const fields = ['quality', 'supplier', 'code', 'color'];
+                          fields.forEach(f => {
+                            const options = [...new Set(filtered.map(item => item[f]))].filter(Boolean);
+                            if (options.length === 1) {
+                              if (f === 'quality') setQualityFilter(options[0]);
+                              else if (f === 'supplier') setSupplierFilter(options[0]);
+                              else if (f === 'code') setCodeFilter(options[0]);
+                              else if (f === 'color') setColorFilter(options[0]);
+                            }
+                          });
+                          setFilterType(type);
+                        }}
                       >
-                        {cat}
+                        {type}
                       </button>
                     ))}
                   </div>
-                  <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>
-                    <select 
-                      value={statusFilter} 
-                      onChange={e => setStatusFilter(e.target.value)}
-                      style={{padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: 'auto'}}
-                    >
-                      <option value="All">All Statuses</option>
-                      <option value="Active">Active / Pending</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
-                    <button 
-                      className="btn btn-outline" 
-                      style={{padding: '0.4rem 0.8rem', fontSize: '0.85rem'}}
-                      onClick={() => {
-                        setCategoryFilter('All');
-                        setStatusFilter('All');
-                        setQualityFilter('');
-                        setSupplierFilter('');
-                        setCodeFilter('');
-                        setColorFilter('');
-                        setSearchQuery('');
-                      }}
-                    >
-                      🔄 Reset
-                    </button>
-                  </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', alignItems: 'end' }}>
-                  <div className="input-group" style={{marginBottom: 0}}>
-                    <label>From Date</label>
-                    <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div className="ob-filter-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr) auto', gap: '1rem', alignItems: 'end', marginBottom: '1.5rem' }}>
+                    <SearchableDropdown 
+                      label="Quality"
+                      placeholder="Search quality..."
+                      options={getOrderOptions('quality')}
+                      value={qualityFilter}
+                      onChange={val => handleOrderFilterSelect('quality', val)}
+                      emptyLabel="-- All Qualities --"
+                    />
+                    <SearchableDropdown 
+                      label="Code"
+                      placeholder="Search code..."
+                      options={getOrderOptions('code')}
+                      value={codeFilter}
+                      onChange={val => handleOrderFilterSelect('code', val)}
+                      emptyLabel="-- All Codes --"
+                    />
+                    <SearchableDropdown 
+                      label="Color"
+                      placeholder="Search color..."
+                      options={getOrderOptions('color')}
+                      value={colorFilter}
+                      onChange={val => handleOrderFilterSelect('color', val)}
+                      emptyLabel="-- All Colors --"
+                    />
+                    <SearchableDropdown 
+                      label="Supplier"
+                      placeholder="Search supplier..."
+                      options={getOrderOptions('supplier')}
+                      value={supplierFilter}
+                      onChange={val => handleOrderFilterSelect('supplier', val)}
+                      emptyLabel="-- All Suppliers --"
+                    />
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <label>From Date</label>
+                      <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{ borderRadius: '12px' }} />
+                    </div>
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <label>To Date</label>
+                      <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={{ borderRadius: '12px' }} />
+                    </div>
+                    <button 
+                      className="btn btn-outline" 
+                      style={{padding: '0.75rem', borderRadius: '12px', alignSelf: 'end'}}
+                      onClick={() => { 
+                        setFromDate(''); setToDate(''); setOrderSearch(''); 
+                        setQualityFilter(''); setSupplierFilter(''); setCodeFilter(''); setColorFilter('');
+                        setFilterType('All');
+                      }}
+                      title="Clear Filters"
+                    >
+                      🔄 Filters
+                    </button>
                   </div>
-                  <div className="input-group" style={{marginBottom: 0}}>
-                    <label>To Date</label>
-                    <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
-                  </div>
-                  <div className="input-group" style={{marginBottom: 0, gridColumn: 'span 2'}}>
+
+                  <div className="input-group" style={{ marginBottom: 0 }}>
                     <label>Search Orders</label>
                     <input 
                       type="text" 
-                      placeholder="Search order #, supplier, quality, color, code..." 
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="Search quality, code, challan, lot, box... (use comma for multiple)" 
+                      value={orderSearch}
+                      onChange={e => setOrderSearch(e.target.value)}
+                      style={{ borderRadius: '12px' }}
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Table */}
-              <div className="card">
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
-                  <h2>Yarn Purchase Orders ({filteredOrders.length})</h2>
+              {/* 3 Summary Cards matching order-book.html */}
+              <div className="ob-summary-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                <div className="card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <h3 style={{ fontSize: '1rem' }}>Active orders</h3>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Current deals</div>
+                  </div>
+                  <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: 0 }}>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Count</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--success)', fontWeight: '700' }}>{stats.active.count}</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Load (kg)</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--accent2)', fontWeight: '700' }}>{stats.active.load.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{ color: 'var(--accent3)', fontSize: '0.8rem', textTransform: 'uppercase' }}>GR (kg)</h3>
+                      <div className="value" style={{ fontSize: '1.2rem', color: 'var(--accent3)', fontWeight: '700' }}>{stats.active.gr.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Pending (kg)</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--fg)', fontWeight: '700' }}>{stats.active.pending.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                    </div>
+                  </div>
                 </div>
+
+                <div className="card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <h3 style={{ fontSize: '1rem' }}>Completed orders</h3>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>History</div>
+                  </div>
+                  <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: 0 }}>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Count</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--muted)', fontWeight: '700' }}>{stats.completed.count}</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Load (kg)</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--accent)', fontWeight: '700' }}>{stats.completed.load.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{ color: 'var(--accent3)', fontSize: '0.8rem', textTransform: 'uppercase' }}>GR (kg)</h3>
+                      <div className="value" style={{ fontSize: '1.2rem', color: 'var(--accent3)', fontWeight: '700' }}>{stats.completed.gr.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Delivered (kg)</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--success)', fontWeight: '700' }}>{stats.completed.received.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <h3 style={{ fontSize: '1rem' }}>Procurement Total</h3>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Combined</div>
+                  </div>
+                  <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: 0 }}>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Total Orders</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--fg)', fontWeight: '700' }}>{stats.total.count}</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Total Load</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--accent)', fontWeight: '700' }}>{stats.total.load.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{ color: 'var(--accent3)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Total GR</h3>
+                      <div className="value" style={{ fontSize: '1.2rem', color: 'var(--accent3)', fontWeight: '700' }}>{stats.total.gr.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                    </div>
+                    <div className="stat-card" style={{ boxShadow: 'none', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                      <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Delivered</h3>
+                      <div className="value" style={{ fontSize: '1.5rem', color: 'var(--success)', fontWeight: '700' }}>{stats.total.received.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Table Card */}
+              <div className="card">
                 <div className="table-responsive">
                   <table>
                     <thead>
                       <tr>
-                        <th onClick={() => setSortConfig({ key: 'orderDate', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Order Date</th>
-                        <th onClick={() => setSortConfig({ key: 'orderNumber', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Order #</th>
-                        <th>Yarn Quality / Item</th>
-                        <th>Supplier</th>
-                        <th>Code & Color</th>
-                        <th onClick={() => setSortConfig({ key: 'orderedWeight', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Total Qty (Kg)</th>
-                        <th>Inward Progress</th>
-                        <th onClick={() => setSortConfig({ key: 'price', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Rate (₹/Kg)</th>
-                        <th>Status</th>
-                        <th style={{textAlign: 'center'}}>Actions</th>
+                        <th onClick={(e) => requestOrderSort('orderDate', e)}><div className="header-content">Date <SortIndicator sortConfig={orderSort} columnKey="orderDate" /></div></th>
+                        <th onClick={(e) => requestOrderSort('quality', e)}><div className="header-content">Quality <SortIndicator sortConfig={orderSort} columnKey="quality" /></div></th>
+                        <th onClick={(e) => requestOrderSort('code', e)}><div className="header-content">Code <SortIndicator sortConfig={orderSort} columnKey="code" /></div></th>
+                        <th onClick={(e) => requestOrderSort('color', e)}><div className="header-content">Color <SortIndicator sortConfig={orderSort} columnKey="color" /></div></th>
+                        <th onClick={(e) => requestOrderSort('supplier', e)}><div className="header-content">Supplier <SortIndicator sortConfig={orderSort} columnKey="supplier" /></div></th>
+                        <th onClick={(e) => requestOrderSort('category', e)}><div className="header-content">Type <SortIndicator sortConfig={orderSort} columnKey="category" /></div></th>
+                        <th onClick={(e) => requestOrderSort('orderedWeight', e)}><div className="header-content">Ordered <SortIndicator sortConfig={orderSort} columnKey="orderedWeight" /></div></th>
+                        <th onClick={(e) => requestOrderSort('received', e)}><div className="header-content">Received <SortIndicator sortConfig={orderSort} columnKey="received" /></div></th>
+                        <th onClick={(e) => requestOrderSort('price', e)}><div className="header-content">Rate <SortIndicator sortConfig={orderSort} columnKey="price" /></div></th>
+                        <th onClick={(e) => requestOrderSort('status', e)}><div className="header-content">Status <SortIndicator sortConfig={orderSort} columnKey="status" /></div></th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredOrders.length === 0 ? (
                         <tr>
-                          <td colSpan="10" style={{textAlign: 'center', padding: '3rem', color: 'var(--muted)'}}>
-                            No yarn orders match the selected filters. Click "+ Add New Yarn Order" to create one.
+                          <td colSpan="11" style={{padding: '2.5rem', textAlign: 'center', color: 'var(--muted)'}}>
+                            No yarn orders found matching the filter criteria.
                           </td>
                         </tr>
                       ) : (
                         filteredOrders.map(order => {
                           const netReceived = (order.batches || []).reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
-                          const totalGR = (order.batches || []).reduce((acc, b) => 
-                            acc + (b.boxes || []).reduce((bAcc, box) => bAcc + (Number(box.returnedWeight) || 0), 0)
+                          const totalReturned = (order.batches || []).reduce((acc, batch) => 
+                            acc + (batch.boxes || []).reduce((boxAcc, box) => boxAcc + (Number(box.returnedWeight) || 0), 0)
                           , 0);
-
                           const orderedWt = Number(order.orderedWeight) || 0;
-                          const progressPct = Math.min(100, (netReceived / (orderedWt || 1)) * 100);
+                          const totalToDisplay = netReceived + totalReturned;
+                          const scaleBase = Math.max(orderedWt, totalToDisplay) || 1;
+                          const netWithoutSurplus = Math.min(netReceived, orderedWt);
+                          const surplus = Math.max(0, netReceived - orderedWt);
+                          
+                          const netProgress = (netWithoutSurplus / scaleBase) * 100;
+                          const returnedProgress = (totalReturned / scaleBase) * 100;
+                          const surplusProgress = (surplus / scaleBase) * 100;
+
+                          const itemCategory = order.category || order.type || 'Polyester';
 
                           return (
                             <tr key={order.id}>
                               <td>{new Date(order.orderDate || order.createdAt).toLocaleDateString('en-GB')}</td>
-                              <td style={{fontFamily: 'var(--font-mono)', fontWeight: '600', color: 'var(--accent)'}}>{order.orderNumber || order.id}</td>
                               <td>
                                 <strong>{order.quality}</strong>
-                                <div style={{fontSize: '0.75rem', color: 'var(--muted)'}}>{order.category || order.itemType || 'Polyester'} {order.countDenier ? `(${order.countDenier})` : ''}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '2px' }}>{itemCategory}</div>
                               </td>
-                              <td><strong>{order.supplier}</strong></td>
-                              <td>
-                                <div>{order.code || '-'}</div>
-                                <div style={{fontSize: '0.75rem', color: 'var(--muted)'}}>{order.color || '-'}</div>
-                              </td>
-                              <td><strong>{orderedWt.toLocaleString()} kg</strong></td>
+                              <td>{order.code || '-'}</td>
+                              <td>{order.color || '-'}</td>
+                              <td>{order.supplier}</td>
+                              <td><span className={`badge badge-${itemCategory.toLowerCase()}`}>{itemCategory}</span></td>
+                              <td style={{fontWeight: '600'}}>{orderedWt} kg</td>
                               <td>
                                 <div className="progress-mini-container">
-                                  <div className="progress-mini-text">
-                                    <span>{netReceived.toFixed(1)} kg</span>
-                                    {totalGR > 0 && <span style={{color: 'var(--accent3)'}}>{totalGR.toFixed(1)} kg GR</span>}
+                                  <div className="progress-mini-text" style={{fontWeight: '600', flexDirection: 'column', gap: '0'}}>
+                                    <div>{netReceived.toFixed(1)} kg</div>
+                                    {totalReturned > 0 && <div style={{color: 'var(--accent3)'}}>{totalReturned.toFixed(1)} Kg(GR)</div>}
                                   </div>
                                   <div className="progress-mini-bar-bg">
-                                    <div style={{ width: `${progressPct}%`, background: progressPct >= 100 ? 'var(--success)' : 'var(--accent)', transition: 'width 0.3s' }}></div>
+                                    <div style={{ width: `${netProgress}%`, height: '100%', background: 'var(--accent)', transition: 'width 0.5s ease' }}></div>
+                                    {totalReturned > 0 && (
+                                      <div style={{ width: `${returnedProgress}%`, height: '100%', background: 'var(--accent3)', transition: 'width 0.5s ease', borderLeft: '1px solid var(--surface)' }}></div>
+                                    )}
+                                    {surplusProgress > 0 && (
+                                      <div style={{ width: `${surplusProgress}%`, height: '100%', background: '#3b82f6', transition: 'width 0.5s ease', borderLeft: '1px solid var(--surface)' }}></div>
+                                    )}
                                   </div>
                                 </div>
                               </td>
-                              <td>
-                                {order.price ? (
-                                  <strong>₹{Number(order.price).toFixed(2)}</strong>
-                                ) : (
-                                  <span style={{color: 'var(--muted)', fontSize: '0.8rem'}}>— Pending</span>
-                                )}
-                              </td>
-                              <td>
-                                <span className={`badge badge-${(order.status || 'Active').toLowerCase()}`}>
-                                  {netReceived >= orderedWt && order.status !== 'Cancelled' ? 'Completed' : (order.status || 'Active')}
-                                </span>
-                              </td>
+                              <td>{order.price ? `₹${Number(order.price).toFixed(2)}` : '—'}</td>
+                              <td><span className={`badge badge-${(order.status || 'Active').toLowerCase()}`}>{order.status || 'Active'}</span></td>
                               <td>
                                 <div style={{display: 'flex', gap: '0.4rem', justifyContent: 'center'}}>
                                   <button 
                                     className="btn btn-outline" 
-                                    style={{padding: '0.35rem 0.65rem', fontSize: '0.8rem', whiteSpace: 'nowrap'}} 
+                                    style={{padding: '0.3rem 0.6rem', fontSize: '0.8rem', whiteSpace: 'nowrap'}} 
                                     onClick={() => setSelectedOrder(order)}
-                                    title="Add Inward Challan & Edit Order Details"
                                   >
                                     + Challan
                                   </button>
                                   <button 
                                     className="btn btn-outline" 
-                                    style={{padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: 'var(--error)', borderColor: 'transparent'}}
-                                    onClick={() => handleDeleteOrder(order.id)}
-                                    title="Delete Order"
+                                    style={{padding: '0.3rem 0.6rem', color: 'var(--error)', borderColor: 'transparent'}} 
+                                    onClick={() => deleteOrder(order.id)}
                                   >
                                     🗑️
                                   </button>
@@ -1087,129 +1325,112 @@
             <HeatMapView orders={orders} onSelectOrder={order => setSelectedOrder(order)} />
           )}
 
-          {/* Order Create/Edit Modal */}
+          {/* Place New Order Modal (8 Essential Fields) */}
           {showOrderModal && (
             <OrderFormModal 
-              onClose={() => { setShowOrderModal(false); setEditingOrder(null); }}
-              onSubmit={handleSaveOrder}
-              initialData={editingOrder}
+              onClose={() => setShowOrderModal(false)}
+              onSubmit={handleAddOrder}
               qualities={qualities}
               suppliers={suppliers}
             />
           )}
 
-          {/* Order Details & Challan Inward Modal */}
+          {/* Popup Order Details & Inward Challans Modal (Matching order-book.html) */}
           {selectedOrder && (
-            <OrderInwardModal 
+            <OrderDetailsModal 
               order={selectedOrder}
-              qualities={qualities}
-              suppliers={suppliers}
               onClose={() => setSelectedOrder(null)}
-              onUpdate={handleUpdateBatches}
+              onUpdate={updateOrder}
+              onComplete={completeOrder}
+              geminiApiKey={geminiApiKey}
+              selectedGeminiModel={selectedGeminiModel}
+              onOpenSettings={() => window.location.href = '../settings.html#gemini-settings'}
             />
           )}
         </div>
       );
     };
 
-    // Component: Order Form Modal
-    const OrderFormModal = ({ onClose, onSubmit, initialData, qualities, suppliers }) => {
-      const [formData, setFormData] = useState(initialData || {
+    // Component: Place New Yarn Order Modal
+    const OrderFormModal = ({ onClose, onSubmit, qualities, suppliers }) => {
+      const [formData, setFormData] = useState({
+        orderDate: new Date().toISOString().split('T')[0],
+        supplier: '',
         category: 'Polyester',
         quality: '',
         code: '',
         color: '',
-        supplier: '',
-        orderNumber: 'YRN-' + Math.floor(1000 + Math.random() * 9000),
-        orderDate: new Date().toISOString().split('T')[0],
         orderedWeight: '',
         price: ''
       });
 
-      // Filtered qualities based on selected Item (Yarn Type)
-      const validQualities = useMemo(() => {
+      // Filter qualities based on item type
+      const filteredQualities = useMemo(() => {
         return (qualities || []).filter(q => {
           const qType = q.type || q.itemType || 'Polyester';
           if (formData.category && qType !== formData.category) return false;
-          if (formData.code && q.code && q.code !== formData.code) return false;
-          if (formData.color && q.color && q.color !== formData.color) return false;
           return true;
         });
-      }, [qualities, formData.category, formData.code, formData.color]);
+      }, [qualities, formData.category]);
 
-      // Filtered codes
-      const validCodes = useMemo(() => {
+      const availableCodes = useMemo(() => {
         const codes = (qualities || []).filter(q => {
           const qType = q.type || q.itemType || 'Polyester';
           const qQual = q.quality || q.name || '';
           if (formData.category && qType !== formData.category) return false;
           if (formData.quality && qQual !== formData.quality) return false;
-          if (formData.color && q.color && q.color !== formData.color) return false;
           return true;
         }).map(q => q.code).filter(Boolean);
         return [...new Set(codes)];
-      }, [qualities, formData.category, formData.quality, formData.color]);
+      }, [qualities, formData.category, formData.quality]);
 
-      // Filtered colors
-      const validColors = useMemo(() => {
+      const availableColors = useMemo(() => {
         const colors = (qualities || []).filter(q => {
           const qType = q.type || q.itemType || 'Polyester';
           const qQual = q.quality || q.name || '';
           if (formData.category && qType !== formData.category) return false;
           if (formData.quality && qQual !== formData.quality) return false;
-          if (formData.code && q.code && q.code !== formData.code) return false;
           return true;
         }).map(q => q.color).filter(Boolean);
         return [...new Set(colors)];
-      }, [qualities, formData.category, formData.quality, formData.code]);
+      }, [qualities, formData.category, formData.quality]);
 
-      const handleCategoryChange = (newCat) => {
+      const handleQualityChange = (selectedQualName) => {
+        const match = filteredQualities.find(q => (q.quality || q.name) === selectedQualName);
         setFormData(prev => ({
           ...prev,
-          category: newCat,
-          quality: '',
-          code: '',
-          color: ''
-        }));
-      };
-
-      const handleQualityChange = (newQual) => {
-        const matched = (qualities || []).find(q => 
-          (q.quality || q.name) === newQual && 
-          (!formData.category || (q.type || q.itemType || 'Polyester') === formData.category)
-        );
-
-        setFormData(prev => ({
-          ...prev,
-          quality: newQual,
-          code: matched?.code || prev.code,
-          color: matched?.color || prev.color,
-          supplier: matched?.supplier || prev.supplier
+          quality: selectedQualName,
+          code: match?.code || prev.code,
+          color: match?.color || prev.color,
+          supplier: prev.supplier || match?.supplier || ''
         }));
       };
 
       const handleSubmit = (e) => {
         e.preventDefault();
-        if (!formData.quality.trim() || !formData.supplier.trim() || !formData.orderedWeight) {
-          alert('Please fill all required fields marked with *');
+        if (!formData.orderDate || !formData.supplier || !formData.category || !formData.quality || !formData.orderedWeight) {
+          alert('Please fill in all mandatory fields (*)');
           return;
         }
+
         onSubmit({
           ...formData,
-          orderNumber: formData.orderNumber || ('YRN-' + Math.floor(1000 + Math.random() * 9000))
+          orderedWeight: Number(formData.orderedWeight) || 0,
+          price: formData.price ? Number(formData.price) : ''
         });
       };
 
       return (
         <div className="modal-overlay">
           <div className="modal" style={{maxWidth: '720px'}}>
-            <div className="modal-header">
-              <h2>{initialData ? '✏️ Edit Yarn RM Order' : '📦 Place New Yarn RM Order'}</h2>
-              <button className="modal-close" onClick={onClose}>&times;</button>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+              <h2>Place New Yarn RM Order</h2>
+              <button className="btn btn-outline" style={{padding: '0.4rem 0.8rem'}} onClick={onClose}>✕</button>
             </div>
+
             <form onSubmit={handleSubmit}>
-              <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginBottom: '1.5rem'}}>
-                <div className="input-group" style={{marginBottom: 0}}>
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                <div className="input-group">
                   <label>Order Date *</label>
                   <input 
                     type="date" 
@@ -1218,7 +1439,8 @@
                     required 
                   />
                 </div>
-                <div className="input-group" style={{marginBottom: 0}}>
+
+                <div className="input-group">
                   <label>RM Supplier *</label>
                   <select 
                     value={formData.supplier} 
@@ -1228,17 +1450,18 @@
                     <option value="">-- Select RM Supplier --</option>
                     {suppliers.map((s, idx) => {
                       const sName = s.name || s.supplier;
-                      return (
-                        <option key={idx} value={sName}>{sName}</option>
-                      );
+                      return <option key={idx} value={sName}>{sName}</option>;
                     })}
                   </select>
                 </div>
-                <div className="input-group" style={{marginBottom: 0}}>
+              </div>
+
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                <div className="input-group">
                   <label>Item (Yarn Type) *</label>
                   <select 
-                    value={formData.category || 'Polyester'} 
-                    onChange={e => handleCategoryChange(e.target.value)}
+                    value={formData.category} 
+                    onChange={e => setFormData({...formData, category: e.target.value, quality: '', code: '', color: ''})}
                     required
                   >
                     {YARN_CATEGORIES.map(cat => (
@@ -1246,78 +1469,93 @@
                     ))}
                   </select>
                 </div>
-                <div className="input-group" style={{marginBottom: 0}}>
+
+                <div className="input-group">
                   <label>Yarn Quality *</label>
                   <select 
                     value={formData.quality} 
                     onChange={e => handleQualityChange(e.target.value)}
                     required
                   >
-                    <option value="">-- Select Quality --</option>
-                    {validQualities.map((q, idx) => {
+                    <option value="">-- Select Yarn Quality --</option>
+                    {filteredQualities.map((q, idx) => {
                       const qName = q.quality || q.name;
-                      return (
-                        <option key={idx} value={qName}>
-                          {qName}{q.color ? ` (${q.color})` : ''}
-                        </option>
-                      );
+                      return <option key={idx} value={qName}>{qName}{q.color ? ` (${q.color})` : ''}</option>;
                     })}
                   </select>
                 </div>
-                <div className="input-group" style={{marginBottom: 0}}>
+              </div>
+
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                <div className="input-group">
                   <label>Yarn Code</label>
-                  <select 
-                    value={formData.code} 
-                    onChange={e => setFormData({...formData, code: e.target.value})}
-                  >
-                    <option value="">-- Select Code --</option>
-                    {validCodes.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                  {availableCodes.length > 0 ? (
+                    <select 
+                      value={formData.code} 
+                      onChange={e => setFormData({...formData, code: e.target.value})}
+                    >
+                      <option value="">-- Select / Optional --</option>
+                      {availableCodes.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  ) : (
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 7536BR" 
+                      value={formData.code} 
+                      onChange={e => setFormData({...formData, code: e.target.value})} 
+                    />
+                  )}
                 </div>
-                <div className="input-group" style={{marginBottom: 0}}>
+
+                <div className="input-group">
                   <label>Color</label>
-                  <select 
-                    value={formData.color} 
-                    onChange={e => setFormData({...formData, color: e.target.value})}
-                  >
-                    <option value="">-- Select Color --</option>
-                    {validColors.map(col => (
-                      <option key={col} value={col}>{col}</option>
-                    ))}
-                  </select>
+                  {availableColors.length > 0 ? (
+                    <select 
+                      value={formData.color} 
+                      onChange={e => setFormData({...formData, color: e.target.value})}
+                    >
+                      <option value="">-- Select / Optional --</option>
+                      {availableColors.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  ) : (
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Optic White" 
+                      value={formData.color} 
+                      onChange={e => setFormData({...formData, color: e.target.value})} 
+                    />
+                  )}
                 </div>
-                <div className="input-group" style={{marginBottom: 0}}>
+              </div>
+
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                <div className="input-group">
                   <label>Total Order Qty (Kg) *</label>
                   <input 
                     type="number" 
                     step="0.01" 
-                    placeholder="0.00"
+                    placeholder="e.g. 1000" 
                     value={formData.orderedWeight} 
                     onChange={e => setFormData({...formData, orderedWeight: e.target.value})} 
                     required 
                   />
                 </div>
-                <div className="input-group" style={{marginBottom: 0}}>
-                  <label>Rate (₹/Kg) <span style={{fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 'normal'}}>(Optional)</span></label>
+
+                <div className="input-group">
+                  <label>Rate (₹/Kg) <span style={{color: 'var(--muted)', fontWeight: 'normal'}}>(Optional)</span></label>
                   <input 
                     type="number" 
                     step="0.01" 
-                    placeholder="₹ Rate (can fill later)"
-                    value={formData.price || ''} 
+                    placeholder="e.g. 145.50" 
+                    value={formData.price} 
                     onChange={e => setFormData({...formData, price: e.target.value})} 
                   />
                 </div>
               </div>
 
               <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
-                <button type="submit" className="btn btn-primary" style={{flex: 1}}>
-                  {initialData ? 'Save Changes' : 'Confirm & Place Yarn Order'}
-                </button>
-                <button type="button" className="btn btn-outline" onClick={onClose}>
-                  Cancel
-                </button>
+                <button type="submit" className="btn btn-primary" style={{flex: 1}}>Place Order</button>
+                <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
               </div>
             </form>
           </div>
@@ -1325,193 +1563,86 @@
       );
     };
 
-    // Component: Order Details & Inward Challans Modal (Unified + Challan Modal)
-    const OrderInwardModal = ({ order, qualities, suppliers, onClose, onUpdate }) => {
+    // Component: Order Details Modal (Exact replica of order-book.html)
+    const OrderDetailsModal = ({ order, onClose, onUpdate, onComplete, geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
       const [showBatchForm, setShowBatchForm] = useState(false);
       const [editingBatch, setEditingBatch] = useState(null);
-      const [showEditOrder, setShowEditOrder] = useState(false);
-      const [syncToStockBook, setSyncToStockBook] = useState(true);
+      const received = (order.batches || []).reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
+      const gr = (order.batches || []).reduce((acc, batch) => acc + (batch.boxes || []).reduce((boxAcc, box) => boxAcc + (Number(box.returnedWeight) || 0), 0), 0);
+      const grossReceived = received + gr;
+      
+      const isCompleted = order.status === 'Completed';
+      const netDiff = received - Number(order.orderedWeight || 0);
 
-      // Order edit form state
-      const [orderForm, setOrderForm] = useState({
-        orderDate: order.orderDate || order.createdAt?.split('T')[0] || '',
-        supplier: order.supplier || '',
-        category: order.category || order.itemType || 'Polyester',
-        quality: order.quality || '',
-        code: order.code || '',
-        color: order.color || '',
-        orderedWeight: order.orderedWeight || '',
-        price: order.price || '',
-        status: order.status || 'Active'
-      });
-
-      const netReceived = (order.batches || []).reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
-      const totalGR = (order.batches || []).reduce((acc, b) => 
-        acc + (b.boxes || []).reduce((bAcc, box) => bAcc + (Number(box.returnedWeight) || 0), 0)
-      , 0);
-
-      const orderedWt = Number(order.orderedWeight) || 0;
-      const pendingBalance = Math.max(0, orderedWt - netReceived);
-
-      // Filtered qualities for order edit
-      const validQualities = useMemo(() => {
-        return (qualities || []).filter(q => {
-          const qType = q.type || q.itemType || 'Polyester';
-          if (orderForm.category && qType !== orderForm.category) return false;
-          return true;
-        });
-      }, [qualities, orderForm.category]);
-
-      const validCodes = useMemo(() => {
-        const codes = (qualities || []).filter(q => {
-          const qType = q.type || q.itemType || 'Polyester';
-          const qQual = q.quality || q.name || '';
-          if (orderForm.category && qType !== orderForm.category) return false;
-          if (orderForm.quality && qQual !== orderForm.quality) return false;
-          return true;
-        }).map(q => q.code).filter(Boolean);
-        return [...new Set(codes)];
-      }, [qualities, orderForm.category, orderForm.quality]);
-
-      const validColors = useMemo(() => {
-        const colors = (qualities || []).filter(q => {
-          const qType = q.type || q.itemType || 'Polyester';
-          const qQual = q.quality || q.name || '';
-          if (orderForm.category && qType !== orderForm.category) return false;
-          if (orderForm.quality && qQual !== orderForm.quality) return false;
-          return true;
-        }).map(q => q.color).filter(Boolean);
-        return [...new Set(colors)];
-      }, [qualities, orderForm.category, orderForm.quality]);
-
-      const handleSaveOrderDetails = (e) => {
-        e.preventDefault();
-        const updated = {
-          ...order,
-          ...orderForm,
-          orderedWeight: Number(orderForm.orderedWeight) || order.orderedWeight
+      const handleBatchSubmit = (batchData) => {
+        const processed = {
+          ...batchData,
+          receiveDate: addTimestampToDate(batchData.receiveDate),
+          boxes: batchData.boxes ? batchData.boxes.map(box => ({
+            ...box,
+            returnedDate: box.returnedDate ? addTimestampToDate(box.returnedDate) : ''
+          })) : []
         };
+        
+        let updatedBatches = editingBatch 
+          ? order.batches.map(x => x.id === editingBatch.id ? { ...x, ...processed } : x) 
+          : [...(order.batches || []), { ...processed, id: Date.now().toString(), receivedAt: new Date().toISOString() }];
 
-        // Update corresponding lots in Yarn RM Stock Book if rate or details changed
+        // Sync directly into Yarn RM Stock Book
         try {
           const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
           let stockList = rawStock ? JSON.parse(rawStock) : [];
-          if (Array.isArray(stockList)) {
-            const orderRef = order.orderNumber || order.id;
-            let lotChanged = false;
-            stockList = stockList.map(lot => {
-              if (lot.orderRef === orderRef) {
-                lotChanged = true;
-                return {
-                  ...lot,
-                  supplier: updated.supplier,
-                  quality: updated.quality,
-                  itemType: updated.category,
-                  code: updated.code,
-                  color: updated.color,
-                  rate: updated.price || ''
-                };
-              }
-              return lot;
-            });
-            if (lotChanged) {
-              localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
-              if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
-                window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
-              }
-            }
-          }
-        } catch(err) {}
+          if (!Array.isArray(stockList)) stockList = [];
 
-        onUpdate(updated);
-        setShowEditOrder(false);
-      };
-
-      const handleSaveBatch = (batchData) => {
-        let updatedBatches;
-        if (editingBatch) {
-          updatedBatches = (order.batches || []).map(b => b.id === editingBatch.id ? { ...b, ...batchData } : b);
-        } else {
-          const newBatch = {
-            ...batchData,
-            id: 'BATCH-' + Date.now(),
-            createdAt: new Date().toISOString()
+          const stockLot = {
+            id: batchData.lotNumber || ('LOT-' + (batchData.challanNumber || Date.now().toString().slice(-4))),
+            lotNumber: batchData.lotNumber || ('LOT-' + (batchData.challanNumber || 'AUTO')),
+            challanNumber: batchData.challanNumber || '',
+            date: batchData.receiveDate || new Date().toISOString().split('T')[0],
+            supplier: order.supplier,
+            quality: order.quality,
+            itemType: order.category || order.type || 'Polyester',
+            code: order.code || '',
+            color: order.color || '',
+            rate: order.price || '',
+            orderRef: order.orderNumber || order.id,
+            boxes: (batchData.boxes || []).map((bx, idx) => ({
+              boxNumber: bx.boxNumber || `B${idx + 1}`,
+              cones: Number(bx.cones) || 0,
+              weight: Number(bx.weight) || 0,
+              status: (Number(bx.returnedWeight) > 0) ? 'gr' : 'available',
+              grWeight: Number(bx.returnedWeight) || 0,
+              grDate: bx.returnedDate || ''
+            }))
           };
-          updatedBatches = [...(order.batches || []), newBatch];
-        }
 
-        const newNet = updatedBatches.reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
-        const newStatus = newNet >= orderedWt ? 'Completed' : (newNet > 0 ? 'Partial' : 'Active');
-
-        const updatedOrder = {
-          ...order,
-          batches: updatedBatches,
-          status: newStatus
-        };
-
-        // Transfer to Yarn RM Stock Book directly
-        if (syncToStockBook && batchData.boxes && batchData.boxes.length > 0) {
-          try {
-            const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
-            let stockList = rawStock ? JSON.parse(rawStock) : [];
-            if (!Array.isArray(stockList)) stockList = [];
-
-            const stockLot = {
-              id: batchData.lotNumber || ('LOT-' + (batchData.challanNumber || Date.now().toString().slice(-4))),
-              lotNumber: batchData.lotNumber || ('LOT-' + (batchData.challanNumber || 'AUTO')),
-              challanNumber: batchData.challanNumber || '',
-              date: batchData.receiveDate || new Date().toISOString().split('T')[0],
-              supplier: order.supplier,
-              quality: order.quality,
-              itemType: order.category || 'Polyester',
-              code: order.code || '',
-              color: order.color || '',
-              rate: order.price || '',
-              orderRef: order.orderNumber || order.id,
-              boxes: (batchData.boxes || []).map((bx, idx) => ({
-                boxNumber: bx.boxNumber || `B${idx + 1}`,
-                cones: Number(bx.cones) || 0,
-                weight: Number(bx.weight) || 0,
-                status: (Number(bx.returnedWeight) > 0) ? 'gr' : 'available',
-                grWeight: Number(bx.returnedWeight) || 0,
-                grDate: bx.returnedDate || ''
-              }))
-            };
-
-            // Avoid duplicate lot addition
-            stockList = stockList.filter(s => s.id !== stockLot.id && s.lotNumber !== stockLot.lotNumber);
-            stockList.unshift(stockLot);
-            localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
-            if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
-              window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
-            }
-          } catch(e) {
-            console.error('Error syncing to yarn stock book:', e);
+          stockList = stockList.filter(s => s.id !== stockLot.id && s.lotNumber !== stockLot.lotNumber);
+          stockList.unshift(stockLot);
+          localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+            window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
           }
+        } catch(e) {
+          console.error("Stock sync error:", e);
         }
 
-        onUpdate(updatedOrder);
-        setShowBatchForm(false);
+        onUpdate({ ...order, batches: updatedBatches }); 
+        setShowBatchForm(false); 
         setEditingBatch(null);
       };
 
       const handleDeleteBatch = (batchId) => {
-        if (confirm('Delete this delivery batch and remove its boxes from Yarn RM Stock?')) {
-          const delBatch = (order.batches || []).find(b => b.id === batchId);
-          const updatedBatches = (order.batches || []).filter(b => b.id !== batchId);
-          const newNet = updatedBatches.reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
+        if (confirm('Delete this batch?')) {
+          const delBatch = (order.batches || []).find(x => x.id === batchId);
+          const updatedBatches = (order.batches || []).filter(x => x.id !== batchId);
 
-          // Remove from stock book
+          // Clean from stock book
           if (delBatch) {
             try {
               const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
               let stockList = rawStock ? JSON.parse(rawStock) : [];
               if (Array.isArray(stockList)) {
-                stockList = stockList.filter(s => 
-                  s.id !== delBatch.lotNumber && 
-                  s.lotNumber !== delBatch.lotNumber && 
-                  s.challanNumber !== delBatch.challanNumber
-                );
+                stockList = stockList.filter(s => s.id !== delBatch.lotNumber && s.lotNumber !== delBatch.lotNumber && s.challanNumber !== delBatch.challanNumber);
                 localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
                 if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
                   window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
@@ -1520,244 +1651,176 @@
             } catch(e) {}
           }
 
-          onUpdate({
-            ...order,
-            batches: updatedBatches,
-            status: newNet >= orderedWt ? 'Completed' : (newNet > 0 ? 'Partial' : 'Active')
-          });
+          onUpdate({ ...order, batches: updatedBatches });
         }
       };
 
       return (
         <div className="modal-overlay">
-          <div className="modal modal-lg" style={{maxWidth: '1000px'}}>
-            <div className="modal-header">
+          <div className="modal" style={{maxWidth: '1200px'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
               <div>
-                <h2>📦 {order.quality} — {order.supplier}</h2>
-                <p style={{color: 'var(--muted)', fontSize: '0.85rem', marginTop: '0.2rem'}}>
-                  Order #{order.orderNumber} | {order.category || 'Polyester'} | Code: {order.code || '-'} | Color: {order.color || '-'} | Rate: {order.price ? `₹${Number(order.price).toFixed(2)}` : 'Pending'}
+                <h2>{order.quality} — {order.supplier}</h2>
+                <p style={{color: 'var(--muted)'}}>
+                  {order.code || '-'} | {order.color || '-'} | {order.category || order.type || 'Polyester'} {order.price ? `| ₹${Number(order.price).toFixed(2)}/kg` : ''}
                 </p>
               </div>
-              <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>
-                <button 
-                  className="btn btn-outline" 
-                  style={{fontSize: '0.8rem', padding: '0.35rem 0.75rem'}}
-                  onClick={() => setShowEditOrder(!showEditOrder)}
-                >
-                  {showEditOrder ? '▲ Hide Order Edit' : '✏️ Edit Order Info / Rate'}
-                </button>
-                <button className="modal-close" onClick={onClose}>&times;</button>
+              <button className="btn btn-outline" onClick={onClose}>Close</button>
+            </div>
+
+            <div className="dashboard-grid" style={{marginTop: '2rem', gridTemplateColumns: isCompleted ? 'repeat(6, 1fr)' : 'repeat(5, 1fr)', gap: '1rem', marginBottom: '2rem'}}>
+              <div className="card" style={{padding: '1.25rem'}}>
+                <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Ordered</h3>
+                <div className="value" style={{fontSize: '1.5rem', fontWeight: '700'}}>{order.orderedWeight} kg</div>
+              </div>
+              <div className="card" style={{padding: '1.25rem'}}>
+                <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Gross Received</h3>
+                <div className="value" style={{fontSize: '1.5rem', fontWeight: '700'}}>{grossReceived.toFixed(1)}</div>
+              </div>
+              <div className="card" style={{padding: '1.25rem'}}>
+                <h3 style={{fontSize: '0.8rem', color: 'var(--accent3)', textTransform: 'uppercase'}}>GR</h3>
+                <div className="value" style={{fontSize: '1.5rem', color: 'var(--accent3)', fontWeight: '700'}}>{gr.toFixed(1)}</div>
+              </div>
+              <div className="card" style={{padding: '1.25rem'}}>
+                <h3 style={{fontSize: '0.8rem', color: 'var(--success)', textTransform: 'uppercase'}}>Net Received</h3>
+                <div className="value" style={{fontSize: '1.5rem', color: 'var(--success)', fontWeight: '700'}}>{received.toFixed(1)}</div>
+              </div>
+              {isCompleted && (
+                <div className="card" style={{ padding: '1.25rem', borderColor: netDiff >= 0 ? '#3b82f6' : 'var(--error)', background: netDiff >= 0 ? 'rgba(59, 130, 246, 0.05)' : 'rgba(239, 68, 68, 0.02)' }}>
+                  <h3 style={{ color: netDiff >= 0 ? '#3b82f6' : 'var(--error)', fontSize: '0.8rem', textTransform: 'uppercase' }}>{netDiff >= 0 ? 'Surplus' : 'Shortfall'}</h3>
+                  <div className="value" style={{ fontSize: '1.5rem', color: netDiff >= 0 ? '#3b82f6' : 'var(--error)', fontWeight: '700' }}>
+                    {Math.abs(netDiff).toFixed(1)} kg
+                  </div>
+                </div>
+              )}
+              <div className="card" style={{padding: '1.25rem'}}>
+                <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Status</h3>
+                <div className="value" style={{fontSize: '1.5rem', color: 'var(--success)', fontWeight: '700'}}>{order.status || 'Active'}</div>
               </div>
             </div>
 
-            {/* Inline Order Edit Panel */}
-            {showEditOrder && (
-              <form onSubmit={handleSaveOrderDetails} style={{background: 'var(--bg)', border: '1.5px solid var(--accent)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem'}}>
-                <h4 style={{marginBottom: '1rem', color: 'var(--accent)'}}>✏️ Edit Order Properties</h4>
-                <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem'}}>
-                  <div className="input-group" style={{marginBottom: 0}}>
-                    <label>Order Date</label>
-                    <input 
-                      type="date" 
-                      value={orderForm.orderDate} 
-                      onChange={e => setOrderForm({...orderForm, orderDate: e.target.value})} 
-                      required 
-                    />
-                  </div>
-                  <div className="input-group" style={{marginBottom: 0}}>
-                    <label>RM Supplier</label>
-                    <select 
-                      value={orderForm.supplier} 
-                      onChange={e => setOrderForm({...orderForm, supplier: e.target.value})}
-                      required
-                    >
-                      {suppliers.map((s, idx) => {
-                        const sName = s.name || s.supplier;
-                        return <option key={idx} value={sName}>{sName}</option>;
-                      })}
-                    </select>
-                  </div>
-                  <div className="input-group" style={{marginBottom: 0}}>
-                    <label>Item Type</label>
-                    <select 
-                      value={orderForm.category} 
-                      onChange={e => setOrderForm({...orderForm, category: e.target.value})}
-                      required
-                    >
-                      {YARN_CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="input-group" style={{marginBottom: 0}}>
-                    <label>Yarn Quality</label>
-                    <select 
-                      value={orderForm.quality} 
-                      onChange={e => setOrderForm({...orderForm, quality: e.target.value})}
-                      required
-                    >
-                      {validQualities.map((q, idx) => {
-                        const qName = q.quality || q.name;
-                        return <option key={idx} value={qName}>{qName}{q.color ? ` (${q.color})` : ''}</option>;
-                      })}
-                    </select>
-                  </div>
-                  <div className="input-group" style={{marginBottom: 0}}>
-                    <label>Yarn Code</label>
-                    <select 
-                      value={orderForm.code} 
-                      onChange={e => setOrderForm({...orderForm, code: e.target.value})}
-                    >
-                      <option value="">-- Code --</option>
-                      {validCodes.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div className="input-group" style={{marginBottom: 0}}>
-                    <label>Color</label>
-                    <select 
-                      value={orderForm.color} 
-                      onChange={e => setOrderForm({...orderForm, color: e.target.value})}
-                    >
-                      <option value="">-- Color --</option>
-                      {validColors.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div className="input-group" style={{marginBottom: 0}}>
-                    <label>Total Ordered Qty (Kg)</label>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      value={orderForm.orderedWeight} 
-                      onChange={e => setOrderForm({...orderForm, orderedWeight: e.target.value})} 
-                      required 
-                    />
-                  </div>
-                  <div className="input-group" style={{marginBottom: 0}}>
-                    <label>Rate (₹/Kg) <span style={{color: 'var(--muted)', fontWeight: 'normal'}}>(Optional)</span></label>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      placeholder="₹ Rate"
-                      value={orderForm.price || ''} 
-                      onChange={e => setOrderForm({...orderForm, price: e.target.value})} 
-                    />
-                  </div>
-                  <div className="input-group" style={{marginBottom: 0}}>
-                    <label>Status</label>
-                    <select 
-                      value={orderForm.status} 
-                      onChange={e => setOrderForm({...orderForm, status: e.target.value})}
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
-                  </div>
-                </div>
-                <div style={{display: 'flex', gap: '0.75rem', justifyContent: 'flex-end'}}>
-                  <button type="button" className="btn btn-outline" onClick={() => setShowEditOrder(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary">Save Order Details</button>
-                </div>
-              </form>
-            )}
-
-            {/* Order Summary Cards */}
-            <div style={{display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '1.5rem'}}>
-              <div className="card" style={{padding: '0.85rem', boxShadow: 'none'}}>
-                <div style={{fontSize: '0.72rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Total Ordered</div>
-                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '700'}}>{orderedWt.toLocaleString()} kg</div>
-              </div>
-              <div className="card" style={{padding: '0.85rem', boxShadow: 'none'}}>
-                <div style={{fontSize: '0.72rem', color: 'var(--success)', textTransform: 'uppercase'}}>Net Received</div>
-                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '700', color: 'var(--success)'}}>{netReceived.toFixed(1)} kg</div>
-              </div>
-              <div className="card" style={{padding: '0.85rem', boxShadow: 'none'}}>
-                <div style={{fontSize: '0.72rem', color: 'var(--accent3)', textTransform: 'uppercase'}}>Goods Return (GR)</div>
-                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '700', color: 'var(--accent3)'}}>{totalGR.toFixed(1)} kg</div>
-              </div>
-              <div className="card" style={{padding: '0.85rem', boxShadow: 'none'}}>
-                <div style={{fontSize: '0.72rem', color: 'var(--info)', textTransform: 'uppercase'}}>Pending Balance</div>
-                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '700', color: 'var(--info)'}}>{pendingBalance.toFixed(1)} kg</div>
-              </div>
-              <div className="card" style={{padding: '0.85rem', boxShadow: 'none'}}>
-                <div style={{fontSize: '0.72rem', color: 'var(--accent)', textTransform: 'uppercase'}}>Rate (₹/Kg)</div>
-                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '700', color: 'var(--accent)'}}>
-                  {order.price ? `₹${Number(order.price).toFixed(2)}` : 'Pending'}
-                </div>
-              </div>
-            </div>
-
-            {/* Batch Form */}
-            {showBatchForm ? (
-              <BatchEntryForm 
-                order={order}
-                initialData={editingBatch}
-                onSave={handleSaveBatch}
-                onCancel={() => { setShowBatchForm(false); setEditingBatch(null); }}
-                syncToStockBook={syncToStockBook}
-                setSyncToStockBook={setSyncToStockBook}
-              />
-            ) : (
-              <div>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
-                  <h3>Recorded Inward Challans ({(order.batches || []).length})</h3>
+            <div style={{marginTop: '2rem'}}>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+                <h3>Received Batches</h3>
+                {order.status === 'Active' && (
                   <button className="btn btn-primary" onClick={() => { setEditingBatch(null); setShowBatchForm(true); }}>
-                    + Record Incoming Challan
+                    + Add Batch
                   </button>
-                </div>
+                )}
+              </div>
 
-                <div className="table-responsive">
-                  <table>
-                    <thead>
+              {showBatchForm && (
+                <BatchForm 
+                  order={order} 
+                  onCancel={() => setShowBatchForm(false)} 
+                  onSubmit={handleBatchSubmit} 
+                  initialData={editingBatch} 
+                  geminiApiKey={geminiApiKey}
+                  selectedGeminiModel={selectedGeminiModel}
+                  onOpenSettings={onOpenSettings}
+                />
+              )}
+
+              <div className="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Received Date</th>
+                      <th>Challan #</th>
+                      <th>Lot #</th>
+                      <th style={{color: 'var(--accent)'}}>Box Number</th>
+                      <th style={{color: 'var(--accent)'}}>In cones</th>
+                      <th style={{color: 'var(--accent)'}}>In weight(Kg)</th>
+                      <th style={{color: 'var(--error)'}}>GR Cones<br/><span style={{fontSize: '0.7rem', fontWeight: 400, opacity: 0.8}}>(Calculated)</span></th>
+                      <th style={{color: 'var(--error)'}}>GR (kg)</th>
+                      <th style={{color: 'var(--error)'}}>GR Date</th>
+                      <th>Net Weight</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(order.batches || []).length === 0 ? (
                       <tr>
-                        <th>Receive Date</th>
-                        <th>Challan #</th>
-                        <th>Lot #</th>
-                        <th>Boxes</th>
-                        <th>Cones</th>
-                        <th>Gross Wt (Kg)</th>
-                        <th>GR (Kg)</th>
-                        <th>Net Wt (Kg)</th>
-                        <th>Actions</th>
+                        <td colSpan="11" style={{textAlign: 'center', padding: '2rem', color: 'var(--muted)'}}>
+                          No batches recorded yet. Click "+ Add Batch" to add incoming delivery boxes.
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {(order.batches || []).length === 0 ? (
-                        <tr>
-                          <td colSpan="9" style={{textAlign: 'center', padding: '2rem', color: 'var(--muted)'}}>
-                            No challan deliveries recorded yet. Click "+ Record Incoming Challan" to add inward boxes.
-                          </td>
-                        </tr>
-                      ) : (
-                        order.batches.map(batch => {
-                          const grossWt = (batch.boxes || []).reduce((acc, b) => acc + (Number(b.weight) || 0), 0);
-                          const grWt = (batch.boxes || []).reduce((acc, b) => acc + (Number(b.returnedWeight) || 0), 0);
-                          const conesCount = (batch.boxes || []).reduce((acc, b) => acc + (Number(b.cones) || 0), 0);
-                          const netWt = Number(batch.totalWeight) || (grossWt - grWt);
+                    ) : (
+                      [...(order.batches || [])].sort((a, b) => new Date(b.receiveDate) - new Date(a.receiveDate)).map((b, bIdx, bArr) => {
+                        const grossTotal = (b.boxes || []).reduce((acc, box) => acc + (Number(box.weight) || 0), 0);
+                        const grTotal = (b.boxes || []).reduce((acc, box) => acc + (Number(box.returnedWeight) || 0), 0);
+                        const conesTotal = (b.boxes || []).reduce((acc, box) => acc + (Number(box.cones) || 0), 0);
+                        
+                        const calcGRCones = (box) => {
+                          if (!box.returnedWeight || !box.weight || !box.cones) return 0;
+                          return Math.round(Number(box.returnedWeight) / (Number(box.weight) / Number(box.cones)));
+                        };
+                        
+                        const grConesTotal = (b.boxes || []).reduce((acc, box) => acc + calcGRCones(box), 0);
 
-                          return (
-                            <tr key={batch.id}>
-                              <td>{new Date(batch.receiveDate || batch.createdAt).toLocaleDateString('en-GB')}</td>
-                              <td><strong>{batch.challanNumber}</strong></td>
-                              <td><span style={{fontFamily: 'var(--font-mono)'}}>{batch.lotNumber || '-'}</span></td>
-                              <td>{(batch.boxes || []).length} boxes</td>
-                              <td>{conesCount || '-'}</td>
-                              <td>{grossWt.toFixed(1)}</td>
-                              <td style={{color: grWt > 0 ? 'var(--accent3)' : 'inherit'}}>{grWt.toFixed(1)}</td>
-                              <td><strong style={{color: 'var(--success)'}}>{netWt.toFixed(1)} kg</strong></td>
-                              <td>
-                                <div style={{display: 'flex', gap: '0.4rem'}}>
-                                  <button className="btn btn-outline" style={{padding: '0.3rem 0.5rem'}} onClick={() => { setEditingBatch(batch); setShowBatchForm(true); }}>✏️</button>
-                                  <button className="btn btn-outline" style={{padding: '0.3rem 0.5rem', color: 'var(--error)', borderColor: 'transparent'}} onClick={() => handleDeleteBatch(batch.id)}>🗑️</button>
-                                </div>
-                              </td>
+                        return (
+                          <React.Fragment key={b.id}>
+                            {(b.boxes || []).map((box, idx) => (
+                              <tr key={`${b.id}-${idx}`}>
+                                {idx === 0 && (
+                                  <React.Fragment>
+                                    <td rowSpan={b.boxes.length + 1}>{new Date(b.receiveDate).toLocaleDateString('en-GB')}</td>
+                                    <td rowSpan={b.boxes.length + 1}><strong>{b.challanNumber}</strong></td>
+                                    <td rowSpan={b.boxes.length + 1}><span style={{fontFamily: 'var(--font-mono)'}}>{b.lotNumber || '-'}</span></td>
+                                  </React.Fragment>
+                                )}
+                                <td style={{fontWeight: '600'}}>{box.boxNumber}</td>
+                                <td>{box.cones || '-'}</td>
+                                <td>{Number(box.weight || 0).toFixed(1)}</td>
+                                <td style={{color: 'var(--error)', fontWeight: '600'}}>{calcGRCones(box) || '-'}</td>
+                                <td style={{color: Number(box.returnedWeight) > 0 ? 'var(--error)' : 'inherit'}}>{box.returnedWeight || '0.0'}</td>
+                                <td style={{color: 'var(--error)'}}>{box.returnedDate ? new Date(box.returnedDate).toLocaleDateString('en-GB') : '-'}</td>
+                                <td>{(Number(box.weight || 0) - (Number(box.returnedWeight) || 0)).toFixed(1)}</td>
+                                {idx === 0 && (
+                                  <td rowSpan={b.boxes.length + 1}>
+                                    <div style={{display: 'flex', gap: '0.4rem', justifyContent: 'center'}}>
+                                      <button className="btn btn-outline" style={{padding: '0.3rem 0.6rem'}} onClick={() => { setEditingBatch(b); setShowBatchForm(true); }}>✏️</button>
+                                      <button className="btn btn-outline" style={{padding: '0.3rem 0.6rem', color: 'var(--error)', borderColor: 'transparent'}} onClick={() => handleDeleteBatch(b.id)}>🗑️</button>
+                                    </div>
+                                  </td>
+                                )}
+                              </tr>
+                            ))}
+                            <tr key={`${b.id}-total`} style={{background: 'var(--bg)', fontWeight: '700', fontSize: '0.85rem', borderTop: '2px solid var(--border)'}}>
+                              <td style={{color: 'var(--muted)', textAlign: 'right', paddingRight: '1rem'}}>BATCH TOTAL</td>
+                              <td>{conesTotal || '-'}</td>
+                              <td style={{color: 'var(--accent)'}}>{grossTotal.toFixed(1)}</td>
+                              <td style={{color: 'var(--error)'}}>{grConesTotal || '-'}</td>
+                              <td style={{color: 'var(--error)'}}>{grTotal.toFixed(1)}</td>
+                              <td style={{color: 'var(--muted)'}}>-</td>
+                              <td style={{color: 'var(--success)', fontSize: '0.95rem'}}>{Number(b.totalWeight || (grossTotal - grTotal)).toFixed(1)} kg</td>
                             </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                            {bIdx < bArr.length - 1 && (
+                              <tr key={`${b.id}-sep`}><td colSpan="11" style={{padding: 0, border: 'none', height: '5px', background: '#000000', lineHeight: '0'}}></td></tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {order.status === 'Active' && (
+              <div style={{marginTop: '2rem', textAlign: 'right'}}>
+                <button 
+                  className="btn btn-primary" 
+                  style={{background: 'var(--success)'}} 
+                  onClick={() => { 
+                    if(confirm('Mark this Yarn RM order as Completed?')) { 
+                      onComplete(order.id); 
+                      onClose(); 
+                    } 
+                  }}
+                >
+                  Mark as Completed
+                </button>
               </div>
             )}
           </div>
@@ -1765,255 +1828,384 @@
       );
     };
 
-    // Component: Batch / Inward Entry Form
-    const BatchEntryForm = ({ order, initialData, onSave, onCancel, syncToStockBook, setSyncToStockBook }) => {
-      const [challanNumber, setChallanNumber] = useState(initialData?.challanNumber || '');
-      const [receiveDate, setReceiveDate] = useState(initialData?.receiveDate || new Date().toISOString().split('T')[0]);
+    // Component: Batch Form with AI Scan (Exact replica of order-book.html)
+    const BatchForm = ({ order, onCancel, onSubmit, initialData, geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
+      const [challan, setChallan] = useState(initialData?.challanNumber || '');
+      const [receiveDate, setReceiveDate] = useState(initialData?.receiveDate?.split('T')[0] || new Date().toISOString().split('T')[0]);
       const [lotNumber, setLotNumber] = useState(initialData?.lotNumber || '');
-      const [boxes, setBoxes] = useState(initialData?.boxes || [
-        { boxNumber: 'B1', cones: '', weight: '', returnedWeight: '', returnedDate: '' }
-      ]);
+      const [boxInputs, setBoxInputs] = useState(initialData?.boxes ? initialData.boxes.map(b => ({...b})) : [{ boxNumber: 'B1', cones: '', weight: '', returnedWeight: '', returnedDate: '' }]);
+      const [error, setError] = useState(null);
+      const [invalidFields, setInvalidFields] = useState({});
+      const [isScanning, setIsScanning] = useState(false);
 
-      const addBoxRow = () => {
-        setBoxes(prev => [
-          ...prev, 
-          { boxNumber: `B${prev.length + 1}`, cones: '', weight: '', returnedWeight: '', returnedDate: '' }
-        ]);
-      };
-
-      const handleBoxChange = (idx, field, val) => {
-        setBoxes(prev => {
-          const next = [...prev];
-          next[idx] = { ...next[idx], [field]: val };
-          return next;
-        });
-      };
-
-      const removeBoxRow = (idx) => {
-        if (boxes.length === 1) return;
-        setBoxes(prev => prev.filter((_, i) => i !== idx));
-      };
-
-      const totalGross = boxes.reduce((acc, b) => acc + (Number(b.weight) || 0), 0);
-      const totalGR = boxes.reduce((acc, b) => acc + (Number(b.returnedWeight) || 0), 0);
-      const totalNet = Math.max(0, totalGross - totalGR);
-
-      const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!challanNumber.trim()) {
-          alert('Challan Number is required');
+      const scanChallan = async (file) => {
+        if (!geminiApiKey) {
+          setError(
+            <span>
+              API Key missing. Please configure it in <a href="#" onClick={(e) => { e.preventDefault(); onOpenSettings(); }} style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Settings</a>.
+            </span>
+          );
           return;
         }
-        const validBoxes = boxes.filter(b => Number(b.weight) > 0);
+
+        setIsScanning(true);
+        setError(null);
+
+        try {
+          const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.readAsDataURL(file);
+          });
+
+          const prompt = `Extract details from this yarn challan image. Return ONLY a JSON object with: 
+            {
+              "supplier": "Name of supplier",
+              "quality": "Quality/Yarn details",
+              "challanNumber": "Challan number",
+              "receiveDate": "Date in dd-mm-yyyy format",
+              "lotNumber": "Lot number",
+              "boxes": [{"boxNumber": "B1", "cones": 24, "weight": 60.5}, ...]
+            }`;
+
+          const modelConfigs = [
+            { id: selectedGeminiModel || 'gemini-2.0-flash', ver: 'v1beta' },
+            { id: 'gemini-2.0-flash', ver: 'v1beta' },
+            { id: 'gemini-2.5-flash', ver: 'v1beta' },
+            { id: 'gemini-flash-latest', ver: 'v1' }
+          ];
+          
+          const uniqueConfigs = [];
+          const seenIds = new Set();
+          for (const config of modelConfigs) {
+            const key = `${config.id}-${config.ver}`;
+            if (!seenIds.has(key)) {
+              uniqueConfigs.push(config);
+              seenIds.add(key);
+            }
+          }
+
+          let success = false;
+          let lastError = "";
+
+          for (const config of uniqueConfigs) {
+            try {
+              const response = await fetch(`https://generativelanguage.googleapis.com/${config.ver}/models/${config.id}:generateContent?key=${geminiApiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{
+                    parts: [
+                      { text: prompt },
+                      { inline_data: { mime_type: file.type, data: base64 } }
+                    ]
+                  }]
+                })
+              });
+
+              const result = await response.json();
+              if (result.error) {
+                lastError = `${config.id} (${config.ver}): ${result.error.message}`;
+                continue;
+              }
+
+              if (!result.candidates || !result.candidates[0]) {
+                lastError = `${config.id}: No candidates returned.`;
+                continue;
+              }
+
+              const text = result.candidates[0].content.parts[0].text;
+              const jsonMatch = text.match(/\{[\s\S]*\}/);
+              if (!jsonMatch) throw new Error("Could not parse data from image.");
+              
+              const data = JSON.parse(jsonMatch[0]);
+
+              setChallan(data.challanNumber || '');
+              setLotNumber(data.lotNumber || '');
+              
+              if (data.receiveDate) {
+                const parts = data.receiveDate.split('-');
+                if (parts.length === 3) {
+                  setReceiveDate(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                }
+              }
+
+              if (data.boxes && Array.isArray(data.boxes)) {
+                setBoxInputs(data.boxes.map(b => ({
+                  boxNumber: b.boxNumber || '',
+                  cones: b.cones || '',
+                  weight: b.weight || '',
+                  returnedWeight: '',
+                  returnedDate: ''
+                })));
+              }
+
+              success = true;
+              break;
+            } catch (e) {
+              lastError = e.message;
+            }
+          }
+
+          if (!success) throw new Error(lastError || "All models failed to respond.");
+
+        } catch (err) {
+          setError("Failed to scan challan: " + err.message);
+        } finally {
+          setIsScanning(false);
+        }
+      };
+
+      const handleSubmit = () => {
+        const errors = [];
+        const newInvalids = {};
+        
+        if (!challan) {
+          errors.push('Challan Number is required.');
+          newInvalids.challan = true;
+        }
+        if (!receiveDate) {
+          errors.push('Received Date is required.');
+          newInvalids.receiveDate = true;
+        }
+
+        const validBoxes = boxInputs.filter(b => b.weight !== '');
         if (validBoxes.length === 0) {
-          alert('Please enter at least one box with weight > 0');
+          errors.push('Add at least one box weight.');
+        }
+
+        boxInputs.forEach((b, i) => {
+          const w = b.weight !== '' ? Number(b.weight) : null;
+          const c = b.cones !== '' ? Number(b.cones) : null;
+
+          if (w !== null || c !== null || b.returnedWeight !== '' || b.returnedDate !== '') {
+            if (w === null || w <= 0) {
+              errors.push(`Weight must be > 0 for ${b.boxNumber}`);
+              newInvalids[`weight-${i}`] = true;
+            }
+            if (c === null || c <= 0) {
+              errors.push(`Cones must be > 0 for ${b.boxNumber}`);
+              newInvalids[`cones-${i}`] = true;
+            }
+            if (Number(b.returnedWeight) > 0 && !b.returnedDate) {
+              errors.push(`Provide GR Date for ${b.boxNumber}`);
+              newInvalids[`grDate-${i}`] = true;
+            }
+            if (w !== null && Number(b.returnedWeight) > w) {
+              errors.push(`GR weight cannot exceed Box weight for ${b.boxNumber}`);
+              newInvalids[`gr-${i}`] = true;
+            }
+          }
+        });
+
+        if (errors.length > 0) {
+          setInvalidFields(newInvalids);
+          setError(errors);
           return;
         }
 
-        onSave({
-          challanNumber,
-          receiveDate,
-          lotNumber,
-          boxes: validBoxes.map(b => ({
-            boxNumber: b.boxNumber,
-            cones: Number(b.cones) || 0,
-            weight: Number(b.weight) || 0,
-            returnedWeight: Number(b.returnedWeight) || 0,
-            returnedDate: b.returnedDate || ''
-          })),
-          totalWeight: totalNet
-        });
+        setError(null);
+        setInvalidFields({});
+        const boxes = validBoxes.map(b => ({ ...b, cones: Number(b.cones), weight: Number(b.weight), returnedWeight: Number(b.returnedWeight) || 0 }));
+        const tw = boxes.reduce((acc, b) => acc + (b.weight - b.returnedWeight), 0);
+        onSubmit({ challanNumber: challan, receiveDate, lotNumber, boxes, totalWeight: tw });
       };
+
+      const inputStyle = (isInvalid) => ({
+        border: isInvalid ? '1.5px solid var(--error)' : '1px solid var(--border)',
+        background: isInvalid ? 'rgba(239, 68, 68, 0.05)' : 'var(--surface)'
+      });
 
       return (
-        <div className="card" style={{border: '1.5px solid var(--accent)', background: 'var(--bg)'}}>
-          <h3 style={{marginBottom: '1.25rem'}}>{initialData ? '✏️ Edit Inward Batch' : '📥 New Inward Delivery Challan'}</h3>
-          <form onSubmit={handleSubmit}>
-            <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem'}}>
-              <div className="input-group">
-                <label>Receive Date *</label>
-                <input type="date" value={receiveDate} onChange={e => setReceiveDate(e.target.value)} required />
-              </div>
-              <div className="input-group">
-                <label>Challan Number *</label>
-                <input type="text" placeholder="e.g. CH-9901" value={challanNumber} onChange={e => setChallanNumber(e.target.value)} required />
-              </div>
-              <div className="input-group">
-                <label>Lot Number</label>
-                <input type="text" placeholder="e.g. LOT-4412" value={lotNumber} onChange={e => setLotNumber(e.target.value)} />
-              </div>
+        <div className="card" style={{border: '1.5px solid var(--accent)', marginBottom: '1.5rem', position: 'relative'}}>
+          {isScanning && (
+            <div className="loading-overlay">
+              <div className="spinner"></div>
+              <p style={{fontWeight: '600'}}>Scanning Challan with Gemini AI...</p>
+              <p style={{fontSize: '0.8rem', color: 'var(--muted)', marginTop: '0.5rem'}}>Extracting weights and details</p>
             </div>
-
-            {/* Box Breakdown Table */}
-            <label style={{fontSize: '0.8rem', fontWeight: '700', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block'}}>
-              Box-Level Breakdown & Weights
-            </label>
-            <div style={{maxHeight: '280px', overflowY: 'auto', marginBottom: '1rem'}}>
-              {boxes.map((b, i) => (
-                <div key={i} style={{display: 'grid', gridTemplateColumns: '1fr 0.8fr 1.2fr 1fr 1.5fr auto', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center'}}>
-                  <input 
-                    type="text" 
-                    placeholder="Box #" 
-                    value={b.boxNumber} 
-                    onChange={e => handleBoxChange(i, 'boxNumber', e.target.value)} 
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Cones" 
-                    value={b.cones} 
-                    onChange={e => handleBoxChange(i, 'cones', e.target.value)} 
-                  />
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    placeholder="Gross Wt (Kg)" 
-                    value={b.weight} 
-                    onChange={e => handleBoxChange(i, 'weight', e.target.value)} 
-                    required 
-                  />
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    placeholder="GR (Kg)" 
-                    value={b.returnedWeight} 
-                    onChange={e => handleBoxChange(i, 'returnedWeight', e.target.value)} 
-                  />
-                  <input 
-                    type="date" 
-                    value={b.returnedDate} 
-                    disabled={!b.returnedWeight || Number(b.returnedWeight) <= 0}
-                    onChange={e => handleBoxChange(i, 'returnedDate', e.target.value)} 
-                  />
-                  <button 
-                    type="button" 
-                    className="btn btn-outline" 
-                    style={{color: 'var(--error)', borderColor: 'transparent', padding: '0.4rem'}} 
-                    onClick={() => removeBoxRow(i)}
-                  >
-                    ✖
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem'}}>
-              <button type="button" className="btn btn-outline" onClick={addBoxRow}>
-                + Add Another Box
+          )}
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+            <h3 style={{ margin: 0 }}>{initialData ? 'Edit Batch' : 'Add New Batch'}</h3>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <button 
+                className="btn btn-outline" 
+                style={{ color: 'var(--error)', borderColor: 'var(--error)', padding: '0.4rem 0.8rem' }}
+                onClick={() => {
+                  setChallan('');
+                  setLotNumber('');
+                  setBoxInputs([{ boxNumber: 'B1', cones: '', weight: '', returnedWeight: '', returnedDate: '' }]);
+                  setError(null);
+                }}
+              >
+                🔄 Reset
               </button>
-              <div style={{fontSize: '0.9rem', fontWeight: '700', display: 'flex', gap: '1rem'}}>
-                <span>Gross: {totalGross.toFixed(1)} kg</span>
-                <span style={{color: 'var(--accent3)'}}>GR: {totalGR.toFixed(1)} kg</span>
-                <span style={{color: 'var(--success)'}}>Net: {totalNet.toFixed(1)} kg</span>
-              </div>
-            </div>
-
-            {/* Sync to Stock Book Option */}
-            <div style={{display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.5rem', padding: '0.75rem', background: 'rgba(139, 92, 246, 0.08)', borderRadius: '10px'}}>
-              <input 
-                type="checkbox" 
-                id="sync-stock-check" 
-                checked={syncToStockBook} 
-                onChange={e => setSyncToStockBook(e.target.checked)} 
-                style={{width: '18px', height: '18px', cursor: 'pointer'}}
-              />
-              <label htmlFor="sync-stock-check" style={{fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', margin: 0}}>
-                ✨ Automatically sync this inward delivery into the <strong>Yarn RM Stock Book</strong> ledger
+              <label className="btn btn-outline" style={{ cursor: 'pointer', margin: 0, padding: '0.4rem 0.8rem' }}>
+                📷 Scan Challan
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  style={{ display: 'none' }} 
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      const file = e.target.files[0];
+                      e.target.value = '';
+                      setChallan('');
+                      setLotNumber('');
+                      setBoxInputs([]);
+                      setError(null);
+                      scanChallan(file);
+                    }
+                  }} 
+                />
               </label>
             </div>
+          </div>
 
-            <div style={{display: 'flex', gap: '1rem'}}>
-              <button type="submit" className="btn btn-primary" style={{flex: 1}}>
-                Save Delivery Batch
-              </button>
-              <button type="button" className="btn btn-outline" onClick={onCancel}>
-                Cancel
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.25rem'}}>
+            <div className="input-group" style={{marginBottom: 0}}>
+              <label>Received Date</label>
+              <input type="date" style={inputStyle(invalidFields.receiveDate)} value={receiveDate} onChange={e => setReceiveDate(e.target.value)} />
+            </div>
+            <div className="input-group" style={{marginBottom: 0}}>
+              <label>Challan Number</label>
+              <input type="text" style={inputStyle(invalidFields.challan)} value={challan} onChange={e => setChallan(e.target.value)} placeholder="e.g. CH-9901" />
+            </div>
+            <div className="input-group" style={{marginBottom: 0}}>
+              <label>Lot Number</label>
+              <input type="text" value={lotNumber} onChange={e => setLotNumber(e.target.value)} placeholder="e.g. LOT-24A" />
+            </div>
+          </div>
+          
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 0.8fr 1fr 1fr 1.5fr auto', gap: '0.5rem', marginBottom: '0.5rem', padding: '0 0.5rem'}}>
+            <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--muted)'}}>BOX NUMBER</div>
+            <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--muted)'}}>IN CONES</div>
+            <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--muted)'}}>IN WEIGHT (KG)</div>
+            <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--error)'}}>GR (KG)</div>
+            <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--error)'}}>GR DATE</div>
+            <div style={{width: '32px'}}></div>
+          </div>
+
+          {boxInputs.map((box, i) => (
+            <div key={i} style={{display: 'grid', gridTemplateColumns: '1fr 0.8fr 1fr 1fr 1.5fr auto', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center'}}>
+              <input type="text" value={box.boxNumber} onChange={e => { let n = [...boxInputs]; n[i] = { ...n[i], boxNumber: e.target.value }; setBoxInputs(n); }} />
+              <input type="number" step="1" min="0" style={inputStyle(invalidFields[`cones-${i}`])} placeholder="Cones" value={box.cones} onChange={e => { 
+                let val = e.target.value;
+                if (val !== '' && Number(val) < 0) return;
+                let n = [...boxInputs]; 
+                n[i] = { ...n[i], cones: val }; 
+                setBoxInputs(n); 
+              }} />
+              <input type="number" min="0" style={inputStyle(invalidFields[`weight-${i}`])} placeholder="Weight" value={box.weight} onChange={e => { 
+                let val = e.target.value;
+                if (val !== '' && Number(val) < 0) return;
+                let n = [...boxInputs]; 
+                n[i] = { ...n[i], weight: val }; 
+                setBoxInputs(n); 
+              }} />
+              <input type="number" min="0" style={inputStyle(invalidFields[`gr-${i}`])} placeholder="GR" value={box.returnedWeight} onChange={e => { 
+                let val = e.target.value;
+                if (val !== '' && Number(val) < 0) return;
+                let n = [...boxInputs]; 
+                n[i] = { ...n[i], returnedWeight: val }; 
+                if (!val || Number(val) === 0) n[i].returnedDate = '';
+                setBoxInputs(n); 
+              }} />
+              <input type="date" style={inputStyle(invalidFields[`grDate-${i}`])} value={box.returnedDate || ''} disabled={!box.returnedWeight} min={receiveDate} onChange={e => { let n = [...boxInputs]; n[i] = { ...n[i], returnedDate: e.target.value }; setBoxInputs(n); }} />
+              <button 
+                className="btn btn-outline" 
+                style={{ padding: '0.4rem', color: 'var(--error)', borderColor: 'transparent', width: '32px', height: '32px', justifyContent: 'center' }}
+                onClick={() => {
+                  const newInputs = boxInputs.filter((_, idx) => idx !== i);
+                  setBoxInputs(newInputs.length > 0 ? newInputs : [{ boxNumber: 'B1', cones: '', weight: '', returnedWeight: '', returnedDate: '' }]);
+                }}
+                title="Remove row"
+              >
+                ✖
               </button>
             </div>
-          </form>
+          ))}
+          
+          <button className="btn btn-outline" style={{width: '100%', marginTop: '0.5rem'}} onClick={() => setBoxInputs([...boxInputs, { boxNumber: `B${boxInputs.length + 1}`, cones: '', weight: '', returnedWeight: '', returnedDate: '' }])}>
+            + Add Box
+          </button>
+          
+          {error && (
+            <div style={{ 
+              padding: '1rem', 
+              background: 'rgba(239, 68, 68, 0.1)', 
+              color: 'var(--error)', 
+              borderRadius: '10px', 
+              fontSize: '0.85rem', 
+              marginTop: '1.5rem',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+            }}>
+              <div style={{fontWeight: '700', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                <span>⚠️ Error</span>
+              </div>
+              <div style={{opacity: 0.9, margin: 0}}>
+                {Array.isArray(error) ? error.map((err, idx) => (
+                  <div key={idx} style={{marginBottom: '0.2rem'}}>- {err}</div>
+                )) : error}
+              </div>
+            </div>
+          )}
+
+          <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
+            <button className="btn btn-primary" style={{flex: 1}} onClick={handleSubmit}>Save</button>
+            <button className="btn btn-outline" onClick={onCancel}>Cancel</button>
+          </div>
         </div>
       );
     };
 
     // Component: Analytics View
-    const AnalyticsView = ({ orders, qualities, suppliers }) => {
-      const chartRef1 = useRef(null);
-      const chartRef2 = useRef(null);
+    const AnalyticsView = ({ orders }) => {
+      const canvasRef = useRef(null);
+      const chartInstance = useRef(null);
 
-      useEffect(() => {
-        if (!chartRef1.current || !chartRef2.current) return;
-
-        // Group by Supplier (Volume in Kg)
-        const supplierVolume = {};
+      const supplierTotals = useMemo(() => {
+        const map = {};
         orders.forEach(o => {
           const s = o.supplier || 'Unknown';
           const wt = Number(o.orderedWeight) || 0;
-          supplierVolume[s] = (supplierVolume[s] || 0) + wt;
+          map[s] = (map[s] || 0) + wt;
         });
+        return map;
+      }, [orders]);
 
-        // Group by Category (Volume in Kg)
-        const catWeights = {};
-        orders.forEach(o => {
-          const c = o.category || o.itemType || 'Polyester';
-          catWeights[c] = (catWeights[c] || 0) + (Number(o.orderedWeight) || 0);
-        });
+      useEffect(() => {
+        if (!canvasRef.current) return;
+        const ctx = canvasRef.current.getContext('2d');
+        if (chartInstance.current) chartInstance.current.destroy();
 
-        const ctx1 = chartRef1.current.getContext('2d');
-        const chart1 = new Chart(ctx1, {
-          type: 'doughnut',
-          data: {
-            labels: Object.keys(supplierVolume),
-            datasets: [{
-              data: Object.values(supplierVolume),
-              backgroundColor: ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f97316', '#f59e0b', '#06b6d4']
-            }]
-          },
-          options: { 
-            responsive: true, 
-            maintainAspectRatio: false,
-            plugins: {
-              tooltip: {
-                callbacks: {
-                  label: (ctx) => ` ${ctx.label}: ${ctx.raw.toLocaleString()} kg`
-                }
-              }
-            }
-          }
-        });
-
-        const ctx2 = chartRef2.current.getContext('2d');
-        const chart2 = new Chart(ctx2, {
+        chartInstance.current = new Chart(ctx, {
           type: 'bar',
           data: {
-            labels: Object.keys(catWeights),
+            labels: Object.keys(supplierTotals),
             datasets: [{
-              label: 'Ordered Volume (Kg)',
-              data: Object.values(catWeights),
-              backgroundColor: '#8b5cf6',
+              label: 'Procurement Volume (Kg)',
+              data: Object.values(supplierTotals),
+              backgroundColor: 'rgba(139, 92, 246, 0.75)',
               borderRadius: 8
             }]
           },
-          options: { responsive: true, maintainAspectRatio: false }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+          }
         });
 
-        return () => {
-          chart1.destroy();
-          chart2.destroy();
-        };
-      }, [orders]);
+        return () => { if (chartInstance.current) chartInstance.current.destroy(); };
+      }, [supplierTotals]);
 
       return (
-        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem'}}>
-          <div className="card" style={{height: '380px'}}>
-            <h3>Procurement Volume by Supplier (Kg)</h3>
-            <div style={{height: '300px', marginTop: '1rem'}}>
-              <canvas ref={chartRef1}></canvas>
-            </div>
-          </div>
-          <div className="card" style={{height: '380px'}}>
-            <h3>Yarn Category Volume (Kg)</h3>
-            <div style={{height: '300px', marginTop: '1rem'}}>
-              <canvas ref={chartRef2}></canvas>
-            </div>
+        <div className="card">
+          <h2 style={{marginBottom: '1.5rem'}}>Yarn Procurement Volume by Supplier</h2>
+          <div style={{height: '350px'}}>
+            <canvas ref={canvasRef}></canvas>
           </div>
         </div>
       );
@@ -2021,89 +2213,48 @@
 
     // Component: Heat Map View
     const HeatMapView = ({ orders, onSelectOrder }) => {
-      const [currentDate, setCurrentDate] = useState(new Date());
-
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const firstDayIndex = new Date(year, month, 1).getDay();
-
-      const monthOrders = useMemo(() => {
-        const map = {};
-        orders.forEach(o => {
-          const oDateStr = o.orderDate || o.createdAt?.split('T')[0];
-          if (oDateStr) {
-            const [y, m, d] = oDateStr.split('-').map(Number);
-            if (y === year && (m - 1) === month) {
-              map[d] = map[d] || { orders: [], arrivals: [] };
-              map[d].orders.push(o);
-            }
-          }
-          (o.batches || []).forEach(b => {
-            const bDateStr = b.receiveDate || b.createdAt?.split('T')[0];
-            if (bDateStr) {
-              const [y, m, d] = bDateStr.split('-').map(Number);
-              if (y === year && (m - 1) === month) {
-                map[d] = map[d] || { orders: [], arrivals: [] };
-                map[d].arrivals.push({ ...b, order: o });
-              }
-            }
-          });
-        });
-        return map;
-      }, [orders, year, month]);
-
-      const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-      ];
-
       return (
         <div className="card">
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
-            <h2>🔥 {monthNames[month]} {year} — Yarn Delivery Heat Map</h2>
-            <div style={{display: 'flex', gap: '0.5rem'}}>
-              <button className="btn btn-outline" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>◀ Prev</button>
-              <button className="btn btn-outline" onClick={() => setCurrentDate(new Date())}>Today</button>
-              <button className="btn btn-outline" onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>Next ▶</button>
-            </div>
-          </div>
-
-          <div className="calendar-grid">
-            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
-              <div key={d} className="calendar-weekday">{d}</div>
-            ))}
-            {Array.from({ length: firstDayIndex }).map((_, i) => (
-              <div key={`empty-${i}`} className="calendar-day calendar-day-empty"></div>
-            ))}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1;
-              const dayData = monthOrders[day] || { orders: [], arrivals: [] };
-              const activityCount = dayData.orders.length + dayData.arrivals.length;
-              const heat = Math.min(5, activityCount);
-
-              return (
-                <div key={day} className={`calendar-day heat-level-${heat}`}>
-                  <div className="day-number">{day}</div>
-                  <div className="day-chips">
-                    {dayData.orders.length > 0 && (
-                      <span className="chip-sm chip-order">📦 {dayData.orders.length}</span>
-                    )}
-                    {dayData.arrivals.length > 0 && (
-                      <span className="chip-sm chip-inward">🚚 {dayData.arrivals.length}</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+          <h2 style={{marginBottom: '1rem'}}>Yarn RM Delivery Calendar</h2>
+          <p style={{color: 'var(--muted)', marginBottom: '1.5rem'}}>Recent yarn order activities across suppliers.</p>
+          <div className="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Date</th>
+                  <th>Quality</th>
+                  <th>Supplier</th>
+                  <th>Type</th>
+                  <th>Ordered (Kg)</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map(o => (
+                  <tr key={o.id}>
+                    <td><strong>{o.orderNumber || o.id}</strong></td>
+                    <td>{new Date(o.orderDate || o.createdAt).toLocaleDateString('en-GB')}</td>
+                    <td>{o.quality}</td>
+                    <td>{o.supplier}</td>
+                    <td><span className={`badge badge-${(o.category || o.type || 'Polyester').toLowerCase()}`}>{o.category || o.type || 'Polyester'}</span></td>
+                    <td>{o.orderedWeight} kg</td>
+                    <td>
+                      <button className="btn btn-outline" style={{padding: '0.3rem 0.6rem', fontSize: '0.8rem'}} onClick={() => onSelectOrder(o)}>
+                        + Challan
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       );
     };
 
-    // Mount React App
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
   </script>
 </body>
 </html>
