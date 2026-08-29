@@ -6328,6 +6328,18 @@ function showToast(message, type = 'info') {
       if (typeof renderSuppliers === 'function') renderSuppliers();
     }
 
+    window.__vf_active_tab = tabId;
+    if (window.VishwaSupabase) {
+      if (typeof window.VishwaSupabase.sendPresencePing === 'function') {
+        window.VishwaSupabase.sendPresencePing(tabId);
+      }
+      if (typeof window.VishwaSupabase.broadcastActiveFormSnapshot === 'function') {
+        setTimeout(() => {
+          try { window.VishwaSupabase.broadcastActiveFormSnapshot(); } catch(e) {}
+        }, 120);
+      }
+    }
+
     try {
       window.dispatchEvent(new CustomEvent('vf-tab-switched', { detail: { tab: tabId } }));
     } catch(e) {}

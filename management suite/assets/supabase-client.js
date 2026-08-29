@@ -127,19 +127,8 @@
     }
   }
 
-  // Unique client session instance ID (persisted across page reloads in the same tab via sessionStorage)
-  let CLIENT_ID;
-  try {
-    CLIENT_ID = (typeof window !== 'undefined' && window.sessionStorage) ? window.sessionStorage.getItem('vf_presence_client_id') : null;
-    if (!CLIENT_ID || typeof CLIENT_ID !== 'string' || !CLIENT_ID.startsWith('vf_client_')) {
-      CLIENT_ID = 'vf_client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        window.sessionStorage.setItem('vf_presence_client_id', CLIENT_ID);
-      }
-    }
-  } catch (e) {
-    CLIENT_ID = 'vf_client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
-  }
+  // Unique client session instance ID (Unique per window/tab lifecycle to prevent multi-tab collision)
+  const CLIENT_ID = 'vf_client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
 
   // In-memory cache for instant synchronous reading across device sessions
   const cache = {};
@@ -759,6 +748,11 @@
     notifyPresenceListeners();
     // Mutual Discovery: Immediately announce self so the newcomer discovers us
     sendPresenceAnnounce();
+    if (typeof window !== 'undefined' && typeof window.__vf_broadcastActiveFormSnapshot === 'function') {
+      setTimeout(() => {
+        try { window.__vf_broadcastActiveFormSnapshot(); } catch(e) {}
+      }, 300);
+    }
   }
 
   function handleIncomingPresenceAnnounce(payload) {
@@ -782,6 +776,11 @@
       isSelf: false
     };
     notifyPresenceListeners();
+    if (typeof window !== 'undefined' && typeof window.__vf_broadcastActiveFormSnapshot === 'function') {
+      setTimeout(() => {
+        try { window.__vf_broadcastActiveFormSnapshot(); } catch(e) {}
+      }, 400);
+    }
   }
 
   function handleIncomingPresencePing(payload) {
@@ -1276,6 +1275,10 @@
         } catch(err) {
           el.value = value;
         }
+
+        // Trigger local UI reactivity (calculations, previews, dropdown dependents) without echoing back
+        try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) {}
+        try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch(e) {}
       }
     });
 
@@ -1290,6 +1293,8 @@
           const el = findElementByFieldId(fid);
           if (el && el !== document.activeElement) {
             el.value = '';
+            try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) {}
+            try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch(e) {}
           }
         });
       } else {
@@ -1297,6 +1302,31 @@
         Array.from(activeRemoteLocks.keys()).forEach(fid => unlockField(fid));
       }
     });
+
+    // Function to broadcast all currently filled input fields so new/joining users immediately see active entry data
+    function broadcastActiveFormSnapshot() {
+      try {
+        const inputs = document.querySelectorAll('input:not([type="password"]):not([type="hidden"]):not([type="file"]), textarea, select');
+        inputs.forEach(el => {
+          const fid = getFieldIdentifier(el);
+          if (fid && el.value !== undefined && el.value !== null && el.value.trim() !== '') {
+            broadcastFieldChange(fid, el.value, {
+              label: el.placeholder || el.name || '',
+              isSnapshot: true
+            });
+          }
+        });
+        if (document.activeElement) {
+          const fid = getFieldIdentifier(document.activeElement);
+          if (fid) {
+            broadcastFieldFocus(fid, true, {
+              label: document.activeElement.placeholder || document.activeElement.name || ''
+            });
+          }
+        }
+      } catch(e) {}
+    }
+    window.__vf_broadcastActiveFormSnapshot = broadcastActiveFormSnapshot;
   }
 
   function handleIncomingFieldFocus(payload) {
@@ -2455,6 +2485,11 @@
     broadcastFieldFocus: (fieldId, isFocused, meta) => broadcastFieldFocus(fieldId, isFocused, meta),
     broadcastFieldChange: (fieldId, value, meta) => broadcastFieldChange(fieldId, value, meta),
     broadcastFormClear: (fieldIds) => broadcastFormClear(fieldIds),
+    broadcastActiveFormSnapshot: () => {
+      if (typeof window.__vf_broadcastActiveFormSnapshot === 'function') {
+        window.__vf_broadcastActiveFormSnapshot();
+      }
+    },
     getAvatarColors: () => AVATAR_COLORS
   };
 
