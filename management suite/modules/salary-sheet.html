@@ -14746,6 +14746,7 @@
                 for (let i = 0; i < roleSelect.options.length; i++) {
                     if (roleSelect.options[i].value.toLowerCase().trim() === empRole.toLowerCase()) {
                         roleSelect.selectedIndex = i;
+                        roleSelect.value = roleSelect.options[i].value;
                         roleFound = true;
                         break;
                     }
@@ -14754,6 +14755,7 @@
                     for (let i = 0; i < roleSelect.options.length; i++) {
                         if (roleSelect.options[i].value === 'Karigar') {
                             roleSelect.selectedIndex = i;
+                            roleSelect.value = 'Karigar';
                             roleFound = true;
                             break;
                         }
@@ -14768,6 +14770,7 @@
                     roleSelect.appendChild(opt);
                     roleSelect.value = empRole;
                 }
+                roleSelect.dispatchEvent(new Event('change', { bubbles: true }));
             }
 
             const currentRole = roleSelect ? roleSelect.value : empRole;
@@ -14792,6 +14795,7 @@
                 for (let i = 0; i < styleSelect.options.length; i++) {
                     if (styleSelect.options[i].value.toLowerCase().trim() === styleVal.toLowerCase().trim()) {
                         styleSelect.selectedIndex = i;
+                        styleSelect.value = styleSelect.options[i].value;
                         styleFound = true;
                         break;
                     }
@@ -14805,6 +14809,7 @@
                     styleSelect.appendChild(opt);
                     styleSelect.value = styleVal;
                 }
+                styleSelect.dispatchEvent(new Event('change', { bubbles: true }));
             }
 
             // Set salary amount
