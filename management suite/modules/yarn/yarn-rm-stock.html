@@ -234,8 +234,8 @@
     .metric-card.success-card::before {
       background: var(--success);
     }
-    .metric-card.danger-card::before {
-      background: var(--error);
+    .metric-card.used-card::before, .metric-card.danger-card::before {
+      background: #3b82f6;
     }
     .metric-card.gr-card::before {
       background: var(--accent3);
@@ -529,19 +529,29 @@
     }
 
     .box-item.issued {
-      background: rgba(239, 68, 68, 0.07);
-      border-color: rgba(239, 68, 68, 0.35);
-      color: var(--error);
+      background: rgba(59, 130, 246, 0.08);
+      border-color: rgba(59, 130, 246, 0.45);
+      color: #3b82f6;
+    }
+
+    .box-item.issued:hover {
+      border-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.16);
     }
 
     .box-item.issued .box-num {
-      color: var(--error);
+      color: #3b82f6;
     }
 
     .box-item.gr {
       background: rgba(249, 115, 22, 0.09);
-      border-color: rgba(249, 115, 22, 0.4);
+      border-color: rgba(249, 115, 22, 0.45);
       color: var(--accent3);
+    }
+
+    .box-item.gr:hover {
+      border-color: var(--accent3);
+      background: rgba(249, 115, 22, 0.18);
     }
 
     .box-item.gr .box-num {
@@ -598,16 +608,17 @@
 
     .box-item.available .box-status-dot {
       background: var(--success);
+      box-shadow: 0 0 5px rgba(16, 185, 129, 0.6);
     }
 
     .box-item.issued .box-status-dot {
-      background: var(--error);
-      box-shadow: 0 0 5px var(--error);
+      background: #3b82f6;
+      box-shadow: 0 0 6px rgba(59, 130, 246, 0.7);
     }
 
     .box-item.gr .box-status-dot {
       background: var(--accent3);
-      box-shadow: 0 0 5px var(--accent3);
+      box-shadow: 0 0 6px rgba(249, 115, 22, 0.7);
     }
 
     .box-weight {
@@ -629,7 +640,7 @@
 
     .box-issued-date {
       font-size: 0.65rem;
-      color: var(--error);
+      color: #3b82f6;
       font-weight: 600;
       white-space: nowrap;
       margin-top: 1px;
@@ -858,9 +869,9 @@
         <div class="metric-val" id="kpi-gr-weight-val" style="color: var(--accent3);">0.00 kg</div>
         <div class="metric-sub" id="kpi-gr-boxes-sub">0 GR boxes</div>
       </div>
-      <div class="metric-card danger-card">
+      <div class="metric-card used-card">
         <div class="metric-title">Used (Kg)</div>
-        <div class="metric-val" id="kpi-used-weight-val" style="color: var(--error);">0.00 kg</div>
+        <div class="metric-val" id="kpi-used-weight-val" style="color: #3b82f6;">0.00 kg</div>
         <div class="metric-sub" id="kpi-used-boxes-sub">0 issued/used boxes</div>
       </div>
       <div class="metric-card primary-card">
@@ -2064,12 +2075,12 @@
               tooltipText = `GR (Fully Returned): -${gr.toFixed(1)} kg on ${formatDateDisplay(box.grDate)} ${box.grRemarks ? `(${box.grRemarks})` : ''}`;
             } else if (isPartialGr) {
               weightHtml = `
-                <span class="box-weight" style="font-weight: 700; color: ${box.status === 'issued' ? 'var(--error)' : 'var(--success)'};">${rem.toFixed(1)} kg</span>
+                <span class="box-weight" style="font-weight: 700; color: ${box.status === 'issued' ? '#3b82f6' : 'var(--success)'};">${rem.toFixed(1)} kg</span>
                 <span class="box-gr-pill">(-${gr.toFixed(1)} GR)</span>
               `;
               tooltipText = `Remaining Qty: ${rem.toFixed(1)} kg (Original Gross: ${gross.toFixed(1)} kg, Returned GR: -${gr.toFixed(1)} kg on ${formatDateDisplay(box.grDate)})`;
             } else if (box.status === 'issued') {
-              weightHtml = `<span class="box-weight">${rem.toFixed(1)} kg</span>`;
+              weightHtml = `<span class="box-weight" style="color: #3b82f6; font-weight: 600;">${rem.toFixed(1)} kg</span><span style="font-size: 0.65rem; font-weight: 700; color: #3b82f6;">ISSUED</span>`;
               tooltipText = `Issued to: ${box.issuedTo || 'Unknown'} on ${formatDateDisplay(box.issueDate)}`;
             } else {
               weightHtml = `<span class="box-weight">${rem.toFixed(1)} kg</span>`;
