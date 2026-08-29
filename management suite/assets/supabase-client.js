@@ -1124,8 +1124,10 @@
       const el = findElementByFieldId(fieldId);
       if (!el) return;
 
-      // If local user is already focusing the element, local user has exclusive editing authority
-      if (document.activeElement === el) return;
+      // If local user is currently on this element, yield focus to the remote editor
+      if (document.activeElement === el) {
+        try { el.blur(); } catch(e) {}
+      }
 
       // Clean up previous lock if any
       unlockField(fieldId);
@@ -1258,10 +1260,9 @@
       const el = findElementByFieldId(fieldId);
       if (!el) return;
 
-      // CRITICAL: If the local user is currently actively focusing this element, local user is authoritative
-      // NEVER overwrite the active user's input with a remote echo
-      if (document.activeElement === el) {
-        return;
+      // If incoming remote change is for this element and local user had cursor, yield focus to remote editor
+      if (document.activeElement === el && !meta?.isSnapshot) {
+        try { el.blur(); } catch(e) {}
       }
 
       // Refresh auto-unlock timeout only if this field is already actively locked by focus
