@@ -84,6 +84,33 @@
     } catch(e) {}
   }, 300000);
 
+  // Auto-inject Favicon if not present or outdated
+  (function ensureFavicon() {
+    try {
+      const faviconUrl = rootPath + '../assets/images/vishwa_logo_circular_dark.png';
+      let iconLink = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]');
+      if (!iconLink) {
+        iconLink = document.createElement('link');
+        iconLink.rel = 'icon';
+        iconLink.type = 'image/png';
+        iconLink.href = faviconUrl;
+        document.head.appendChild(iconLink);
+      } else {
+        iconLink.type = 'image/png';
+        iconLink.href = faviconUrl;
+      }
+      let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+      if (!appleIcon) {
+        appleIcon = document.createElement('link');
+        appleIcon.rel = 'apple-touch-icon';
+        appleIcon.href = faviconUrl;
+        document.head.appendChild(appleIcon);
+      } else {
+        appleIcon.href = faviconUrl;
+      }
+    } catch (e) {}
+  })();
+
   // Auto-inject Config & Supabase adapter if not present
   if (!window.APP_CONFIG) {
     const cfgScript = document.createElement('script');
