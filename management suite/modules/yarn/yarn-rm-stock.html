@@ -490,13 +490,14 @@
     }
 
     .box-item {
-      width: 76px;
-      height: 76px;
-      min-width: 76px;
-      border-radius: 12px;
-      display: flex;
+      min-width: 100px;
+      width: max-content;
+      max-width: 220px;
+      min-height: 52px;
+      border-radius: 10px;
+      display: inline-flex;
       flex-direction: column;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       cursor: pointer;
       user-select: none;
@@ -504,9 +505,9 @@
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       border: 1.5px solid var(--border);
       background: var(--surface);
-      padding: 0.35rem 0.3rem;
+      padding: 0.45rem 0.75rem;
       box-sizing: border-box;
-      text-align: center;
+      gap: 0.2rem;
     }
 
     .box-item:hover {
@@ -528,48 +529,32 @@
     }
 
     .box-item.issued {
-      background: rgba(239, 68, 68, 0.08);
-      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(239, 68, 68, 0.07);
+      border-color: rgba(239, 68, 68, 0.35);
       color: var(--error);
     }
 
     .box-item.issued .box-num {
       color: var(--error);
-      font-weight: 700;
     }
 
     .box-item.gr {
-      background: rgba(249, 115, 22, 0.1);
-      border-color: rgba(249, 115, 22, 0.45);
+      background: rgba(249, 115, 22, 0.09);
+      border-color: rgba(249, 115, 22, 0.4);
       color: var(--accent3);
     }
 
     .box-item.gr .box-num {
       color: var(--accent3);
-      font-weight: 700;
     }
 
     .box-item.has-partial-gr {
       border-color: rgba(249, 115, 22, 0.55);
-      background: linear-gradient(145deg, rgba(16, 185, 129, 0.08) 55%, rgba(249, 115, 22, 0.14) 100%);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 45%, rgba(249, 115, 22, 0.12) 100%);
     }
 
     .box-item.has-partial-gr:hover {
       border-color: var(--accent3);
-    }
-
-    .box-gr-pill {
-      font-size: 0.62rem;
-      color: var(--accent3);
-      font-weight: 700;
-      line-height: 1;
-      margin-top: 1px;
-      letter-spacing: -0.02em;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      display: block;
     }
 
     .box-item.selected {
@@ -578,29 +563,37 @@
       background: rgba(139, 92, 246, 0.1);
     }
 
+    .box-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 0.6rem;
+    }
+
     .box-num {
       font-family: var(--font-mono);
-      font-size: clamp(0.72rem, 1.8vw, 0.9rem);
+      font-size: 0.88rem;
       font-weight: 700;
-      max-width: 100%;
-      width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
-      display: block;
-      text-align: center;
-      line-height: 1.15;
-      padding: 0 2px;
-      box-sizing: border-box;
+      line-height: 1.2;
+      color: var(--fg);
+      letter-spacing: -0.01em;
+    }
+
+    .box-bottom-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.35rem;
+      flex-wrap: nowrap;
+      width: 100%;
     }
 
     .box-status-dot {
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      position: absolute;
-      top: 5px;
-      right: 5px;
+      flex-shrink: 0;
     }
 
     .box-item.available .box-status-dot {
@@ -609,38 +602,37 @@
 
     .box-item.issued .box-status-dot {
       background: var(--error);
-      box-shadow: 0 0 6px var(--error);
+      box-shadow: 0 0 5px var(--error);
     }
 
     .box-item.gr .box-status-dot {
       background: var(--accent3);
-      box-shadow: 0 0 6px var(--accent3);
+      box-shadow: 0 0 5px var(--accent3);
     }
 
     .box-weight {
-      font-size: 0.68rem;
+      font-size: 0.76rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
       color: var(--muted);
-      margin-top: 2px;
-      max-width: 100%;
-      width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
-      display: block;
+      line-height: 1.15;
+    }
+
+    .box-gr-pill {
+      font-size: 0.68rem;
+      color: var(--accent3);
+      font-weight: 700;
+      white-space: nowrap;
       line-height: 1.15;
     }
 
     .box-issued-date {
-      font-size: 0.62rem;
+      font-size: 0.65rem;
       color: var(--error);
-      font-weight: 500;
-      margin-top: 1px;
-      max-width: 100%;
-      width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-weight: 600;
       white-space: nowrap;
-      display: block;
+      margin-top: 1px;
     }
 
     .box-item.gr .box-issued-date {
@@ -2090,10 +2082,14 @@
 
             boxesGridHtml += `
               <div class="box-item ${boxClass}" onclick="toggleBoxSelection('${lot.id}', '${box.id}', '${box.status}')">
-                <span class="box-status-dot"></span>
-                <span class="box-num">${box.id}</span>
-                ${weightHtml}
-                ${dateLabel ? `<span class="box-issued-date">${dateLabel}</span>` : ''}
+                <div class="box-top-row">
+                  <span class="box-num">${box.id}</span>
+                  <span class="box-status-dot"></span>
+                </div>
+                <div class="box-bottom-row">
+                  ${weightHtml}
+                </div>
+                ${dateLabel ? `<div class="box-issued-date">${dateLabel}</div>` : ''}
                 <div class="box-tooltip">${tooltipText}</div>
               </div>
             `;
