@@ -738,6 +738,83 @@
         return () => window.removeEventListener('fyChanged', handleFYChange);
       }, []);
 
+      // Auto-heal and sync all orders and batches into Yarn RM Stock Book
+      useEffect(() => {
+        if (!Array.isArray(orders) || orders.length === 0) return;
+        try {
+          const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
+          let stockList = rawStock ? JSON.parse(rawStock) : [];
+          if (!Array.isArray(stockList)) stockList = [];
+
+          let changed = false;
+          orders.forEach(order => {
+            (order.batches || []).forEach(batch => {
+              const recDateOnly = (batch.receiveDate || new Date().toISOString().split('T')[0]).split('T')[0];
+              const lotIdVal = batch.lotNumber || ('LOT-' + (batch.challanNumber || Date.now().toString().slice(-4)));
+              
+              const existingIdx = stockList.findIndex(s => String(s.id) === String(lotIdVal) || String(s.lotNumber) === String(batch.lotNumber));
+              const existingLot = existingIdx >= 0 ? stockList[existingIdx] : null;
+              const existingBoxMap = existingLot && Array.isArray(existingLot.boxes) 
+                ? new Map(existingLot.boxes.map(b => [String(b.id || b.boxNumber), b])) 
+                : new Map();
+
+              const boxes = (batch.boxes || []).map((bx, idx) => {
+                const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
+                const retWt = Number(bx.returnedWeight) || 0;
+                const isGr = retWt > 0;
+                const oldB = existingBoxMap.get(bId);
+
+                return {
+                  id: bId,
+                  boxNumber: bId,
+                  cones: Number(bx.cones) || 0,
+                  weight: Number(bx.weight) || 0,
+                  status: oldB?.status === 'issued' ? 'issued' : (isGr ? 'gr' : (oldB?.status || 'available')),
+                  issueDate: oldB?.issueDate || null,
+                  issuedTo: oldB?.issuedTo || null,
+                  grWeight: retWt,
+                  grDate: bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || ''),
+                  grRemarks: isGr ? 'Returned in Challan GR' : (oldB?.grRemarks || null)
+                };
+              });
+
+              const updatedLot = {
+                id: lotIdVal,
+                lotNumber: batch.lotNumber || ('LOT-' + (batch.challanNumber || 'AUTO')),
+                challanNo: batch.challanNumber || (existingLot?.challanNo || ''),
+                challanNumber: batch.challanNumber || (existingLot?.challanNumber || ''),
+                receiveDate: recDateOnly,
+                date: recDateOnly,
+                supplier: order.supplier || (existingLot?.supplier || ''),
+                quality: order.quality || (existingLot?.quality || ''),
+                itemType: order.category || order.type || 'Polyester',
+                code: order.code || (existingLot?.code || ''),
+                color: order.color || (existingLot?.color || ''),
+                rate: order.price || (existingLot?.rate || ''),
+                orderRef: order.orderNumber || order.id,
+                boxes: boxes
+              };
+
+              if (existingIdx >= 0) {
+                stockList[existingIdx] = updatedLot;
+              } else {
+                stockList.unshift(updatedLot);
+              }
+              changed = true;
+            });
+          });
+
+          if (changed) {
+            localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+              window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
+            }
+          }
+        } catch(e) {
+          console.error("Yarn stock auto-heal sync error:", e);
+        }
+      }, [orders]);
+
       // View URL sync
       useEffect(() => {
         const titles = {
@@ -1594,29 +1671,61 @@
           let stockList = rawStock ? JSON.parse(rawStock) : [];
           if (!Array.isArray(stockList)) stockList = [];
 
+          const recDateOnly = (batchData.receiveDate || new Date().toISOString().split('T')[0]).split('T')[0];
+          const lotIdVal = batchData.lotNumber || ('LOT-' + (batchData.challanNumber || Date.now().toString().slice(-4)));
+
           const stockLot = {
-            id: batchData.lotNumber || ('LOT-' + (batchData.challanNumber || Date.now().toString().slice(-4))),
+            id: lotIdVal,
             lotNumber: batchData.lotNumber || ('LOT-' + (batchData.challanNumber || 'AUTO')),
+            challanNo: batchData.challanNumber || '',
             challanNumber: batchData.challanNumber || '',
-            date: batchData.receiveDate || new Date().toISOString().split('T')[0],
-            supplier: order.supplier,
-            quality: order.quality,
+            receiveDate: recDateOnly,
+            date: recDateOnly,
+            supplier: order.supplier || '',
+            quality: order.quality || '',
             itemType: order.category || order.type || 'Polyester',
             code: order.code || '',
             color: order.color || '',
             rate: order.price || '',
             orderRef: order.orderNumber || order.id,
-            boxes: (batchData.boxes || []).map((bx, idx) => ({
-              boxNumber: bx.boxNumber || `B${idx + 1}`,
-              cones: Number(bx.cones) || 0,
-              weight: Number(bx.weight) || 0,
-              status: (Number(bx.returnedWeight) > 0) ? 'gr' : 'available',
-              grWeight: Number(bx.returnedWeight) || 0,
-              grDate: bx.returnedDate || ''
-            }))
+            boxes: (batchData.boxes || []).map((bx, idx) => {
+              const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
+              const retWt = Number(bx.returnedWeight) || 0;
+              const isGr = retWt > 0;
+              return {
+                id: bId,
+                boxNumber: bId,
+                cones: Number(bx.cones) || 0,
+                weight: Number(bx.weight) || 0,
+                status: isGr ? 'gr' : 'available',
+                issueDate: null,
+                issuedTo: null,
+                grWeight: retWt,
+                grDate: bx.returnedDate ? bx.returnedDate.split('T')[0] : '',
+                grRemarks: isGr ? 'Returned in Challan GR' : null
+              };
+            })
           };
 
-          stockList = stockList.filter(s => s.id !== stockLot.id && s.lotNumber !== stockLot.lotNumber);
+          // If lot exists, preserve existing box issue/status records
+          const existingLot = stockList.find(s => String(s.id) === String(stockLot.id) || String(s.lotNumber) === String(stockLot.lotNumber));
+          if (existingLot && Array.isArray(existingLot.boxes)) {
+            const existingBoxMap = new Map(existingLot.boxes.map(b => [String(b.id || b.boxNumber), b]));
+            stockLot.boxes = stockLot.boxes.map(b => {
+              const oldB = existingBoxMap.get(String(b.id));
+              if (oldB && oldB.status === 'issued') {
+                return {
+                  ...b,
+                  status: 'issued',
+                  issueDate: oldB.issueDate,
+                  issuedTo: oldB.issuedTo
+                };
+              }
+              return b;
+            });
+          }
+
+          stockList = stockList.filter(s => String(s.id) !== String(stockLot.id) && String(s.lotNumber) !== String(stockLot.lotNumber));
           stockList.unshift(stockLot);
           localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
           if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
@@ -1642,7 +1751,7 @@
               const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
               let stockList = rawStock ? JSON.parse(rawStock) : [];
               if (Array.isArray(stockList)) {
-                stockList = stockList.filter(s => s.id !== delBatch.lotNumber && s.lotNumber !== delBatch.lotNumber && s.challanNumber !== delBatch.challanNumber);
+                stockList = stockList.filter(s => String(s.id) !== String(delBatch.lotNumber) && String(s.lotNumber) !== String(delBatch.lotNumber) && String(s.challanNo || s.challanNumber) !== String(delBatch.challanNumber));
                 localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
                 if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
                   window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);

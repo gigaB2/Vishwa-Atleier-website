@@ -1021,6 +1021,63 @@
     let stockData = [];
     let selectedBoxes = []; // Array of { lotId, boxId }
 
+    // Normalize Lot & Box records from any source (Yarn RM Orders, manual challans, etc.)
+    function normalizeLot(lot, idx = 0) {
+      if (!lot) return null;
+      const lotId = String(lot.id || lot.lotNumber || `LOT-${Date.now()}-${idx}`);
+      const lotNumber = String(lot.lotNumber || lot.id || 'LOT-UNKNOWN');
+      const challanNo = String(lot.challanNo || lot.challanNumber || '');
+      const rawDate = String(lot.receiveDate || lot.date || '');
+      const receiveDate = rawDate.includes('T') ? rawDate.split('T')[0] : (rawDate.includes(' ') ? rawDate.split(' ')[0] : rawDate);
+      const supplier = String(lot.supplier || '');
+      const quality = String(lot.quality || '');
+      const itemType = String(lot.itemType || lot.category || lot.type || 'Polyester');
+      const code = String(lot.code || '');
+      const color = String(lot.color || '');
+      const rate = lot.rate || lot.price || '';
+      const orderRef = String(lot.orderRef || '');
+
+      const boxes = Array.isArray(lot.boxes) ? lot.boxes.map((b, bIdx) => {
+        const boxId = String(b.id || b.boxNumber || `B${bIdx + 1}`).trim();
+        const weight = parseFloat(b.weight) || parseFloat(lot.boxWeight) || 0;
+        const cones = parseInt(b.cones, 10) || 0;
+        const grWeight = parseFloat(b.grWeight || b.returnedWeight) || 0;
+        const status = b.status || (grWeight > 0 ? 'gr' : 'available');
+
+        return {
+          ...b,
+          id: boxId,
+          boxNumber: boxId,
+          weight: weight,
+          cones: cones,
+          status: status,
+          issueDate: b.issueDate || null,
+          issuedTo: b.issuedTo || null,
+          grDate: b.grDate || b.returnedDate || null,
+          grRemarks: b.grRemarks || (grWeight > 0 ? 'Returned in Challan GR' : null),
+          grWeight: grWeight
+        };
+      }) : [];
+
+      return {
+        ...lot,
+        id: lotId,
+        lotNumber: lotNumber,
+        challanNo: challanNo,
+        challanNumber: challanNo,
+        receiveDate: receiveDate,
+        date: receiveDate,
+        supplier: supplier,
+        quality: quality,
+        itemType: itemType,
+        code: code,
+        color: color,
+        rate: rate,
+        orderRef: orderRef,
+        boxes: boxes
+      };
+    }
+
     // Initial Data Seed if empty
     function initSeedData() {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -1028,12 +1085,12 @@
         try {
           let data = JSON.parse(stored);
           if (Array.isArray(data)) {
-            // Purge demo/sample lots ('LOT-8072-01' and 'LOT-30C-02') if present from previous sessions
-            data = data.filter(item => item.id !== 'LOT-8072-01' && item.id !== 'LOT-30C-02' && item.quality !== '80/72 Polyester DTY' && item.quality !== '30s Combed Cotton');
+            // Purge demo/sample lots if present from previous sessions
+            data = data.filter(item => item && item.id !== 'LOT-8072-01' && item.id !== 'LOT-30C-02' && item.quality !== '80/72 Polyester DTY' && item.quality !== '30s Combed Cotton');
           } else {
             data = [];
           }
-          stockData = data;
+          stockData = data.map(normalizeLot).filter(Boolean);
           saveStockData();
           return;
         } catch(e) {
@@ -1048,6 +1105,9 @@
 
     function saveStockData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stockData));
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+        window.VishwaSupabase.saveToSupabase(STORAGE_KEY, stockData);
+      }
     }
 
     let boxRowCount = 0;
@@ -1476,9 +1536,9 @@
       const remarks = document.getElementById('gr-remarks').value.trim();
 
       selectedBoxes.forEach(item => {
-        const lot = stockData.find(l => l.id === item.lotId);
+        const lot = stockData.find(l => String(l.id) === String(item.lotId));
         if (lot) {
-          const box = lot.boxes.find(b => b.id === item.boxId);
+          const box = lot.boxes.find(b => String(b.id) === String(item.boxId));
           if (box) {
             box.status = 'gr';
             box.grDate = grDate;
@@ -1500,9 +1560,12 @@
 
     // Dynamic Select/Toggle Box
     function toggleBoxSelection(lotId, boxId, status) {
+      const sLotId = String(lotId);
+      const sBoxId = String(boxId);
+
       if (status === 'issued') {
-        const lot = stockData.find(l => l.id === lotId);
-        const box = lot ? lot.boxes.find(b => b.id === boxId) : null;
+        const lot = stockData.find(l => String(l.id) === sLotId);
+        const box = lot ? lot.boxes.find(b => String(b.id) === sBoxId) : null;
         if (box) {
           const issuedInfo = box.issuedTo ? ` to ${box.issuedTo}` : '';
           const dateInfo = box.issueDate ? ` on ${formatDateDisplay(box.issueDate)}` : '';
@@ -1511,7 +1574,7 @@
             box.issueDate = null;
             box.issuedTo = null;
             // Also remove from selectedBoxes if it was selected
-            const selIdx = selectedBoxes.findIndex(b => b.lotId === lotId && b.boxId === boxId);
+            const selIdx = selectedBoxes.findIndex(b => String(b.lotId) === sLotId && String(b.boxId) === sBoxId);
             if (selIdx >= 0) selectedBoxes.splice(selIdx, 1);
             saveStockData();
             renderStockBook();
@@ -1521,14 +1584,14 @@
       }
 
       if (status === 'gr') {
-        const lot = stockData.find(l => l.id === lotId);
-        const box = lot ? lot.boxes.find(b => b.id === boxId) : null;
+        const lot = stockData.find(l => String(l.id) === sLotId);
+        const box = lot ? lot.boxes.find(b => String(b.id) === sBoxId) : null;
         if (box) {
           if (confirm(`Box ${box.id} of ${lot.quality} (${lot.lotNumber}) is marked as GR on ${formatDateDisplay(box.grDate)}.\n\nDo you want to re-open/return this box to AVAILABLE stock?`)) {
             box.status = 'available';
             box.grDate = null;
             box.grRemarks = null;
-            const selIdx = selectedBoxes.findIndex(b => b.lotId === lotId && b.boxId === boxId);
+            const selIdx = selectedBoxes.findIndex(b => String(b.lotId) === sLotId && String(b.boxId) === sBoxId);
             if (selIdx >= 0) selectedBoxes.splice(selIdx, 1);
             saveStockData();
             renderStockBook();
@@ -1537,11 +1600,11 @@
         return;
       }
 
-      const index = selectedBoxes.findIndex(b => b.lotId === lotId && b.boxId === boxId);
+      const index = selectedBoxes.findIndex(b => String(b.lotId) === sLotId && String(b.boxId) === sBoxId);
       if (index >= 0) {
         selectedBoxes.splice(index, 1);
       } else {
-        selectedBoxes.push({ lotId, boxId });
+        selectedBoxes.push({ lotId: sLotId, boxId: sBoxId });
       }
 
       renderStockBook();
@@ -1642,9 +1705,9 @@
       const issuedTo = document.getElementById('issue-to').value.trim();
 
       selectedBoxes.forEach(item => {
-        const lot = stockData.find(l => l.id === item.lotId);
+        const lot = stockData.find(l => String(l.id) === String(item.lotId));
         if (lot) {
-          const box = lot.boxes.find(b => b.id === item.boxId);
+          const box = lot.boxes.find(b => String(b.id) === String(item.boxId));
           if (box) {
             box.status = 'issued';
             box.issueDate = issueDate;
@@ -1663,11 +1726,13 @@
     // Render Function
     function formatDateDisplay(dStr) {
       if (!dStr) return '';
-      const parts = dStr.split('-');
+      const str = String(dStr);
+      const datePart = str.includes('T') ? str.split('T')[0] : (str.includes(' ') ? str.split(' ')[0] : str);
+      const parts = datePart.split('-');
       if (parts.length === 3) {
         return `${parts[2]}-${parts[1]}-${parts[0]}`;
       }
-      return dStr;
+      return datePart;
     }
 
     function renderStockBook() {
