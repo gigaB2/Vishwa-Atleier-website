@@ -2661,45 +2661,61 @@ header:has(.vf-presence-container:hover),
 
 .vf-collab-focus-ring {
   outline: none !important;
-  box-shadow: 0 0 0 2px var(--vf-collab-color, #8b5cf6), 0 0 10px var(--vf-collab-glow, rgba(139, 92, 246, 0.35)) !important;
+  box-shadow: 0 0 0 2px var(--vf-collab-color, #8b5cf6), 0 0 12px var(--vf-collab-glow, rgba(139, 92, 246, 0.35)) !important;
   border-color: var(--vf-collab-color, #8b5cf6) !important;
   position: relative;
   z-index: 5;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+}
+
+.vf-collab-locked-field {
+  cursor: not-allowed !important;
+  user-select: none !important;
+  background: rgba(139, 92, 246, 0.03) !important;
+  opacity: 0.94;
+}
+
+.dark-mode .vf-collab-locked-field {
+  background: rgba(139, 92, 246, 0.08) !important;
 }
 
 .vf-collab-editor-tag {
   position: absolute;
-  top: -12px;
+  top: -13px;
   right: 6px;
-  padding: 1px 7px;
-  font-size: 0.62rem;
+  padding: 2px 8px;
+  font-size: 0.65rem;
   font-weight: 700;
-  border-radius: 4px;
+  font-family: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
+  letter-spacing: 0.02em;
+  border-radius: 6px;
   background: var(--vf-collab-color, #8b5cf6);
   color: #ffffff;
   pointer-events: none;
-  z-index: 25;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   white-space: nowrap;
-  animation: vfTagSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: vfTagSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: 1.2;
 }
 
 @keyframes vfTagSlideDown {
-  0% { transform: translateY(4px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
+  0% { transform: translateY(5px) scale(0.95); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 .vf-collab-editor-tag::after {
   content: '';
   position: absolute;
   bottom: -4px;
-  right: 8px;
+  right: 10px;
   border-width: 4px 4px 0 4px;
   border-style: solid;
   border-color: var(--vf-collab-color, #8b5cf6) transparent transparent transparent;
 }
+
 
 

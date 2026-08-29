@@ -3934,33 +3934,29 @@ function removeEmployee(empId) {
             
 
             if (confirm(`Are you sure you want to permanently delete employee "${emp.name}"? This will clean up their tasks as well.`)) {
-
                 pushUndoState();
-
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+                    window.VishwaSupabase.recordDeletion(STATE_KEY, emp.id || emp.name);
+                }
                 state.employees = state.employees.filter(e => e.id !== emp.id && e.name !== emp.name);
-
                 if (state.tasks) { state.tasks = state.tasks.filter(t => t.assignedTo !== emp.id && t.assignedBy !== emp.id); } else { state.tasks = []; }
-
                 
-
                 state.logs.push({
-
                     id: `log-${Date.now()}`,
-
                     timestamp: new Date().toISOString(),
-
                     text: `CEO permanently deleted employee roster member: ${emp.name}`
-
                 });
-
                 
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+                    window.VishwaSupabase.broadcastFormClear(['team-emp-name', 'team-emp-phone', 'team-emp-salary-amount', 'team-emp-join-date', 'edit-emp-name', 'edit-emp-phone', 'edit-emp-salary-amount']);
+                }
 
                 saveState();
-
+                if (typeof closeEmployeeDetailsModal === 'function') {
+                    closeEmployeeDetailsModal();
+                }
                 showToast(`Employee "${emp.name}" deleted permanently`, "error");
-
                 refreshData();
-
             }
 
         }
@@ -6007,6 +6003,10 @@ function showToast(message, type = 'info') {
       colorInput.value = '';
     }
 
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-quality-name', 'new-quality-code', 'new-quality-color', 'new-quality-type', 'new-quality-supplier']);
+    }
+
     saveState();
     renderQualities();
   }
@@ -6037,6 +6037,10 @@ function showToast(message, type = 'info') {
     document.getElementById('new-quality-color').value = '';
     document.getElementById('new-quality-type').value = 'Polyester';
     
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-quality-name', 'new-quality-code', 'new-quality-color', 'new-quality-type', 'new-quality-supplier']);
+    }
+
     const submitBtn = document.getElementById('btn-add-quality');
     submitBtn.innerText = 'Add Quality';
     submitBtn.style.background = '';
@@ -6046,6 +6050,12 @@ function showToast(message, type = 'info') {
   function deleteQuality(id) {
     if (confirm('Are you sure you want to delete this quality?')) {
       pushToUndo();
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+        window.VishwaSupabase.recordDeletion('yarn-qualities', id);
+      }
+      if (editingQualityId === id) {
+        cancelQualityEdit();
+      }
       rawMaterialQualities = rawMaterialQualities.filter(q => q.id !== id);
       saveState();
       renderQualities();
@@ -6168,6 +6178,10 @@ function showToast(message, type = 'info') {
       notesInput.value = '';
     }
 
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-supplier-name', 'new-supplier-contact', 'new-supplier-phone', 'new-supplier-email', 'new-supplier-address', 'new-supplier-notes']);
+    }
+
     saveState();
     renderSuppliers();
     populateSupplierDropdown();
@@ -6203,6 +6217,10 @@ function showToast(message, type = 'info') {
     document.getElementById('new-supplier-address').value = '';
     document.getElementById('new-supplier-notes').value = '';
     
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-supplier-name', 'new-supplier-contact', 'new-supplier-phone', 'new-supplier-email', 'new-supplier-address', 'new-supplier-notes']);
+    }
+
     const submitBtn = document.getElementById('btn-add-supplier');
     submitBtn.innerText = 'Add Supplier';
     submitBtn.style.background = '';
@@ -6225,6 +6243,12 @@ function showToast(message, type = 'info') {
     }
 
     pushToUndo();
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+      window.VishwaSupabase.recordDeletion('yarn-suppliers', id);
+    }
+    if (editingSupplierId === id) {
+      cancelSupplierEdit();
+    }
     rawMaterialSuppliers = rawMaterialSuppliers.filter(item => item.id !== id);
     saveState();
     renderSuppliers();
@@ -6412,7 +6436,13 @@ function showToast(message, type = 'info') {
 
   window.deleteLoan = function(loanId) {
     if (!confirm('Are you sure you want to delete this loan record?')) return;
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+      window.VishwaSupabase.recordDeletion(STATE_KEY, loanId);
+    }
     state.loans = (state.loans || []).filter(l => l.id !== loanId);
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['loan-emp-select', 'loan-amount-input', 'loan-date-input', 'loan-reason-input']);
+    }
     saveState();
     showToast('Loan record deleted.', 'success');
     renderLoansTab();
@@ -6468,6 +6498,9 @@ function showToast(message, type = 'info') {
       looms.push({ id: newId, name: name });
       nameInput.value = '';
     }
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-loom-name']);
+    }
     saveState();
   }
 
@@ -6487,6 +6520,9 @@ function showToast(message, type = 'info') {
   function cancelLoomEdit() {
     editingLoomId = null;
     document.getElementById('new-loom-name').value = '';
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-loom-name']);
+    }
     const submitBtn = document.getElementById('btn-add-loom');
     submitBtn.innerText = 'Add Loom';
     submitBtn.style.background = '';
@@ -6510,6 +6546,12 @@ function showToast(message, type = 'info') {
     }
 
     pushToUndo();
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+      window.VishwaSupabase.recordDeletion('manage-looms', id);
+    }
+    if (editingLoomId === id) {
+      cancelLoomEdit();
+    }
     looms = looms.filter(l => l.id !== id);
     saveState();
   }
@@ -6575,6 +6617,9 @@ function showToast(message, type = 'info') {
       nameInput.value = '';
       hooksInput.value = '';
     }
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-jacquard-name', 'new-jacquard-hooks']);
+    }
     saveState();
   }
 
@@ -6596,6 +6641,9 @@ function showToast(message, type = 'info') {
     editingJacquardId = null;
     document.getElementById('new-jacquard-name').value = '';
     document.getElementById('new-jacquard-hooks').value = '';
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-jacquard-name', 'new-jacquard-hooks']);
+    }
     const submitBtn = document.getElementById('btn-add-jacquard');
     submitBtn.innerText = 'Add Jacquard';
     submitBtn.style.background = '';
@@ -6619,6 +6667,12 @@ function showToast(message, type = 'info') {
     }
 
     pushToUndo();
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+      window.VishwaSupabase.recordDeletion('manage-jacquards', id);
+    }
+    if (editingJacquardId === id) {
+      cancelJacquardEdit();
+    }
     jacquards = jacquards.filter(j => j.id !== id);
     saveState();
   }
@@ -7808,6 +7862,11 @@ function showToast(message, type = 'info') {
       if (remainingInput) remainingInput.value = 0;
       updateJalaEndsCalculation();
     }
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-jala-name', 'new-jala-remaining', 'new-jala-adjustment']);
+    }
+
     saveState();
   }
 
@@ -7862,6 +7921,10 @@ function showToast(message, type = 'info') {
     
     updateJalaEndsCalculation();
 
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-jala-name', 'new-jala-remaining', 'new-jala-adjustment']);
+    }
+
     const submitBtn = document.getElementById('btn-add-jala');
     submitBtn.innerText = 'Add Jala';
     submitBtn.style.background = '';
@@ -7885,6 +7948,12 @@ function showToast(message, type = 'info') {
     }
 
     pushToUndo();
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+      window.VishwaSupabase.recordDeletion('manage-jalas', id);
+    }
+    if (editingJalaId === id) {
+      cancelJalaEdit();
+    }
     jalas = jalas.filter(j => j.id !== id);
     saveState();
   }
@@ -8002,6 +8071,9 @@ function showToast(message, type = 'info') {
       document.getElementById('new-fani-reed-length').value = '';
       nameInput.value = '';
     }
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-fani-reed-count', 'new-fani-reed-length', 'new-fani-name']);
+    }
     saveState();
   }
 
@@ -8029,6 +8101,9 @@ function showToast(message, type = 'info') {
     document.getElementById('new-fani-reed-count').value = '';
     document.getElementById('new-fani-reed-length').value = '';
     document.getElementById('new-fani-name').value = '';
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-fani-reed-count', 'new-fani-reed-length', 'new-fani-name']);
+    }
     const submitBtn = document.getElementById('btn-add-fani');
     submitBtn.innerText = 'Add Fani';
     submitBtn.style.background = '';
@@ -8052,6 +8127,12 @@ function showToast(message, type = 'info') {
     }
 
     pushToUndo();
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+      window.VishwaSupabase.recordDeletion('manage-fanis', id);
+    }
+    if (editingFaniId === id) {
+      cancelFaniEdit();
+    }
     fanis = fanis.filter(f => f.id !== id);
     saveState();
   }
@@ -8285,6 +8366,9 @@ function showToast(message, type = 'info') {
       if (rapierSelect) rapierSelect.value = '';
       if (jacquardSelect) jacquardSelect.value = '';
       if (jalaSelect) jalaSelect.value = '';
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+        window.VishwaSupabase.broadcastFormClear(['new-machine-name', 'new-machine-rapier', 'new-machine-jacquard', 'new-machine-jala']);
+      }
       saveState();
     }
   }
@@ -8329,6 +8413,10 @@ function showToast(message, type = 'info') {
     const jalaSelect = document.getElementById('new-machine-jala');
     if (jalaSelect) jalaSelect.value = '';
     
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-machine-name', 'new-machine-rapier', 'new-machine-jacquard', 'new-machine-jala']);
+    }
+
     const submitBtn = document.getElementById('btn-add-machine');
     submitBtn.innerText = 'Add Machine';
     submitBtn.style.background = '';
@@ -8348,6 +8436,12 @@ function showToast(message, type = 'info') {
     }
     
     pushToUndo();
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+      window.VishwaSupabase.recordDeletion('machines', id);
+    }
+    if (editingMachineId === id) {
+      cancelMachineEdit();
+    }
     
     // Clear machineNumber from warp-beams if it was assigned to this machine
     const storedBeams = JSON.parse(localStorage.getItem('warp-beams') || '[]');
@@ -8456,7 +8550,77 @@ function showToast(message, type = 'info') {
   });
 
   window.addEventListener('supabase-sync', (e) => {
-    if (e.detail && e.detail.key === STATE_KEY) {
+    const key = e.detail ? e.detail.key : null;
+    if (!key || key === STATE_KEY) {
+      refreshData();
+    }
+    if (key === 'machines') {
+      state.machines = loadInitialState('machines', []);
+      renderMachines();
+    } else if (key === 'manage-looms' || key === 'looms') {
+      looms = loadInitialState('manage-looms', []);
+      populateMachineDropdowns();
+      renderLooms();
+    } else if (key === 'manage-jacquards' || key === 'jacquards') {
+      jacquards = loadInitialState('manage-jacquards', []);
+      populateMachineDropdowns();
+      renderJacquards();
+    } else if (key === 'manage-jalas' || key === 'jalas') {
+      jalas = loadInitialState('manage-jalas', []);
+      populateMachineDropdowns();
+      renderJalas();
+    } else if (key === 'manage-fanis' || key === 'fanis') {
+      fanis = loadInitialState('manage-fanis', []);
+      renderFanis();
+    } else if (key === 'yarn-qualities') {
+      rawMaterialQualities = loadInitialState('yarn-qualities', []);
+      renderQualities();
+    } else if (key === 'yarn-suppliers') {
+      rawMaterialSuppliers = loadInitialState('yarn-suppliers', []);
+      renderSuppliers();
+      populateSupplierDropdown();
+      renderQualities();
+    }
+  });
+
+  window.addEventListener('supabase-item-deleted', (e) => {
+    const { key, itemId } = e.detail || {};
+    if (!itemId) return;
+    const idStr = String(itemId);
+    
+    if (editingQualityId === idStr) cancelQualityEdit();
+    if (editingSupplierId === idStr) cancelSupplierEdit();
+    if (editingLoomId === idStr) cancelLoomEdit();
+    if (editingJacquardId === idStr) cancelJacquardEdit();
+    if (editingJalaId === idStr) cancelJalaEdit();
+    if (editingFaniId === idStr) cancelFaniEdit();
+    if (editingMachineId === idStr) cancelMachineEdit();
+
+    // Re-render
+    if (key === 'yarn-qualities') {
+      rawMaterialQualities = loadInitialState('yarn-qualities', []);
+      renderQualities();
+    } else if (key === 'yarn-suppliers') {
+      rawMaterialSuppliers = loadInitialState('yarn-suppliers', []);
+      renderSuppliers();
+      populateSupplierDropdown();
+      renderQualities();
+    } else if (key === 'manage-looms' || key === 'looms') {
+      looms = loadInitialState('manage-looms', []);
+      renderLooms();
+    } else if (key === 'manage-jacquards' || key === 'jacquards') {
+      jacquards = loadInitialState('manage-jacquards', []);
+      renderJacquards();
+    } else if (key === 'manage-jalas' || key === 'jalas') {
+      jalas = loadInitialState('manage-jalas', []);
+      renderJalas();
+    } else if (key === 'manage-fanis' || key === 'fanis') {
+      fanis = loadInitialState('manage-fanis', []);
+      renderFanis();
+    } else if (key === 'machines') {
+      state.machines = loadInitialState('machines', []);
+      renderMachines();
+    } else if (!key || key === STATE_KEY) {
       refreshData();
     }
   });

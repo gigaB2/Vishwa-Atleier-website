@@ -242,6 +242,20 @@
     return Array.isArray(deleted) ? deleted.map(String) : [];
   }
 
+  function filterDeletedEntities(arr) {
+    if (!Array.isArray(arr)) return arr;
+    const tombstones = getDeletedTombstones();
+    if (tombstones.length === 0) return arr;
+    const tombstoneSet = new Set(tombstones);
+    return arr.filter(item => {
+      if (!item) return false;
+      const id = getItemIdentifier(item);
+      if (id && tombstoneSet.has(String(id))) return false;
+      if (item.id && tombstoneSet.has(String(item.id))) return false;
+      return true;
+    });
+  }
+
   function mergeDatasets(key, localVal, remoteVal) {
     if (localVal === undefined || localVal === null) return remoteVal;
     if (remoteVal === undefined || remoteVal === null) return localVal;
@@ -264,20 +278,31 @@
     // Case 1: Both are Arrays -> If remote state has been updated, remote state is authoritative unless local has recent edits
     if (Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
       const lastWrite = lastLocalWrites[key] || 0;
-      if (Date.now() - lastWrite < 3000) {
-        return localVal;
-      }
-      return remoteVal;
+      const targetArr = (Date.now() - lastWrite < 3000) ? parsedLocal : parsedRemote;
+      return filterDeletedEntities(targetArr);
+    }
+
+    if (Array.isArray(parsedRemote)) {
+      return filterDeletedEntities(parsedRemote);
+    }
+    if (Array.isArray(parsedLocal)) {
+      return filterDeletedEntities(parsedLocal);
     }
 
     // Case 2: Both are Plain Objects (Dictionaries / Settings / State Objects)
     if (parsedLocal && typeof parsedLocal === 'object' && !Array.isArray(parsedLocal) &&
         parsedRemote && typeof parsedRemote === 'object' && !Array.isArray(parsedRemote)) {
       const lastWrite = lastLocalWrites[key] || 0;
-      if (Date.now() - lastWrite < 3000) {
-        return localVal;
+      const targetObj = (Date.now() - lastWrite < 3000) ? parsedLocal : parsedRemote;
+      // If object has employees/machines/loans arrays (like STATE_KEY aethertasks_db_state_v7)
+      if (targetObj && (Array.isArray(targetObj.employees) || Array.isArray(targetObj.machines) || Array.isArray(targetObj.loans))) {
+        const cloned = { ...targetObj };
+        if (Array.isArray(cloned.employees)) cloned.employees = filterDeletedEntities(cloned.employees);
+        if (Array.isArray(cloned.machines)) cloned.machines = filterDeletedEntities(cloned.machines);
+        if (Array.isArray(cloned.loans)) cloned.loans = filterDeletedEntities(cloned.loans);
+        return cloned;
       }
-      return remoteVal;
+      return targetObj;
     }
 
     // Case 3: Primitive values -> Prefer remote server value unless locally edited within 3s
@@ -932,23 +957,62 @@
     handleLocalUserTyping(fieldId, payload.tab);
   }
 
-  // --- Realtime Collaborative Form & Input Field Synchronizer (Google Sheets Style) ---
+  function broadcastFormClear(fieldIds = []) {
+    const user = getLocalUserInfo();
+    const page = getCurrentPageKey();
+    const payload = {
+      type: 'form_clear',
+      senderId: CLIENT_ID,
+      user: user,
+      page: page,
+      tab: window.__vf_active_tab || '',
+      fieldIds: Array.isArray(fieldIds) ? fieldIds : (fieldIds ? [fieldIds] : []),
+      timestamp: Date.now()
+    };
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({
+          topic: WS_CHANNEL_TOPIC,
+          event: 'broadcast',
+          payload: {
+            type: 'broadcast',
+            event: 'form_clear',
+            payload: payload
+          },
+          ref: 'fclr_' + Date.now()
+        }));
+      } catch(e) {}
+    }
+
+    if (syncChannel) {
+      try {
+        syncChannel.postMessage({
+          type: 'form_clear',
+          senderId: CLIENT_ID,
+          payload: payload
+        });
+      } catch(e) {}
+    }
+  }
+
+  // --- Realtime Collaborative Form & Input Field Synchronizer (Google Sheets Style with Live Field Locking) ---
   function initCollaborativeDOMSync() {
-    const activeRemoteFocuses = new Map();
+    const activeRemoteLocks = new Map(); // fieldId -> { tagEl, inputEl, user, timer, origReadOnly, origPointerEvents }
     let inputDebounceTimer = null;
 
     function getFieldIdentifier(el) {
       if (!el || !el.tagName) return null;
       const tag = el.tagName.toLowerCase();
       if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return null;
-      if (el.type === 'password' || el.type === 'hidden') return null;
+      if (el.type === 'password' || el.type === 'hidden' || el.type === 'file') return null;
       
       if (el.dataset && el.dataset.collabId) return el.dataset.collabId;
       if (el.id && !el.id.startsWith('__')) return el.id;
       if (el.name) return el.name;
 
-      const rowEl = el.closest('[data-row-id], [data-item-id], tr, li, .card, .product-card');
-      const rowKey = rowEl ? (rowEl.dataset.rowId || rowEl.dataset.itemId || rowEl.id || Array.from(rowEl.parentElement ? rowEl.parentElement.children : []).indexOf(rowEl)) : 'form';
+      const rowEl = el.closest('[data-row-id], [data-item-id], [data-id], tr, li, .card, .product-card');
+      const rowKey = rowEl ? (rowEl.dataset.rowId || rowEl.dataset.itemId || rowEl.dataset.id || rowEl.id || Array.from(rowEl.parentElement ? rowEl.parentElement.children : []).indexOf(rowEl)) : 'form';
       const fieldKey = el.getAttribute('aria-label') || el.placeholder || el.type || 'inp';
       return `${rowKey}__${fieldKey}`.replace(/\s+/g, '_');
     }
@@ -961,7 +1025,7 @@
 
         if (fieldId.includes('__')) {
           const [rowKey, fieldKey] = fieldId.split('__');
-          const row = document.querySelector(`[data-row-id="${CSS.escape(rowKey)}"], [data-item-id="${CSS.escape(rowKey)}"], #${CSS.escape(rowKey)}`);
+          const row = document.querySelector(`[data-row-id="${CSS.escape(rowKey)}"], [data-item-id="${CSS.escape(rowKey)}"], [data-id="${CSS.escape(rowKey)}"], #${CSS.escape(rowKey)}`);
           if (row) {
             el = row.querySelector(`[name="${CSS.escape(fieldKey)}"], [placeholder="${CSS.escape(fieldKey)}"], [aria-label="${CSS.escape(fieldKey)}"]`);
             if (el) return el;
@@ -974,6 +1038,97 @@
     function escapeHtmlStr(str) {
       if (!str) return '';
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function unlockField(fieldId) {
+      if (!activeRemoteLocks.has(fieldId)) return;
+      const info = activeRemoteLocks.get(fieldId);
+      clearTimeout(info.timer);
+      if (info.tagEl && info.tagEl.parentElement) {
+        info.tagEl.style.opacity = '0';
+        info.tagEl.style.transform = 'translateY(4px)';
+        setTimeout(() => { try { info.tagEl.remove(); } catch(e) {} }, 180);
+      }
+      if (info.inputEl) {
+        info.inputEl.classList.remove('vf-collab-focus-ring', 'vf-collab-locked-field');
+        info.inputEl.style.removeProperty('--vf-collab-color');
+        info.inputEl.style.removeProperty('--vf-collab-glow');
+        info.inputEl.removeAttribute('data-vf-locked-by');
+        info.inputEl.removeAttribute('title');
+        
+        // Restore interaction
+        if (info.origReadOnly !== undefined) {
+          info.inputEl.readOnly = info.origReadOnly;
+        } else {
+          info.inputEl.readOnly = false;
+        }
+        if (info.origPointerEvents !== undefined) {
+          info.inputEl.style.pointerEvents = info.origPointerEvents;
+        } else {
+          info.inputEl.style.removeProperty('pointer-events');
+        }
+      }
+      activeRemoteLocks.delete(fieldId);
+    }
+
+    function lockFieldForRemoteUser(fieldId, user) {
+      const el = findElementByFieldId(fieldId);
+      if (!el) return;
+
+      // If local user is already focusing the element, don't hijack their active typing
+      if (document.activeElement === el) return;
+
+      // Clean up previous lock if any
+      unlockField(fieldId);
+
+      const color = user.color || { bg: '#8b5cf6', fg: '#ffffff', glow: 'rgba(139,92,246,0.35)' };
+      const origReadOnly = el.readOnly;
+      const origPointerEvents = el.style.pointerEvents;
+
+      el.classList.add('vf-collab-focus-ring', 'vf-collab-locked-field');
+      el.style.setProperty('--vf-collab-color', color.bg);
+      el.style.setProperty('--vf-collab-glow', color.glow || 'rgba(139,92,246,0.35)');
+      el.setAttribute('data-vf-locked-by', user.name || 'User');
+      el.setAttribute('title', `🔒 Locked: ${user.name || 'User'} is entering data...`);
+
+      const tag = el.tagName ? el.tagName.toLowerCase() : '';
+      if (tag === 'select') {
+        el.style.pointerEvents = 'none';
+      } else {
+        el.readOnly = true;
+      }
+
+      const tagEl = document.createElement('div');
+      tagEl.className = 'vf-collab-editor-tag';
+      tagEl.style.setProperty('--vf-collab-color', color.bg);
+      tagEl.innerHTML = `
+        <span style="font-size:0.7rem; line-height: 1;">🔒</span>
+        <span style="font-weight: 700;">${escapeHtmlStr(user.name || 'User')}</span>
+        <span style="opacity: 0.85; font-size: 0.65rem;">is editing</span>
+      `;
+
+      const parent = el.parentElement;
+      if (parent) {
+        const computedPos = window.getComputedStyle(parent).position;
+        if (computedPos === 'static') {
+          parent.style.position = 'relative';
+        }
+        parent.appendChild(tagEl);
+      }
+
+      // Safety timeout: auto-unlock after 6 seconds of inactivity if blur was missed
+      const timer = setTimeout(() => {
+        unlockField(fieldId);
+      }, 6000);
+
+      activeRemoteLocks.set(fieldId, {
+        tagEl: tagEl,
+        inputEl: el,
+        user: user,
+        timer: timer,
+        origReadOnly: origReadOnly,
+        origPointerEvents: origPointerEvents
+      });
     }
 
     // Local user focus & typing broadcasters
@@ -1015,64 +1170,42 @@
       });
     }, true);
 
-    // Incoming Remote Field Focus Handler
+    // Incoming Remote Field Focus Handler (Google Sheets Style Field Locking)
     window.addEventListener('supabase-field-focus', (e) => {
-      const { fieldId, isFocused, user } = e.detail || {};
-      if (!fieldId || !user) return;
+      const { fieldId, isFocused, user, senderId } = e.detail || {};
+      if (!fieldId || senderId === CLIENT_ID) return;
 
-      const el = findElementByFieldId(fieldId);
-      
-      // Clean up previous tag if any
-      if (activeRemoteFocuses.has(fieldId)) {
-        const prev = activeRemoteFocuses.get(fieldId);
-        if (prev.tagEl) prev.tagEl.remove();
-        if (prev.inputEl) {
-          prev.inputEl.classList.remove('vf-collab-focus-ring');
-          prev.inputEl.style.removeProperty('--vf-collab-color');
-          prev.inputEl.style.removeProperty('--vf-collab-glow');
-        }
-        activeRemoteFocuses.delete(fieldId);
-      }
-
-      if (isFocused && el) {
-        const color = user.color || { bg: '#8b5cf6', fg: '#ffffff', glow: 'rgba(139,92,246,0.35)' };
-        el.classList.add('vf-collab-focus-ring');
-        el.style.setProperty('--vf-collab-color', color.bg);
-        el.style.setProperty('--vf-collab-glow', color.glow);
-
-        const tag = document.createElement('div');
-        tag.className = 'vf-collab-editor-tag';
-        tag.style.setProperty('--vf-collab-color', color.bg);
-        tag.innerHTML = `
-          <span style="font-size:0.6rem;">●</span>
-          <span>${escapeHtmlStr(user.name || 'User')} is editing</span>
-        `;
-
-        const parent = el.parentElement;
-        if (parent) {
-          const computedPos = window.getComputedStyle(parent).position;
-          if (computedPos === 'static') {
-            parent.style.position = 'relative';
-          }
-          parent.appendChild(tag);
-        }
-
-        activeRemoteFocuses.set(fieldId, { tagEl: tag, inputEl: el, user: user });
+      if (isFocused && user) {
+        lockFieldForRemoteUser(fieldId, user);
+      } else {
+        unlockField(fieldId);
       }
     });
 
-    // Incoming Remote Field Change Handler (Live Keystrokes & Live Values)
+    // Incoming Remote Field Change Handler (Live Keystrokes & Live Values with Auto-Lock Refresh)
     window.addEventListener('supabase-field-change', (e) => {
-      const { fieldId, value, senderId } = e.detail || {};
-      if (!fieldId || value === undefined || value === null) return;
+      const { fieldId, value, user, senderId } = e.detail || {};
+      if (!fieldId || value === undefined || value === null || senderId === CLIENT_ID) return;
 
       const el = findElementByFieldId(fieldId);
       if (!el) return;
 
-      // If local user is currently focusing the element, only skip if they typed within the last 400ms
+      // If local user is currently actively focusing the element, only skip if they typed within last 400ms
       const lastWrite = lastLocalWrites[fieldId] || 0;
       if (document.activeElement === el && (Date.now() - lastWrite < 400)) {
         return;
+      }
+
+      // Ensure remote field lock is active for the remote user
+      if (user && !activeRemoteLocks.has(fieldId)) {
+        lockFieldForRemoteUser(fieldId, user);
+      } else if (activeRemoteLocks.has(fieldId)) {
+        // Refresh auto-unlock timeout on keystroke
+        const lockInfo = activeRemoteLocks.get(fieldId);
+        clearTimeout(lockInfo.timer);
+        lockInfo.timer = setTimeout(() => {
+          unlockField(fieldId);
+        }, 6000);
       }
 
       if (el.value !== value) {
@@ -1098,11 +1231,88 @@
           el.value = value;
         }
 
-        // Notify input/change subscribers immediately
+        // Notify input/change subscribers immediately so formulas/derived cards update
         try { el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true })); } catch(e) {}
         try { el.dispatchEvent(new Event('change', { bubbles: true, cancelable: true })); } catch(e) {}
       }
     });
+
+    // Incoming Remote Form Clear Handler
+    window.addEventListener('supabase-form-clear', (e) => {
+      const { fieldIds, senderId } = e.detail || {};
+      if (senderId === CLIENT_ID) return;
+
+      if (Array.isArray(fieldIds) && fieldIds.length > 0) {
+        fieldIds.forEach(fid => {
+          unlockField(fid);
+          const el = findElementByFieldId(fid);
+          if (el && el !== document.activeElement) {
+            el.value = '';
+            try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch(err) {}
+            try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch(err) {}
+          }
+        });
+      } else {
+        // Unlock all active locks if broad form clear
+        Array.from(activeRemoteLocks.keys()).forEach(fid => unlockField(fid));
+      }
+    });
+  }
+
+  function handleIncomingFieldFocus(payload) {
+    if (!payload || payload.senderId === CLIENT_ID) return;
+    try {
+      window.dispatchEvent(new CustomEvent('supabase-field-focus', { detail: payload }));
+    } catch(e) {}
+  }
+
+  function handleIncomingFieldChange(payload) {
+    if (!payload || payload.senderId === CLIENT_ID) return;
+    try {
+      window.dispatchEvent(new CustomEvent('supabase-field-change', { detail: payload }));
+    } catch(e) {}
+  }
+
+  function handleIncomingFormClear(payload) {
+    if (!payload || payload.senderId === CLIENT_ID) return;
+    try {
+      window.dispatchEvent(new CustomEvent('supabase-form-clear', { detail: payload }));
+    } catch(e) {}
+  }
+
+  function handleIncomingItemDeleted(payload) {
+    if (!payload || payload.senderId === CLIENT_ID) return;
+    try {
+      const { key, itemId } = payload;
+      if (itemId) {
+        const idStr = String(itemId);
+        let deletedIds = getDeletedTombstones();
+        if (!deletedIds.includes(idStr)) {
+          deletedIds.push(idStr);
+          cache['vf_deleted_entity_ids'] = JSON.stringify(deletedIds);
+          safeLocalStorageSet('vf_deleted_entity_ids', JSON.stringify(deletedIds));
+        }
+
+        // Clean from cached array if applicable
+        if (key && cache[key]) {
+          try {
+            const parsed = JSON.parse(cache[key]);
+            if (Array.isArray(parsed)) {
+              const filtered = parsed.filter(item => {
+                if (!item) return false;
+                const id = getItemIdentifier(item) || item.id || item._id;
+                return String(id) !== idStr;
+              });
+              const newStr = JSON.stringify(filtered);
+              cache[key] = newStr;
+              safeLocalStorageSet(key, newStr);
+            }
+          } catch(e) {}
+        }
+      }
+      window.dispatchEvent(new CustomEvent('supabase-item-deleted', { detail: payload }));
+      window.dispatchEvent(new Event('storage'));
+    } catch(e) {}
   }
 
   if (document.readyState === 'loading') {
@@ -1129,6 +1339,10 @@
           handleIncomingFieldFocus(payload);
         } else if (type === 'field_change' && payload) {
           handleIncomingFieldChange(payload);
+        } else if (type === 'form_clear' && payload) {
+          handleIncomingFormClear(payload);
+        } else if (type === 'item_deleted' && payload) {
+          handleIncomingItemDeleted(payload);
         } else if (key) {
           if (type === 'removeItem') {
             handleIncomingRemoteUpdate(key, null, true);
@@ -1202,6 +1416,10 @@
               handleIncomingFieldFocus(inner);
             } else if (eventType === 'field_change') {
               handleIncomingFieldChange(inner);
+            } else if (eventType === 'form_clear') {
+              handleIncomingFormClear(inner);
+            } else if (eventType === 'item_deleted') {
+              handleIncomingItemDeleted(inner);
             } else if (inner.key || rawPayload.key) {
               const targetKey = inner.key || rawPayload.key;
               const targetVal = inner.value !== undefined ? inner.value : rawPayload.value;
@@ -2147,6 +2365,7 @@
     sendPresenceLeave: () => sendPresenceLeave(),
     broadcastFieldFocus: (fieldId, isFocused, meta) => broadcastFieldFocus(fieldId, isFocused, meta),
     broadcastFieldChange: (fieldId, value, meta) => broadcastFieldChange(fieldId, value, meta),
+    broadcastFormClear: (fieldIds) => broadcastFormClear(fieldIds),
     getAvatarColors: () => AVATAR_COLORS
   };
 
