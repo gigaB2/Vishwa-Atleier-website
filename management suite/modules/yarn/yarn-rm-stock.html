@@ -1007,7 +1007,9 @@
         const weight = parseFloat(b.weight) || parseFloat(lot.boxWeight) || 0;
         const cones = parseInt(b.cones, 10) || 0;
         const grWeight = parseFloat(b.grWeight || b.returnedWeight) || 0;
-        const status = b.status || (grWeight > 0 ? 'gr' : 'available');
+        // GR is strictly determined by positive GR returned weight from Yarn RM Orders
+        const isGr = grWeight > 0;
+        const status = isGr ? 'gr' : (b.status === 'issued' ? 'issued' : 'available');
 
         return {
           ...b,
@@ -1016,11 +1018,11 @@
           weight: weight,
           cones: cones,
           status: status,
-          issueDate: b.issueDate || null,
-          issuedTo: b.issuedTo || null,
-          grDate: b.grDate || b.returnedDate || null,
-          grRemarks: b.grRemarks || (grWeight > 0 ? 'Returned in Challan GR' : null),
-          grWeight: grWeight
+          issueDate: isGr ? null : (b.issueDate || null),
+          issuedTo: isGr ? null : (b.issuedTo || null),
+          grDate: isGr ? (b.grDate || b.returnedDate || null) : null,
+          grRemarks: isGr ? (b.grRemarks || 'Returned in Challan GR') : null,
+          grWeight: isGr ? grWeight : 0
         };
       }) : [];
 
@@ -1043,7 +1045,7 @@
       };
     }
 
-    // Initial Data Seed if empty
+    // Initial Data Seed and Auto-heal against Yarn RM Orders
     function initSeedData() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
@@ -1366,35 +1368,60 @@
       const lot = stockData.find(l => l.id === contextLotId);
       if (!lot) return;
 
-      document.getElementById('editing-lot-id').value = lot.id;
-      document.getElementById('modal-challan-title').textContent = '✏️ Edit Yarn Lot / Challan';
-      
-      if (lot.itemType) document.getElementById('c-item-type').value = lot.itemType;
-      populateQualityDropdownByItemType(lot.itemType || '');
-      populateSupplierDropdown(lot.supplier || '');
+      // Find matching order in yarn-rm-orders
+      let orders = [];
+      try {
+        orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
+      } catch(e) { orders = []; }
 
-      if (lot.quality) document.getElementById('c-quality').value = lot.quality;
-      handleQualitySelection(lot.quality || '');
-      if (lot.code) document.getElementById('c-code').value = lot.code;
-      if (lot.color) document.getElementById('c-color').value = lot.color;
+      let matchingOrder = orders.find(o => 
+        (lot.orderRef && (String(o.id) === String(lot.orderRef) || String(o.orderNumber) === String(lot.orderRef))) ||
+        (o.batches || []).some(b => (lot.challanNo && String(b.challanNumber) === String(lot.challanNo)) || (lot.lotNumber && String(b.lotNumber) === String(lot.lotNumber)))
+      );
 
-      document.getElementById('c-lot').value = lot.lotNumber || '';
-      document.getElementById('c-challan').value = lot.challanNo || '';
-      if (lot.supplier) document.getElementById('c-supplier').value = lot.supplier;
-      document.getElementById('c-date').value = lot.receiveDate || new Date().toISOString().split('T')[0];
-
-      // Populate box rows
-      document.getElementById('challan-box-rows-container').innerHTML = '';
-      boxRowCount = 0;
-      if (lot.boxes && lot.boxes.length > 0) {
-        lot.boxes.forEach(b => {
-          addChallanBoxRow(b.id, b.weight);
-        });
-      } else {
-        addChallanBoxRow();
+      if (matchingOrder) {
+        window.location.href = `yarn-rm-orders.html?view=orders&orderId=${encodeURIComponent(matchingOrder.id)}&challan=${encodeURIComponent(lot.challanNo || '')}&lot=${encodeURIComponent(lot.lotNumber || '')}&openModal=1`;
+        return;
       }
 
-      document.getElementById('modal-challan').classList.add('active');
+      // If no order exists yet for this lot (e.g. legacy/direct lot), create an order representation in yarn-rm-orders so it can be managed with the full Order Details modal
+      const newOrderId = `ORD-${Date.now().toString().slice(-4)}`;
+      const totalBatchWt = (lot.boxes || []).reduce((acc, b) => acc + (parseFloat(b.weight) || 0), 0);
+      const newOrder = {
+        id: newOrderId,
+        orderNumber: newOrderId,
+        orderDate: lot.receiveDate || new Date().toISOString().split('T')[0],
+        supplier: lot.supplier || 'Unknown Supplier',
+        category: lot.itemType || 'Polyester',
+        quality: lot.quality || 'Standard Quality',
+        code: lot.code || '',
+        color: lot.color || '',
+        orderedWeight: totalBatchWt || 100,
+        price: lot.rate || '',
+        status: 'Completed',
+        batches: [{
+          id: `BATCH-${Date.now()}`,
+          receiveDate: lot.receiveDate || new Date().toISOString().split('T')[0],
+          challanNumber: lot.challanNo || `CH-${Date.now().toString().slice(-4)}`,
+          lotNumber: lot.lotNumber || `LOT-${Date.now().toString().slice(-4)}`,
+          totalWeight: totalBatchWt,
+          boxes: (lot.boxes || []).map(b => ({
+            boxNumber: b.id || b.boxNumber,
+            cones: b.cones || 0,
+            weight: b.weight || 0,
+            returnedWeight: b.grWeight || 0,
+            returnedDate: b.grDate || ''
+          }))
+        }]
+      };
+
+      orders.unshift(newOrder);
+      localStorage.setItem('yarn-rm-orders', JSON.stringify(orders));
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+        window.VishwaSupabase.saveToSupabase('yarn-rm-orders', orders);
+      }
+
+      window.location.href = `yarn-rm-orders.html?view=orders&orderId=${encodeURIComponent(newOrder.id)}&challan=${encodeURIComponent(lot.challanNo || '')}&lot=${encodeURIComponent(lot.lotNumber || '')}&openModal=1`;
     }
 
     function deleteContextLot() {
@@ -1405,11 +1432,52 @@
       const lot = stockData.find(l => l.id === contextLotId);
       if (!lot) return;
 
-      if (confirm(`Are you sure you want to delete Lot "${lot.lotNumber}" (${lot.quality})?\n\nThis action cannot be undone.`)) {
-        stockData = stockData.filter(l => l.id !== contextLotId);
-        saveStockData();
-        renderStockBook();
+      const challanInfo = lot.challanNo ? ` (Challan: ${lot.challanNo})` : '';
+      if (!confirm(`Are you sure you want to delete Lot "${lot.lotNumber}"${challanInfo} of ${lot.quality}?\n\nThis will completely delete this inward challan from Yarn RM Orders and update the Yarn RM Stock Book.`)) {
+        return;
       }
+
+      // Delete corresponding batch / challan from Yarn RM Orders
+      try {
+        let orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
+        if (Array.isArray(orders) && orders.length > 0) {
+          let ordersModified = false;
+          orders.forEach(order => {
+            if (Array.isArray(order.batches) && order.batches.length > 0) {
+              const prevBatchCount = order.batches.length;
+              order.batches = order.batches.filter(b => {
+                const matchChallan = lot.challanNo && String(b.challanNumber).trim() === String(lot.challanNo).trim();
+                const matchLot = lot.lotNumber && String(b.lotNumber).trim() === String(lot.lotNumber).trim();
+                const matchOrderRef = lot.orderRef && (String(order.id) === String(lot.orderRef) || String(order.orderNumber) === String(lot.orderRef));
+                return !(matchChallan || matchLot || (matchOrderRef && prevBatchCount === 1));
+              });
+
+              if (order.batches.length !== prevBatchCount) {
+                ordersModified = true;
+                // Recalculate order status
+                const totReceived = order.batches.reduce((sum, b) => sum + (Number(b.totalWeight) || 0), 0);
+                if (totReceived < (Number(order.orderedWeight) || 0)) {
+                  order.status = 'Active';
+                }
+              }
+            }
+          });
+
+          if (ordersModified) {
+            localStorage.setItem('yarn-rm-orders', JSON.stringify(orders));
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+              window.VishwaSupabase.saveToSupabase('yarn-rm-orders', orders);
+            }
+          }
+        }
+      } catch(e) {
+        console.error("Error removing challan from yarn-rm-orders:", e);
+      }
+
+      // Remove from stockData
+      stockData = stockData.filter(l => l.id !== contextLotId);
+      saveStockData();
+      renderStockBook();
     }
 
     // Modal Handlers

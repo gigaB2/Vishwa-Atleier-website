@@ -799,12 +799,12 @@
                   boxNumber: bId,
                   cones: Number(bx.cones) || 0,
                   weight: Number(bx.weight) || 0,
-                  status: oldB?.status === 'issued' ? 'issued' : (isGr ? 'gr' : (oldB?.status || 'available')),
-                  issueDate: oldB?.issueDate || null,
-                  issuedTo: oldB?.issuedTo || null,
-                  grWeight: retWt,
-                  grDate: bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || ''),
-                  grRemarks: isGr ? 'Returned in Challan GR' : (oldB?.grRemarks || null)
+                  status: isGr ? 'gr' : (oldB?.status === 'issued' ? 'issued' : 'available'),
+                  issueDate: isGr ? null : (oldB?.issueDate || null),
+                  issuedTo: isGr ? null : (oldB?.issuedTo || null),
+                  grWeight: isGr ? retWt : 0,
+                  grDate: isGr ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
+                  grRemarks: isGr ? 'Returned in Challan GR' : null
                 };
               });
 
@@ -842,6 +842,32 @@
           }
         } catch(e) {
           console.error("Yarn stock auto-heal sync error:", e);
+        }
+      }, [orders]);
+
+      // Handle opening order modal from external link (e.g. Yarn RM Stock Book right click Edit)
+      useEffect(() => {
+        if (!Array.isArray(orders) || orders.length === 0) return;
+        const params = new URLSearchParams(window.location.search);
+        const orderIdParam = params.get('orderId');
+        const challanParam = params.get('challan');
+        const lotParam = params.get('lot');
+        const shouldOpenModal = params.get('openModal') === '1';
+
+        if (orderIdParam || challanParam || lotParam) {
+          const match = orders.find(o => 
+            (orderIdParam && (String(o.id) === String(orderIdParam) || String(o.orderNumber) === String(orderIdParam))) ||
+            (challanParam && (o.batches || []).some(b => String(b.challanNumber) === String(challanParam))) ||
+            (lotParam && (o.batches || []).some(b => String(b.lotNumber) === String(lotParam)))
+          );
+          if (match) {
+            setSelectedOrder(match);
+            if (shouldOpenModal) {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('openModal');
+              window.history.replaceState({}, '', url.pathname + '?' + url.searchParams.toString());
+            }
+          }
         }
       }, [orders]);
 
