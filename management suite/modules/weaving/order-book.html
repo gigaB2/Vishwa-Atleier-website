@@ -2502,18 +2502,14 @@
                 <div className={`app-container${view === 'heat-map' ? ' ob-heatmap-page' : ''}`}>
                     <header>
                         <div className="logo-section">
-                            <span className="logo" onClick={() => setView('orders')} style={{cursor: 'pointer'}}>
+                            <span className="logo" style={{cursor: 'default'}}>
                                 {view === 'orders' ? 'RM Orders' : view === 'analytics' ? 'RM order analytics' : view === 'heat-map' ? 'RM delivery heat map' : 'RM Order Book'}
                             </span>
                         </div>
                         <div className="ob-header-actions">
-                            <button className={`btn vf-top-tab-hidden ${view === 'analytics' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('analytics')}>📊 RM order analytics</button>
-                            <button className={`btn vf-top-tab-hidden ${view === 'orders' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('orders')}>📦 RM Orders</button>
-                            <button className={`btn vf-top-tab-hidden ${view === 'heat-map' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('heat-map')}>🔥 RM delivery heat map</button>
                             {view !== 'analytics' && (
                                 <button className="btn btn-primary" onClick={() => setShowOrderModal(true)}>+ Add New Order</button>
                             )}
-
                         </div>
                     </header>
 

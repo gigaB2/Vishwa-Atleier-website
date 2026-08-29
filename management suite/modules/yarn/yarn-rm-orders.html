@@ -869,20 +869,11 @@
         <div className="app-container">
           <header>
             <div className="logo-section">
-              <span className="logo" onClick={() => setView('orders')} style={{cursor: 'pointer'}}>
-                Yarn RM Orders
+              <span className="logo" style={{cursor: 'default'}}>
+                {view === 'orders' ? 'Yarn RM Orders' : view === 'analytics' ? 'Yarn Order Analytics' : 'Yarn Delivery Heat Map'}
               </span>
             </div>
             <div className="ob-header-actions">
-              <button className={`btn ${view === 'orders' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('orders')}>
-                📦 Yarn RM Orders
-              </button>
-              <button className={`btn ${view === 'analytics' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('analytics')}>
-                📊 Yarn Order Analytics
-              </button>
-              <button className={`btn ${view === 'heat-map' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('heat-map')}>
-                🔥 Delivery Heat Map
-              </button>
               {view === 'orders' && (
                 <button className="btn btn-primary" onClick={() => { setEditingOrder(null); setShowOrderModal(true); }}>
                   + Add New Yarn Order
