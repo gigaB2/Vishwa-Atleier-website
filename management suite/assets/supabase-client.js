@@ -1145,10 +1145,10 @@
         parent.appendChild(tagEl);
       }
 
-      // Safety timeout: auto-unlock after 6 seconds of inactivity if blur was missed
+      // Safety timeout: auto-unlock after 2.5 seconds of inactivity if blur was missed
       const timer = setTimeout(() => {
         unlockField(fieldId);
-      }, 6000);
+      }, 2500);
 
       activeRemoteLocks.set(fieldId, {
         tagEl: tagEl,
@@ -1162,8 +1162,11 @@
 
     // Local user focus & typing broadcasters (ONLY triggers on genuine trusted user interactions)
     document.addEventListener('focusin', (e) => {
-      if (!e.isTrusted) return;
       const fid = getFieldIdentifier(e.target);
+      if (fid) {
+        unlockField(fid); // Immediately clear any stale remote lock for local user
+      }
+      if (!e.isTrusted) return;
       if (!fid) return;
       broadcastFieldFocus(fid, true, {
         label: e.target.placeholder || e.target.name || ''
@@ -1215,7 +1218,7 @@
       });
     }, true);
 
-    // Incoming Remote Field Focus Handler (Google Sheets Style Field Locking)
+    // Incoming Remote Field Focus Handler (Google Sheets Style Single-Field Locking)
     window.addEventListener('supabase-field-focus', (e) => {
       const { fieldId, isFocused, user, senderId } = e.detail || {};
       if (!fieldId || senderId === CLIENT_ID) return;
@@ -1227,9 +1230,9 @@
       }
     });
 
-    // Incoming Remote Field Change Handler (Live Keystrokes & Live Values with Auto-Lock Refresh)
+    // Incoming Remote Field Change Handler (Live Keystrokes & Live Values)
     window.addEventListener('supabase-field-change', (e) => {
-      const { fieldId, value, user, senderId } = e.detail || {};
+      const { fieldId, value, user, senderId, meta } = e.detail || {};
       if (!fieldId || value === undefined || value === null || senderId === CLIENT_ID) return;
 
       const el = findElementByFieldId(fieldId);
@@ -1241,16 +1244,13 @@
         return;
       }
 
-      // Ensure remote field lock is active for the remote user
-      if (user && !activeRemoteLocks.has(fieldId)) {
-        lockFieldForRemoteUser(fieldId, user);
-      } else if (activeRemoteLocks.has(fieldId)) {
-        // Refresh auto-unlock timeout on keystroke
+      // Refresh auto-unlock timeout only if this field is already actively locked by focus
+      if (activeRemoteLocks.has(fieldId)) {
         const lockInfo = activeRemoteLocks.get(fieldId);
         clearTimeout(lockInfo.timer);
         lockInfo.timer = setTimeout(() => {
           unlockField(fieldId);
-        }, 6000);
+        }, 2500);
       }
 
       if (el.value !== value) {
