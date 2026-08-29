@@ -744,16 +744,12 @@
         let totalOrderedWeight = 0;
         let totalReceivedWeight = 0;
         let totalGRWeight = 0;
-        let totalSpend = 0;
         let activeOrdersCount = 0;
         let completedOrdersCount = 0;
 
         orders.forEach(o => {
           const ordered = Number(o.orderedWeight) || 0;
-          const rate = Number(o.price) || 0;
-          const gst = Number(o.gstRate || 0);
           totalOrderedWeight += ordered;
-          totalSpend += ordered * rate * (1 + gst / 100);
 
           let receivedForOrder = 0;
           (o.batches || []).forEach(b => {
@@ -765,7 +761,7 @@
 
           totalReceivedWeight += receivedForOrder;
 
-          if (o.status === 'Completed' || receivedForOrder >= ordered) {
+          if (o.status === 'Completed' || (ordered > 0 && receivedForOrder >= ordered)) {
             completedOrdersCount++;
           } else if (o.status !== 'Cancelled') {
             activeOrdersCount++;
@@ -773,6 +769,7 @@
         });
 
         const pendingWeight = Math.max(0, totalOrderedWeight - totalReceivedWeight);
+        const fulfillmentRate = totalOrderedWeight > 0 ? ((totalReceivedWeight / totalOrderedWeight) * 100).toFixed(1) : '0.0';
 
         return {
           totalOrders: orders.length,
@@ -782,7 +779,7 @@
           receivedWeight: totalReceivedWeight,
           pendingWeight: pendingWeight,
           grWeight: totalGRWeight,
-          totalSpend: totalSpend
+          fulfillmentRate: fulfillmentRate
         };
       }, [orders]);
 
@@ -894,7 +891,7 @@
             <div className="metric-card success-card">
               <div className="metric-title">Received Inward (Kg)</div>
               <div className="metric-val" style={{color: 'var(--success)'}}>{metrics.receivedWeight.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} kg</div>
-              <div className="metric-sub">{((metrics.receivedWeight / (metrics.orderedWeight || 1)) * 100).toFixed(1)}% fulfillment</div>
+              <div className="metric-sub">{metrics.fulfillmentRate}% overall fulfillment</div>
             </div>
             <div className="metric-card gr-card">
               <div className="metric-title">GR / Returned (Kg)</div>
@@ -902,9 +899,9 @@
               <div className="metric-sub">Defective / returned yarn</div>
             </div>
             <div className="metric-card danger-card">
-              <div className="metric-title">Est. Procurement Spend</div>
-              <div className="metric-val" style={{fontSize: '1.4rem'}}>₹{metrics.totalSpend.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-              <div className="metric-sub">Total purchase commitment</div>
+              <div className="metric-title">Fulfillment Rate</div>
+              <div className="metric-val" style={{fontSize: '1.4rem', color: 'var(--accent)'}}>{metrics.fulfillmentRate}%</div>
+              <div className="metric-sub">{metrics.completedOrders} orders completed</div>
             </div>
           </div>
 
@@ -990,7 +987,7 @@
                         <th>Code & Color</th>
                         <th onClick={() => setSortConfig({ key: 'orderedWeight', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Ordered (Kg)</th>
                         <th>Inward Progress</th>
-                        <th onClick={() => setSortConfig({ key: 'price', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Rate (₹/Kg)</th>
+                        <th>Expected Delivery</th>
                         <th>Status</th>
                         <th style={{textAlign: 'center'}}>Actions</th>
                       </tr>
@@ -1037,7 +1034,7 @@
                                   </div>
                                 </div>
                               </td>
-                              <td>₹{Number(order.price || 0).toFixed(2)}</td>
+                              <td>{order.expectedDeliveryDate ? new Date(order.expectedDeliveryDate).toLocaleDateString('en-GB') : '-'}</td>
                               <td>
                                 <span className={`badge badge-${(order.status || 'Active').toLowerCase()}`}>
                                   {netReceived >= orderedWt && order.status !== 'Cancelled' ? 'Completed' : (order.status || 'Active')}
@@ -1115,34 +1112,86 @@
       );
     };
 
-    // Component: Order Creation & Edit Modal
+    // Component: Order Form Modal (Mirrors Yarn RM Stock Book Incoming Challan Modal)
     const OrderFormModal = ({ onClose, onSubmit, initialData, qualities, suppliers }) => {
       const [formData, setFormData] = useState(initialData || {
-        orderNumber: 'YRN-' + Math.floor(1000 + Math.random() * 9000),
-        orderDate: new Date().toISOString().split('T')[0],
-        expectedDeliveryDate: '',
-        supplier: '',
         category: 'Polyester',
         quality: '',
-        countDenier: '',
         code: '',
         color: '',
+        supplier: '',
+        orderNumber: 'YRN-' + Math.floor(1000 + Math.random() * 9000),
+        orderDate: new Date().toISOString().split('T')[0],
         orderedWeight: '',
-        price: '',
-        gstRate: 5,
+        expectedDeliveryDate: '',
         notes: ''
       });
 
-      const totalAmount = useMemo(() => {
-        const wt = Number(formData.orderedWeight) || 0;
-        const rate = Number(formData.price) || 0;
-        const gst = Number(formData.gstRate || 0);
-        return wt * rate * (1 + gst / 100);
-      }, [formData.orderedWeight, formData.price, formData.gstRate]);
+      // Filtered qualities based on selected Item (Yarn Type)
+      const validQualities = useMemo(() => {
+        return (qualities || []).filter(q => {
+          const qType = q.type || q.itemType || 'Polyester';
+          if (formData.category && qType !== formData.category) return false;
+          if (formData.code && q.code && q.code !== formData.code) return false;
+          if (formData.color && q.color && q.color !== formData.color) return false;
+          return true;
+        });
+      }, [qualities, formData.category, formData.code, formData.color]);
+
+      // Filtered codes
+      const validCodes = useMemo(() => {
+        const codes = (qualities || []).filter(q => {
+          const qType = q.type || q.itemType || 'Polyester';
+          const qQual = q.quality || q.name || '';
+          if (formData.category && qType !== formData.category) return false;
+          if (formData.quality && qQual !== formData.quality) return false;
+          if (formData.color && q.color && q.color !== formData.color) return false;
+          return true;
+        }).map(q => q.code).filter(Boolean);
+        return [...new Set(codes)];
+      }, [qualities, formData.category, formData.quality, formData.color]);
+
+      // Filtered colors
+      const validColors = useMemo(() => {
+        const colors = (qualities || []).filter(q => {
+          const qType = q.type || q.itemType || 'Polyester';
+          const qQual = q.quality || q.name || '';
+          if (formData.category && qType !== formData.category) return false;
+          if (formData.quality && qQual !== formData.quality) return false;
+          if (formData.code && q.code && q.code !== formData.code) return false;
+          return true;
+        }).map(q => q.color).filter(Boolean);
+        return [...new Set(colors)];
+      }, [qualities, formData.category, formData.quality, formData.code]);
+
+      const handleCategoryChange = (newCat) => {
+        setFormData(prev => ({
+          ...prev,
+          category: newCat,
+          quality: '',
+          code: '',
+          color: ''
+        }));
+      };
+
+      const handleQualityChange = (newQual) => {
+        const matched = (qualities || []).find(q => 
+          (q.quality || q.name) === newQual && 
+          (!formData.category || (q.type || q.itemType || 'Polyester') === formData.category)
+        );
+
+        setFormData(prev => ({
+          ...prev,
+          quality: newQual,
+          code: matched?.code || prev.code,
+          color: matched?.color || prev.color,
+          supplier: matched?.supplier || prev.supplier
+        }));
+      };
 
       const handleSubmit = (e) => {
         e.preventDefault();
-        if (!formData.quality.trim() || !formData.supplier.trim() || !formData.orderedWeight || !formData.price) {
+        if (!formData.quality.trim() || !formData.supplier.trim() || !formData.orderedWeight) {
           alert('Please fill all required fields marked with *');
           return;
         }
@@ -1151,19 +1200,90 @@
 
       return (
         <div className="modal-overlay">
-          <div className="modal">
+          <div className="modal" style={{maxWidth: '760px'}}>
             <div className="modal-header">
               <h2>{initialData ? '✏️ Edit Yarn RM Order' : '📦 Place New Yarn RM Order'}</h2>
               <button className="modal-close" onClick={onClose}>&times;</button>
             </div>
             <form onSubmit={handleSubmit}>
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+              <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.25rem'}}>
                 <div className="input-group">
-                  <label>Order Number *</label>
+                  <label>Item (Yarn Type) *</label>
+                  <select 
+                    value={formData.category || 'Polyester'} 
+                    onChange={e => handleCategoryChange(e.target.value)}
+                    required
+                  >
+                    {YARN_CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Yarn Quality *</label>
+                  <select 
+                    value={formData.quality} 
+                    onChange={e => handleQualityChange(e.target.value)}
+                    required
+                  >
+                    <option value="">-- Select Quality --</option>
+                    {validQualities.map((q, idx) => {
+                      const qName = q.quality || q.name;
+                      return (
+                        <option key={idx} value={qName}>
+                          {qName}{q.color ? ` (${q.color})` : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Yarn Code</label>
+                  <select 
+                    value={formData.code} 
+                    onChange={e => setFormData({...formData, code: e.target.value})}
+                  >
+                    <option value="">-- Select Code --</option>
+                    {validCodes.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Color</label>
+                  <select 
+                    value={formData.color} 
+                    onChange={e => setFormData({...formData, color: e.target.value})}
+                  >
+                    <option value="">-- Select Color --</option>
+                    {validColors.map(col => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>RM Supplier *</label>
+                  <select 
+                    value={formData.supplier} 
+                    onChange={e => setFormData({...formData, supplier: e.target.value})}
+                    required
+                  >
+                    <option value="">-- Select RM Supplier --</option>
+                    {suppliers.map((s, idx) => {
+                      const sName = s.name || s.supplier;
+                      return (
+                        <option key={idx} value={sName}>{sName}</option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Order Number / Deal # *</label>
                   <input 
                     type="text" 
                     value={formData.orderNumber} 
                     onChange={e => setFormData({...formData, orderNumber: e.target.value})} 
+                    placeholder="e.g. YRN-4092"
                     required 
                   />
                 </div>
@@ -1176,98 +1296,7 @@
                     required 
                   />
                 </div>
-              </div>
-
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
                 <div className="input-group">
-                  <label>Yarn Category / Type *</label>
-                  <select 
-                    value={formData.category} 
-                    onChange={e => setFormData({...formData, category: e.target.value})}
-                    required
-                  >
-                    {YARN_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label>Supplier / Mill Name *</label>
-                  <input 
-                    type="text" 
-                    list="supplier-list"
-                    placeholder="Select or enter supplier..."
-                    value={formData.supplier} 
-                    onChange={e => setFormData({...formData, supplier: e.target.value})} 
-                    required 
-                  />
-                  <datalist id="supplier-list">
-                    {suppliers.map((s, idx) => (
-                      <option key={idx} value={s.name || s.supplier} />
-                    ))}
-                  </datalist>
-                </div>
-              </div>
-
-              <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem'}}>
-                <div className="input-group">
-                  <label>Yarn Quality Name *</label>
-                  <input 
-                    type="text" 
-                    list="quality-list"
-                    placeholder="e.g. 80/72 DTY Bright, 40s Combed Cotton..."
-                    value={formData.quality} 
-                    onChange={e => setFormData({...formData, quality: e.target.value})} 
-                    required 
-                  />
-                  <datalist id="quality-list">
-                    {qualities.map((q, idx) => (
-                      <option key={idx} value={q.quality || q.name} />
-                    ))}
-                  </datalist>
-                </div>
-                <div className="input-group">
-                  <label>Count / Denier</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. 80/72, 30s, 150/48"
-                    value={formData.countDenier} 
-                    onChange={e => setFormData({...formData, countDenier: e.target.value})} 
-                  />
-                </div>
-              </div>
-
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem'}}>
-                <div className="input-group">
-                  <label>Yarn Code</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. YRN-8072"
-                    value={formData.code} 
-                    onChange={e => setFormData({...formData, code: e.target.value})} 
-                  />
-                </div>
-                <div className="input-group">
-                  <label>Color / Shade</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Raw White, Black, Dyed"
-                    value={formData.color} 
-                    onChange={e => setFormData({...formData, color: e.target.value})} 
-                  />
-                </div>
-                <div className="input-group">
-                  <label>Expected Delivery</label>
-                  <input 
-                    type="date" 
-                    value={formData.expectedDeliveryDate} 
-                    onChange={e => setFormData({...formData, expectedDeliveryDate: e.target.value})} 
-                  />
-                </div>
-              </div>
-
-              <div style={{display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr 1.5fr', gap: '1rem', background: 'var(--bg)', padding: '1rem', borderRadius: '12px', marginBottom: '1.25rem'}}>
-                <div className="input-group" style={{marginBottom: 0}}>
                   <label>Ordered Wt (Kg) *</label>
                   <input 
                     type="number" 
@@ -1278,34 +1307,13 @@
                     required 
                   />
                 </div>
-                <div className="input-group" style={{marginBottom: 0}}>
-                  <label>Rate (₹/Kg) *</label>
+                <div className="input-group">
+                  <label>Expected Delivery Date</label>
                   <input 
-                    type="number" 
-                    step="0.01" 
-                    placeholder="₹ 0.00"
-                    value={formData.price} 
-                    onChange={e => setFormData({...formData, price: e.target.value})} 
-                    required 
+                    type="date" 
+                    value={formData.expectedDeliveryDate || ''} 
+                    onChange={e => setFormData({...formData, expectedDeliveryDate: e.target.value})} 
                   />
-                </div>
-                <div className="input-group" style={{marginBottom: 0}}>
-                  <label>GST %</label>
-                  <select 
-                    value={formData.gstRate} 
-                    onChange={e => setFormData({...formData, gstRate: Number(e.target.value)})}
-                  >
-                    <option value={0}>0%</option>
-                    <option value={5}>5%</option>
-                    <option value={12}>12%</option>
-                    <option value={18}>18%</option>
-                  </select>
-                </div>
-                <div className="input-group" style={{marginBottom: 0}}>
-                  <label>Est. Total Amount</label>
-                  <div style={{fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: '700', color: 'var(--success)', marginTop: '0.4rem'}}>
-                    ₹{totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                  </div>
                 </div>
               </div>
 
@@ -1313,8 +1321,8 @@
                 <label>Notes / Delivery Remarks</label>
                 <textarea 
                   rows="2" 
-                  placeholder="Additional mill terms, packaging specs..." 
-                  value={formData.notes} 
+                  placeholder="Additional mill terms, packaging specs, cone specifications..." 
+                  value={formData.notes || ''} 
                   onChange={e => setFormData({...formData, notes: e.target.value})} 
                 />
               </div>
@@ -1712,16 +1720,15 @@
       useEffect(() => {
         if (!chartRef1.current || !chartRef2.current) return;
 
-        // Group by Supplier
-        const supplierSpend = {};
+        // Group by Supplier (Volume in Kg)
+        const supplierVolume = {};
         orders.forEach(o => {
           const s = o.supplier || 'Unknown';
           const wt = Number(o.orderedWeight) || 0;
-          const rate = Number(o.price) || 0;
-          supplierSpend[s] = (supplierSpend[s] || 0) + (wt * rate);
+          supplierVolume[s] = (supplierVolume[s] || 0) + wt;
         });
 
-        // Group by Category
+        // Group by Category (Volume in Kg)
         const catWeights = {};
         orders.forEach(o => {
           const c = o.category || o.itemType || 'Polyester';
@@ -1732,13 +1739,23 @@
         const chart1 = new Chart(ctx1, {
           type: 'doughnut',
           data: {
-            labels: Object.keys(supplierSpend),
+            labels: Object.keys(supplierVolume),
             datasets: [{
-              data: Object.values(supplierSpend),
+              data: Object.values(supplierVolume),
               backgroundColor: ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f97316', '#f59e0b', '#06b6d4']
             }]
           },
-          options: { responsive: true, maintainAspectRatio: false }
+          options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => ` ${ctx.label}: ${ctx.raw.toLocaleString()} kg`
+                }
+              }
+            }
+          }
         });
 
         const ctx2 = chartRef2.current.getContext('2d');
@@ -1765,7 +1782,7 @@
       return (
         <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem'}}>
           <div className="card" style={{height: '380px'}}>
-            <h3>Procurement Spend by Supplier (₹)</h3>
+            <h3>Procurement Volume by Supplier (Kg)</h3>
             <div style={{height: '300px', marginTop: '1rem'}}>
               <canvas ref={chartRef1}></canvas>
             </div>
