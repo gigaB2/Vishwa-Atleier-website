@@ -397,6 +397,7 @@
 
         .badge-warp { background: rgba(139, 92, 246, 0.1); color: var(--accent); }
         .badge-weft { background: rgba(236, 72, 153, 0.1); color: var(--accent2); }
+        .badge-yarn { background: rgba(16, 185, 129, 0.1); color: var(--success); }
         .badge-active { background: rgba(16, 185, 129, 0.1); color: var(--success); }
         .badge-completed { background: rgba(139, 143, 163, 0.1); color: var(--muted); }
 
@@ -2522,7 +2523,7 @@
                                 <div className="ob-filter-toolbar">
                                     <h3>Order Filters</h3>
                                     <div className="ob-filter-type-toggle">
-                                            {['All', 'Warp', 'Weft'].map(type => (
+                                            {['All', 'Warp', 'Weft', 'Yarn'].map(type => (
                                                 <button 
                                                     key={type}
                                                     className="btn" 
@@ -4747,6 +4748,7 @@
                                     <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
                                         <option value="Warp">Warp</option>
                                         <option value="Weft">Weft</option>
+                                        <option value="Yarn">Yarn</option>
                                     </select>
                                 </div>
                                 <div className="input-group">

@@ -354,6 +354,28 @@
         </a>
       </div>
     </div>
+    <!-- Yarn RM Order Book Folder -->
+    <button class="vf-sb-folder" data-mode="yarn" aria-expanded="false" onclick="_vfToggleFolder(this)">
+      <span class="vf-sb-icon vf-sb-icon-purple"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+      Yarn RM Order Book
+      <svg class="vf-sb-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <div class="vf-sb-accordion-wrapper" data-mode="yarn">
+      <div class="vf-sb-accordion-inner" id="vf-mod-folder-yarn-orders">
+        <a class="vf-sb-link child" href="modules/yarn/yarn-rm-orders.html?view=orders">
+          <span class="vf-sb-icon vf-sb-icon-purple vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+          Yarn RM Orders
+        </a>
+        <a class="vf-sb-link child" href="modules/yarn/yarn-rm-orders.html?view=analytics">
+          <span class="vf-sb-icon vf-sb-icon-purple vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+          Yarn Order Analytics
+        </a>
+        <a class="vf-sb-link child" href="modules/yarn/yarn-rm-orders.html?view=heat-map">
+          <span class="vf-sb-icon vf-sb-icon-purple vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+          Yarn Delivery Heat Map
+        </a>
+      </div>
+    </div>
     <!-- Yarn RM Stock Book Link (below Costing Sheet) -->
     <a class="vf-sb-link" data-mode="yarn" href="modules/yarn/yarn-rm-stock.html">
       <span class="vf-sb-icon vf-sb-icon-green"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
@@ -833,6 +855,7 @@
   // --- Known Module File Mappings & Tab Aliases for Navigation ---
   const MODULE_PAGE_MAP = {
     'yarn-costing.html': 'modules/yarn/yarn-costing.html',
+    'yarn-rm-orders.html': 'modules/yarn/yarn-rm-orders.html',
     'yarn-production.html': 'modules/yarn/yarn-production.html',
     'yarn-sales.html': 'modules/yarn/yarn-sales.html',
     'yarn-stock-dashboard.html': 'modules/yarn/yarn-stock-dashboard.html',
@@ -1770,6 +1793,7 @@
     'costing-compare-yarn': 'yarn-costing.html?tab=compare-yarn',
 
     // Standalone Yarn Pages
+    'yarn-rm-orders': 'yarn-rm-orders.html',
     'yarn-rm-stock': 'yarn-rm-stock.html',
     'yarn-rm-analytics': 'yarn-rm-analytics.html',
     'yarn-production': 'yarn-production.html',

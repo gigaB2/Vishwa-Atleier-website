@@ -1,0 +1,1882 @@
+<!DOCTYPE html>
+<html lang="en" translate="no" class="notranslate">
+<head>
+  <script src="../../assets/config.js"></script>
+  <script src="../../assets/supabase-client.js"></script>
+  <script src="../../assets/fy-engine.js"></script>
+
+  <script>
+    (function() {
+      if (typeof Node !== 'undefined' && Node.prototype) {
+        const originalRemoveChild = Node.prototype.removeChild;
+        Node.prototype.removeChild = function (child) {
+          if (child.parentNode !== this) {
+            if (child.parentNode) {
+              return child.parentNode.removeChild(child);
+            }
+            return child;
+          }
+          return originalRemoveChild.apply(this, arguments);
+        };
+
+        const originalInsertBefore = Node.prototype.insertBefore;
+        Node.prototype.insertBefore = function (newNode, referenceNode) {
+          if (referenceNode && referenceNode.parentNode !== this) {
+            if (referenceNode.parentNode) {
+              return referenceNode.parentNode.insertBefore(newNode, referenceNode);
+            }
+            return this.appendChild(newNode);
+          }
+          return originalInsertBefore.apply(this, arguments);
+        };
+      }
+
+      const isDark = localStorage.getItem('vishwa_fashions_theme') === 'true' || 
+                     (localStorage.getItem('vishwa_fashions_theme') === null && true);
+      if (isDark) {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
+      const isCollapsed = localStorage.getItem('vf_sidebar_collapsed') === 'true';
+      if (isCollapsed) {
+        document.documentElement.classList.add('vf-sidebar-collapsed');
+      }
+    })();
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yarn RM Orders — Vishwa Fashions</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- React & Babel Standalone -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Sidebar Component -->
+  <link rel="stylesheet" href="../../sidebar.css">
+  <script src="../../sidebar.js" defer></script>
+  
+  <style>
+    :root {
+      --bg:      #F8F7FC;
+      --surface: #ffffff;
+      --fg:      #1a1a2e;
+      --muted:   #8b8fa3;
+      --border:  #e8e7f1;
+      --accent:  #8b5cf6;
+      --accent2: #ec4899;
+      --accent3: #f97316;
+      --error:   #ef4444;
+      --success: #10b981;
+      --info:    #3b82f6;
+
+      --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --font-body:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+
+      --radius: 16px;
+      --shadow-sm:  0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md:  0 4px 16px rgba(0, 0, 0, 0.06);
+      --shadow-lg:  0 8px 32px rgba(0, 0, 0, 0.08);
+      --shadow-xl:  0 16px 48px rgba(0, 0, 0, 0.12);
+
+      --transition-fast: 0.15s ease;
+      --transition-base: 0.25s ease;
+      --transition-slow: 0.4s ease;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 4px;
+      border: 2px solid var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+      transition: background 0.3s ease;
+    }
+
+    body.dark-mode, .dark-mode body, .dark-mode {
+      background: linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #0f0f1a 100%);
+      --bg: #000000;
+      --surface: #0a0a0a;
+      --fg: #ffffff;
+      --muted: #a1a1aa;
+      --border: #27272a;
+      --accent: #7c3aed;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .dark-mode input:not(.bg-transparent),
+    .dark-mode textarea:not(.bg-transparent),
+    .dark-mode select:not(.bg-transparent) {
+      background-color: var(--surface) !important;
+      color: var(--fg) !important;
+      border-color: var(--border) !important;
+    }
+
+    .dark-mode input,
+    .dark-mode select,
+    .dark-mode textarea {
+      color-scheme: dark !important;
+    }
+
+    .dark-mode select option {
+      background-color: #0a0a0a !important;
+      color: var(--fg) !important;
+    }
+
+    .dark-mode input:focus,
+    .dark-mode textarea:focus,
+    .dark-mode select:focus {
+      background-color: var(--surface) !important;
+      color: var(--fg) !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15) !important;
+    }
+
+    .app-container {
+      max-width: 1350px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem 1.5rem;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0 1.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+      opacity: 0.5;
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .ob-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border);
+      transition: transform var(--transition-base), box-shadow var(--transition-base);
+      position: relative;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .btn {
+      padding: 0.65rem 1.25rem;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-base);
+      border: none;
+      font-family: var(--font-body);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      color: var(--fg);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--fg);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .input-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--fg);
+      font-family: var(--font-body);
+      transition: all var(--transition-fast);
+      font-size: 0.95rem;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent);
+    }
+
+    .metric-card.success-card::before { background: var(--success); }
+    .metric-card.danger-card::before { background: var(--error); }
+    .metric-card.gr-card::before { background: var(--accent3); }
+    .metric-card.info-card::before { background: var(--info); }
+
+    .metric-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+    }
+
+    .metric-val {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--fg);
+    }
+
+    .metric-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+    }
+
+    .ob-filter-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .ob-filter-type-toggle {
+      display: flex;
+      gap: 0.35rem;
+      background: var(--bg);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .type-btn {
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all var(--transition-fast);
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .type-btn.active {
+      background: var(--surface);
+      color: var(--accent);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-top: 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.85rem 0.75rem;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th:hover {
+      color: var(--accent);
+    }
+
+    td {
+      padding: 0.9rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(139, 92, 246, 0.02);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.3rem 0.65rem;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-pending { background: rgba(249, 115, 22, 0.12); color: var(--accent3); }
+    .badge-active { background: rgba(59, 130, 246, 0.12); color: var(--info); }
+    .badge-partial { background: rgba(139, 92, 246, 0.12); color: var(--accent); }
+    .badge-completed { background: rgba(16, 185, 129, 0.12); color: var(--success); }
+    .badge-cancelled { background: rgba(239, 68, 68, 0.12); color: var(--error); }
+    .badge-yarn { background: rgba(16, 185, 129, 0.12); color: var(--success); }
+
+    .progress-mini-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 140px;
+    }
+
+    .progress-mini-text {
+      font-size: 0.78rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .progress-mini-bar-bg {
+      width: 100%;
+      height: 7px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 10, 20, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      z-index: 9999;
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-xl);
+      max-width: 750px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 2rem;
+      position: relative;
+    }
+
+    .modal-lg {
+      max-width: 1100px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h2 {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      color: var(--fg);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+      color: var(--error);
+    }
+
+    /* Heat Map Calendar Grid */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-top: 1rem;
+    }
+
+    .calendar-weekday {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-align: center;
+      padding: 0.5rem 0;
+    }
+
+    .calendar-day {
+      aspect-ratio: 1.1;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all var(--transition-fast);
+      position: relative;
+    }
+
+    .calendar-day:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .calendar-day-empty {
+      background: transparent;
+      border: none;
+    }
+
+    .day-number {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .heat-level-0 { background: var(--surface); }
+    .heat-level-1 { background: rgba(139, 92, 246, 0.08); }
+    .heat-level-2 { background: rgba(139, 92, 246, 0.18); }
+    .heat-level-3 { background: rgba(139, 92, 246, 0.32); }
+    .heat-level-4 { background: rgba(139, 92, 246, 0.5); }
+    .heat-level-5 { background: rgba(139, 92, 246, 0.75); color: #fff; }
+
+    .day-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+    }
+
+    .chip-sm {
+      font-size: 0.65rem;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .chip-order { background: rgba(59, 130, 246, 0.15); color: var(--info); }
+    .chip-inward { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .chip-gr { background: rgba(249, 115, 22, 0.15); color: var(--accent3); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    const YARN_CATEGORIES = [
+      'Polyester', 'Nylon', 'Viscose', 'Cotton', 'Silk', 'Linen', 
+      'Wool', 'Acrylic', 'Blend', 'POY', 'FDY', 'DTY', 'Spun', 'Lycra', 'Metallic'
+    ];
+
+    const YARN_ORDERS_STORAGE_KEY = 'yarn-rm-orders';
+    const YARN_STOCK_STORAGE_KEY = 'vishwa_yarn_rm_stock_data';
+
+    // Hook for storage
+    function useSyncedStorage(key, defaultValue) {
+      const [data, setData] = useState(() => {
+        try {
+          const stored = localStorage.getItem(key);
+          return stored ? JSON.parse(stored) : defaultValue;
+        } catch (e) {
+          return defaultValue;
+        }
+      });
+
+      const updateData = (newVal) => {
+        const valueToStore = typeof newVal === 'function' ? newVal(data) : newVal;
+        setData(valueToStore);
+        try {
+          localStorage.setItem(key, JSON.stringify(valueToStore));
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+            window.VishwaSupabase.saveToSupabase(key, valueToStore);
+          }
+        } catch (e) {
+          console.error(`Error saving ${key}:`, e);
+        }
+      };
+
+      useEffect(() => {
+        const handleSync = (e) => {
+          if (e?.detail?.key === key && e?.detail?.value) {
+            setData(e.detail.value);
+          }
+        };
+        window.addEventListener('supabase-synced', handleSync);
+        window.addEventListener('storage', (e) => {
+          if (e.key === key && e.newValue) {
+            try { setData(JSON.parse(e.newValue)); } catch(err) {}
+          }
+        });
+        return () => {
+          window.removeEventListener('supabase-synced', handleSync);
+        };
+      }, [key]);
+
+      return [data, updateData];
+    }
+
+    // Main App Component
+    const App = () => {
+      const [orders, setOrders] = useSyncedStorage(YARN_ORDERS_STORAGE_KEY, []);
+      const [qualities, setQualities] = useSyncedStorage('yarn-qualities', []);
+      const [suppliers, setSuppliers] = useSyncedStorage('yarn-suppliers', []);
+      
+      const [view, setView] = useState(() => (new URLSearchParams(window.location.search).get('view') || 'orders'));
+      const [showOrderModal, setShowOrderModal] = useState(false);
+      const [selectedOrder, setSelectedOrder] = useState(null);
+      const [editingOrder, setEditingOrder] = useState(null);
+      
+      // Filters
+      const [categoryFilter, setCategoryFilter] = useState('All');
+      const [statusFilter, setStatusFilter] = useState('All');
+      const [qualityFilter, setQualityFilter] = useState('');
+      const [supplierFilter, setSupplierFilter] = useState('');
+      const [codeFilter, setCodeFilter] = useState('');
+      const [colorFilter, setColorFilter] = useState('');
+      const [searchQuery, setSearchQuery] = useState('');
+      const [fromDate, setFromDate] = useState('');
+      const [toDate, setToDate] = useState('');
+
+      // Sorting
+      const [sortConfig, setSortConfig] = useState({ key: 'orderDate', direction: 'desc' });
+
+      // FY Synchronization
+      useEffect(() => {
+        const initialFY = localStorage.getItem('vishwa_fashions_selected_fy');
+        if (initialFY && typeof FYEngine !== 'undefined') {
+          const { start, end } = FYEngine.getFYDateRange(initialFY);
+          if (start) setFromDate(start);
+          if (end) setToDate(end);
+        }
+
+        const handleFYChange = (e) => {
+          const fy = e?.detail?.fy;
+          if (fy && typeof FYEngine !== 'undefined') {
+            const { start, end } = FYEngine.getFYDateRange(fy);
+            setFromDate(start || '');
+            setToDate(end || '');
+          }
+        };
+        window.addEventListener('fyChanged', handleFYChange);
+        return () => window.removeEventListener('fyChanged', handleFYChange);
+      }, []);
+
+      // View URL sync
+      useEffect(() => {
+        const titles = {
+          'orders': 'Yarn RM Orders — Vishwa Fashions',
+          'analytics': 'Yarn Order Analytics — Vishwa Fashions',
+          'heat-map': 'Yarn Delivery Heat Map — Vishwa Fashions'
+        };
+        document.title = titles[view] || 'Yarn RM Orders — Vishwa Fashions';
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('view') !== view) {
+          url.searchParams.set('view', view);
+          window.history.replaceState({}, '', url.pathname + '?' + url.searchParams.toString());
+        }
+      }, [view]);
+
+      // Calculate Metrics
+      const metrics = useMemo(() => {
+        let totalOrderedWeight = 0;
+        let totalReceivedWeight = 0;
+        let totalGRWeight = 0;
+        let totalSpend = 0;
+        let activeOrdersCount = 0;
+        let completedOrdersCount = 0;
+
+        orders.forEach(o => {
+          const ordered = Number(o.orderedWeight) || 0;
+          const rate = Number(o.price) || 0;
+          const gst = Number(o.gstRate || 0);
+          totalOrderedWeight += ordered;
+          totalSpend += ordered * rate * (1 + gst / 100);
+
+          let receivedForOrder = 0;
+          (o.batches || []).forEach(b => {
+            receivedForOrder += Number(b.totalWeight) || 0;
+            (b.boxes || []).forEach(box => {
+              totalGRWeight += Number(box.returnedWeight) || 0;
+            });
+          });
+
+          totalReceivedWeight += receivedForOrder;
+
+          if (o.status === 'Completed' || receivedForOrder >= ordered) {
+            completedOrdersCount++;
+          } else if (o.status !== 'Cancelled') {
+            activeOrdersCount++;
+          }
+        });
+
+        const pendingWeight = Math.max(0, totalOrderedWeight - totalReceivedWeight);
+
+        return {
+          totalOrders: orders.length,
+          activeOrders: activeOrdersCount,
+          completedOrders: completedOrdersCount,
+          orderedWeight: totalOrderedWeight,
+          receivedWeight: totalReceivedWeight,
+          pendingWeight: pendingWeight,
+          grWeight: totalGRWeight,
+          totalSpend: totalSpend
+        };
+      }, [orders]);
+
+      // Filtered Orders
+      const filteredOrders = useMemo(() => {
+        return orders.filter(o => {
+          if (categoryFilter !== 'All' && (o.category || o.itemType) !== categoryFilter) return false;
+          if (statusFilter !== 'All') {
+            if (statusFilter === 'Active' && o.status === 'Completed') return false;
+            if (statusFilter === 'Completed' && o.status !== 'Completed') return false;
+            if (statusFilter === 'Cancelled' && o.status !== 'Cancelled') return false;
+          }
+          if (qualityFilter && o.quality !== qualityFilter) return false;
+          if (supplierFilter && o.supplier !== supplierFilter) return false;
+          if (codeFilter && o.code !== codeFilter) return false;
+          if (colorFilter && o.color !== colorFilter) return false;
+
+          const oDate = o.orderDate || o.createdAt?.split('T')[0];
+          if (fromDate && oDate < fromDate) return false;
+          if (toDate && oDate > toDate) return false;
+
+          if (searchQuery.trim()) {
+            const terms = searchQuery.toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
+            const searchable = [
+              o.orderNumber, o.quality, o.code, o.color, o.supplier, o.category, o.itemType,
+              o.status, o.orderedWeight, o.price, oDate
+            ].join(' ').toLowerCase();
+
+            return terms.every(term => searchable.includes(term));
+          }
+
+          return true;
+        }).sort((a, b) => {
+          let valA = a[sortConfig.key] || '';
+          let valB = b[sortConfig.key] || '';
+          if (sortConfig.key === 'orderDate') {
+            valA = new Date(a.orderDate || a.createdAt);
+            valB = new Date(b.orderDate || b.createdAt);
+          } else if (['orderedWeight', 'price'].includes(sortConfig.key)) {
+            valA = Number(valA) || 0;
+            valB = Number(valB) || 0;
+          }
+          if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }, [orders, categoryFilter, statusFilter, qualityFilter, supplierFilter, codeFilter, colorFilter, searchQuery, fromDate, toDate, sortConfig]);
+
+      const handleSaveOrder = (orderData) => {
+        if (editingOrder) {
+          setOrders(prev => prev.map(o => o.id === editingOrder.id ? { ...o, ...orderData } : o));
+        } else {
+          const newOrder = {
+            ...orderData,
+            id: 'YRN-ORD-' + Date.now(),
+            orderNumber: orderData.orderNumber || ('YRN-' + Math.floor(1000 + Math.random() * 9000)),
+            createdAt: new Date().toISOString(),
+            status: 'Active',
+            batches: []
+          };
+          setOrders(prev => [newOrder, ...prev]);
+        }
+        setShowOrderModal(false);
+        setEditingOrder(null);
+      };
+
+      const handleDeleteOrder = (orderId) => {
+        if (confirm('Are you sure you want to delete this yarn order?')) {
+          setOrders(prev => prev.filter(o => o.id !== orderId));
+        }
+      };
+
+      const handleUpdateBatches = (updatedOrder) => {
+        setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+        if (selectedOrder && selectedOrder.id === updatedOrder.id) {
+          setSelectedOrder(updatedOrder);
+        }
+      };
+
+      return (
+        <div className="app-container">
+          <header>
+            <div className="logo-section">
+              <span className="logo" onClick={() => setView('orders')} style={{cursor: 'pointer'}}>
+                Yarn RM Orders
+              </span>
+            </div>
+            <div className="ob-header-actions">
+              <button className={`btn ${view === 'orders' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('orders')}>
+                📦 Yarn RM Orders
+              </button>
+              <button className={`btn ${view === 'analytics' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('analytics')}>
+                📊 Yarn Order Analytics
+              </button>
+              <button className={`btn ${view === 'heat-map' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('heat-map')}>
+                🔥 Delivery Heat Map
+              </button>
+              {view === 'orders' && (
+                <button className="btn btn-primary" onClick={() => { setEditingOrder(null); setShowOrderModal(true); }}>
+                  + Add New Yarn Order
+                </button>
+              )}
+            </div>
+          </header>
+
+          {/* Metric KPIs */}
+          <div className="metrics-grid">
+            <div className="metric-card">
+              <div className="metric-title">Active Yarn Orders</div>
+              <div className="metric-val">{metrics.activeOrders}</div>
+              <div className="metric-sub">{metrics.totalOrders} total orders placed</div>
+            </div>
+            <div className="metric-card info-card">
+              <div className="metric-title">Pending Delivery (Kg)</div>
+              <div className="metric-val" style={{color: 'var(--info)'}}>{metrics.pendingWeight.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} kg</div>
+              <div className="metric-sub">Out of {metrics.orderedWeight.toLocaleString()} kg ordered</div>
+            </div>
+            <div className="metric-card success-card">
+              <div className="metric-title">Received Inward (Kg)</div>
+              <div className="metric-val" style={{color: 'var(--success)'}}>{metrics.receivedWeight.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} kg</div>
+              <div className="metric-sub">{((metrics.receivedWeight / (metrics.orderedWeight || 1)) * 100).toFixed(1)}% fulfillment</div>
+            </div>
+            <div className="metric-card gr-card">
+              <div className="metric-title">GR / Returned (Kg)</div>
+              <div className="metric-val" style={{color: 'var(--accent3)'}}>{metrics.grWeight.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} kg</div>
+              <div className="metric-sub">Defective / returned yarn</div>
+            </div>
+            <div className="metric-card danger-card">
+              <div className="metric-title">Est. Procurement Spend</div>
+              <div className="metric-val" style={{fontSize: '1.4rem'}}>₹{metrics.totalSpend.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+              <div className="metric-sub">Total purchase commitment</div>
+            </div>
+          </div>
+
+          {/* VIEW: ORDERS LIST */}
+          {view === 'orders' && (
+            <React.Fragment>
+              <div className="card" style={{ marginBottom: '2rem' }}>
+                <div className="ob-filter-toolbar">
+                  <div className="ob-filter-type-toggle">
+                    {['All', ...YARN_CATEGORIES.slice(0, 8)].map(cat => (
+                      <button 
+                        key={cat} 
+                        className={`type-btn ${categoryFilter === cat ? 'active' : ''}`}
+                        onClick={() => setCategoryFilter(cat)}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>
+                    <select 
+                      value={statusFilter} 
+                      onChange={e => setStatusFilter(e.target.value)}
+                      style={{padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: 'auto'}}
+                    >
+                      <option value="All">All Statuses</option>
+                      <option value="Active">Active / Pending</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                    <button 
+                      className="btn btn-outline" 
+                      style={{padding: '0.4rem 0.8rem', fontSize: '0.85rem'}}
+                      onClick={() => {
+                        setCategoryFilter('All');
+                        setStatusFilter('All');
+                        setQualityFilter('');
+                        setSupplierFilter('');
+                        setCodeFilter('');
+                        setColorFilter('');
+                        setSearchQuery('');
+                      }}
+                    >
+                      🔄 Reset
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', alignItems: 'end' }}>
+                  <div className="input-group" style={{marginBottom: 0}}>
+                    <label>From Date</label>
+                    <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+                  </div>
+                  <div className="input-group" style={{marginBottom: 0}}>
+                    <label>To Date</label>
+                    <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
+                  </div>
+                  <div className="input-group" style={{marginBottom: 0, gridColumn: 'span 2'}}>
+                    <label>Search Orders</label>
+                    <input 
+                      type="text" 
+                      placeholder="Search order #, supplier, quality, color, code..." 
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="card">
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+                  <h2>Yarn Purchase Orders ({filteredOrders.length})</h2>
+                </div>
+                <div className="table-responsive">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th onClick={() => setSortConfig({ key: 'orderDate', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Order Date</th>
+                        <th onClick={() => setSortConfig({ key: 'orderNumber', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Order #</th>
+                        <th>Yarn Quality / Item</th>
+                        <th>Supplier</th>
+                        <th>Code & Color</th>
+                        <th onClick={() => setSortConfig({ key: 'orderedWeight', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Ordered (Kg)</th>
+                        <th>Inward Progress</th>
+                        <th onClick={() => setSortConfig({ key: 'price', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Rate (₹/Kg)</th>
+                        <th>Status</th>
+                        <th style={{textAlign: 'center'}}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredOrders.length === 0 ? (
+                        <tr>
+                          <td colSpan="10" style={{textAlign: 'center', padding: '3rem', color: 'var(--muted)'}}>
+                            No yarn orders match the selected filters. Click "+ Add New Yarn Order" to create one.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredOrders.map(order => {
+                          const netReceived = (order.batches || []).reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
+                          const totalGR = (order.batches || []).reduce((acc, b) => 
+                            acc + (b.boxes || []).reduce((bAcc, box) => bAcc + (Number(box.returnedWeight) || 0), 0)
+                          , 0);
+
+                          const orderedWt = Number(order.orderedWeight) || 0;
+                          const progressPct = Math.min(100, (netReceived / (orderedWt || 1)) * 100);
+
+                          return (
+                            <tr key={order.id}>
+                              <td>{new Date(order.orderDate || order.createdAt).toLocaleDateString('en-GB')}</td>
+                              <td style={{fontFamily: 'var(--font-mono)', fontWeight: '600', color: 'var(--accent)'}}>{order.orderNumber || order.id}</td>
+                              <td>
+                                <strong>{order.quality}</strong>
+                                <div style={{fontSize: '0.75rem', color: 'var(--muted)'}}>{order.category || order.itemType || 'Polyester'} {order.countDenier ? `(${order.countDenier})` : ''}</div>
+                              </td>
+                              <td><strong>{order.supplier}</strong></td>
+                              <td>
+                                <div>{order.code || '-'}</div>
+                                <div style={{fontSize: '0.75rem', color: 'var(--muted)'}}>{order.color || '-'}</div>
+                              </td>
+                              <td><strong>{orderedWt.toLocaleString()} kg</strong></td>
+                              <td>
+                                <div className="progress-mini-container">
+                                  <div className="progress-mini-text">
+                                    <span>{netReceived.toFixed(1)} kg</span>
+                                    {totalGR > 0 && <span style={{color: 'var(--accent3)'}}>{totalGR.toFixed(1)} kg GR</span>}
+                                  </div>
+                                  <div className="progress-mini-bar-bg">
+                                    <div style={{ width: `${progressPct}%`, background: progressPct >= 100 ? 'var(--success)' : 'var(--accent)', transition: 'width 0.3s' }}></div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>₹{Number(order.price || 0).toFixed(2)}</td>
+                              <td>
+                                <span className={`badge badge-${(order.status || 'Active').toLowerCase()}`}>
+                                  {netReceived >= orderedWt && order.status !== 'Cancelled' ? 'Completed' : (order.status || 'Active')}
+                                </span>
+                              </td>
+                              <td>
+                                <div style={{display: 'flex', gap: '0.4rem', justifyContent: 'center'}}>
+                                  <button 
+                                    className="btn btn-outline" 
+                                    style={{padding: '0.35rem 0.65rem', fontSize: '0.8rem'}} 
+                                    onClick={() => setSelectedOrder(order)}
+                                    title="View Delivery Batches & Inward Challans"
+                                  >
+                                    📥 Inward
+                                  </button>
+                                  <button 
+                                    className="btn btn-outline" 
+                                    style={{padding: '0.35rem 0.65rem', fontSize: '0.8rem'}}
+                                    onClick={() => { setEditingOrder(order); setShowOrderModal(true); }}
+                                    title="Edit Order"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button 
+                                    className="btn btn-outline" 
+                                    style={{padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: 'var(--error)', borderColor: 'transparent'}}
+                                    onClick={() => handleDeleteOrder(order.id)}
+                                    title="Delete Order"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </React.Fragment>
+          )}
+
+          {/* VIEW: ANALYTICS */}
+          {view === 'analytics' && (
+            <AnalyticsView orders={orders} qualities={qualities} suppliers={suppliers} />
+          )}
+
+          {/* VIEW: HEAT MAP */}
+          {view === 'heat-map' && (
+            <HeatMapView orders={orders} onSelectOrder={order => setSelectedOrder(order)} />
+          )}
+
+          {/* Order Create/Edit Modal */}
+          {showOrderModal && (
+            <OrderFormModal 
+              onClose={() => { setShowOrderModal(false); setEditingOrder(null); }}
+              onSubmit={handleSaveOrder}
+              initialData={editingOrder}
+              qualities={qualities}
+              suppliers={suppliers}
+            />
+          )}
+
+          {/* Order Details & Challan Inward Modal */}
+          {selectedOrder && (
+            <OrderInwardModal 
+              order={selectedOrder}
+              onClose={() => setSelectedOrder(null)}
+              onUpdate={handleUpdateBatches}
+            />
+          )}
+        </div>
+      );
+    };
+
+    // Component: Order Creation & Edit Modal
+    const OrderFormModal = ({ onClose, onSubmit, initialData, qualities, suppliers }) => {
+      const [formData, setFormData] = useState(initialData || {
+        orderNumber: 'YRN-' + Math.floor(1000 + Math.random() * 9000),
+        orderDate: new Date().toISOString().split('T')[0],
+        expectedDeliveryDate: '',
+        supplier: '',
+        category: 'Polyester',
+        quality: '',
+        countDenier: '',
+        code: '',
+        color: '',
+        orderedWeight: '',
+        price: '',
+        gstRate: 5,
+        notes: ''
+      });
+
+      const totalAmount = useMemo(() => {
+        const wt = Number(formData.orderedWeight) || 0;
+        const rate = Number(formData.price) || 0;
+        const gst = Number(formData.gstRate || 0);
+        return wt * rate * (1 + gst / 100);
+      }, [formData.orderedWeight, formData.price, formData.gstRate]);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!formData.quality.trim() || !formData.supplier.trim() || !formData.orderedWeight || !formData.price) {
+          alert('Please fill all required fields marked with *');
+          return;
+        }
+        onSubmit(formData);
+      };
+
+      return (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h2>{initialData ? '✏️ Edit Yarn RM Order' : '📦 Place New Yarn RM Order'}</h2>
+              <button className="modal-close" onClick={onClose}>&times;</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                <div className="input-group">
+                  <label>Order Number *</label>
+                  <input 
+                    type="text" 
+                    value={formData.orderNumber} 
+                    onChange={e => setFormData({...formData, orderNumber: e.target.value})} 
+                    required 
+                  />
+                </div>
+                <div className="input-group">
+                  <label>Order Date *</label>
+                  <input 
+                    type="date" 
+                    value={formData.orderDate} 
+                    onChange={e => setFormData({...formData, orderDate: e.target.value})} 
+                    required 
+                  />
+                </div>
+              </div>
+
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                <div className="input-group">
+                  <label>Yarn Category / Type *</label>
+                  <select 
+                    value={formData.category} 
+                    onChange={e => setFormData({...formData, category: e.target.value})}
+                    required
+                  >
+                    {YARN_CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Supplier / Mill Name *</label>
+                  <input 
+                    type="text" 
+                    list="supplier-list"
+                    placeholder="Select or enter supplier..."
+                    value={formData.supplier} 
+                    onChange={e => setFormData({...formData, supplier: e.target.value})} 
+                    required 
+                  />
+                  <datalist id="supplier-list">
+                    {suppliers.map((s, idx) => (
+                      <option key={idx} value={s.name || s.supplier} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+
+              <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem'}}>
+                <div className="input-group">
+                  <label>Yarn Quality Name *</label>
+                  <input 
+                    type="text" 
+                    list="quality-list"
+                    placeholder="e.g. 80/72 DTY Bright, 40s Combed Cotton..."
+                    value={formData.quality} 
+                    onChange={e => setFormData({...formData, quality: e.target.value})} 
+                    required 
+                  />
+                  <datalist id="quality-list">
+                    {qualities.map((q, idx) => (
+                      <option key={idx} value={q.quality || q.name} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="input-group">
+                  <label>Count / Denier</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 80/72, 30s, 150/48"
+                    value={formData.countDenier} 
+                    onChange={e => setFormData({...formData, countDenier: e.target.value})} 
+                  />
+                </div>
+              </div>
+
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem'}}>
+                <div className="input-group">
+                  <label>Yarn Code</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. YRN-8072"
+                    value={formData.code} 
+                    onChange={e => setFormData({...formData, code: e.target.value})} 
+                  />
+                </div>
+                <div className="input-group">
+                  <label>Color / Shade</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Raw White, Black, Dyed"
+                    value={formData.color} 
+                    onChange={e => setFormData({...formData, color: e.target.value})} 
+                  />
+                </div>
+                <div className="input-group">
+                  <label>Expected Delivery</label>
+                  <input 
+                    type="date" 
+                    value={formData.expectedDeliveryDate} 
+                    onChange={e => setFormData({...formData, expectedDeliveryDate: e.target.value})} 
+                  />
+                </div>
+              </div>
+
+              <div style={{display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr 1.5fr', gap: '1rem', background: 'var(--bg)', padding: '1rem', borderRadius: '12px', marginBottom: '1.25rem'}}>
+                <div className="input-group" style={{marginBottom: 0}}>
+                  <label>Ordered Wt (Kg) *</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="0.00"
+                    value={formData.orderedWeight} 
+                    onChange={e => setFormData({...formData, orderedWeight: e.target.value})} 
+                    required 
+                  />
+                </div>
+                <div className="input-group" style={{marginBottom: 0}}>
+                  <label>Rate (₹/Kg) *</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="₹ 0.00"
+                    value={formData.price} 
+                    onChange={e => setFormData({...formData, price: e.target.value})} 
+                    required 
+                  />
+                </div>
+                <div className="input-group" style={{marginBottom: 0}}>
+                  <label>GST %</label>
+                  <select 
+                    value={formData.gstRate} 
+                    onChange={e => setFormData({...formData, gstRate: Number(e.target.value)})}
+                  >
+                    <option value={0}>0%</option>
+                    <option value={5}>5%</option>
+                    <option value={12}>12%</option>
+                    <option value={18}>18%</option>
+                  </select>
+                </div>
+                <div className="input-group" style={{marginBottom: 0}}>
+                  <label>Est. Total Amount</label>
+                  <div style={{fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: '700', color: 'var(--success)', marginTop: '0.4rem'}}>
+                    ₹{totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </div>
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label>Notes / Delivery Remarks</label>
+                <textarea 
+                  rows="2" 
+                  placeholder="Additional mill terms, packaging specs..." 
+                  value={formData.notes} 
+                  onChange={e => setFormData({...formData, notes: e.target.value})} 
+                />
+              </div>
+
+              <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
+                <button type="submit" className="btn btn-primary" style={{flex: 1}}>
+                  {initialData ? 'Save Changes' : 'Confirm & Place Yarn Order'}
+                </button>
+                <button type="button" className="btn btn-outline" onClick={onClose}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    };
+
+    // Component: Order Inward & Challan Modal
+    const OrderInwardModal = ({ order, onClose, onUpdate }) => {
+      const [showBatchForm, setShowBatchForm] = useState(false);
+      const [editingBatch, setEditingBatch] = useState(null);
+      const [syncToStockBook, setSyncToStockBook] = useState(true);
+
+      const netReceived = (order.batches || []).reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
+      const totalGR = (order.batches || []).reduce((acc, b) => 
+        acc + (b.boxes || []).reduce((bAcc, box) => bAcc + (Number(box.returnedWeight) || 0), 0)
+      , 0);
+
+      const orderedWt = Number(order.orderedWeight) || 0;
+      const pendingBalance = Math.max(0, orderedWt - netReceived);
+
+      const handleSaveBatch = (batchData) => {
+        let updatedBatches;
+        if (editingBatch) {
+          updatedBatches = order.batches.map(b => b.id === editingBatch.id ? { ...b, ...batchData } : b);
+        } else {
+          const newBatch = {
+            ...batchData,
+            id: 'BATCH-' + Date.now(),
+            createdAt: new Date().toISOString()
+          };
+          updatedBatches = [...(order.batches || []), newBatch];
+        }
+
+        const newNet = updatedBatches.reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
+        const newStatus = newNet >= orderedWt ? 'Completed' : (newNet > 0 ? 'Partial' : 'Active');
+
+        const updatedOrder = {
+          ...order,
+          batches: updatedBatches,
+          status: newStatus
+        };
+
+        // Transfer to Yarn RM Stock Book if enabled
+        if (syncToStockBook && batchData.boxes && batchData.boxes.length > 0) {
+          try {
+            const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
+            let stockList = rawStock ? JSON.parse(rawStock) : [];
+            if (!Array.isArray(stockList)) stockList = [];
+
+            const stockLot = {
+              id: batchData.lotNumber || ('LOT-' + Date.now().toString().slice(-4)),
+              lotNumber: batchData.lotNumber || 'LOT-AUTO',
+              challanNumber: batchData.challanNumber || '',
+              date: batchData.receiveDate || new Date().toISOString().split('T')[0],
+              supplier: order.supplier,
+              quality: order.quality,
+              itemType: order.category || 'Polyester',
+              code: order.code || '',
+              color: order.color || '',
+              rate: order.price || '',
+              orderRef: order.orderNumber || order.id,
+              boxes: (batchData.boxes || []).map((bx, idx) => ({
+                boxNumber: bx.boxNumber || `B${idx + 1}`,
+                cones: Number(bx.cones) || 0,
+                weight: Number(bx.weight) || 0,
+                status: (Number(bx.returnedWeight) > 0) ? 'gr' : 'available',
+                grWeight: Number(bx.returnedWeight) || 0,
+                grDate: bx.returnedDate || ''
+              }))
+            };
+
+            // Avoid duplicate lot addition
+            stockList = stockList.filter(s => s.id !== stockLot.id);
+            stockList.unshift(stockLot);
+            localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
+          } catch(e) {
+            console.error('Error syncing to yarn stock book:', e);
+          }
+        }
+
+        onUpdate(updatedOrder);
+        setShowBatchForm(false);
+        setEditingBatch(null);
+      };
+
+      const handleDeleteBatch = (batchId) => {
+        if (confirm('Delete this delivery batch?')) {
+          const updatedBatches = (order.batches || []).filter(b => b.id !== batchId);
+          const newNet = updatedBatches.reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
+          onUpdate({
+            ...order,
+            batches: updatedBatches,
+            status: newNet >= orderedWt ? 'Completed' : (newNet > 0 ? 'Partial' : 'Active')
+          });
+        }
+      };
+
+      return (
+        <div className="modal-overlay">
+          <div className="modal modal-lg">
+            <div className="modal-header">
+              <div>
+                <h2>📥 Inward Deliveries & Challans</h2>
+                <p style={{color: 'var(--muted)', fontSize: '0.85rem', marginTop: '0.2rem'}}>
+                  Order #{order.orderNumber} — <strong>{order.quality}</strong> ({order.supplier})
+                </p>
+              </div>
+              <button className="modal-close" onClick={onClose}>&times;</button>
+            </div>
+
+            {/* Order Summary Cards */}
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem'}}>
+              <div className="card" style={{padding: '1rem', boxShadow: 'none'}}>
+                <div style={{fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Total Ordered</div>
+                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: '700'}}>{orderedWt.toLocaleString()} kg</div>
+              </div>
+              <div className="card" style={{padding: '1rem', boxShadow: 'none'}}>
+                <div style={{fontSize: '0.75rem', color: 'var(--success)', textTransform: 'uppercase'}}>Net Received</div>
+                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: '700', color: 'var(--success)'}}>{netReceived.toFixed(1)} kg</div>
+              </div>
+              <div className="card" style={{padding: '1rem', boxShadow: 'none'}}>
+                <div style={{fontSize: '0.75rem', color: 'var(--accent3)', textTransform: 'uppercase'}}>Goods Return (GR)</div>
+                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: '700', color: 'var(--accent3)'}}>{totalGR.toFixed(1)} kg</div>
+              </div>
+              <div className="card" style={{padding: '1rem', boxShadow: 'none'}}>
+                <div style={{fontSize: '0.75rem', color: 'var(--info)', textTransform: 'uppercase'}}>Pending Balance</div>
+                <div style={{fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: '700', color: 'var(--info)'}}>{pendingBalance.toFixed(1)} kg</div>
+              </div>
+            </div>
+
+            {/* Batch Form */}
+            {showBatchForm ? (
+              <BatchEntryForm 
+                order={order}
+                initialData={editingBatch}
+                onSave={handleSaveBatch}
+                onCancel={() => { setShowBatchForm(false); setEditingBatch(null); }}
+                syncToStockBook={syncToStockBook}
+                setSyncToStockBook={setSyncToStockBook}
+              />
+            ) : (
+              <div>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+                  <h3>Recorded Inward Challans ({(order.batches || []).length})</h3>
+                  <button className="btn btn-primary" onClick={() => { setEditingBatch(null); setShowBatchForm(true); }}>
+                    + Record Incoming Challan
+                  </button>
+                </div>
+
+                <div className="table-responsive">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Receive Date</th>
+                        <th>Challan #</th>
+                        <th>Lot #</th>
+                        <th>Boxes</th>
+                        <th>Cones</th>
+                        <th>Gross Wt (Kg)</th>
+                        <th>GR (Kg)</th>
+                        <th>Net Wt (Kg)</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(order.batches || []).length === 0 ? (
+                        <tr>
+                          <td colSpan="9" style={{textAlign: 'center', padding: '2rem', color: 'var(--muted)'}}>
+                            No challan deliveries recorded yet. Click "+ Record Incoming Challan" to add boxes.
+                          </td>
+                        </tr>
+                      ) : (
+                        order.batches.map(batch => {
+                          const grossWt = (batch.boxes || []).reduce((acc, b) => acc + (Number(b.weight) || 0), 0);
+                          const grWt = (batch.boxes || []).reduce((acc, b) => acc + (Number(b.returnedWeight) || 0), 0);
+                          const conesCount = (batch.boxes || []).reduce((acc, b) => acc + (Number(b.cones) || 0), 0);
+                          const netWt = Number(batch.totalWeight) || (grossWt - grWt);
+
+                          return (
+                            <tr key={batch.id}>
+                              <td>{new Date(batch.receiveDate || batch.createdAt).toLocaleDateString('en-GB')}</td>
+                              <td><strong>{batch.challanNumber}</strong></td>
+                              <td><span style={{fontFamily: 'var(--font-mono)'}}>{batch.lotNumber || '-'}</span></td>
+                              <td>{(batch.boxes || []).length} boxes</td>
+                              <td>{conesCount || '-'}</td>
+                              <td>{grossWt.toFixed(1)}</td>
+                              <td style={{color: grWt > 0 ? 'var(--accent3)' : 'inherit'}}>{grWt.toFixed(1)}</td>
+                              <td><strong style={{color: 'var(--success)'}}>{netWt.toFixed(1)} kg</strong></td>
+                              <td>
+                                <div style={{display: 'flex', gap: '0.4rem'}}>
+                                  <button className="btn btn-outline" style={{padding: '0.3rem 0.5rem'}} onClick={() => { setEditingBatch(batch); setShowBatchForm(true); }}>✏️</button>
+                                  <button className="btn btn-outline" style={{padding: '0.3rem 0.5rem', color: 'var(--error)', borderColor: 'transparent'}} onClick={() => handleDeleteBatch(batch.id)}>🗑️</button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    // Component: Batch / Inward Entry Form
+    const BatchEntryForm = ({ order, initialData, onSave, onCancel, syncToStockBook, setSyncToStockBook }) => {
+      const [challanNumber, setChallanNumber] = useState(initialData?.challanNumber || '');
+      const [receiveDate, setReceiveDate] = useState(initialData?.receiveDate || new Date().toISOString().split('T')[0]);
+      const [lotNumber, setLotNumber] = useState(initialData?.lotNumber || '');
+      const [boxes, setBoxes] = useState(initialData?.boxes || [
+        { boxNumber: 'B1', cones: '', weight: '', returnedWeight: '', returnedDate: '' }
+      ]);
+
+      const addBoxRow = () => {
+        setBoxes(prev => [
+          ...prev, 
+          { boxNumber: `B${prev.length + 1}`, cones: '', weight: '', returnedWeight: '', returnedDate: '' }
+        ]);
+      };
+
+      const handleBoxChange = (idx, field, val) => {
+        setBoxes(prev => {
+          const next = [...prev];
+          next[idx] = { ...next[idx], [field]: val };
+          return next;
+        });
+      };
+
+      const removeBoxRow = (idx) => {
+        if (boxes.length === 1) return;
+        setBoxes(prev => prev.filter((_, i) => i !== idx));
+      };
+
+      const totalGross = boxes.reduce((acc, b) => acc + (Number(b.weight) || 0), 0);
+      const totalGR = boxes.reduce((acc, b) => acc + (Number(b.returnedWeight) || 0), 0);
+      const totalNet = Math.max(0, totalGross - totalGR);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!challanNumber.trim()) {
+          alert('Challan Number is required');
+          return;
+        }
+        const validBoxes = boxes.filter(b => Number(b.weight) > 0);
+        if (validBoxes.length === 0) {
+          alert('Please enter at least one box with weight > 0');
+          return;
+        }
+
+        onSave({
+          challanNumber,
+          receiveDate,
+          lotNumber,
+          boxes: validBoxes.map(b => ({
+            boxNumber: b.boxNumber,
+            cones: Number(b.cones) || 0,
+            weight: Number(b.weight) || 0,
+            returnedWeight: Number(b.returnedWeight) || 0,
+            returnedDate: b.returnedDate || ''
+          })),
+          totalWeight: totalNet
+        });
+      };
+
+      return (
+        <div className="card" style={{border: '1.5px solid var(--accent)', background: 'var(--bg)'}}>
+          <h3 style={{marginBottom: '1.25rem'}}>{initialData ? '✏️ Edit Inward Batch' : '📥 New Inward Delivery Challan'}</h3>
+          <form onSubmit={handleSubmit}>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem'}}>
+              <div className="input-group">
+                <label>Receive Date *</label>
+                <input type="date" value={receiveDate} onChange={e => setReceiveDate(e.target.value)} required />
+              </div>
+              <div className="input-group">
+                <label>Challan Number *</label>
+                <input type="text" placeholder="e.g. CH-9901" value={challanNumber} onChange={e => setChallanNumber(e.target.value)} required />
+              </div>
+              <div className="input-group">
+                <label>Lot Number</label>
+                <input type="text" placeholder="e.g. LOT-4412" value={lotNumber} onChange={e => setLotNumber(e.target.value)} />
+              </div>
+            </div>
+
+            {/* Box Breakdown Table */}
+            <label style={{fontSize: '0.8rem', fontWeight: '700', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block'}}>
+              Box-Level Breakdown & Weights
+            </label>
+            <div style={{maxHeight: '280px', overflowY: 'auto', marginBottom: '1rem'}}>
+              {boxes.map((b, i) => (
+                <div key={i} style={{display: 'grid', gridTemplateColumns: '1fr 0.8fr 1.2fr 1fr 1.5fr auto', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center'}}>
+                  <input 
+                    type="text" 
+                    placeholder="Box #" 
+                    value={b.boxNumber} 
+                    onChange={e => handleBoxChange(i, 'boxNumber', e.target.value)} 
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Cones" 
+                    value={b.cones} 
+                    onChange={e => handleBoxChange(i, 'cones', e.target.value)} 
+                  />
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="Gross Wt (Kg)" 
+                    value={b.weight} 
+                    onChange={e => handleBoxChange(i, 'weight', e.target.value)} 
+                    required 
+                  />
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="GR (Kg)" 
+                    value={b.returnedWeight} 
+                    onChange={e => handleBoxChange(i, 'returnedWeight', e.target.value)} 
+                  />
+                  <input 
+                    type="date" 
+                    value={b.returnedDate} 
+                    disabled={!b.returnedWeight || Number(b.returnedWeight) <= 0}
+                    onChange={e => handleBoxChange(i, 'returnedDate', e.target.value)} 
+                  />
+                  <button 
+                    type="button" 
+                    className="btn btn-outline" 
+                    style={{color: 'var(--error)', borderColor: 'transparent', padding: '0.4rem'}} 
+                    onClick={() => removeBoxRow(i)}
+                  >
+                    ✖
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem'}}>
+              <button type="button" className="btn btn-outline" onClick={addBoxRow}>
+                + Add Another Box
+              </button>
+              <div style={{fontSize: '0.9rem', fontWeight: '700', display: 'flex', gap: '1rem'}}>
+                <span>Gross: {totalGross.toFixed(1)} kg</span>
+                <span style={{color: 'var(--accent3)'}}>GR: {totalGR.toFixed(1)} kg</span>
+                <span style={{color: 'var(--success)'}}>Net: {totalNet.toFixed(1)} kg</span>
+              </div>
+            </div>
+
+            {/* Sync to Stock Book Option */}
+            <div style={{display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.5rem', padding: '0.75rem', background: 'rgba(139, 92, 246, 0.08)', borderRadius: '10px'}}>
+              <input 
+                type="checkbox" 
+                id="sync-stock-check" 
+                checked={syncToStockBook} 
+                onChange={e => setSyncToStockBook(e.target.checked)} 
+                style={{width: '18px', height: '18px', cursor: 'pointer'}}
+              />
+              <label htmlFor="sync-stock-check" style={{fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', margin: 0}}>
+                ✨ Automatically sync this inward delivery into the <strong>Yarn RM Stock Book</strong> ledger
+              </label>
+            </div>
+
+            <div style={{display: 'flex', gap: '1rem'}}>
+              <button type="submit" className="btn btn-primary" style={{flex: 1}}>
+                Save Delivery Batch
+              </button>
+              <button type="button" className="btn btn-outline" onClick={onCancel}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      );
+    };
+
+    // Component: Analytics View
+    const AnalyticsView = ({ orders, qualities, suppliers }) => {
+      const chartRef1 = useRef(null);
+      const chartRef2 = useRef(null);
+
+      useEffect(() => {
+        if (!chartRef1.current || !chartRef2.current) return;
+
+        // Group by Supplier
+        const supplierSpend = {};
+        orders.forEach(o => {
+          const s = o.supplier || 'Unknown';
+          const wt = Number(o.orderedWeight) || 0;
+          const rate = Number(o.price) || 0;
+          supplierSpend[s] = (supplierSpend[s] || 0) + (wt * rate);
+        });
+
+        // Group by Category
+        const catWeights = {};
+        orders.forEach(o => {
+          const c = o.category || o.itemType || 'Polyester';
+          catWeights[c] = (catWeights[c] || 0) + (Number(o.orderedWeight) || 0);
+        });
+
+        const ctx1 = chartRef1.current.getContext('2d');
+        const chart1 = new Chart(ctx1, {
+          type: 'doughnut',
+          data: {
+            labels: Object.keys(supplierSpend),
+            datasets: [{
+              data: Object.values(supplierSpend),
+              backgroundColor: ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f97316', '#f59e0b', '#06b6d4']
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        const ctx2 = chartRef2.current.getContext('2d');
+        const chart2 = new Chart(ctx2, {
+          type: 'bar',
+          data: {
+            labels: Object.keys(catWeights),
+            datasets: [{
+              label: 'Ordered Volume (Kg)',
+              data: Object.values(catWeights),
+              backgroundColor: '#8b5cf6',
+              borderRadius: 8
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        return () => {
+          chart1.destroy();
+          chart2.destroy();
+        };
+      }, [orders]);
+
+      return (
+        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem'}}>
+          <div className="card" style={{height: '380px'}}>
+            <h3>Procurement Spend by Supplier (₹)</h3>
+            <div style={{height: '300px', marginTop: '1rem'}}>
+              <canvas ref={chartRef1}></canvas>
+            </div>
+          </div>
+          <div className="card" style={{height: '380px'}}>
+            <h3>Yarn Category Volume (Kg)</h3>
+            <div style={{height: '300px', marginTop: '1rem'}}>
+              <canvas ref={chartRef2}></canvas>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Component: Heat Map View
+    const HeatMapView = ({ orders, onSelectOrder }) => {
+      const [currentDate, setCurrentDate] = useState(new Date());
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDayIndex = new Date(year, month, 1).getDay();
+
+      const monthOrders = useMemo(() => {
+        const map = {};
+        orders.forEach(o => {
+          const oDateStr = o.orderDate || o.createdAt?.split('T')[0];
+          if (oDateStr) {
+            const [y, m, d] = oDateStr.split('-').map(Number);
+            if (y === year && (m - 1) === month) {
+              map[d] = map[d] || { orders: [], arrivals: [] };
+              map[d].orders.push(o);
+            }
+          }
+          (o.batches || []).forEach(b => {
+            const bDateStr = b.receiveDate || b.createdAt?.split('T')[0];
+            if (bDateStr) {
+              const [y, m, d] = bDateStr.split('-').map(Number);
+              if (y === year && (m - 1) === month) {
+                map[d] = map[d] || { orders: [], arrivals: [] };
+                map[d].arrivals.push({ ...b, order: o });
+              }
+            }
+          });
+        });
+        return map;
+      }, [orders, year, month]);
+
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+
+      return (
+        <div className="card">
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+            <h2>🔥 {monthNames[month]} {year} — Yarn Delivery Heat Map</h2>
+            <div style={{display: 'flex', gap: '0.5rem'}}>
+              <button className="btn btn-outline" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>◀ Prev</button>
+              <button className="btn btn-outline" onClick={() => setCurrentDate(new Date())}>Today</button>
+              <button className="btn btn-outline" onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>Next ▶</button>
+            </div>
+          </div>
+
+          <div className="calendar-grid">
+            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
+              <div key={d} className="calendar-weekday">{d}</div>
+            ))}
+            {Array.from({ length: firstDayIndex }).map((_, i) => (
+              <div key={`empty-${i}`} className="calendar-day calendar-day-empty"></div>
+            ))}
+            {Array.from({ length: daysInMonth }).map((_, i) => {
+              const day = i + 1;
+              const dayData = monthOrders[day] || { orders: [], arrivals: [] };
+              const activityCount = dayData.orders.length + dayData.arrivals.length;
+              const heat = Math.min(5, activityCount);
+
+              return (
+                <div key={day} className={`calendar-day heat-level-${heat}`}>
+                  <div className="day-number">{day}</div>
+                  <div className="day-chips">
+                    {dayData.orders.length > 0 && (
+                      <span className="chip-sm chip-order">📦 {dayData.orders.length}</span>
+                    )}
+                    {dayData.arrivals.length > 0 && (
+                      <span className="chip-sm chip-inward">🚚 {dayData.arrivals.length}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
+
+    // Mount React App
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
