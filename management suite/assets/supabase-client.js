@@ -207,7 +207,9 @@
 
   // --- Universal Intelligent Merge Engine (Eliminates Concurrent Multi-User Overwrites) ---
   function getItemIdentifier(item) {
-    if (!item || typeof item !== 'object') return null;
+    if (!item) return null;
+    if (typeof item === 'string' || typeof item === 'number') return String(item).trim();
+    if (typeof item !== 'object') return null;
     if (item.id !== undefined && item.id !== null && String(item.id).trim() !== '') {
       return String(item.id).trim();
     }
@@ -216,6 +218,12 @@
     }
     if (item.uuid !== undefined && item.uuid !== null && String(item.uuid).trim() !== '') {
       return String(item.uuid).trim();
+    }
+    if (item.loanId !== undefined && item.loanId !== null && String(item.loanId).trim() !== '') {
+      return String(item.loanId).trim();
+    }
+    if (item.empId !== undefined && item.empId !== null && String(item.empId).trim() !== '') {
+      return String(item.empId).trim();
     }
     if (item.orderId || item.orderNo) {
       return 'ord_' + String(item.orderId || item.orderNo).trim();
@@ -229,6 +237,12 @@
     // Composite log key for shift entries without explicit ID
     if (item.date && (item.shift || item.machine || item.machineNo || item.loom || item.loomNo || item.worker)) {
       return `log_${item.date}_${item.shift || ''}_${item.machine || item.machineNo || item.loom || item.loomNo || ''}_${item.productName || item.worker || ''}`;
+    }
+    if (item.name !== undefined && item.name !== null && String(item.name).trim() !== '') {
+      return String(item.name).trim();
+    }
+    if (item.code !== undefined && item.code !== null && String(item.code).trim() !== '') {
+      return String(item.code).trim();
     }
     return null;
   }
@@ -249,15 +263,36 @@
     const tombstoneSet = new Set(tombstones);
     return arr.filter(item => {
       if (!item) return false;
-      const id = getItemIdentifier(item);
-      if (id && tombstoneSet.has(String(id))) return false;
-      if (item.id && tombstoneSet.has(String(item.id))) return false;
+      try {
+        const id = getItemIdentifier(item);
+        if (id && tombstoneSet.has(String(id))) return false;
+        if (item.id && tombstoneSet.has(String(item.id))) return false;
+        if (item._id && tombstoneSet.has(String(item._id))) return false;
+        if (item.name && tombstoneSet.has(String(item.name))) return false;
+        if (item.loanId && tombstoneSet.has(String(item.loanId))) return false;
+        if (item.empId && tombstoneSet.has(String(item.empId))) return false;
+      } catch(e) {}
       return true;
     });
   }
 
   function mergeDatasets(key, localVal, remoteVal) {
-    if (localVal === undefined || localVal === null) return remoteVal;
+    if (localVal === undefined || localVal === null) {
+      if (typeof remoteVal === 'string' && (remoteVal.startsWith('[') || remoteVal.startsWith('{'))) {
+        try {
+          const parsed = JSON.parse(remoteVal);
+          if (Array.isArray(parsed)) return filterDeletedEntities(parsed);
+          if (parsed && typeof parsed === 'object') {
+            const cloned = { ...parsed };
+            if (Array.isArray(cloned.employees)) cloned.employees = filterDeletedEntities(cloned.employees);
+            if (Array.isArray(cloned.machines)) cloned.machines = filterDeletedEntities(cloned.machines);
+            if (Array.isArray(cloned.loans)) cloned.loans = filterDeletedEntities(cloned.loans);
+            return cloned;
+          }
+        } catch(e) {}
+      }
+      return remoteVal;
+    }
     if (remoteVal === undefined || remoteVal === null) return localVal;
 
     let parsedLocal = localVal;
@@ -275,11 +310,12 @@
       }
     } catch(e) {}
 
-    // Case 1: Both are Arrays -> If remote state has been updated, remote state is authoritative unless local has recent edits
+    // Case 1: Both are Arrays -> Strictly filter deletions on both and prioritize latest authority
     if (Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
+      const cleanLocal = filterDeletedEntities(parsedLocal);
+      const cleanRemote = filterDeletedEntities(parsedRemote);
       const lastWrite = lastLocalWrites[key] || 0;
-      const targetArr = (Date.now() - lastWrite < 3000) ? parsedLocal : parsedRemote;
-      return filterDeletedEntities(targetArr);
+      return (Date.now() - lastWrite < 3000) ? cleanLocal : cleanRemote;
     }
 
     if (Array.isArray(parsedRemote)) {
@@ -330,13 +366,6 @@
         window.dispatchEvent(new StorageEvent('storage', { key: key, newValue: finalValSerialized }));
       } catch(e) {
         window.dispatchEvent(new Event('storage'));
-      }
-
-      // If merge preserved local records that were not in incoming remote payload, sync union back
-      if (finalValSerialized !== valStr && activeConfig.isConfigured) {
-        let parsed = finalValSerialized;
-        try { parsed = JSON.parse(finalValSerialized); } catch(e) {}
-        supabaseApi.set(key, parsed);
       }
     }
   }
@@ -999,7 +1028,8 @@
   // --- Realtime Collaborative Form & Input Field Synchronizer (Google Sheets Style with Live Field Locking) ---
   function initCollaborativeDOMSync() {
     const activeRemoteLocks = new Map(); // fieldId -> { tagEl, inputEl, user, timer, origReadOnly, origPointerEvents }
-    let inputDebounceTimer = null;
+    const fieldDebounceTimers = new Map();
+    const lastLocalFieldWrites = new Map();
 
     function getFieldIdentifier(el) {
       if (!el || !el.tagName) return null;
@@ -1075,7 +1105,7 @@
       const el = findElementByFieldId(fieldId);
       if (!el) return;
 
-      // If local user is already focusing the element, don't hijack their active typing
+      // If local user is already focusing the element, local user has exclusive editing authority
       if (document.activeElement === el) return;
 
       // Clean up previous lock if any
@@ -1131,8 +1161,9 @@
       });
     }
 
-    // Local user focus & typing broadcasters
+    // Local user focus & typing broadcasters (ONLY triggers on genuine trusted user interactions)
     document.addEventListener('focusin', (e) => {
+      if (!e.isTrusted) return;
       const fid = getFieldIdentifier(e.target);
       if (!fid) return;
       broadcastFieldFocus(fid, true, {
@@ -1141,30 +1172,45 @@
     }, true);
 
     document.addEventListener('focusout', (e) => {
+      if (!e.isTrusted) return;
       const fid = getFieldIdentifier(e.target);
       if (!fid) return;
       broadcastFieldFocus(fid, false);
     }, true);
 
     document.addEventListener('input', (e) => {
+      if (!e.isTrusted) return; // Prevent synthetic events from echoing into broadcast loop
       const fid = getFieldIdentifier(e.target);
       if (!fid) return;
       const val = e.target.value;
+      lastLocalFieldWrites.set(fid, Date.now());
 
-      clearTimeout(inputDebounceTimer);
-      inputDebounceTimer = setTimeout(() => {
+      if (fieldDebounceTimers.has(fid)) {
+        clearTimeout(fieldDebounceTimers.get(fid));
+      }
+
+      // Fast-flush on empty value (user deleted/cleared all text) so delete is instant on other screens
+      const delay = (val === '') ? 5 : 25;
+      const timer = setTimeout(() => {
         broadcastFieldChange(fid, val, {
           label: e.target.placeholder || e.target.name || ''
         });
-      }, 20);
+        fieldDebounceTimers.delete(fid);
+      }, delay);
+      fieldDebounceTimers.set(fid, timer);
     }, true);
 
     document.addEventListener('change', (e) => {
+      if (!e.isTrusted) return;
       const fid = getFieldIdentifier(e.target);
       if (!fid) return;
       const val = e.target.value;
+      lastLocalFieldWrites.set(fid, Date.now());
 
-      clearTimeout(inputDebounceTimer);
+      if (fieldDebounceTimers.has(fid)) {
+        clearTimeout(fieldDebounceTimers.get(fid));
+        fieldDebounceTimers.delete(fid);
+      }
       broadcastFieldChange(fid, val, {
         label: e.target.placeholder || e.target.name || ''
       });
@@ -1190,9 +1236,9 @@
       const el = findElementByFieldId(fieldId);
       if (!el) return;
 
-      // If local user is currently actively focusing the element, only skip if they typed within last 400ms
-      const lastWrite = lastLocalWrites[fieldId] || 0;
-      if (document.activeElement === el && (Date.now() - lastWrite < 400)) {
+      // CRITICAL: If the local user is currently actively focusing this element, local user is authoritative
+      // NEVER overwrite the active user's input with a remote echo
+      if (document.activeElement === el) {
         return;
       }
 
@@ -1230,10 +1276,6 @@
         } catch(err) {
           el.value = value;
         }
-
-        // Notify input/change subscribers immediately so formulas/derived cards update
-        try { el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true })); } catch(e) {}
-        try { el.dispatchEvent(new Event('change', { bubbles: true, cancelable: true })); } catch(e) {}
       }
     });
 
@@ -1248,8 +1290,6 @@
           const el = findElementByFieldId(fid);
           if (el && el !== document.activeElement) {
             el.value = '';
-            try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch(err) {}
-            try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch(err) {}
           }
         });
       } else {
@@ -1285,7 +1325,7 @@
     try {
       const { key, itemId } = payload;
       if (itemId) {
-        const idStr = String(itemId);
+        const idStr = String(itemId).trim();
         let deletedIds = getDeletedTombstones();
         if (!deletedIds.includes(idStr)) {
           deletedIds.push(idStr);
@@ -1293,19 +1333,35 @@
           safeLocalStorageSet('vf_deleted_entity_ids', JSON.stringify(deletedIds));
         }
 
-        // Clean from cached array if applicable
-        if (key && cache[key]) {
+        // Clean from all known entity keys in cache immediately
+        const entityKeys = ['yarn-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines'];
+        if (key && !entityKeys.includes(key)) entityKeys.push(key);
+
+        entityKeys.forEach(k => {
+          if (cache[k]) {
+            try {
+              const parsed = JSON.parse(cache[k]);
+              if (Array.isArray(parsed)) {
+                const filtered = filterDeletedEntities(parsed);
+                const newStr = JSON.stringify(filtered);
+                cache[k] = newStr;
+                safeLocalStorageSet(k, newStr);
+              }
+            } catch(e) {}
+          }
+        });
+
+        // Clean from state object (e.g. aethertasks_db_state_v7)
+        if (cache['aethertasks_db_state_v7']) {
           try {
-            const parsed = JSON.parse(cache[key]);
-            if (Array.isArray(parsed)) {
-              const filtered = parsed.filter(item => {
-                if (!item) return false;
-                const id = getItemIdentifier(item) || item.id || item._id;
-                return String(id) !== idStr;
-              });
-              const newStr = JSON.stringify(filtered);
-              cache[key] = newStr;
-              safeLocalStorageSet(key, newStr);
+            const parsed = JSON.parse(cache['aethertasks_db_state_v7']);
+            if (parsed && typeof parsed === 'object') {
+              if (Array.isArray(parsed.employees)) parsed.employees = filterDeletedEntities(parsed.employees);
+              if (Array.isArray(parsed.machines)) parsed.machines = filterDeletedEntities(parsed.machines);
+              if (Array.isArray(parsed.loans)) parsed.loans = filterDeletedEntities(parsed.loans);
+              const newStr = JSON.stringify(parsed);
+              cache['aethertasks_db_state_v7'] = newStr;
+              safeLocalStorageSet('aethertasks_db_state_v7', newStr);
             }
           } catch(e) {}
         }
@@ -1681,7 +1737,7 @@
     // Explicit Universal Item Deletion Tombstone Tracking
     async recordDeletion(key, itemId) {
       try {
-        const idStr = String(itemId);
+        const idStr = String(itemId).trim();
         let deletedIds = [];
         try {
           const raw = cache['vf_deleted_entity_ids'] || cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_entity_ids') || nativeLocalStorage.getItem('vf_deleted_costing_ids');
@@ -1701,6 +1757,39 @@
           safeLocalStorageSet('vf_deleted_entity_ids', valStr);
           safeLocalStorageSet('vf_deleted_costing_ids', valStr);
           this.set('vf_deleted_entity_ids', deletedIds, true);
+        }
+
+        const deletePayload = {
+          type: 'item_deleted',
+          senderId: CLIENT_ID,
+          key: key,
+          itemId: idStr,
+          timestamp: Date.now()
+        };
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(JSON.stringify({
+              topic: WS_CHANNEL_TOPIC,
+              event: 'broadcast',
+              payload: {
+                type: 'broadcast',
+                event: 'item_deleted',
+                payload: deletePayload
+              },
+              ref: 'del_' + Date.now()
+            }));
+          } catch(e) {}
+        }
+
+        if (syncChannel) {
+          try {
+            syncChannel.postMessage({
+              type: 'item_deleted',
+              senderId: CLIENT_ID,
+              payload: deletePayload
+            });
+          } catch(e) {}
         }
 
         // Delete from dedicated table if costing key
