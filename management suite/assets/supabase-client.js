@@ -924,6 +924,8 @@
           ref: 'foc_' + Date.now()
         }));
       } catch(e) {}
+    } else if (activeConfig.isConfigured && (!ws || ws.readyState === WebSocket.CLOSED)) {
+      initRealtimeWebSocket();
     }
 
     if (syncChannel) {
@@ -970,6 +972,8 @@
           ref: 'fchg_' + Date.now()
         }));
       } catch(e) {}
+    } else if (activeConfig.isConfigured && (!ws || ws.readyState === WebSocket.CLOSED)) {
+      initRealtimeWebSocket();
     }
 
     if (syncChannel) {
@@ -1011,6 +1015,8 @@
           ref: 'fclr_' + Date.now()
         }));
       } catch(e) {}
+    } else if (activeConfig.isConfigured && (!ws || ws.readyState === WebSocket.CLOSED)) {
+      initRealtimeWebSocket();
     }
 
     if (syncChannel) {
@@ -1049,14 +1055,28 @@
     function findElementByFieldId(fieldId) {
       if (!fieldId) return null;
       try {
-        let el = document.querySelector(`[data-collab-id="${CSS.escape(fieldId)}"]`) || document.getElementById(fieldId);
+        let el = document.getElementById(fieldId);
+        if (el) return el;
+
+        const safeEscape = (str) => {
+          try {
+            return (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(str) : String(str).replace(/([ #;?%&,.+*~':"!^$[\]()=>|/@])/g, '\\$1');
+          } catch(e) {
+            return String(str);
+          }
+        };
+
+        el = document.querySelector(`[data-collab-id="${safeEscape(fieldId)}"]`);
+        if (el) return el;
+
+        el = document.querySelector(`[name="${safeEscape(fieldId)}"]`);
         if (el) return el;
 
         if (fieldId.includes('__')) {
           const [rowKey, fieldKey] = fieldId.split('__');
-          const row = document.querySelector(`[data-row-id="${CSS.escape(rowKey)}"], [data-item-id="${CSS.escape(rowKey)}"], [data-id="${CSS.escape(rowKey)}"], #${CSS.escape(rowKey)}`);
+          const row = document.getElementById(rowKey) || document.querySelector(`[data-row-id="${safeEscape(rowKey)}"], [data-item-id="${safeEscape(rowKey)}"], [data-id="${safeEscape(rowKey)}"]`);
           if (row) {
-            el = row.querySelector(`[name="${CSS.escape(fieldKey)}"], [placeholder="${CSS.escape(fieldKey)}"], [aria-label="${CSS.escape(fieldKey)}"]`);
+            el = row.querySelector(`[name="${safeEscape(fieldKey)}"], [placeholder="${safeEscape(fieldKey)}"], [aria-label="${safeEscape(fieldKey)}"]`);
             if (el) return el;
           }
         }
@@ -1191,8 +1211,8 @@
         clearTimeout(fieldDebounceTimers.get(fid));
       }
 
-      // Fast-flush on empty value (user deleted/cleared all text) so delete is instant on other screens
-      const delay = (val === '') ? 5 : 25;
+      // Fast-flush (0ms for empty/cleared, 10ms on typing) for instantaneous live peer reflection
+      const delay = (val === '') ? 0 : 10;
       const timer = setTimeout(() => {
         broadcastFieldChange(fid, val, {
           label: e.target.placeholder || e.target.name || ''
@@ -1253,7 +1273,7 @@
         }, 2500);
       }
 
-      if (el.value !== value) {
+      if (String(el.value) !== String(value)) {
         const tag = el.tagName ? el.tagName.toLowerCase() : '';
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value') ? 
           Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set : null;
@@ -1275,6 +1295,9 @@
         } catch(err) {
           el.value = value;
         }
+
+        // Direct guarantee
+        el.value = value;
 
         // Trigger local UI reactivity (calculations, previews, dropdown dependents) without echoing back
         try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) {}
