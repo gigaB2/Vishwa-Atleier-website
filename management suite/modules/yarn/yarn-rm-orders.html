@@ -629,10 +629,7 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    const YARN_CATEGORIES = [
-      'Polyester', 'Nylon', 'Viscose', 'Cotton', 'Silk', 'Linen', 
-      'Wool', 'Acrylic', 'Blend', 'POY', 'FDY', 'DTY', 'Spun', 'Lycra', 'Metallic'
-    ];
+    const YARN_CATEGORIES = ['Polyester', 'Nylon', 'Viscose'];
 
     const YARN_ORDERS_STORAGE_KEY = 'yarn-rm-orders';
     const YARN_STOCK_STORAGE_KEY = 'vishwa_yarn_rm_stock_data';
@@ -917,7 +914,7 @@
               <div className="card" style={{ marginBottom: '2rem' }}>
                 <div className="ob-filter-toolbar">
                   <div className="ob-filter-type-toggle">
-                    {['All', ...YARN_CATEGORIES.slice(0, 8)].map(cat => (
+                    {['All', ...YARN_CATEGORIES].map(cat => (
                       <button 
                         key={cat} 
                         className={`type-btn ${categoryFilter === cat ? 'active' : ''}`}

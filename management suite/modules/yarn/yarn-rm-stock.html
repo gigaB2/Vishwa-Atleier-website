@@ -864,12 +864,6 @@
                 <option value="Polyester">Polyester</option>
                 <option value="Nylon">Nylon</option>
                 <option value="Viscose">Viscose</option>
-                <option value="Cotton">Cotton</option>
-                <option value="Silk">Silk</option>
-                <option value="Linen">Linen</option>
-                <option value="Wool">Wool</option>
-                <option value="Acrylic">Acrylic</option>
-                <option value="Blend">Blend</option>
               </select>
             </div>
             <div class="form-group">
@@ -1695,10 +1689,7 @@
       const storedQualities = getStoredYarnQualities();
       const rawTypes = storedQualities.map(q => q.type || q.itemType).filter(Boolean);
       const stockTypes = stockData.map(l => l.itemType).filter(Boolean);
-      const defaultTypes = [
-        'Polyester', 'Nylon', 'Viscose', 'Cotton', 'Silk', 
-        'Linen', 'Wool', 'Acrylic', 'Blend'
-      ];
+      const defaultTypes = ['Polyester', 'Nylon', 'Viscose'];
       
       const itemTypesSet = new Set([...rawTypes, ...stockTypes, ...defaultTypes]);
       const itemTypeSelect = document.getElementById('item-type-filter');

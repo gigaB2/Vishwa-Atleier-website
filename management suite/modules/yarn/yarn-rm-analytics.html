@@ -1195,8 +1195,7 @@
       });
       document.getElementById('tab-suppliers-count').textContent = supSet.size;
 
-      // Item Types
-      const defaultTypes = ['Polyester', 'Nylon', 'Viscose', 'Cotton', 'Silk', 'Linen', 'Wool', 'Acrylic', 'Blend'];
+      const defaultTypes = ['Polyester', 'Nylon', 'Viscose'];
       const typeSet = new Set([...defaultTypes, ...storedQualities.map(q => q.type || q.itemType).filter(Boolean), ...stockLots.map(l => l.itemType).filter(Boolean)]);
       const typeSelect = document.getElementById('filter-item-type');
       const curType = typeSelect.value;
