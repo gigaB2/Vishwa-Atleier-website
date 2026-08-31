@@ -889,7 +889,7 @@
     'stock-dashboard': ['stock-dashboard', 'stock', 'tab-btn-stock'],
     'analytics': ['analytics', 'production analytics', 'rm order analytics', 'tab-btn-analytics'],
     'orders': ['orders', 'rm orders'],
-    'heat-map': ['heat-map', 'heatmap', 'delivery heat map', 'rm delivery heat map'],
+    'heat-map': ['heat-map', 'heatmap', 'delivery heat map', 'rm delivery heat map', 'yarn delivery heat map', 'yarn delivery heatmap'],
     'item-detail': ['item-detail', 'weft stock register', 'stock register'],
     'item-ledger-v2': ['item-ledger-v2', 'item-wise ledger v2', 'item-wise ledger', 'ledger'],
     'challan-history': ['challan-history', 'challan register', 'challan history'],

@@ -534,6 +534,456 @@
       cursor: grabbing;
     }
 
+    /* Heat map styles — square cells; scroll allowed when content overflows */
+    .ob-heatmap-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-height: 0;
+    }
+
+    .app-container.ob-heatmap-page {
+      min-height: 0 !important;
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem 1.5rem;
+      box-sizing: border-box;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .ob-heatmap-nav {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .ob-heatmap-month-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.65rem;
+      flex-wrap: wrap;
+    }
+
+    .app-container.ob-heatmap-page > header {
+      flex-shrink: 0;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+
+    .app-container.ob-heatmap-page .ob-heatmap-stack {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .ob-heatmap-filters {
+      flex-shrink: 0;
+      padding: 0.85rem 1.1rem !important;
+    }
+
+    .ob-heatmap-filters .ob-filter-toolbar {
+      margin-bottom: 0.65rem;
+    }
+
+    .ob-heatmap-legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.55rem 0.85rem;
+      background: var(--bg);
+      border-radius: 10px;
+      margin-bottom: 0.75rem;
+      border: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .heat-map-container {
+      padding: 1.15rem 1.25rem;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border);
+      flex: 1;
+      min-height: 0 !important;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .ob-heatmap-month-row h2 {
+      font-size: 1.35rem !important;
+    }
+
+    .calendar-grid-shell {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      container-type: size;
+      display: grid;
+      place-items: center;
+    }
+
+    .calendar-grid {
+      --gap: 8px;
+      --header-h: 1.25rem;
+      --weeks: 6;
+      --cell: min(
+        calc((100cqw - (6 * var(--gap))) / 7),
+        calc((100cqh - var(--header-h) - (var(--weeks) * var(--gap))) / var(--weeks))
+      );
+      display: grid;
+      grid-template-columns: repeat(7, var(--cell));
+      grid-template-rows: var(--header-h) repeat(var(--weeks), var(--cell));
+      gap: var(--gap);
+      margin: 0;
+      width: max-content;
+      max-width: 100%;
+    }
+
+    @supports not (width: 1cqw) {
+      .calendar-grid {
+        --cell: min(calc((100vw - 5rem) / 7), calc((100dvh - 20rem) / 6), 108px);
+      }
+      .calendar-grid-shell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+
+    .calendar-weekday {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      text-align: center;
+      font-weight: 800;
+      font-size: clamp(0.58rem, 1.1cqw, 0.78rem);
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      padding: 0;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .calendar-day {
+      min-height: 0;
+      width: var(--cell);
+      height: var(--cell);
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      padding: clamp(0.25rem, 0.9cqw, 0.55rem);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    .calendar-day-empty {
+      min-height: 0;
+      width: var(--cell);
+      height: var(--cell);
+      border-radius: 12px;
+      border: 1px dashed transparent;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .calendar-day:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      z-index: 10;
+      border-color: var(--accent);
+    }
+
+    .calendar-day.has-activity {
+      box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.25), 0 8px 18px rgba(139, 92, 246, 0.12);
+    }
+
+    .day-number {
+      font-weight: 750;
+      font-size: clamp(0.7rem, 1.6cqw, 1rem);
+      color: var(--fg);
+      font-family: var(--font-display);
+      line-height: 1;
+    }
+
+    .day-content {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      align-items: center;
+      gap: 2px;
+      margin-top: 2px;
+      overflow: hidden;
+      padding-right: 0;
+      max-height: none;
+    }
+
+    .day-activity-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      font-size: clamp(0.55rem, 1.1cqw, 0.68rem);
+      font-weight: 700;
+      line-height: 1;
+      padding: 1px 3px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.55);
+      border: 1px solid rgba(0,0,0,0.06);
+      white-space: nowrap;
+    }
+
+    .day-heat-bar {
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      bottom: 6px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--accent);
+      opacity: 0.85;
+      pointer-events: none;
+    }
+
+    .heat-level-1 .day-heat-bar { opacity: 0.35; }
+    .heat-level-2 .day-heat-bar { opacity: 0.5; }
+    .heat-level-3 .day-heat-bar { opacity: 0.7; }
+    .heat-level-4 .day-heat-bar,
+    .heat-level-5 .day-heat-bar { opacity: 1; background: #fff; }
+
+    .item-pill-ordered {
+      background: #E9D5FF;
+      color: #333333;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+    .item-pill-received {
+      background: #DCFCE7;
+      color: #333333;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+    .item-pill-gr {
+      background: #FFEDD5;
+      color: #333333;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .heat-level-0 { background-color: var(--bg); opacity: 0.5; }
+    .heat-level-1 { background-color: rgba(139, 92, 246, 0.1); }
+    .heat-level-2 { background-color: rgba(139, 92, 246, 0.25); }
+    .heat-level-3 { background-color: rgba(139, 92, 246, 0.45); }
+    .heat-level-4 { background-color: rgba(139, 92, 246, 0.7); }
+    .heat-level-5 { background-color: rgba(139, 92, 246, 0.95); }
+
+    .heat-level-4 .day-number, .heat-level-5 .day-number { color: white; }
+
+    .dark-mode .heat-level-0 { background-color: #1a1a1a; }
+    .dark-mode .heat-level-1 { background-color: rgba(124, 58, 237, 0.15); }
+    .dark-mode .heat-level-2 { background-color: rgba(124, 58, 237, 0.3); }
+    .dark-mode .heat-level-3 { background-color: rgba(124, 58, 237, 0.5); }
+    .dark-mode .heat-level-4 { background-color: rgba(124, 58, 237, 0.75); }
+    .dark-mode .heat-level-5 { background-color: rgba(124, 58, 237, 1); }
+
+    @media (max-width: 1024px) {
+      .app-container.ob-heatmap-page {
+        height: auto !important;
+        max-height: none !important;
+        min-height: calc(100dvh - 4.25rem) !important;
+        overflow: visible !important;
+        padding: 0.65rem 0.85rem 1.25rem;
+      }
+
+      .app-container.ob-heatmap-page .ob-heatmap-stack {
+        overflow: visible;
+        flex: none;
+      }
+
+      .app-container.ob-heatmap-page .heat-map-container {
+        flex: none;
+        overflow: visible;
+        min-height: 0 !important;
+        padding: 0.85rem !important;
+      }
+
+      .app-container.ob-heatmap-page .calendar-grid-shell {
+        flex: none;
+        height: auto;
+        min-height: 0;
+        container-type: inline-size;
+        display: block;
+        width: 100%;
+      }
+
+      .app-container.ob-heatmap-page .calendar-grid {
+        --gap: 5px;
+        --header-h: 1.1rem;
+        --cell: min(calc((100cqi - (6 * var(--gap))) / 7), 56px);
+        width: 100%;
+        max-width: 100%;
+        margin: 0 auto;
+        justify-content: center;
+      }
+
+      @supports not (width: 1cqi) {
+        .app-container.ob-heatmap-page .calendar-grid {
+          --cell: min(calc((100vw - 2.75rem) / 7), 56px);
+        }
+      }
+
+      .calendar-day {
+        min-height: 0;
+        padding: 0;
+        gap: 0;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .calendar-day .day-content,
+      .calendar-day .day-heat-bar {
+        display: none !important;
+      }
+
+      .day-number {
+        font-size: 0.8rem;
+        margin: 0;
+      }
+
+      .app-container.ob-heatmap-page > header {
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+      }
+
+      .ob-heatmap-filters {
+        padding: 0.55rem 0.7rem !important;
+      }
+
+      .ob-heatmap-filters.is-collapsed {
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+      }
+
+      .ob-heatmap-filters .ob-filter-toolbar {
+        margin-bottom: 0;
+      }
+
+      .ob-heatmap-filters.is-open .ob-filter-toolbar {
+        margin-bottom: 0.55rem;
+      }
+
+      .ob-heatmap-legend span[style*="font-size: 1rem"] {
+        font-size: 0.9rem !important;
+      }
+
+      .app-container.ob-heatmap-page .ob-header-actions .btn-primary {
+        display: none;
+      }
+
+      .ob-heatmap-legend {
+        font-size: 0.7rem;
+        padding: 0.4rem 0.6rem;
+        margin-bottom: 0.45rem;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .ob-heatmap-month-row {
+        margin-bottom: 0.35rem;
+        gap: 0.35rem;
+      }
+
+      .ob-heatmap-month-row h2 {
+        font-size: 1.05rem !important;
+      }
+
+      .ob-heatmap-nav {
+        width: 100%;
+        gap: 0.35rem;
+      }
+
+      .ob-heatmap-nav .btn {
+        flex: 1 1 calc(20% - 0.3rem);
+        justify-content: center;
+        padding: 0.35rem 0.2rem !important;
+        font-size: 0.7rem;
+        min-width: 0;
+        height: 32px;
+      }
+
+      .app-container.ob-heatmap-page {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        padding: 0.35rem 0.65rem 1.5rem;
+      }
+
+      .app-container.ob-heatmap-page > header {
+        margin-bottom: 0.35rem;
+        padding-bottom: 0.35rem;
+      }
+
+      .app-container.ob-heatmap-page .logo {
+        font-size: 1.15rem !important;
+      }
+
+      .heat-map-container {
+        overflow: visible;
+        padding: 0.55rem 0.6rem !important;
+      }
+
+      .ob-heatmap-legend {
+        display: flex;
+        font-size: 0.68rem;
+        padding: 0.4rem 0.55rem;
+        margin-bottom: 0.45rem;
+      }
+
+      .calendar-grid {
+        --gap: 4px;
+        --header-h: 0.9rem;
+        --cell: min(calc((100vw - 2.5rem) / 7), 48px);
+      }
+
+      .calendar-day {
+        min-height: 0;
+        padding: 0;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .calendar-day:hover {
+        transform: none;
+      }
+
+      .day-heat-bar,
+      .day-content {
+        display: none !important;
+      }
+    }
+
     body.is-embedded {
       background: transparent !important;
       overflow-y: auto;
@@ -1138,8 +1588,18 @@
         }
       };
 
+      const navigateToOrder = (orderId, item) => {
+        setQualityFilter(item.quality);
+        setSupplierFilter(item.supplier);
+        setCodeFilter(item.code || '');
+        setColorFilter(item.color || '');
+        setFilterType(item.type || 'All');
+        setHighlightedOrderId(orderId);
+        setView('analytics');
+      };
+
       return (
-        <div className="app-container">
+        <div className={`app-container${view === 'heat-map' ? ' ob-heatmap-page' : ''}`}>
           <header>
             <div className="logo-section">
               <span className="logo" style={{cursor: 'default'}}>
@@ -1494,7 +1954,22 @@
 
           {/* VIEW: HEAT MAP */}
           {view === 'heat-map' && (
-            <HeatMapView orders={orders} onSelectOrder={order => setSelectedOrder(order)} />
+            <HeatMapView 
+              orders={orders} 
+              qualities={qualities}
+              selectedQuality={qualityFilter}
+              setSelectedQuality={setQualityFilter}
+              selectedSupplier={supplierFilter}
+              setSelectedSupplier={setSupplierFilter}
+              selectedCode={codeFilter}
+              setSelectedCode={setCodeFilter}
+              selectedColor={colorFilter}
+              setSelectedColor={setColorFilter}
+              filterType={filterType}
+              setFilterType={setFilterType}
+              allCombinations={allCombinations}
+              onNavigate={navigateToOrder}
+            />
           )}
 
           {/* Place New Order Modal (8 Essential Fields) */}
@@ -3538,44 +4013,610 @@
     };
 
     // Component: Heat Map View
-    const HeatMapView = ({ orders, onSelectOrder }) => {
+    const HeatMapView = ({ 
+      orders, 
+      qualities, 
+      selectedQuality, 
+      setSelectedQuality, 
+      selectedSupplier, 
+      setSelectedSupplier, 
+      selectedCode, 
+      setSelectedCode, 
+      selectedColor, 
+      setSelectedColor, 
+      filterType, 
+      setFilterType, 
+      allCombinations,
+      onNavigate 
+    }) => {
+      const [currentDate, setCurrentDate] = useState(new Date());
+      const [selectedDate, setSelectedDate] = useState(null);
+      const [filtersOpen, setFiltersOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth > 900 : true);
+
+      const getOptions = (field) => {
+        const otherFilters = {
+          quality: selectedQuality,
+          supplier: selectedSupplier,
+          code: selectedCode,
+          color: selectedColor,
+          type: filterType === 'All' ? null : filterType
+        };
+        delete otherFilters[field];
+
+        const relevantCombos = (allCombinations || []).filter(c => 
+          Object.keys(otherFilters).every(k => !otherFilters[k] || c[k] === otherFilters[k])
+        );
+        return [...new Set(relevantCombos.map(c => c[field]).filter(Boolean))].sort();
+      };
+
+      const handleSelect = (field, value) => {
+        const newFilters = {
+          quality: selectedQuality,
+          supplier: selectedSupplier,
+          code: selectedCode,
+          color: selectedColor,
+          [field]: value
+        };
+
+        let currentFiltered = (allCombinations || []).filter(c => {
+          return (!newFilters.quality || c.quality === newFilters.quality) &&
+                 (!newFilters.code || c.code === newFilters.code) &&
+                 (!newFilters.color || c.color === newFilters.color) &&
+                 (!newFilters.supplier || c.supplier === newFilters.supplier) &&
+                 (filterType === 'All' || c.type === filterType);
+        });
+
+        const updated = { ...newFilters };
+        ['quality', 'supplier', 'code', 'color'].forEach(f => {
+          const options = [...new Set(currentFiltered.map(item => item[f]))].filter(Boolean);
+          if (options.length === 1) updated[f] = options[0];
+        });
+
+        setSelectedQuality(updated.quality || '');
+        setSelectedSupplier(updated.supplier || '');
+        setSelectedCode(updated.code || '');
+        setSelectedColor(updated.color || '');
+      };
+
+      const filteredOrders = useMemo(() => {
+        return (orders || []).filter(o => {
+          const itemCat = o.category || o.type || 'Polyester';
+          return (!selectedQuality || o.quality === selectedQuality) &&
+                 (!selectedSupplier || o.supplier === selectedSupplier) &&
+                 (!selectedCode || o.code === selectedCode) &&
+                 (!selectedColor || o.color === selectedColor) &&
+                 (filterType === 'All' || itemCat === filterType);
+        });
+      }, [orders, selectedQuality, selectedSupplier, selectedCode, selectedColor, filterType]);
+
+      const monthData = useMemo(() => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+
+        // Normalize ISO / datetime strings to YYYY-MM-DD for day matching
+        const toDayKey = (value) => {
+          if (!value) return '';
+          const raw = String(value).trim();
+          if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+          const parsed = new Date(raw);
+          if (Number.isNaN(parsed.getTime())) return '';
+          const y = parsed.getFullYear();
+          const m = String(parsed.getMonth() + 1).padStart(2, '0');
+          const d = String(parsed.getDate()).padStart(2, '0');
+          return `${y}-${m}-${d}`;
+        };
+        
+        const days = [];
+        for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
+        
+        for (let d = 1; d <= lastDay.getDate(); d++) {
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          
+          let ordersPlaced = [];
+          let ordersReceived = [];
+          let grItems = [];
+          
+          filteredOrders.forEach(o => {
+            const itemCat = o.category || o.type || 'Polyester';
+            const oDate = toDayKey(o.orderDate || o.createdAt);
+            if (oDate === dateStr) ordersPlaced.push(o);
+            
+            (o.batches || []).forEach(b => {
+              const bDate = toDayKey(b.receiveDate || b.receivedAt);
+              if (bDate === dateStr) {
+                ordersReceived.push({ 
+                  ...b, 
+                  orderId: o.id, 
+                  quality: o.quality, 
+                  code: o.code, 
+                  color: o.color, 
+                  supplier: o.supplier, 
+                  type: itemCat,
+                  totalWeight: Number(b.totalWeight) || 0
+                });
+              }
+              
+              (b.boxes || []).forEach(box => {
+                const retWeight = Number(box.returnedWeight) || 0;
+                if (toDayKey(box.returnedDate) === dateStr && retWeight > 0) {
+                  const existing = grItems.find(g => g.challanNumber === b.challanNumber && g.orderId === o.id);
+                  if (existing) {
+                    existing.returnedWeight += retWeight;
+                  } else {
+                    grItems.push({ 
+                      orderId: o.id, 
+                      quality: o.quality, 
+                      code: o.code, 
+                      color: o.color, 
+                      supplier: o.supplier, 
+                      type: itemCat, 
+                      challanNumber: b.challanNumber, 
+                      lotNumber: b.lotNumber,
+                      returnedWeight: retWeight 
+                    });
+                  }
+                }
+              });
+            });
+          });
+          
+          days.push({
+            day: d,
+            date: dateStr,
+            ordersPlaced,
+            ordersReceived,
+            grItems,
+            totalWeight: ordersPlaced.reduce((acc, o) => acc + (Number(o.orderedWeight) || 0), 0) +
+                         ordersReceived.reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0) +
+                         grItems.reduce((acc, g) => acc + (Number(g.returnedWeight) || 0), 0)
+          });
+        }
+        while (days.length % 7 !== 0) days.push(null);
+        return days;
+      }, [currentDate, filteredOrders]);
+
+      const weekRows = Math.max(1, Math.ceil(monthData.length / 7));
+
+      const maxWeight = useMemo(() => {
+        return Math.max(...monthData.map(d => d?.totalWeight || 0), 100);
+      }, [monthData]);
+
+      const getHeatLevel = (weight) => {
+        if (weight === 0) return 0;
+        const ratio = weight / maxWeight;
+        if (ratio < 0.2) return 1;
+        if (ratio < 0.4) return 2;
+        if (ratio < 0.6) return 3;
+        if (ratio < 0.8) return 4;
+        return 5;
+      };
+
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
       return (
-        <div className="card">
-          <h2 style={{marginBottom: '1rem'}}>Yarn RM Delivery Calendar</h2>
-          <p style={{color: 'var(--muted)', marginBottom: '1.5rem'}}>Recent yarn order activities across suppliers.</p>
-          <div className="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Order #</th>
-                  <th>Date</th>
-                  <th>Quality</th>
-                  <th>Supplier</th>
-                  <th>Type</th>
-                  <th>Ordered (Kg)</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map(o => (
-                  <tr key={o.id}>
-                    <td><strong>{o.orderNumber || o.id}</strong></td>
-                    <td>{new Date(o.orderDate || o.createdAt).toLocaleDateString('en-GB')}</td>
-                    <td>{o.quality}</td>
-                    <td>{o.supplier}</td>
-                    <td><span className={`badge badge-${(o.category || o.type || 'Polyester').toLowerCase()}`}>{o.category || o.type || 'Polyester'}</span></td>
-                    <td>{o.orderedWeight} kg</td>
-                    <td>
-                      <button className="btn btn-outline" style={{padding: '0.3rem 0.6rem', fontSize: '0.8rem'}} onClick={() => onSelectOrder(o)}>
-                        + Challan
-                      </button>
-                    </td>
-                  </tr>
+        <div className="ob-heatmap-stack">
+          <div className={`card ob-heatmap-filters${filtersOpen ? ' is-open' : ' is-collapsed'}`} style={{ overflow: 'visible', zIndex: 100 }}>
+            <div className="ob-filter-toolbar">
+              <h3 style={{ fontSize: '1.05rem', fontWeight: '700', margin: 0 }}>Heat Map Filters</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                <div className="ob-filter-type-toggle">
+                  {['All', ...YARN_CATEGORIES].map(type => (
+                    <button 
+                      key={type}
+                      className="btn" 
+                      style={{
+                        padding: '0.35rem 0.85rem', 
+                        fontSize: '0.8rem',
+                        background: filterType === type ? 'var(--surface)' : 'transparent',
+                        boxShadow: filterType === type ? 'var(--shadow-sm)' : 'none',
+                        color: filterType === type ? 'var(--accent)' : 'var(--muted)'
+                      }}
+                      onClick={() => {
+                        const currentFilters = { quality: selectedQuality, supplier: selectedSupplier, code: selectedCode, color: selectedColor };
+                        const newFilters = { ...currentFilters, type: type === 'All' ? null : type };
+                        let filtered = (allCombinations || []).filter(c => {
+                          return (!newFilters.type || c.type === newFilters.type) &&
+                                 (!newFilters.quality || c.quality === newFilters.quality) &&
+                                 (!newFilters.code || c.code === newFilters.code) &&
+                                 (!newFilters.color || c.color === newFilters.color) &&
+                                 (!newFilters.supplier || c.supplier === newFilters.supplier);
+                        });
+                        
+                        const fields = ['quality', 'supplier', 'code', 'color'];
+                        fields.forEach(f => {
+                          const options = [...new Set(filtered.map(item => item[f]))].filter(Boolean);
+                          if (options.length === 1) {
+                            if (f === 'quality') setSelectedQuality(options[0]);
+                            else if (f === 'supplier') setSelectedSupplier(options[0]);
+                            else if (f === 'code') setSelectedCode(options[0]);
+                            else if (f === 'color') setSelectedColor(options[0]);
+                          }
+                        });
+                        setFilterType(type);
+                      }}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-outline ob-heatmap-filter-toggle"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
+                  onClick={() => setFiltersOpen(v => !v)}
+                >
+                  {filtersOpen ? 'Hide filters' : 'Show filters'}
+                </button>
+              </div>
+            </div>
+
+            {filtersOpen && (
+              <div className="ob-filter-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr) auto', gap: '0.85rem', alignItems: 'end' }}>
+                <SearchableDropdown 
+                  label="Quality"
+                  placeholder="Search quality..."
+                  options={getOptions('quality')}
+                  value={selectedQuality}
+                  onChange={val => handleSelect('quality', val)}
+                  emptyLabel="-- All Qualities --"
+                />
+                <SearchableDropdown 
+                  label="Code"
+                  placeholder="Search code..."
+                  options={getOptions('code')}
+                  value={selectedCode}
+                  onChange={val => handleSelect('code', val)}
+                  emptyLabel="-- All Codes --"
+                />
+                <SearchableDropdown 
+                  label="Color"
+                  placeholder="Search color..."
+                  options={getOptions('color')}
+                  value={selectedColor}
+                  onChange={val => handleSelect('color', val)}
+                  emptyLabel="-- All Colors --"
+                />
+                <SearchableDropdown 
+                  label="Supplier"
+                  placeholder="Search supplier..."
+                  options={getOptions('supplier')}
+                  value={selectedSupplier}
+                  onChange={val => handleSelect('supplier', val)}
+                  emptyLabel="-- All Suppliers --"
+                />
+                <button 
+                  className="btn btn-outline" 
+                  style={{padding: '0.65rem', borderRadius: '12px', alignSelf: 'end'}}
+                  onClick={() => { 
+                    setSelectedQuality(''); setSelectedSupplier(''); setSelectedCode(''); setSelectedColor('');
+                    setFilterType('All');
+                  }}
+                  title="Clear Filters"
+                >
+                  🔄
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="card heat-map-container">
+            <div className="ob-heatmap-month-row">
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', background: 'linear-gradient(135deg, var(--accent), var(--accent2))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </h2>
+              <div className="ob-heatmap-nav">
+                <button className="btn btn-outline" style={{ padding: '0.4rem 0.75rem' }} onClick={() => { const d = new Date(currentDate); d.setFullYear(d.getFullYear() - 1); setCurrentDate(d); }} title="Previous Year">◀◀</button>
+                <button className="btn btn-outline" style={{ padding: '0.4rem 0.75rem' }} onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth() - 1); setCurrentDate(d); }} title="Previous Month">◀</button>
+                <button className="btn btn-outline" style={{ padding: '0.4rem 0.75rem' }} onClick={() => setCurrentDate(new Date())}>Today</button>
+                <button className="btn btn-outline" style={{ padding: '0.4rem 0.75rem' }} onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth() + 1); setCurrentDate(d); }} title="Next Month">▶</button>
+                <button className="btn btn-outline" style={{ padding: '0.4rem 0.75rem' }} onClick={() => { const d = new Date(currentDate); d.setFullYear(d.getFullYear() + 1); setCurrentDate(d); }} title="Next Year">▶▶</button>
+              </div>
+            </div>
+
+            <div className="ob-heatmap-legend">
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ fontSize: '1rem' }}>📦</span>
+                  <span style={{ color: 'var(--fg)' }}>Orders</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ fontSize: '1rem' }}>🚚</span>
+                  <span style={{ color: 'var(--fg)' }}>Received</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ fontSize: '1rem' }}>🔄</span>
+                  <span style={{ color: 'var(--fg)' }}>Returns</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--muted)', marginRight: '4px' }}>Activity:</span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <span className="legend-box heat-level-0" style={{ width: '12px', height: '12px', borderRadius: '3px', border: '1px solid var(--border)', display: 'inline-block' }} title="No Activity"></span>
+                  <span className="legend-box heat-level-1" style={{ width: '12px', height: '12px', borderRadius: '3px', border: '1px solid var(--border)', display: 'inline-block' }} title="Low Activity"></span>
+                  <span className="legend-box heat-level-3" style={{ width: '12px', height: '12px', borderRadius: '3px', border: '1px solid var(--border)', display: 'inline-block' }} title="Medium Activity"></span>
+                  <span className="legend-box heat-level-5" style={{ width: '12px', height: '12px', borderRadius: '3px', border: '1px solid var(--border)', display: 'inline-block' }} title="Peak Activity"></span>
+                </div>
+              </div>
+            </div>
+
+            <div className="calendar-grid-shell">
+              <div className="calendar-grid" style={{ ['--weeks']: String(weekRows) }}>
+                {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(d => (
+                  <div key={d} className="calendar-weekday">{d}</div>
                 ))}
-              </tbody>
-            </table>
+                {monthData.map((day, idx) => {
+                  if (!day) return <div key={idx} className="calendar-day-empty" />;
+                  const activityCount = day.ordersPlaced.length + day.ordersReceived.length + day.grItems.length;
+                  const hasActivity = activityCount > 0;
+                  const heat = getHeatLevel(day.totalWeight);
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`calendar-day heat-level-${heat}${hasActivity ? ' has-activity' : ''}`}
+                      style={{ cursor: hasActivity ? 'pointer' : 'default' }}
+                      title={hasActivity ? `${activityCount} activit${activityCount === 1 ? 'y' : 'ies'} · ${day.totalWeight.toFixed(0)} kg` : undefined}
+                      onClick={() => {
+                        if (hasActivity) setSelectedDate(day);
+                      }}
+                    >
+                      <span className="day-number">{day.day}</span>
+                      <div className="day-content">
+                        {day.ordersPlaced.length > 0 && (
+                          <span className="day-activity-chip item-pill-ordered" title={`${day.ordersPlaced.length} orders`}>
+                            📦{day.ordersPlaced.length}
+                          </span>
+                        )}
+                        {day.ordersReceived.length > 0 && (
+                          <span className="day-activity-chip item-pill-received" title={`${day.ordersReceived.length} received`}>
+                            🚚{day.ordersReceived.length}
+                          </span>
+                        )}
+                        {day.grItems.length > 0 && (
+                          <span className="day-activity-chip item-pill-gr" title={`${day.grItems.length} returns`}>
+                            🔄{day.grItems.length}
+                          </span>
+                        )}
+                      </div>
+                      {hasActivity ? <div className="day-heat-bar" /> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {selectedDate && (
+              <DayDetailModal 
+                dateData={selectedDate} 
+                onClose={() => setSelectedDate(null)} 
+                onNavigate={onNavigate}
+                qualities={qualities}
+              />
+            )}
           </div>
         </div>
+      );
+    };
+
+    const DayDetailModal = ({ dateData, onClose, onNavigate, qualities = [] }) => {
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (e.key === 'Escape') onClose();
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+          document.body.style.overflow = prevOverflow;
+        };
+      }, [onClose]);
+
+      return ReactDOM.createPortal(
+        <div 
+          className="modal-overlay" 
+          onClick={onClose}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            height: '100dvh',
+            background: 'rgba(10, 10, 20, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.25rem',
+            zIndex: 999999,
+            margin: 0
+          }}
+        >
+          <div 
+            className="modal" 
+            onClick={e => e.stopPropagation()}
+            style={{ 
+              maxWidth: '1000px',
+              width: '100%',
+              maxHeight: 'calc(100dvh - 2.5rem)',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '1.75rem 2rem',
+              borderRadius: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexShrink: 0 }}>
+              <div>
+                <h2 style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>Daily Activity Details</h2>
+                <p style={{ color: 'var(--muted)', fontWeight: '600', fontSize: '0.9rem' }}>{new Date(dateData.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              </div>
+              <button className="btn btn-outline" onClick={onClose} style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>Close ✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', overflowY: 'auto', flex: 1, paddingRight: '0.25rem' }}>
+              {dateData.ordersPlaced.length > 0 && (
+                <div>
+                  <h3 style={{ color: 'var(--accent)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.5rem' }}>📦</span> Orders Placed
+                  </h3>
+                  <div className="table-responsive">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Quality</th>
+                          <th>Supplier</th>
+                          <th>Code</th>
+                          <th>Color</th>
+                          <th>Type</th>
+                          <th>Weight</th>
+                          <th>Rate</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dateData.ordersPlaced.map(o => {
+                          const itemCat = o.category || o.type || 'Polyester';
+                          return (
+                            <tr key={o.id}>
+                              <td>
+                                <strong>{o.quality}</strong>
+                                {(() => {
+                                  const q = (qualities || []).find(x => x.id === o.qualityId || (x.quality === o.quality && x.code === o.code && x.color === o.color));
+                                  return q && q.type ? <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '2px' }}>{q.type}</div> : null;
+                                })()}
+                              </td>
+                              <td>{o.supplier}</td>
+                              <td>{o.code || '-'}</td>
+                              <td>{o.color || '-'}</td>
+                              <td><span className={`badge badge-${itemCat.toLowerCase()}`}>{itemCat}</span></td>
+                              <td style={{ fontWeight: '700' }}>{o.orderedWeight} kg</td>
+                              <td>{o.price ? `₹${Number(o.price).toFixed(2)}` : '—'}</td>
+                              <td><button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => onNavigate(o.id, { ...o, type: itemCat })}>📈 View Tree</button></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {dateData.ordersReceived.length > 0 && (
+                <div>
+                  <h3 style={{ color: 'var(--success)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.5rem' }}>🚚</span> Shipments Received
+                  </h3>
+                  <div className="table-responsive">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Quality</th>
+                          <th>Supplier</th>
+                          <th>Code</th>
+                          <th>Color</th>
+                          <th>Type</th>
+                          <th>Challan #</th>
+                          <th>Lot No #</th>
+                          <th>Received Weight</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dateData.ordersReceived.map(b => {
+                          const itemCat = b.type || 'Polyester';
+                          return (
+                            <tr key={b.id || (b.challanNumber + '-' + b.lotNumber)}>
+                              <td>
+                                <strong>{b.quality}</strong>
+                                {(() => {
+                                  const q = (qualities || []).find(x => x.quality === b.quality && x.code === b.code && x.color === b.color);
+                                  return q && q.type ? <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '2px' }}>{q.type}</div> : null;
+                                })()}
+                              </td>
+                              <td>{b.supplier}</td>
+                              <td>{b.code || '-'}</td>
+                              <td>{b.color || '-'}</td>
+                              <td><span className={`badge badge-${itemCat.toLowerCase()}`}>{itemCat}</span></td>
+                              <td>{b.challanNumber}</td>
+                              <td>{b.lotNumber}</td>
+                              <td style={{ fontWeight: '700', color: 'var(--success)' }}>{(Number(b.totalWeight) || 0).toFixed(1)} kg</td>
+                              <td><button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => onNavigate(b.orderId, { ...b, type: itemCat })}>📈 View Tree</button></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {dateData.grItems.length > 0 && (
+                <div>
+                  <h3 style={{ color: 'var(--error)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.5rem' }}>🔄</span> Goods Return (GR)
+                  </h3>
+                  <div className="table-responsive">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Quality</th>
+                          <th>Supplier</th>
+                          <th>Code</th>
+                          <th>Color</th>
+                          <th>Type</th>
+                          <th>Challan #</th>
+                          <th>Lot No #</th>
+                          <th>Returned Weight</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dateData.grItems.map((g, idx) => {
+                          const itemCat = g.type || 'Polyester';
+                          return (
+                            <tr key={idx}>
+                              <td>
+                                <strong>{g.quality}</strong>
+                                {(() => {
+                                  const q = (qualities || []).find(x => x.quality === g.quality && x.code === g.code && x.color === g.color);
+                                  return q && q.type ? <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '2px' }}>{q.type}</div> : null;
+                                })()}
+                              </td>
+                              <td>{g.supplier}</td>
+                              <td>{g.code || '-'}</td>
+                              <td>{g.color || '-'}</td>
+                              <td><span className={`badge badge-${itemCat.toLowerCase()}`}>{itemCat}</span></td>
+                              <td>{g.challanNumber}</td>
+                              <td>{g.lotNumber}</td>
+                              <td style={{ fontWeight: '700', color: 'var(--error)' }}>{(Number(g.returnedWeight) || 0).toFixed(1)} kg</td>
+                              <td><button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => onNavigate(g.orderId, { ...g, type: itemCat })}>📈 View Tree</button></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {dateData.ordersPlaced.length === 0 && dateData.ordersReceived.length === 0 && dateData.grItems.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '4rem', background: 'var(--bg)', borderRadius: '20px', border: '2px dashed var(--border)' }}>
+                  <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>📅</span>
+                  <h4 style={{ color: 'var(--muted)' }}>No activity recorded on this date.</h4>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
       );
     };
 
