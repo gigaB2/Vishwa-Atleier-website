@@ -572,6 +572,85 @@ CREATE TABLE IF NOT EXISTS public.vf_fabric_cut_relations (
 );
 CREATE INDEX IF NOT EXISTS idx_vf_fabric_cuts_parent ON public.vf_fabric_cut_relations(parent_serial);
 
+-- 23. Dedicated Relational Table: Employees Master
+CREATE TABLE IF NOT EXISTS public.vf_employees (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL,
+    department TEXT,
+    salary_style TEXT NOT NULL DEFAULT 'Per Day Fixed',
+    salary_rate NUMERIC(10, 2) DEFAULT 0,
+    base_salary NUMERIC(10, 2) DEFAULT 0,
+    phone TEXT,
+    email TEXT,
+    joining_date DATE,
+    assigned_machines JSONB DEFAULT '[]'::jsonb,
+    avatar_gradient TEXT,
+    active BOOLEAN DEFAULT true,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_emp_name ON public.vf_employees(name);
+CREATE INDEX IF NOT EXISTS idx_vf_emp_role ON public.vf_employees(role);
+CREATE INDEX IF NOT EXISTS idx_vf_emp_active ON public.vf_employees(active);
+
+-- 24. Dedicated Relational Table: Attendance Records
+CREATE TABLE IF NOT EXISTS public.vf_attendance_records (
+    id TEXT PRIMARY KEY,
+    attendance_date DATE NOT NULL,
+    employee_id TEXT NOT NULL REFERENCES public.vf_employees(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'Present',
+    shift TEXT DEFAULT 'Day',
+    hours NUMERIC(5, 2) DEFAULT 0,
+    overtime_hours NUMERIC(5, 2) DEFAULT 0,
+    meters NUMERIC(10, 2) DEFAULT 0,
+    rate NUMERIC(10, 2) DEFAULT 0,
+    total_earned NUMERIC(10, 2) DEFAULT 0,
+    notes TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_att_date ON public.vf_attendance_records(attendance_date DESC);
+CREATE INDEX IF NOT EXISTS idx_vf_att_emp ON public.vf_attendance_records(employee_id);
+CREATE INDEX IF NOT EXISTS idx_vf_att_status ON public.vf_attendance_records(status);
+
+-- 25. Dedicated Relational Table: Employee Loans & Advances
+CREATE TABLE IF NOT EXISTS public.vf_employee_loans (
+    id TEXT PRIMARY KEY,
+    employee_id TEXT NOT NULL REFERENCES public.vf_employees(id) ON DELETE CASCADE,
+    loan_date DATE NOT NULL,
+    amount NUMERIC(10, 2) NOT NULL,
+    type TEXT NOT NULL DEFAULT 'Advance',
+    reason TEXT,
+    cleared BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_loans_emp ON public.vf_employee_loans(employee_id);
+CREATE INDEX IF NOT EXISTS idx_vf_loans_date ON public.vf_employee_loans(loan_date DESC);
+CREATE INDEX IF NOT EXISTS idx_vf_loans_type ON public.vf_employee_loans(type);
+CREATE INDEX IF NOT EXISTS idx_vf_loans_cleared ON public.vf_employee_loans(cleared);
+
+-- 26. Dedicated Relational Table: Monthly Salary Settlements
+CREATE TABLE IF NOT EXISTS public.vf_salary_settlements (
+    id TEXT PRIMARY KEY,
+    month_year TEXT NOT NULL,
+    employee_id TEXT NOT NULL REFERENCES public.vf_employees(id) ON DELETE CASCADE,
+    paid_amount NUMERIC(10, 2) DEFAULT 0,
+    net_payable NUMERIC(10, 2) DEFAULT 0,
+    paid_date DATE,
+    payment_mode TEXT,
+    status TEXT DEFAULT 'Pending',
+    details JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_salary_month ON public.vf_salary_settlements(month_year DESC);
+CREATE INDEX IF NOT EXISTS idx_vf_salary_emp ON public.vf_salary_settlements(employee_id);
+CREATE INDEX IF NOT EXISTS idx_vf_salary_status ON public.vf_salary_settlements(status);
+
 -- ==============================================================================
 -- Row Level Security (RLS) Configuration
 -- ==============================================================================
@@ -597,6 +676,10 @@ ALTER TABLE public.vf_yarn_production_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_sales_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_fabric_dispatches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_fabric_cut_relations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_attendance_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_employee_loans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_salary_settlements ENABLE ROW LEVEL SECURITY;
 
 -- Dynamic Policy Configuration:
 -- Production Mode: Allows read/write for all authenticated API requests & anon key (matching client tokens)
@@ -706,6 +789,26 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fabric_cut_relations' AND policyname = 'Allow public access to vf_fabric_cut_relations') THEN
         CREATE POLICY "Allow public access to vf_fabric_cut_relations" ON public.vf_fabric_cut_relations FOR ALL USING (true) WITH CHECK (true);
     END IF;
+
+    -- 22. vf_employees
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_employees' AND policyname = 'Allow public access to vf_employees') THEN
+        CREATE POLICY "Allow public access to vf_employees" ON public.vf_employees FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 23. vf_attendance_records
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_attendance_records' AND policyname = 'Allow public access to vf_attendance_records') THEN
+        CREATE POLICY "Allow public access to vf_attendance_records" ON public.vf_attendance_records FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 24. vf_employee_loans
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_employee_loans' AND policyname = 'Allow public access to vf_employee_loans') THEN
+        CREATE POLICY "Allow public access to vf_employee_loans" ON public.vf_employee_loans FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 25. vf_salary_settlements
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_salary_settlements' AND policyname = 'Allow public access to vf_salary_settlements') THEN
+        CREATE POLICY "Allow public access to vf_salary_settlements" ON public.vf_salary_settlements FOR ALL USING (true) WITH CHECK (true);
+    END IF;
 END $$;
 
 -- ==============================================================================
@@ -754,6 +857,10 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_sales_logs;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_dispatches;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_cut_relations;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_employees;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_attendance_records;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_employee_loans;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_salary_settlements;
     END IF;
 EXCEPTION
     WHEN duplicate_object THEN NULL;

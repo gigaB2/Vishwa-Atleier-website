@@ -2371,6 +2371,171 @@
               }
             }
 
+            // Dedicated Relational Synchronization for Salary Sheet & Staff Attendance
+            if ((key === 'aethertasks_db_state_v7' || key === 'staff-salary-state') && typeof value === 'object' && value !== null) {
+              try {
+                // 1. Sync Employees Master
+                if (Array.isArray(value.employees) && value.employees.length > 0) {
+                  const empRows = value.employees.map(emp => {
+                    if (!emp || !emp.id) return null;
+                    return {
+                      id: String(emp.id).trim(),
+                      name: String(emp.name || 'Unnamed Employee').trim(),
+                      role: String(emp.role || 'Staff').trim(),
+                      department: emp.department ? String(emp.department).trim() : null,
+                      salary_style: String(emp.salaryStyle || 'Per Day Fixed').trim(),
+                      salary_rate: parseFloat(emp.salaryRate) || 0,
+                      base_salary: parseFloat(emp.baseSalary) || 0,
+                      phone: emp.phone ? String(emp.phone).trim() : null,
+                      email: emp.email ? String(emp.email).trim() : null,
+                      joining_date: emp.joiningDate ? String(emp.joiningDate).split('T')[0] : null,
+                      assigned_machines: Array.isArray(emp.assignedMachines) ? emp.assignedMachines : [],
+                      avatar_gradient: emp.avatarGradient || null,
+                      active: emp.active !== false,
+                      metadata: typeof emp.metadata === 'object' && emp.metadata !== null ? emp.metadata : {},
+                      updated_at: nowIso
+                    };
+                  }).filter(Boolean);
+
+                  if (empRows.length > 0) {
+                    for (let i = 0; i < empRows.length; i += 300) {
+                      const chunk = empRows.slice(i, i + 300);
+                      await fetch(`${SUPABASE_URL}/rest/v1/vf_employees?on_conflict=id`, {
+                        method: 'POST',
+                        headers: {
+                          'apikey': SUPABASE_ANON_KEY,
+                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Content-Type': 'application/json',
+                          'Prefer': 'resolution=merge-duplicates'
+                        },
+                        body: JSON.stringify(chunk)
+                      }).catch(() => {});
+                    }
+                  }
+                }
+
+                // 2. Sync Attendance Records
+                if (value.attendance && typeof value.attendance === 'object') {
+                  const attRows = [];
+                  Object.entries(value.attendance).forEach(([dateStr, empAttMap]) => {
+                    if (!dateStr || typeof empAttMap !== 'object' || empAttMap === null) return;
+                    const cleanDate = String(dateStr).split('T')[0];
+                    Object.entries(empAttMap).forEach(([empId, att]) => {
+                      if (!empId || !att) return;
+                      const attId = `${cleanDate}_${empId}`;
+                      attRows.push({
+                        id: attId,
+                        attendance_date: cleanDate,
+                        employee_id: String(empId).trim(),
+                        status: String(att.status || 'Present').trim(),
+                        shift: String(att.shift || 'Day').trim(),
+                        hours: parseFloat(att.hours) || 0,
+                        overtime_hours: parseFloat(att.overtime || att.otHours) || 0,
+                        meters: parseFloat(att.meters) || 0,
+                        rate: parseFloat(att.rate) || 0,
+                        total_earned: parseFloat(att.earned || att.totalEarned) || 0,
+                        notes: att.notes ? String(att.notes).trim() : null,
+                        metadata: typeof att.metadata === 'object' && att.metadata !== null ? att.metadata : {},
+                        updated_at: nowIso
+                      });
+                    });
+                  });
+
+                  if (attRows.length > 0) {
+                    for (let i = 0; i < attRows.length; i += 300) {
+                      const chunk = attRows.slice(i, i + 300);
+                      await fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records?on_conflict=id`, {
+                        method: 'POST',
+                        headers: {
+                          'apikey': SUPABASE_ANON_KEY,
+                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Content-Type': 'application/json',
+                          'Prefer': 'resolution=merge-duplicates'
+                        },
+                        body: JSON.stringify(chunk)
+                      }).catch(() => {});
+                    }
+                  }
+                }
+
+                // 3. Sync Employee Loans & Advances
+                if (Array.isArray(value.loans) && value.loans.length > 0) {
+                  const loanRows = value.loans.map(ln => {
+                    if (!ln || !ln.empId) return null;
+                    const lnId = String(ln.id || `LN-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
+                    return {
+                      id: lnId,
+                      employee_id: String(ln.empId).trim(),
+                      loan_date: (ln.date || new Date().toISOString().split('T')[0]).split('T')[0],
+                      amount: parseFloat(ln.amount) || 0,
+                      type: String(ln.type || 'Advance').trim(),
+                      reason: ln.reason ? String(ln.reason).trim() : null,
+                      cleared: Boolean(ln.cleared),
+                      updated_at: nowIso
+                    };
+                  }).filter(Boolean);
+
+                  if (loanRows.length > 0) {
+                    for (let i = 0; i < loanRows.length; i += 300) {
+                      const chunk = loanRows.slice(i, i + 300);
+                      await fetch(`${SUPABASE_URL}/rest/v1/vf_employee_loans?on_conflict=id`, {
+                        method: 'POST',
+                        headers: {
+                          'apikey': SUPABASE_ANON_KEY,
+                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Content-Type': 'application/json',
+                          'Prefer': 'resolution=merge-duplicates'
+                        },
+                        body: JSON.stringify(chunk)
+                      }).catch(() => {});
+                    }
+                  }
+                }
+
+                // 4. Sync Salary Settlements
+                if (value.salaryPayments && typeof value.salaryPayments === 'object') {
+                  const settlementRows = [];
+                  Object.entries(value.salaryPayments).forEach(([monthYear, empPayMap]) => {
+                    if (!monthYear || typeof empPayMap !== 'object' || empPayMap === null) return;
+                    Object.entries(empPayMap).forEach(([empId, pay]) => {
+                      if (!empId || !pay) return;
+                      const setlId = `${monthYear}_${empId}`;
+                      settlementRows.push({
+                        id: setlId,
+                        month_year: String(monthYear).trim(),
+                        employee_id: String(empId).trim(),
+                        paid_amount: parseFloat(pay.paidAmount || pay.paid) || 0,
+                        net_payable: parseFloat(pay.netPayable || pay.payable) || 0,
+                        paid_date: pay.paidDate ? String(pay.paidDate).split('T')[0] : null,
+                        payment_mode: pay.paymentMode || pay.mode || null,
+                        status: String(pay.status || 'Paid').trim(),
+                        details: typeof pay === 'object' ? pay : {},
+                        updated_at: nowIso
+                      });
+                    });
+                  });
+
+                  if (settlementRows.length > 0) {
+                    for (let i = 0; i < settlementRows.length; i += 300) {
+                      const chunk = settlementRows.slice(i, i + 300);
+                      await fetch(`${SUPABASE_URL}/rest/v1/vf_salary_settlements?on_conflict=id`, {
+                        method: 'POST',
+                        headers: {
+                          'apikey': SUPABASE_ANON_KEY,
+                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Content-Type': 'application/json',
+                          'Prefer': 'resolution=merge-duplicates'
+                        },
+                        body: JSON.stringify(chunk)
+                      }).catch(() => {});
+                    }
+                  }
+                }
+              } catch(e) {
+                console.warn('Salary Sheet Relational Sync notice:', e);
+              }
+            }
+
             setSyncStatus(ws && ws.readyState === WebSocket.OPEN ? 'connected' : 'offline');
           } catch (err) {
             console.error('Supabase set error:', err);
@@ -3461,6 +3626,111 @@
               console.warn('Fabric Cut Relations relational reconciliation notice:', cutErr);
             }
 
+            // Reconcile Dedicated Salary Sheet & Staff Attendance Tables
+            try {
+              const [dbEmployees, dbAttendance, dbLoans, dbSettlements] = await Promise.all([
+                fetchAllRowsPaginated('vf_employees', '*', 'order=name.asc'),
+                fetchAllRowsPaginated('vf_attendance_records', '*', 'order=attendance_date.desc'),
+                fetchAllRowsPaginated('vf_employee_loans', '*', 'order=loan_date.desc'),
+                fetchAllRowsPaginated('vf_salary_settlements', '*', 'order=month_year.desc')
+              ]);
+
+              if (Array.isArray(dbEmployees) && dbEmployees.length > 0) {
+                const staffKey = 'aethertasks_db_state_v7';
+                let existingStaffState = {};
+                try {
+                  const rawStaff = cache[staffKey] || nativeLocalStorage.getItem(staffKey);
+                  if (rawStaff) existingStaffState = JSON.parse(rawStaff);
+                } catch(e) {}
+
+                const reconstructedEmployees = dbEmployees.map(emp => ({
+                  id: emp.id,
+                  name: emp.name,
+                  role: emp.role,
+                  department: emp.department || '',
+                  salaryStyle: emp.salary_style || 'Per Day Fixed',
+                  salaryRate: Number(emp.salary_rate) || 0,
+                  baseSalary: Number(emp.base_salary) || 0,
+                  phone: emp.phone || '',
+                  email: emp.email || '',
+                  joiningDate: emp.joining_date || '',
+                  assignedMachines: Array.isArray(emp.assigned_machines) ? emp.assigned_machines : [],
+                  avatarGradient: emp.avatar_gradient || '',
+                  active: emp.active !== false,
+                  ...(emp.metadata && typeof emp.metadata === 'object' ? emp.metadata : {})
+                }));
+
+                const reconstructedAttendance = {};
+                if (Array.isArray(dbAttendance)) {
+                  dbAttendance.forEach(att => {
+                    const date = att.attendance_date;
+                    const empId = att.employee_id;
+                    if (!date || !empId) return;
+                    if (!reconstructedAttendance[date]) reconstructedAttendance[date] = {};
+                    reconstructedAttendance[date][empId] = {
+                      status: att.status || 'Present',
+                      shift: att.shift || 'Day',
+                      hours: Number(att.hours) || 0,
+                      overtime: Number(att.overtime_hours) || 0,
+                      meters: Number(att.meters) || 0,
+                      rate: Number(att.rate) || 0,
+                      earned: Number(att.total_earned) || 0,
+                      notes: att.notes || '',
+                      ...(att.metadata && typeof att.metadata === 'object' ? att.metadata : {})
+                    };
+                  });
+                }
+
+                const reconstructedLoans = Array.isArray(dbLoans) ? dbLoans.map(ln => ({
+                  id: ln.id,
+                  empId: ln.employee_id,
+                  date: ln.loan_date,
+                  amount: Number(ln.amount) || 0,
+                  type: ln.type || 'Advance',
+                  reason: ln.reason || '',
+                  cleared: Boolean(ln.cleared)
+                })) : [];
+
+                const reconstructedSettlements = {};
+                if (Array.isArray(dbSettlements)) {
+                  dbSettlements.forEach(st => {
+                    const m = st.month_year;
+                    const empId = st.employee_id;
+                    if (!m || !empId) return;
+                    if (!reconstructedSettlements[m]) reconstructedSettlements[m] = {};
+                    reconstructedSettlements[m][empId] = {
+                      paidAmount: Number(st.paid_amount) || 0,
+                      netPayable: Number(st.net_payable) || 0,
+                      paidDate: st.paid_date || '',
+                      paymentMode: st.payment_mode || '',
+                      status: st.status || 'Paid',
+                      ...(st.details && typeof st.details === 'object' ? st.details : {})
+                    };
+                  });
+                }
+
+                const mergedStaffState = {
+                  ...existingStaffState,
+                  employees: reconstructedEmployees,
+                  attendance: reconstructedAttendance,
+                  loans: reconstructedLoans,
+                  salaryPayments: reconstructedSettlements
+                };
+
+                const staffStr = JSON.stringify(mergedStaffState);
+                const lastStaffWrite = lastLocalWrites[staffKey] || 0;
+                if (Date.now() - lastStaffWrite >= 3000) {
+                  cache[staffKey] = staffStr;
+                  lastSavedHashes[staffKey] = computeHash(staffStr);
+                  safeLocalStorageSet(staffKey, staffStr);
+                  if (!updatedKeys.includes(staffKey)) updatedKeys.push(staffKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (staffErr) {
+              console.warn('Salary Sheet relational reconciliation notice:', staffErr);
+            }
+
             isHydrated = true;
             window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
 
@@ -3946,6 +4216,157 @@
       if (!parentSerial || !activeConfig.isConfigured || !SUPABASE_URL) return;
       try {
         await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_cut_relations?id=eq.${encodeURIComponent(parentSerial)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    // --- Enterprise Staff, Attendance & Salary Sheet Relational APIs ---
+    async fetchEmployeesRelational() {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const rows = await fetchAllRowsPaginated('vf_employees', '*', 'order=name.asc');
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        return rows.map(emp => ({
+          id: emp.id,
+          name: emp.name,
+          role: emp.role,
+          department: emp.department || '',
+          salaryStyle: emp.salary_style || 'Per Day Fixed',
+          salaryRate: Number(emp.salary_rate) || 0,
+          baseSalary: Number(emp.base_salary) || 0,
+          phone: emp.phone || '',
+          email: emp.email || '',
+          joiningDate: emp.joining_date || '',
+          assignedMachines: Array.isArray(emp.assigned_machines) ? emp.assigned_machines : [],
+          avatarGradient: emp.avatar_gradient || '',
+          active: emp.active !== false,
+          ...(emp.metadata && typeof emp.metadata === 'object' ? emp.metadata : {})
+        }));
+      } catch(e) {
+        console.error('fetchEmployeesRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteEmployeeRelational(empId) {
+      if (!empId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_employees?id=eq.${encodeURIComponent(empId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    async fetchAttendanceRelational(startDate, endDate) {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        let query = 'order=attendance_date.desc';
+        if (startDate && endDate) {
+          query = `attendance_date=gte.${startDate}&attendance_date=lte.${endDate}&order=attendance_date.desc`;
+        }
+        const rows = await fetchAllRowsPaginated('vf_attendance_records', '*', query);
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        const result = {};
+        rows.forEach(att => {
+          const date = att.attendance_date;
+          const empId = att.employee_id;
+          if (!date || !empId) return;
+          if (!result[date]) result[date] = {};
+          result[date][empId] = {
+            status: att.status || 'Present',
+            shift: att.shift || 'Day',
+            hours: Number(att.hours) || 0,
+            overtime: Number(att.overtime_hours) || 0,
+            meters: Number(att.meters) || 0,
+            rate: Number(att.rate) || 0,
+            earned: Number(att.total_earned) || 0,
+            notes: att.notes || '',
+            ...(att.metadata && typeof att.metadata === 'object' ? att.metadata : {})
+          };
+        });
+        return result;
+      } catch(e) {
+        console.error('fetchAttendanceRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteAttendanceRecordRelational(recordId) {
+      if (!recordId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records?id=eq.${encodeURIComponent(recordId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    async fetchEmployeeLoansRelational(employeeId) {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const query = employeeId ? `employee_id=eq.${encodeURIComponent(employeeId)}&order=loan_date.desc` : 'order=loan_date.desc';
+        const rows = await fetchAllRowsPaginated('vf_employee_loans', '*', query);
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        return rows.map(ln => ({
+          id: ln.id,
+          empId: ln.employee_id,
+          date: ln.loan_date,
+          amount: Number(ln.amount) || 0,
+          type: ln.type || 'Advance',
+          reason: ln.reason || '',
+          cleared: Boolean(ln.cleared)
+        }));
+      } catch(e) {
+        console.error('fetchEmployeeLoansRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteEmployeeLoanRelational(loanId) {
+      if (!loanId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_employee_loans?id=eq.${encodeURIComponent(loanId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    async fetchSalarySettlementsRelational(monthYear) {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const query = monthYear ? `month_year=eq.${encodeURIComponent(monthYear)}&order=created_at.desc` : 'order=month_year.desc';
+        const rows = await fetchAllRowsPaginated('vf_salary_settlements', '*', query);
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        const result = {};
+        rows.forEach(st => {
+          const m = st.month_year;
+          const empId = st.employee_id;
+          if (!m || !empId) return;
+          if (!result[m]) result[m] = {};
+          result[m][empId] = {
+            paidAmount: Number(st.paid_amount) || 0,
+            netPayable: Number(st.net_payable) || 0,
+            paidDate: st.paid_date || '',
+            paymentMode: st.payment_mode || '',
+            status: st.status || 'Paid',
+            ...(st.details && typeof st.details === 'object' ? st.details : {})
+          };
+        });
+        return result;
+      } catch(e) {
+        console.error('fetchSalarySettlementsRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteSalarySettlementRelational(settlementId) {
+      if (!settlementId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_salary_settlements?id=eq.${encodeURIComponent(settlementId)}`, {
           method: 'DELETE',
           headers: this.getAuthHeaders()
         });
