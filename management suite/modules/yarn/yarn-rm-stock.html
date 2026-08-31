@@ -828,9 +828,92 @@
       background: rgba(139, 92, 246, 0.1);
       color: var(--accent);
     }
-    .context-menu-item.danger:hover {
-      background: rgba(239, 68, 68, 0.1);
-      color: var(--error);
+    /* Floating Action Button for Box Issuance (Taste Skill Anti-Slop) */
+    .floating-issue-btn {
+      position: fixed;
+      bottom: 2rem;
+      right: 2.25rem;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      padding: 0.8rem 1.4rem;
+      background: var(--primary-gradient);
+      color: #ffffff;
+      font-family: var(--font-body);
+      font-size: 0.92rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      border: 1.5px solid rgba(255, 255, 255, 0.28);
+      border-radius: 9999px;
+      cursor: pointer;
+      box-shadow: 0 10px 25px -4px rgba(139, 92, 246, 0.5), 0 4px 12px -2px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px) scale(0.92);
+      transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                  visibility 0.25s,
+                  box-shadow 0.2s ease,
+                  border-color 0.2s ease;
+      will-change: transform, opacity;
+      user-select: none;
+    }
+
+    .floating-issue-btn.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+
+    .floating-issue-btn:hover {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 14px 32px -4px rgba(139, 92, 246, 0.65), 0 6px 16px -2px rgba(0, 0, 0, 0.25);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .floating-issue-btn:active {
+      transform: translateY(0) scale(0.97);
+      box-shadow: 0 6px 16px -2px rgba(139, 92, 246, 0.4);
+    }
+
+    .floating-issue-btn svg {
+      flex-shrink: 0;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+    }
+
+    .floating-issue-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+    }
+
+    @media (max-width: 640px) {
+      .floating-issue-btn {
+        bottom: 1.25rem;
+        right: 1.25rem;
+        padding: 0.7rem 1.15rem;
+        font-size: 0.86rem;
+      }
+    }
+
+    @media print {
+      .floating-issue-btn {
+        display: none !important;
+      }
     }
   </style>
 </head>
@@ -1055,11 +1138,19 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Edit Lot
     </div>
-    <div class="context-menu-item danger" onclick="deleteContextLot()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
       Delete Lot
     </div>
   </div>
+
+  <!-- Floating + Issue Boxes Button (Appears when boxes are selected) -->
+  <button id="floating-issue-btn" class="floating-issue-btn" onclick="openIssueModal()" title="Issue selected boxes" aria-label="Issue selected boxes">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+    <span>Issue Boxes</span>
+    <span id="floating-issue-count" class="floating-issue-badge">0</span>
+  </button>
 
   <script>
     // LocalStorage Key
@@ -2103,6 +2194,7 @@
             <p>No yarn stock records match your criteria.</p>
           </div>
         `;
+        updateFloatingIssueButton();
         return;
       }
 
@@ -2299,7 +2391,27 @@
 
         container.appendChild(groupEl);
       });
+
+      // Update floating issue button visibility and count based on selectedBoxes
+      updateFloatingIssueButton();
     }
+
+    function updateFloatingIssueButton() {
+      const floatBtn = document.getElementById('floating-issue-btn');
+      const floatCount = document.getElementById('floating-issue-count');
+      if (!floatBtn) return;
+
+      const count = Array.isArray(selectedBoxes) ? selectedBoxes.length : 0;
+      if (count > 0) {
+        if (floatCount) {
+          floatCount.textContent = count;
+        }
+        floatBtn.classList.add('visible');
+      } else {
+        floatBtn.classList.remove('visible');
+      }
+    }
+
 
     // Initialize on load
     document.addEventListener('DOMContentLoaded', () => {
