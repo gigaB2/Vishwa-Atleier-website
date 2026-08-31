@@ -1970,6 +1970,50 @@
               }
             }
 
+            // Dedicated Relational Synchronization for Weft Yarn Issues
+            if (key === 'yarn-issues' && Array.isArray(value) && value.length > 0) {
+              try {
+                const issueRows = value.map(iss => {
+                  if (!iss) return null;
+                  const issId = String(iss.id || `ISS-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
+                  const issDate = (iss.date || new Date().toISOString().split('T')[0]).split('T')[0];
+                  return {
+                    id: issId,
+                    date: issDate,
+                    quality: String(iss.quality || ''),
+                    supplier: String(iss.supplier || iss.company || ''),
+                    code: iss.code ? String(iss.code) : null,
+                    color: iss.color ? String(iss.color) : null,
+                    box: String(iss.box || ''),
+                    challan: iss.challan ? String(iss.challan) : null,
+                    lot: iss.lot ? String(iss.lot) : null,
+                    cones: parseFloat(iss.cones) || 0,
+                    net: parseFloat(iss.net) || 0,
+                    details: iss.details || null,
+                    updated_at: nowIso
+                  };
+                }).filter(Boolean);
+
+                if (issueRows.length > 0) {
+                  for (let i = 0; i < issueRows.length; i += 500) {
+                    const chunk = issueRows.slice(i, i + 500);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_weft_issues?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(e) {
+                console.warn('Weft Issues Relational Sync notice:', e);
+              }
+            }
+
             setSyncStatus(ws && ws.readyState === WebSocket.OPEN ? 'connected' : 'offline');
           } catch (err) {
             console.error('Supabase set error:', err);
@@ -2733,6 +2777,40 @@
               console.warn('Yarn RM Orders relational reconciliation notice:', orderErr);
             }
 
+            // Reconcile Dedicated Weft Issues Relational Table
+            try {
+              const dbIssues = await fetchAllRowsPaginated('vf_weft_issues', '*', 'order=date.desc');
+              if (Array.isArray(dbIssues) && dbIssues.length > 0) {
+                const reconstructedIssues = dbIssues.map(iss => ({
+                  id: iss.id,
+                  date: iss.date,
+                  quality: iss.quality,
+                  supplier: iss.supplier,
+                  code: iss.code || '',
+                  color: iss.color || '',
+                  box: iss.box,
+                  challan: iss.challan || '',
+                  lot: iss.lot || '',
+                  cones: Number(iss.cones) || 0,
+                  net: Number(iss.net) || 0,
+                  details: iss.details || ''
+                }));
+
+                const issKey = 'yarn-issues';
+                const issStr = JSON.stringify(reconstructedIssues);
+                const lastIssWrite = lastLocalWrites[issKey] || 0;
+                if (Date.now() - lastIssWrite >= 3000) {
+                  cache[issKey] = issStr;
+                  lastSavedHashes[issKey] = computeHash(issStr);
+                  safeLocalStorageSet(issKey, issStr);
+                  if (!updatedKeys.includes(issKey)) updatedKeys.push(issKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (issErr) {
+              console.warn('Weft Issues relational reconciliation notice:', issErr);
+            }
+
             isHydrated = true;
             window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
 
@@ -2835,6 +2913,60 @@
         isHydrated = true;
         window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
       }
+    },
+    // --- Enterprise Weft Issues Relational APIs ---
+    async fetchWeftIssuesRelational() {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const rows = await fetchAllRowsPaginated('vf_weft_issues', '*', 'order=date.desc');
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        return rows.map(iss => ({
+          id: iss.id,
+          date: iss.date,
+          quality: iss.quality,
+          supplier: iss.supplier,
+          code: iss.code || '',
+          color: iss.color || '',
+          box: iss.box,
+          challan: iss.challan || '',
+          lot: iss.lot || '',
+          cones: Number(iss.cones) || 0,
+          net: Number(iss.net) || 0,
+          details: iss.details || ''
+        }));
+      } catch(e) {
+        console.error('fetchWeftIssuesRelational error:', e);
+        return null;
+      }
+    },
+
+    async recordWeftIssuesAtomic(issueList) {
+      if (!Array.isArray(issueList) || issueList.length === 0) return { success: false, error: 'No issues to record' };
+      if (activeConfig.isConfigured && SUPABASE_URL) {
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/vf_record_weft_issues`, {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ p_issues: issueList })
+          });
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch(e) {
+          console.warn('RPC vf_record_weft_issues fallback to local write:', e);
+        }
+      }
+      return { success: true, fallback: true };
+    },
+
+    async deleteWeftIssueRelational(issueId) {
+      if (!issueId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_weft_issues?id=eq.${encodeURIComponent(issueId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
     },
     // --- Enterprise Yarn RM Orders Relational APIs ---
     async fetchYarnOrdersRelational() {

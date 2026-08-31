@@ -4524,12 +4524,16 @@
                 const c = parseFloat(editingIssueDraft.cones) || 0;
                 const autoNet = cw > 0 ? (c * cw).toFixed(3) : editingIssueDraft.net;
 
-                setIssues(prev => prev.map(i => i.id === editingIssueId ? {
+                const updatedIssue = {
                     ...editingIssueDraft,
                     date: addTimestampToDate(editingIssueDraft.date),
                     cones: parseFloat(editingIssueDraft.cones) || 0,
                     net: parseFloat(autoNet) || 0
-                } : i));
+                };
+                setIssues(prev => prev.map(i => i.id === editingIssueId ? updatedIssue : i));
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.recordWeftIssuesAtomic === 'function') {
+                    window.VishwaSupabase.recordWeftIssuesAtomic([updatedIssue]);
+                }
                 cancelIssueEdit();
             };
 
@@ -4537,6 +4541,9 @@
                 const ok = window.confirm('Delete this issue entry? This removes it from history and all box deduction totals.');
                 if (!ok) return;
                 setIssues(prev => prev.filter(i => i.id !== issueId));
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.deleteWeftIssueRelational === 'function') {
+                    window.VishwaSupabase.deleteWeftIssueRelational(issueId);
+                }
                 if (editingIssueId === issueId) cancelIssueEdit();
             };
 
@@ -4752,6 +4759,9 @@
                 }
 
                 setIssues(prev => [...newIssues, ...prev]);
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.recordWeftIssuesAtomic === 'function') {
+                    window.VishwaSupabase.recordWeftIssuesAtomic(newIssues);
+                }
                 setMultiIssueForm([{
                     id: Date.now(),
                     date: new Date().toISOString().slice(0, 10),

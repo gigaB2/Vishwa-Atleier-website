@@ -305,6 +305,98 @@ CREATE INDEX IF NOT EXISTS idx_vf_yarn_order_boxes_batch ON public.vf_yarn_order
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_order_boxes_order ON public.vf_yarn_order_boxes(order_id);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_order_boxes_box_num ON public.vf_yarn_order_boxes(box_number);
 
+-- 13. Dedicated Relational Table: Weft Yarn Issues (Loom Consumptions & Ledger)
+CREATE TABLE IF NOT EXISTS public.vf_weft_issues (
+    id TEXT PRIMARY KEY,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    quality TEXT NOT NULL,
+    supplier TEXT NOT NULL,
+    code TEXT,
+    color TEXT,
+    box TEXT NOT NULL,
+    challan TEXT,
+    lot TEXT,
+    cones NUMERIC(10, 2) DEFAULT 0,
+    net NUMERIC(10, 3) NOT NULL DEFAULT 0,
+    details TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_weft_issues_quality ON public.vf_weft_issues(quality);
+CREATE INDEX IF NOT EXISTS idx_vf_weft_issues_supplier ON public.vf_weft_issues(supplier);
+CREATE INDEX IF NOT EXISTS idx_vf_weft_issues_code ON public.vf_weft_issues(code);
+CREATE INDEX IF NOT EXISTS idx_vf_weft_issues_box ON public.vf_weft_issues(box);
+CREATE INDEX IF NOT EXISTS idx_vf_weft_issues_date ON public.vf_weft_issues(date DESC);
+CREATE INDEX IF NOT EXISTS idx_vf_weft_issues_challan ON public.vf_weft_issues(challan);
+
+-- 14. Atomic Stored Procedure: Record Weft Issues in Batch
+CREATE OR REPLACE FUNCTION public.vf_record_weft_issues(
+    p_issues JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    issue_record JSONB;
+    inserted_count INT := 0;
+BEGIN
+    FOR issue_record IN SELECT * FROM jsonb_array_elements(p_issues)
+    LOOP
+        INSERT INTO public.vf_weft_issues (
+            id,
+            date,
+            quality,
+            supplier,
+            code,
+            color,
+            box,
+            challan,
+            lot,
+            cones,
+            net,
+            details,
+            updated_at
+        ) VALUES (
+            COALESCE(issue_record->>'id', 'WEFT-ISSUE-' || gen_random_uuid()::text),
+            COALESCE((issue_record->>'date')::date, CURRENT_DATE),
+            COALESCE(issue_record->>'quality', ''),
+            COALESCE(issue_record->>'supplier', ''),
+            issue_record->>'code',
+            issue_record->>'color',
+            COALESCE(issue_record->>'box', ''),
+            issue_record->>'challan',
+            issue_record->>'lot',
+            COALESCE((issue_record->>'cones')::numeric, 0),
+            COALESCE((issue_record->>'net')::numeric, 0),
+            issue_record->>'details',
+            timezone('utc'::text, now())
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            date = EXCLUDED.date,
+            quality = EXCLUDED.quality,
+            supplier = EXCLUDED.supplier,
+            code = EXCLUDED.code,
+            color = EXCLUDED.color,
+            box = EXCLUDED.box,
+            challan = EXCLUDED.challan,
+            lot = EXCLUDED.lot,
+            cones = EXCLUDED.cones,
+            net = EXCLUDED.net,
+            details = EXCLUDED.details,
+            updated_at = timezone('utc'::text, now());
+
+        inserted_count := inserted_count + 1;
+    END LOOP;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'count', inserted_count,
+        'timestamp', timezone('utc'::text, now())
+    );
+END;
+$$;
+
 -- ==============================================================================
 -- Row Level Security (RLS) Configuration
 -- ==============================================================================
@@ -321,6 +413,7 @@ ALTER TABLE public.vf_yarn_rm_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_order_batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_order_boxes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_weft_issues ENABLE ROW LEVEL SECURITY;
 
 -- Dynamic Policy Configuration:
 -- Production Mode: Allows read/write for all authenticated API requests & anon key (matching client tokens)
@@ -385,6 +478,11 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_order_boxes' AND policyname = 'Allow public access to vf_yarn_order_boxes') THEN
         CREATE POLICY "Allow public access to vf_yarn_order_boxes" ON public.vf_yarn_order_boxes FOR ALL USING (true) WITH CHECK (true);
     END IF;
+
+    -- 13. vf_weft_issues
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_weft_issues' AND policyname = 'Allow public access to vf_weft_issues') THEN
+        CREATE POLICY "Allow public access to vf_weft_issues" ON public.vf_weft_issues FOR ALL USING (true) WITH CHECK (true);
+    END IF;
 END $$;
 
 -- ==============================================================================
@@ -424,6 +522,7 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_orders;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_order_batches;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_order_boxes;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_weft_issues;
     END IF;
 EXCEPTION
     WHEN duplicate_object THEN NULL;
