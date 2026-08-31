@@ -1764,24 +1764,24 @@
   const permKeyMap = {
     // RM Order Book
     'order-book': 'order-book.html',
-    'order-book-entry': 'view=orders',
-    'order-book-analytics': 'view=analytics',
-    'order-book-heatmap': 'view=heat-map',
+    'order-book-entry': 'order-book.html?view=orders',
+    'order-book-analytics': 'order-book.html?view=analytics',
+    'order-book-heatmap': 'order-book.html?view=heat-map',
 
     // RM Weft Stock Book
     'rm-weft-stock-book': 'rm-weft-stock-book.html',
-    'weft-ledger': 'tab=item-detail',
-    'weft-beam-tracker': 'tab=item-ledger-v2',
-    'weft-analytics': 'tab=challan-history',
-    'weft-low-stock': 'tab=low-stock',
-    'weft-log': 'tab=log',
+    'weft-ledger': 'rm-weft-stock-book.html?tab=item-detail',
+    'weft-beam-tracker': 'rm-weft-stock-book.html?tab=item-ledger-v2',
+    'weft-analytics': 'rm-weft-stock-book.html?tab=challan-history',
+    'weft-low-stock': 'rm-weft-stock-book.html?tab=low-stock',
+    'weft-log': 'rm-weft-stock-book.html?tab=log',
 
     // RM Warp Stock Book
     'rm-warp-stock-book': 'rm-warp-stock-book.html',
-    'warp-register': 'tab=register',
-    'warp-ledger': 'tab=ledger',
-    'warp-dashboard': 'tab=dashboard',
-    'warp-tracker': 'tab=tracker',
+    'warp-register': 'rm-warp-stock-book.html?tab=register',
+    'warp-ledger': 'rm-warp-stock-book.html?tab=ledger',
+    'warp-dashboard': 'rm-warp-stock-book.html?tab=dashboard',
+    'warp-tracker': 'rm-warp-stock-book.html?tab=tracker',
 
     // Costing Sheet
     'costing-sheet': 'costing.html',
@@ -1802,47 +1802,142 @@
 
     // Weaving Production
     'weaving-production': 'weaving-production.html',
-    'weaving-prod-analytics': 'tab=analytics',
-    'weaving-prod-daily': 'tab=production',
-    'weaving-prod-stock': 'tab=production-stock',
+    'weaving-prod-analytics': 'weaving-production.html?tab=analytics',
+    'weaving-prod-daily': 'weaving-production.html?tab=production',
+    'weaving-prod-stock': 'weaving-production.html?tab=production-stock',
 
     // Dispatch Pipeline
     'dispatch': 'dispatch.html',
     'dispatch-pipeline': 'dispatch.html',
-    'dispatch-outsource': 'outsourced',
-    'dispatch-history': 'dispatchhistory',
+    'dispatch-outsource': 'dispatch.html?tab=outsourced',
+    'dispatch-history': 'dispatch.html?tab=dispatchhistory',
 
     // Salary Sheet
     'salary-sheet': 'salary-sheet.html',
-    'salary-overview': 'tab=dashboard-tab',
-    'salary-karigar': 'tab=karigar-salary',
-    'salary-beam-loading': 'tab=beam-loading-tab',
-    'salary-loans': 'tab=tab-loans',
+    'salary-overview': 'salary-sheet.html?tab=dashboard-tab',
+    'salary-karigar': 'salary-sheet.html?tab=karigar-salary',
+    'salary-beam-loading': 'salary-sheet.html?tab=beam-loading-tab',
+    'salary-attendance': 'salary-sheet.html?tab=tab-attendance',
+    'salary-loans': 'salary-sheet.html?tab=tab-loans',
 
     // Standalone Pages
     'design-library': 'design-library.html',
 
     // Manage Masters
     'manage': 'manage.html',
-    'manage-machines': 'tab=machines',
-    'manage-looms': 'tab=looms',
-    'manage-jacquards': 'tab=jacquards',
-    'manage-jalas': 'tab=jalas',
-    'manage-fanis': 'tab=fanis',
+    'manage-machines': 'manage.html?tab=machines',
+    'manage-looms': 'manage.html?tab=looms',
+    'manage-jacquards': 'manage.html?tab=jacquards',
+    'manage-jalas': 'manage.html?tab=jalas',
+    'manage-fanis': 'manage.html?tab=fanis',
     'manage-machine-parts': 'machine-parts.html',
-    'manage-staff': 'tab=staff',
-    'manage-rm-qualities': 'tab=raw-material-qualities',
-    'manage-rm-suppliers': 'tab=raw-material-suppliers',
-    'manage-year-end': 'tab=year-end-rollover',
+    'manage-staff': 'manage.html?tab=staff',
+    'manage-rm-qualities': 'manage.html?tab=raw-material-qualities',
+    'manage-rm-suppliers': 'manage.html?tab=raw-material-suppliers',
+    'manage-year-end': 'manage.html?tab=year-end-rollover',
 
     // Tools & Gear Charts
     'ep-parser': 'ep-parser.html',
     'jacquard-castout-calculator': 'jacquard-castout-calculator.html',
     'gear': 'gear%20charts',
     'gear-national': 'national%20textile',
+    'gear-shivam': 'shivam%20engineering',
     'gear-shinkwang': 'shinkwang',
     'gear-doubler': 'doubler%20gear'
   };
+
+  // Structured rules matching each sidebar link to its specific permission key and optional parent folder
+  const linkPermRules = [
+    // RM Order Book
+    { pattern: /order-book\.html\?view=orders/i, key: 'order-book-entry', parent: 'order-book' },
+    { pattern: /order-book\.html\?view=analytics/i, key: 'order-book-analytics', parent: 'order-book' },
+    { pattern: /order-book\.html\?view=heat-map/i, key: 'order-book-heatmap', parent: 'order-book' },
+
+    // RM Weft Stock Book
+    { pattern: /rm-weft-stock-book\.html\?tab=item-detail/i, key: 'weft-ledger', parent: 'rm-weft-stock-book' },
+    { pattern: /rm-weft-stock-book\.html\?tab=item-ledger-v2/i, key: 'weft-beam-tracker', parent: 'rm-weft-stock-book' },
+    { pattern: /rm-weft-stock-book\.html\?tab=challan-history/i, key: 'weft-analytics', parent: 'rm-weft-stock-book' },
+    { pattern: /rm-weft-stock-book\.html\?tab=low-stock/i, key: 'weft-low-stock', parent: 'rm-weft-stock-book' },
+    { pattern: /rm-weft-stock-book\.html\?tab=log/i, key: 'weft-log', parent: 'rm-weft-stock-book' },
+
+    // RM Warp Stock Book
+    { pattern: /rm-warp-stock-book\.html\?tab=register/i, key: 'warp-register', parent: 'rm-warp-stock-book' },
+    { pattern: /rm-warp-stock-book\.html\?tab=ledger/i, key: 'warp-ledger', parent: 'rm-warp-stock-book' },
+    { pattern: /rm-warp-stock-book\.html\?tab=dashboard/i, key: 'warp-dashboard', parent: 'rm-warp-stock-book' },
+    { pattern: /rm-warp-stock-book\.html\?tab=tracker/i, key: 'warp-tracker', parent: 'rm-warp-stock-book' },
+
+    // Costing Sheet
+    { pattern: /weaving-costing\.html\?tab=fabric/i, key: 'costing-fabric', parent: 'costing-sheet' },
+    { pattern: /weaving-costing\.html\?tab=compare-weaving/i, key: 'costing-compare-weaving', parent: 'costing-sheet' },
+    { pattern: /yarn-costing\.html\?tab=tfo/i, key: 'costing-tfo', parent: 'costing-sheet' },
+    { pattern: /yarn-costing\.html\?tab=doubler/i, key: 'costing-doubler', parent: 'costing-sheet' },
+    { pattern: /yarn-costing\.html\?tab=covering/i, key: 'costing-covering', parent: 'costing-sheet' },
+    { pattern: /yarn-costing\.html\?tab=compare-yarn/i, key: 'costing-compare-yarn', parent: 'costing-sheet' },
+
+    // Yarn Standalone
+    { pattern: /yarn-rm-orders\.html/i, key: 'yarn-rm-orders', parent: null },
+    { pattern: /yarn-rm-stock\.html/i, key: 'yarn-rm-stock', parent: null },
+    { pattern: /yarn-rm-analytics\.html/i, key: 'yarn-rm-analytics', parent: null },
+    { pattern: /yarn-production\.html/i, key: 'yarn-production', parent: null },
+    { pattern: /yarn-sales\.html/i, key: 'yarn-sales', parent: null },
+    { pattern: /yarn-stock-dashboard\.html/i, key: 'yarn-stock-dashboard', parent: null },
+
+    // Weaving Production
+    { pattern: /weaving-production\.html\?tab=analytics/i, key: 'weaving-prod-analytics', parent: 'weaving-production' },
+    { pattern: /weaving-production\.html\?tab=production-stock/i, key: 'weaving-prod-stock', parent: 'weaving-production' },
+    { pattern: /weaving-production\.html(?:\?tab=production)?$/i, key: 'weaving-prod-daily', parent: 'weaving-production' },
+
+    // Dispatch
+    { pattern: /dispatch\.html\?tab=outsourced/i, key: 'dispatch-outsource', parent: 'dispatch' },
+    { pattern: /dispatch\.html\?tab=dispatchhistory/i, key: 'dispatch-history', parent: 'dispatch' },
+    { pattern: /dispatch\.html/i, key: 'dispatch-pipeline', parent: 'dispatch' },
+
+    // Salary Sheet
+    { pattern: /salary-sheet\.html\?tab=dashboard-tab/i, key: 'salary-overview', parent: 'salary-sheet' },
+    { pattern: /salary-sheet\.html\?tab=karigar-salary/i, key: 'salary-karigar', parent: 'salary-sheet' },
+    { pattern: /salary-sheet\.html\?tab=beam-loading-tab/i, key: 'salary-beam-loading', parent: 'salary-sheet' },
+    { pattern: /salary-sheet\.html\?tab=tab-attendance/i, key: 'salary-attendance', parent: 'salary-sheet' },
+    { pattern: /salary-sheet\.html\?tab=tab-loans/i, key: 'salary-loans', parent: 'salary-sheet' },
+
+    // Standalone Design Library
+    { pattern: /design-library\.html/i, key: 'design-library', parent: null },
+
+    // Manage Masters
+    { pattern: /manage\.html\?tab=machines/i, key: 'manage-machines', parent: 'manage' },
+    { pattern: /manage\.html\?tab=looms/i, key: 'manage-looms', parent: 'manage' },
+    { pattern: /manage\.html\?tab=jacquards/i, key: 'manage-jacquards', parent: 'manage' },
+    { pattern: /manage\.html\?tab=jalas/i, key: 'manage-jalas', parent: 'manage' },
+    { pattern: /manage\.html\?tab=fanis/i, key: 'manage-fanis', parent: 'manage' },
+    { pattern: /manage\.html\?tab=staff/i, key: 'manage-staff', parent: 'manage' },
+    { pattern: /manage\.html\?tab=raw-material-qualities/i, key: 'manage-rm-qualities', parent: 'manage' },
+    { pattern: /manage\.html\?tab=raw-material-suppliers/i, key: 'manage-rm-suppliers', parent: 'manage' },
+
+    // Tools & Gear
+    { pattern: /ep-parser\.html/i, key: 'ep-parser', parent: null },
+    { pattern: /jacquard-castout-calculator\.html/i, key: 'jacquard-castout-calculator', parent: null },
+    { pattern: /national%20textile/i, key: 'gear-national', parent: 'gear' },
+    { pattern: /shivam%20engineering/i, key: 'gear-shivam', parent: 'gear' },
+    { pattern: /shinkwang/i, key: 'gear-shinkwang', parent: 'gear' },
+    { pattern: /doubler%20gear/i, key: 'gear-doubler', parent: 'gear' },
+
+    // Base fallback matches
+    { pattern: /order-book\.html/i, key: 'order-book', parent: null },
+    { pattern: /rm-weft-stock-book\.html/i, key: 'rm-weft-stock-book', parent: null },
+    { pattern: /rm-warp-stock-book\.html/i, key: 'rm-warp-stock-book', parent: null },
+    { pattern: /weaving-production\.html/i, key: 'weaving-production', parent: null },
+    { pattern: /salary-sheet\.html/i, key: 'salary-sheet', parent: null },
+    { pattern: /manage\.html/i, key: 'manage', parent: null }
+  ];
+
+  function resolveLinkPermRule(href) {
+    if (!href) return null;
+    for (let i = 0; i < linkPermRules.length; i++) {
+      if (linkPermRules[i].pattern.test(href)) {
+        return linkPermRules[i];
+      }
+    }
+    return null;
+  }
 
   function applyViewOnlyEnforcer() {
     const sessRaw = localStorage.getItem('vf_session');
@@ -2002,76 +2097,90 @@
       const perms = activeSession.permissions;
       const currentPath = window.location.pathname.toLowerCase();
 
-      // 1. Hide restricted links permanently with .vf-perm-hidden
+      // 1. Evaluate every sidebar link specifically with resolveLinkPermRule
       document.querySelectorAll('.vf-sb-link').forEach(link => {
         const href = (link.getAttribute('href') || '').toLowerCase();
+        const rule = resolveLinkPermRule(href);
 
-        Object.keys(permKeyMap).forEach(key => {
-          if (perms[key] === 'none' || perms[key] === false) {
-            const target = permKeyMap[key].toLowerCase();
-            if (href.includes(target) ||
-              (key === 'costing-sheet' && (href.includes('weaving-costing') || href.includes('yarn-costing'))) ||
-              (key === 'dispatch' && href.includes('dispatch'))) {
-              link.classList.add('vf-perm-hidden');
-              link.style.setProperty('display', 'none', 'important');
-            }
+        let isHidden = false;
+        if (rule) {
+          const directVal = perms[rule.key];
+          if (directVal !== undefined) {
+            // Direct child/page permission explicitly specified
+            isHidden = (directVal === 'none' || directVal === false);
+          } else if (rule.parent && perms[rule.parent] !== undefined) {
+            // Inherit from parent folder only if no direct child permission exists
+            isHidden = (perms[rule.parent] === 'none' || perms[rule.parent] === false);
           }
-        });
+        }
+
+        if (isHidden) {
+          link.classList.add('vf-perm-hidden');
+          link.style.setProperty('display', 'none', 'important');
+        } else {
+          link.classList.remove('vf-perm-hidden');
+          link.style.removeProperty('display');
+        }
       });
 
-      // 2. Hide accordion folder buttons if folder key is restricted OR if all child links inside are hidden
+      // 2. Manage accordion folder visibility:
+      // A folder should ONLY be hidden if ALL of its child links are hidden.
+      // If an employee is granted access to even one child tab, the folder MUST stay visible!
       document.querySelectorAll('.vf-sb-folder').forEach(folder => {
-        const text = (folder.textContent || '').toLowerCase();
-        let folderKey = null;
-
-        if (text.includes('order book')) folderKey = 'order-book';
-        else if (text.includes('weft stock')) folderKey = 'rm-weft-stock-book';
-        else if (text.includes('warp stock')) folderKey = 'rm-warp-stock-book';
-        else if (text.includes('costing sheet')) folderKey = 'costing-sheet';
-        else if (text.includes('weaving production')) folderKey = 'weaving-production';
-        else if (text.includes('dispatch pipeline')) folderKey = 'dispatch';
-        else if (text.includes('salary sheet')) folderKey = 'salary-sheet';
-        else if (text.includes('manage')) folderKey = 'manage';
-        else if (text.includes('gear charts')) folderKey = 'gear';
-
         const accordionWrap = folder.nextElementSibling;
-        const isFolderRestricted = folderKey && (perms[folderKey] === 'none' || perms[folderKey] === false);
-
-        let allChildrenHidden = false;
         if (accordionWrap && accordionWrap.classList.contains('vf-sb-accordion-wrapper')) {
           const links = accordionWrap.querySelectorAll('.vf-sb-link');
+          let allChildrenHidden = false;
           if (links.length > 0) {
             allChildrenHidden = Array.from(links).every(l => l.classList.contains('vf-perm-hidden') || l.style.display === 'none');
           }
-        }
 
-        if (isFolderRestricted || allChildrenHidden) {
-          folder.classList.add('vf-perm-hidden');
-          folder.style.setProperty('display', 'none', 'important');
-          if (accordionWrap && accordionWrap.classList.contains('vf-sb-accordion-wrapper')) {
+          if (allChildrenHidden) {
+            folder.classList.add('vf-perm-hidden');
+            folder.style.setProperty('display', 'none', 'important');
             accordionWrap.classList.add('vf-perm-hidden');
             accordionWrap.style.setProperty('display', 'none', 'important');
+          } else {
+            folder.classList.remove('vf-perm-hidden');
+            folder.style.removeProperty('display');
+            accordionWrap.classList.remove('vf-perm-hidden');
+            accordionWrap.style.removeProperty('display');
           }
         }
       });
 
-      // 3. Enforce Page-Level Access Guard: Quietly redirect away from restricted pages
-      Object.keys(permKeyMap).forEach(key => {
-        const pageTarget = permKeyMap[key].split('?')[0].toLowerCase();
-        const currentFile = currentPath.split('/').pop().split('?')[0];
-        if ((perms[key] === 'none' || perms[key] === false) && pageTarget.endsWith('.html') && currentFile === pageTarget) {
-          // Find first permitted page
-          const firstAllowedKey = Object.keys(permKeyMap).find(k => perms[k] !== 'none' && perms[k] !== false && permKeyMap[k].endsWith('.html'));
-          let redirectTarget = rootPath ? (rootPath + 'index.html') : '../../index.html';
+      // 3. Enforce Page-Level Access Guard:
+      // Quietly redirect away only if user has NO access to the current page AND NO access to any sub-tabs on this page
+      const currentFile = currentPath.split('/').pop().split('?')[0];
+      if (currentFile && currentFile.endsWith('.html')) {
+        // Collect all rules for this HTML file
+        const pageRules = linkPermRules.filter(r => r.pattern.test(currentFile));
+        if (pageRules.length > 0) {
+          // Check if any rule allows this page
+          const hasAnyAccessToPage = pageRules.some(r => {
+            const val = perms[r.key];
+            if (val !== undefined) return (val !== 'none' && val !== false);
+            if (r.parent && perms[r.parent] !== undefined) return (perms[r.parent] !== 'none' && perms[r.parent] !== false);
+            return true;
+          });
 
-          if (firstAllowedKey) {
-            redirectTarget = rootPath ? (rootPath + permKeyMap[firstAllowedKey]) : ('../../' + permKeyMap[firstAllowedKey]);
+          if (!hasAnyAccessToPage) {
+            // Find first permitted page link from linkPermRules
+            const firstAllowedRule = linkPermRules.find(r => {
+              const val = perms[r.key];
+              if (val !== undefined) return (val !== 'none' && val !== false);
+              if (r.parent && perms[r.parent] !== undefined) return (perms[r.parent] !== 'none' && perms[r.parent] !== false);
+              return true;
+            });
+
+            let redirectTarget = rootPath ? (rootPath + 'index.html') : '../../index.html';
+            if (firstAllowedRule && permKeyMap[firstAllowedRule.key]) {
+              redirectTarget = rootPath ? (rootPath + permKeyMap[firstAllowedRule.key]) : ('../../' + permKeyMap[firstAllowedRule.key]);
+            }
+            window.location.href = redirectTarget;
           }
-
-          // Quiet redirect without popup alert
-          window.location.href = redirectTarget;
         }
-      });
+      }
     }
 
     let groupName = localStorage.getItem('vf_group_name');
