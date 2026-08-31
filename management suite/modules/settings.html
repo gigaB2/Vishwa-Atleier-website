@@ -1980,37 +1980,65 @@
       if (raw) companies = JSON.parse(raw) || [];
     } catch(e) {}
 
-    if (companies.length === 0) {
-      let legacyName = "Vishwa Fashions";
-      let legacyGst = "24AAAFV1234A1Z5";
-      let legacyPhone = "+91 98251 12345";
-      let legacyEmail = "sales@vishwafashions.com";
-      let legacyAddress = "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221";
-
-      try {
-        const stored = localStorage.getItem('vishwa_fashions_settings');
-        if (stored) {
-          const s = JSON.parse(stored);
-          if (s.sellerName) legacyName = s.sellerName;
-          if (s.sellerGstin) legacyGst = s.sellerGstin;
-          if (s.sellerPhone) legacyPhone = s.sellerPhone;
-          if (s.sellerEmail) legacyEmail = s.sellerEmail;
-          if (s.sellerAddress) legacyAddress = s.sellerAddress;
-        }
-      } catch(e) {}
-
-      companies = [{
-        id: 'comp-1',
-        sellerName: legacyName,
-        sellerGstin: legacyGst,
-        sellerPhone: legacyPhone,
-        sellerEmail: legacyEmail,
-        sellerAddress: legacyAddress,
-        isDefault: true
-      }];
-      localStorage.setItem('vf_companies', JSON.stringify(companies));
+    if (Array.isArray(companies) && companies.length > 0) {
+      return companies;
     }
-    return companies;
+
+    let legacyName = "Vishwa Fashions";
+    let legacyGst = "24AAAFV1234A1Z5";
+    let legacyPhone = "+91 98251 12345";
+    let legacyEmail = "sales@vishwafashions.com";
+    let legacyAddress = "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221";
+
+    try {
+      const stored = localStorage.getItem('vishwa_fashions_settings');
+      if (stored) {
+        const s = JSON.parse(stored);
+        if (s.sellerName) legacyName = s.sellerName;
+        if (s.sellerGstin) legacyGst = s.sellerGstin;
+        if (s.sellerPhone) legacyPhone = s.sellerPhone;
+        if (s.sellerEmail) legacyEmail = s.sellerEmail;
+        if (s.sellerAddress) legacyAddress = s.sellerAddress;
+      }
+    } catch(e) {}
+
+    return [{
+      id: 'comp-1',
+      sellerName: legacyName,
+      sellerGstin: legacyGst,
+      sellerPhone: legacyPhone,
+      sellerEmail: legacyEmail,
+      sellerAddress: legacyAddress,
+      isDefault: true
+    }];
+  }
+
+  async function fetchCompaniesFromSupabase() {
+    try {
+      if (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL && window.APP_CONFIG.SUPABASE_ANON_KEY) {
+        const url = `${window.APP_CONFIG.SUPABASE_URL}/rest/v1/vf_kv_store?key=eq.vf_companies&select=value`;
+        const res = await fetch(url, {
+          headers: {
+            'apikey': window.APP_CONFIG.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${window.APP_CONFIG.SUPABASE_ANON_KEY}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0 && data[0].value) {
+            const cloudCompanies = typeof data[0].value === 'string' ? JSON.parse(data[0].value) : data[0].value;
+            if (Array.isArray(cloudCompanies) && cloudCompanies.length > 0) {
+              localStorage.setItem('vf_companies', JSON.stringify(cloudCompanies));
+              renderCompaniesList();
+              return cloudCompanies;
+            }
+          }
+        }
+      }
+    } catch(err) {
+      console.warn("Cloud company fetch notice:", err);
+    }
+    return null;
   }
 
   function saveCompaniesToStorage(companies) {
@@ -3434,10 +3462,41 @@
     applyTheme(isDark);
     loadGroupNameSetting();
     loadCompanyProfile();
+    fetchCompaniesFromSupabase();
     loadGeminiSettings();
     loadAuthSettings();
     bindParentChildPermToggles('emp-perm-checkboxes');
     bindParentChildPermToggles('edit-modal-perm-checkboxes');
+
+    window.addEventListener('supabase-ready', () => {
+      loadGroupNameSetting();
+      renderCompaniesList();
+      renderAdminsList();
+      renderUsersAndInvitesList();
+    });
+
+    window.addEventListener('supabase-sync', (e) => {
+      const key = e.detail ? e.detail.key : null;
+      if (!key || key === 'vf_companies' || key === 'vishwa_fashions_settings') {
+        renderCompaniesList();
+      }
+      if (!key || key === 'vf_group_name') {
+        loadGroupNameSetting();
+      }
+      if (!key || key === 'vf_users' || key === 'vf_admin_users') {
+        renderAdminsList();
+        renderUsersAndInvitesList();
+      }
+    });
+
+    window.addEventListener('storage', (e) => {
+      if (!e.key || e.key === 'vf_companies' || e.key === 'vishwa_fashions_settings') {
+        renderCompaniesList();
+      }
+      if (!e.key || e.key === 'vf_group_name') {
+        loadGroupNameSetting();
+      }
+    });
   })();
 </script>
 
