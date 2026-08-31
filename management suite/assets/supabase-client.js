@@ -2014,6 +2014,135 @@
               }
             }
 
+            // Dedicated Relational Synchronization for Warp Beams
+            if (key === 'warp-beams' && Array.isArray(value) && value.length > 0) {
+              try {
+                const beamRows = value.map(b => {
+                  if (!b || !b.beamNumber) return null;
+                  const bId = String(b.id || `BEAM-${b.beamNumber}`);
+                  const bCreated = (b.createdAt || new Date().toISOString().split('T')[0]).split('T')[0];
+                  return {
+                    id: bId,
+                    beam_number: String(b.beamNumber).trim(),
+                    quality: String(b.quality || ''),
+                    code: b.code ? String(b.code) : null,
+                    color: b.color ? String(b.color) : null,
+                    meters: parseFloat(b.meters) || 0,
+                    ends: parseInt(b.ends, 10) || 0,
+                    status: String(b.status || 'Available'),
+                    machine_number: b.machineNumber ? String(b.machineNumber) : null,
+                    warping_person: b.warpingPerson || null,
+                    created_at: bCreated,
+                    history: Array.isArray(b.history) ? b.history : [],
+                    updated_at: nowIso
+                  };
+                }).filter(Boolean);
+
+                if (beamRows.length > 0) {
+                  for (let i = 0; i < beamRows.length; i += 300) {
+                    const chunk = beamRows.slice(i, i + 300);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_warp_beams?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(e) {
+                console.warn('Warp Beams Relational Sync notice:', e);
+              }
+            }
+
+            // Dedicated Relational Synchronization for Warp Yarn Issues
+            if (key === 'warp-issues' && Array.isArray(value) && value.length > 0) {
+              try {
+                const warpIssRows = value.map(iss => {
+                  if (!iss) return null;
+                  const issId = String(iss.id || `WARP-ISS-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
+                  const issDate = (iss.date || new Date().toISOString().split('T')[0]).split('T')[0];
+                  return {
+                    id: issId,
+                    date: issDate,
+                    quality: String(iss.quality || ''),
+                    code: iss.code ? String(iss.code) : null,
+                    color: iss.color ? String(iss.color) : null,
+                    issued_weight: parseFloat(iss.issuedWeight || iss.net) || 0,
+                    details: iss.details || null,
+                    supplier: iss.supplier ? String(iss.supplier) : null,
+                    updated_at: nowIso
+                  };
+                }).filter(Boolean);
+
+                if (warpIssRows.length > 0) {
+                  for (let i = 0; i < warpIssRows.length; i += 500) {
+                    const chunk = warpIssRows.slice(i, i + 500);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_warp_issues?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(e) {
+                console.warn('Warp Issues Relational Sync notice:', e);
+              }
+            }
+
+            // Dedicated Relational Synchronization for Warp Beam Loadings
+            if (key === 'warp-beam-loadings' && Array.isArray(value) && value.length > 0) {
+              try {
+                const loadingRows = value.map(bl => {
+                  if (!bl) return null;
+                  const blId = String(bl.id || `BL-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
+                  const blDate = (bl.date || new Date().toISOString().split('T')[0]).split('T')[0];
+                  return {
+                    id: blId,
+                    date: blDate,
+                    piecein: bl.piecein || null,
+                    drawing_in: bl.drawingIn || null,
+                    fani: bl.fani || null,
+                    drop_pin_jog: bl.dropPinJog || null,
+                    machine_number: bl.machineNumber ? String(bl.machineNumber) : null,
+                    beam_number: bl.beamNumber ? String(bl.beamNumber) : null,
+                    item_color: bl.itemColor || null,
+                    meters: parseFloat(bl.meters) || 0,
+                    ends: parseInt(bl.ends, 10) || 0,
+                    rate: parseFloat(bl.rate) || 0,
+                    payment_amount: parseFloat(bl.paymentAmount) || 0,
+                    updated_at: nowIso
+                  };
+                }).filter(Boolean);
+
+                if (loadingRows.length > 0) {
+                  for (let i = 0; i < loadingRows.length; i += 500) {
+                    const chunk = loadingRows.slice(i, i + 500);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_warp_beam_loadings?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(e) {
+                console.warn('Warp Beam Loadings Relational Sync notice:', e);
+              }
+            }
+
             setSyncStatus(ws && ws.readyState === WebSocket.OPEN ? 'connected' : 'offline');
           } catch (err) {
             console.error('Supabase set error:', err);
@@ -2811,6 +2940,105 @@
               console.warn('Weft Issues relational reconciliation notice:', issErr);
             }
 
+            // Reconcile Dedicated Warp Beams Relational Table
+            try {
+              const dbBeams = await fetchAllRowsPaginated('vf_warp_beams', '*', 'order=created_at.desc');
+              if (Array.isArray(dbBeams) && dbBeams.length > 0) {
+                const reconstructedBeams = dbBeams.map(b => ({
+                  id: b.id,
+                  beamNumber: b.beam_number,
+                  quality: b.quality,
+                  code: b.code || '',
+                  color: b.color || '',
+                  meters: Number(b.meters) || 0,
+                  ends: b.ends || 0,
+                  status: b.status || 'Available',
+                  machineNumber: b.machine_number || null,
+                  warpingPerson: b.warping_person || '',
+                  createdAt: b.created_at,
+                  history: Array.isArray(b.history) ? b.history : []
+                }));
+
+                const bKey = 'warp-beams';
+                const bStr = JSON.stringify(reconstructedBeams);
+                const lastBWrite = lastLocalWrites[bKey] || 0;
+                if (Date.now() - lastBWrite >= 3000) {
+                  cache[bKey] = bStr;
+                  lastSavedHashes[bKey] = computeHash(bStr);
+                  safeLocalStorageSet(bKey, bStr);
+                  if (!updatedKeys.includes(bKey)) updatedKeys.push(bKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (bErr) {
+              console.warn('Warp Beams relational reconciliation notice:', bErr);
+            }
+
+            // Reconcile Dedicated Warp Issues Relational Table
+            try {
+              const dbWarpIssues = await fetchAllRowsPaginated('vf_warp_issues', '*', 'order=date.desc');
+              if (Array.isArray(dbWarpIssues) && dbWarpIssues.length > 0) {
+                const reconstructedWarpIssues = dbWarpIssues.map(iss => ({
+                  id: iss.id,
+                  date: iss.date,
+                  quality: iss.quality,
+                  code: iss.code || '',
+                  color: iss.color || '',
+                  issuedWeight: Number(iss.issued_weight) || 0,
+                  details: iss.details || '',
+                  supplier: iss.supplier || ''
+                }));
+
+                const wiKey = 'warp-issues';
+                const wiStr = JSON.stringify(reconstructedWarpIssues);
+                const lastWiWrite = lastLocalWrites[wiKey] || 0;
+                if (Date.now() - lastWiWrite >= 3000) {
+                  cache[wiKey] = wiStr;
+                  lastSavedHashes[wiKey] = computeHash(wiStr);
+                  safeLocalStorageSet(wiKey, wiStr);
+                  if (!updatedKeys.includes(wiKey)) updatedKeys.push(wiKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (wiErr) {
+              console.warn('Warp Issues relational reconciliation notice:', wiErr);
+            }
+
+            // Reconcile Dedicated Warp Beam Loadings Relational Table
+            try {
+              const dbLoadings = await fetchAllRowsPaginated('vf_warp_beam_loadings', '*', 'order=date.desc');
+              if (Array.isArray(dbLoadings) && dbLoadings.length > 0) {
+                const reconstructedLoadings = dbLoadings.map(bl => ({
+                  id: bl.id,
+                  date: bl.date,
+                  piecein: bl.piecein || '',
+                  drawingIn: bl.drawing_in || '',
+                  fani: bl.fani || '',
+                  dropPinJog: bl.drop_pin_jog || '',
+                  machineNumber: bl.machine_number || '',
+                  beamNumber: bl.beam_number || '',
+                  itemColor: bl.item_color || '',
+                  meters: Number(bl.meters) || 0,
+                  ends: bl.ends || 0,
+                  rate: Number(bl.rate) || 0,
+                  paymentAmount: Number(bl.payment_amount) || 0
+                }));
+
+                const blKey = 'warp-beam-loadings';
+                const blStr = JSON.stringify(reconstructedLoadings);
+                const lastBlWrite = lastLocalWrites[blKey] || 0;
+                if (Date.now() - lastBlWrite >= 3000) {
+                  cache[blKey] = blStr;
+                  lastSavedHashes[blKey] = computeHash(blStr);
+                  safeLocalStorageSet(blKey, blStr);
+                  if (!updatedKeys.includes(blKey)) updatedKeys.push(blKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (blErr) {
+              console.warn('Warp Beam Loadings relational reconciliation notice:', blErr);
+            }
+
             isHydrated = true;
             window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
 
@@ -2914,6 +3142,142 @@
         window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
       }
     },
+    // --- Enterprise Warp Beams Relational APIs ---
+    async fetchWarpBeamsRelational() {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const rows = await fetchAllRowsPaginated('vf_warp_beams', '*', 'order=created_at.desc');
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        return rows.map(b => ({
+          id: b.id,
+          beamNumber: b.beam_number,
+          quality: b.quality,
+          code: b.code || '',
+          color: b.color || '',
+          meters: Number(b.meters) || 0,
+          ends: b.ends || 0,
+          status: b.status || 'Available',
+          machineNumber: b.machine_number || null,
+          warpingPerson: b.warping_person || '',
+          createdAt: b.created_at,
+          history: Array.isArray(b.history) ? b.history : []
+        }));
+      } catch(e) {
+        console.error('fetchWarpBeamsRelational error:', e);
+        return null;
+      }
+    },
+
+    async saveWarpBeamRelational(beam) {
+      if (!beam || !beam.beamNumber || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      const bId = String(beam.id || `BEAM-${beam.beamNumber}`);
+      const bCreated = (beam.createdAt || new Date().toISOString().split('T')[0]).split('T')[0];
+      const payload = {
+        id: bId,
+        beam_number: String(beam.beamNumber).trim(),
+        quality: String(beam.quality || ''),
+        code: beam.code ? String(beam.code) : null,
+        color: beam.color ? String(beam.color) : null,
+        meters: parseFloat(beam.meters) || 0,
+        ends: parseInt(beam.ends, 10) || 0,
+        status: String(beam.status || 'Available'),
+        machine_number: beam.machineNumber ? String(beam.machineNumber) : null,
+        warping_person: beam.warpingPerson || null,
+        created_at: bCreated,
+        history: Array.isArray(beam.history) ? beam.history : [],
+        updated_at: new Date().toISOString()
+      };
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_warp_beams?on_conflict=id`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify(payload)
+        });
+      } catch(e) {}
+    },
+
+    async deleteWarpBeamRelational(beamId) {
+      if (!beamId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_warp_beams?id=eq.${encodeURIComponent(beamId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    async fetchWarpIssuesRelational() {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const rows = await fetchAllRowsPaginated('vf_warp_issues', '*', 'order=date.desc');
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        return rows.map(iss => ({
+          id: iss.id,
+          date: iss.date,
+          quality: iss.quality,
+          code: iss.code || '',
+          color: iss.color || '',
+          issuedWeight: Number(iss.issued_weight) || 0,
+          details: iss.details || '',
+          supplier: iss.supplier || ''
+        }));
+      } catch(e) {
+        console.error('fetchWarpIssuesRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteWarpIssueRelational(issueId) {
+      if (!issueId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_warp_issues?id=eq.${encodeURIComponent(issueId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    async fetchWarpBeamLoadingsRelational() {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const rows = await fetchAllRowsPaginated('vf_warp_beam_loadings', '*', 'order=date.desc');
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        return rows.map(bl => ({
+          id: bl.id,
+          date: bl.date,
+          piecein: bl.piecein || '',
+          drawingIn: bl.drawing_in || '',
+          fani: bl.fani || '',
+          dropPinJog: bl.drop_pin_jog || '',
+          machineNumber: bl.machine_number || '',
+          beamNumber: bl.beam_number || '',
+          itemColor: bl.item_color || '',
+          meters: Number(bl.meters) || 0,
+          ends: bl.ends || 0,
+          rate: Number(bl.rate) || 0,
+          paymentAmount: Number(bl.payment_amount) || 0
+        }));
+      } catch(e) {
+        console.error('fetchWarpBeamLoadingsRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteWarpBeamLoadingRelational(loadingId) {
+      if (!loadingId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_warp_beam_loadings?id=eq.${encodeURIComponent(loadingId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
     // --- Enterprise Weft Issues Relational APIs ---
     async fetchWeftIssuesRelational() {
       if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;

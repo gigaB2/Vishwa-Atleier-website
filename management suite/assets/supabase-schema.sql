@@ -397,6 +397,67 @@ BEGIN
 END;
 $$;
 
+-- 15. Dedicated Relational Table: Warp Beams
+CREATE TABLE IF NOT EXISTS public.vf_warp_beams (
+    id TEXT PRIMARY KEY,
+    beam_number TEXT NOT NULL UNIQUE,
+    quality TEXT NOT NULL,
+    code TEXT,
+    color TEXT,
+    meters NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    ends INTEGER DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'Available',
+    machine_number TEXT,
+    warping_person TEXT,
+    created_at DATE NOT NULL DEFAULT CURRENT_DATE,
+    history JSONB DEFAULT '[]'::jsonb,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_warp_beams_num ON public.vf_warp_beams(beam_number);
+CREATE INDEX IF NOT EXISTS idx_vf_warp_beams_quality ON public.vf_warp_beams(quality);
+CREATE INDEX IF NOT EXISTS idx_vf_warp_beams_code ON public.vf_warp_beams(code);
+CREATE INDEX IF NOT EXISTS idx_vf_warp_beams_status ON public.vf_warp_beams(status);
+CREATE INDEX IF NOT EXISTS idx_vf_warp_beams_machine ON public.vf_warp_beams(machine_number);
+
+-- 16. Dedicated Relational Table: Warp Yarn Issues (To Sizing / Warping)
+CREATE TABLE IF NOT EXISTS public.vf_warp_issues (
+    id TEXT PRIMARY KEY,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    quality TEXT NOT NULL,
+    code TEXT,
+    color TEXT,
+    issued_weight NUMERIC(10, 3) NOT NULL DEFAULT 0,
+    details TEXT,
+    supplier TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_warp_issues_quality ON public.vf_warp_issues(quality);
+CREATE INDEX IF NOT EXISTS idx_vf_warp_issues_date ON public.vf_warp_issues(date DESC);
+CREATE INDEX IF NOT EXISTS idx_vf_warp_issues_supplier ON public.vf_warp_issues(supplier);
+
+-- 17. Dedicated Relational Table: Warp Beam Loom Loadings & Setup Records
+CREATE TABLE IF NOT EXISTS public.vf_warp_beam_loadings (
+    id TEXT PRIMARY KEY,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    piecein TEXT,
+    drawing_in TEXT,
+    fani TEXT,
+    drop_pin_jog TEXT,
+    machine_number TEXT,
+    beam_number TEXT,
+    item_color TEXT,
+    meters NUMERIC(10, 2) DEFAULT 0,
+    ends INTEGER DEFAULT 0,
+    rate NUMERIC(10, 2) DEFAULT 0,
+    payment_amount NUMERIC(12, 2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_warp_loadings_beam ON public.vf_warp_beam_loadings(beam_number);
+CREATE INDEX IF NOT EXISTS idx_vf_warp_loadings_machine ON public.vf_warp_beam_loadings(machine_number);
+CREATE INDEX IF NOT EXISTS idx_vf_warp_loadings_date ON public.vf_warp_beam_loadings(date DESC);
+
 -- ==============================================================================
 -- Row Level Security (RLS) Configuration
 -- ==============================================================================
@@ -414,6 +475,9 @@ ALTER TABLE public.vf_yarn_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_order_batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_order_boxes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_weft_issues ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_warp_beams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_warp_issues ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_warp_beam_loadings ENABLE ROW LEVEL SECURITY;
 
 -- Dynamic Policy Configuration:
 -- Production Mode: Allows read/write for all authenticated API requests & anon key (matching client tokens)
@@ -483,6 +547,21 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_weft_issues' AND policyname = 'Allow public access to vf_weft_issues') THEN
         CREATE POLICY "Allow public access to vf_weft_issues" ON public.vf_weft_issues FOR ALL USING (true) WITH CHECK (true);
     END IF;
+
+    -- 14. vf_warp_beams
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_warp_beams' AND policyname = 'Allow public access to vf_warp_beams') THEN
+        CREATE POLICY "Allow public access to vf_warp_beams" ON public.vf_warp_beams FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 15. vf_warp_issues
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_warp_issues' AND policyname = 'Allow public access to vf_warp_issues') THEN
+        CREATE POLICY "Allow public access to vf_warp_issues" ON public.vf_warp_issues FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 16. vf_warp_beam_loadings
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_warp_beam_loadings' AND policyname = 'Allow public access to vf_warp_beam_loadings') THEN
+        CREATE POLICY "Allow public access to vf_warp_beam_loadings" ON public.vf_warp_beam_loadings FOR ALL USING (true) WITH CHECK (true);
+    END IF;
 END $$;
 
 -- ==============================================================================
@@ -523,6 +602,9 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_order_batches;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_order_boxes;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_weft_issues;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_warp_beams;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_warp_issues;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_warp_beam_loadings;
     END IF;
 EXCEPTION
     WHEN duplicate_object THEN NULL;
