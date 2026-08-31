@@ -65,9 +65,158 @@ CREATE INDEX IF NOT EXISTS idx_vf_audit_logs_created_at ON public.vf_audit_logs(
 CREATE INDEX IF NOT EXISTS idx_vf_audit_logs_entity ON public.vf_audit_logs(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_vf_audit_logs_user ON public.vf_audit_logs(user_email);
 
+-- 7. Dedicated Relational Table: Yarn RM Inward Lots
+CREATE TABLE IF NOT EXISTS public.vf_yarn_rm_lots (
+    id TEXT PRIMARY KEY,
+    batch_id TEXT,
+    lot_number TEXT NOT NULL,
+    challan_number TEXT,
+    receive_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    supplier TEXT NOT NULL,
+    quality TEXT NOT NULL,
+    item_type TEXT DEFAULT 'Polyester',
+    code TEXT,
+    color TEXT,
+    rate NUMERIC(12, 2) DEFAULT 0,
+    order_ref TEXT,
+    total_boxes INTEGER DEFAULT 0,
+    gross_weight NUMERIC(12, 2) DEFAULT 0,
+    notes TEXT,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_lots_lot_num ON public.vf_yarn_rm_lots(lot_number);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_lots_supplier ON public.vf_yarn_rm_lots(supplier);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_lots_receive_date ON public.vf_yarn_rm_lots(receive_date DESC);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_lots_updated_at ON public.vf_yarn_rm_lots(updated_at DESC);
+
+-- 8. Dedicated Relational Table: Yarn RM Inventory Boxes
+CREATE TABLE IF NOT EXISTS public.vf_yarn_rm_boxes (
+    id TEXT PRIMARY KEY,
+    lot_id TEXT NOT NULL REFERENCES public.vf_yarn_rm_lots(id) ON DELETE CASCADE,
+    box_number TEXT NOT NULL,
+    cones INTEGER DEFAULT 0,
+    gross_weight NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    remaining_weight NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    active_weight NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'issued', 'gr')),
+    issue_date DATE,
+    issued_to TEXT,
+    gr_date DATE,
+    gr_weight NUMERIC(10, 2) DEFAULT 0,
+    gr_remarks TEXT,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_boxes_lot_id ON public.vf_yarn_rm_boxes(lot_id);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_boxes_status ON public.vf_yarn_rm_boxes(status);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_boxes_box_number ON public.vf_yarn_rm_boxes(box_number);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_boxes_updated_at ON public.vf_yarn_rm_boxes(updated_at DESC);
+
+-- 9. Dedicated Relational Table: Yarn RM Transaction & Audit Ledger
+CREATE TABLE IF NOT EXISTS public.vf_yarn_rm_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_type TEXT NOT NULL CHECK (transaction_type IN ('issue', 'return_gr', 'adjust', 'add')),
+    lot_id TEXT NOT NULL REFERENCES public.vf_yarn_rm_lots(id) ON DELETE CASCADE,
+    box_id TEXT NOT NULL,
+    box_number TEXT,
+    weight NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    cones INTEGER DEFAULT 0,
+    issued_to TEXT,
+    remarks TEXT,
+    created_by TEXT DEFAULT 'Operator',
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_tx_lot ON public.vf_yarn_rm_transactions(lot_id);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_tx_box ON public.vf_yarn_rm_transactions(box_id);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_tx_created ON public.vf_yarn_rm_transactions(created_at DESC);
+
 -- ==============================================================================
--- Server-Side RPC Utility Functions (Health & Security)
+-- Server-Side RPC Utility Functions (Health, Security & Atomic Transactions)
 -- ==============================================================================
+
+-- Atomic Box Issue Transaction (Guarantees zero race conditions & double issuing)
+CREATE OR REPLACE FUNCTION public.vf_issue_yarn_boxes(
+    p_box_ids TEXT[],
+    p_issued_to TEXT,
+    p_issue_date DATE DEFAULT CURRENT_DATE,
+    p_user TEXT DEFAULT 'Operator',
+    p_remarks TEXT DEFAULT ''
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_updated_count INT := 0;
+    v_box_rec RECORD;
+BEGIN
+    IF p_box_ids IS NULL OR array_length(p_box_ids, 1) IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'No box IDs provided');
+    END IF;
+
+    -- 1. Verify availability of selected boxes
+    FOR v_box_rec IN
+        SELECT id, lot_id, box_number, active_weight, cones, status
+        FROM public.vf_yarn_rm_boxes
+        WHERE id = ANY(p_box_ids)
+        FOR UPDATE
+    LOOP
+        IF v_box_rec.status = 'issued' THEN
+            RETURN jsonb_build_object(
+                'success', false, 
+                'error', format('Box %s is already issued', v_box_rec.box_number)
+            );
+        END IF;
+
+        IF v_box_rec.status = 'gr' THEN
+            RETURN jsonb_build_object(
+                'success', false, 
+                'error', format('Box %s is marked as GR (Returned)', v_box_rec.box_number)
+            );
+        END IF;
+
+        -- 2. Insert transaction ledger row
+        INSERT INTO public.vf_yarn_rm_transactions (
+            transaction_type,
+            lot_id,
+            box_id,
+            box_number,
+            weight,
+            cones,
+            issued_to,
+            remarks,
+            created_by
+        ) VALUES (
+            'issue',
+            v_box_rec.lot_id,
+            v_box_rec.id,
+            v_box_rec.box_number,
+            v_box_rec.active_weight,
+            v_box_rec.cones,
+            p_issued_to,
+            p_remarks,
+            p_user
+        );
+    END LOOP;
+
+    -- 3. Atomically update box status
+    UPDATE public.vf_yarn_rm_boxes
+    SET 
+        status = 'issued',
+        issue_date = p_issue_date,
+        issued_to = p_issued_to,
+        updated_at = timezone('utc'::text, now())
+    WHERE id = ANY(p_box_ids) AND status = 'available';
+
+    GET DIAGNOSTICS v_updated_count = ROW_COUNT;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'issued_count', v_updated_count,
+        'issued_to', p_issued_to,
+        'issue_date', p_issue_date
+    );
+END;
+$$;
 
 -- Health check RPC to verify database latency & connection health
 CREATE OR REPLACE FUNCTION public.vf_ping()
@@ -109,6 +258,9 @@ ALTER TABLE public.vf_costing_tfo_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_costing_doubler_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_costing_covering_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_rm_lots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_rm_boxes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_rm_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Dynamic Policy Configuration:
 -- Production Mode: Allows read/write for all authenticated API requests & anon key (matching client tokens)
@@ -143,6 +295,21 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_audit_logs' AND policyname = 'Allow public access to vf_audit_logs') THEN
         CREATE POLICY "Allow public access to vf_audit_logs" ON public.vf_audit_logs FOR ALL USING (true) WITH CHECK (true);
     END IF;
+
+    -- 7. vf_yarn_rm_lots
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_rm_lots' AND policyname = 'Allow public access to vf_yarn_rm_lots') THEN
+        CREATE POLICY "Allow public access to vf_yarn_rm_lots" ON public.vf_yarn_rm_lots FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 8. vf_yarn_rm_boxes
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_rm_boxes' AND policyname = 'Allow public access to vf_yarn_rm_boxes') THEN
+        CREATE POLICY "Allow public access to vf_yarn_rm_boxes" ON public.vf_yarn_rm_boxes FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 9. vf_yarn_rm_transactions
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_rm_transactions' AND policyname = 'Allow public access to vf_yarn_rm_transactions') THEN
+        CREATE POLICY "Allow public access to vf_yarn_rm_transactions" ON public.vf_yarn_rm_transactions FOR ALL USING (true) WITH CHECK (true);
+    END IF;
 END $$;
 
 -- ==============================================================================
@@ -176,8 +343,12 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_costing_doubler_products;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_costing_covering_products;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_audit_logs;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_rm_lots;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_rm_boxes;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_rm_transactions;
     END IF;
 EXCEPTION
     WHEN duplicate_object THEN NULL;
     WHEN others THEN NULL;
 END $$;
+

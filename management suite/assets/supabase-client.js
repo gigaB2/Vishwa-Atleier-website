@@ -1755,6 +1755,101 @@
                 }
               }
             }
+
+            // Dedicated Relational Synchronization for Yarn RM Stock Book
+            if (key === 'vishwa_yarn_rm_stock_data' && Array.isArray(value) && value.length > 0) {
+              try {
+                const lotRows = [];
+                const boxRows = [];
+
+                value.forEach(lot => {
+                  if (!lot || !lot.id) return;
+                  const lotId = String(lot.id);
+                  const boxes = Array.isArray(lot.boxes) ? lot.boxes : [];
+                  const grossWt = boxes.reduce((sum, b) => sum + (parseFloat(b.grossWeight) || parseFloat(b.weight) || 0), 0);
+
+                  lotRows.push({
+                    id: lotId,
+                    batch_id: lot.batchId || null,
+                    lot_number: String(lot.lotNumber || lot.id || 'LOT-AUTO'),
+                    challan_number: String(lot.challanNo || lot.challanNumber || ''),
+                    receive_date: (lot.receiveDate || lot.date || new Date().toISOString().split('T')[0]).split('T')[0],
+                    supplier: String(lot.supplier || ''),
+                    quality: String(lot.quality || ''),
+                    item_type: String(lot.itemType || lot.category || 'Polyester'),
+                    code: String(lot.code || ''),
+                    color: String(lot.color || ''),
+                    rate: parseFloat(lot.rate || lot.price) || 0,
+                    order_ref: String(lot.orderRef || ''),
+                    total_boxes: boxes.length,
+                    gross_weight: parseFloat(grossWt.toFixed(2)),
+                    notes: lot.notes || '',
+                    updated_at: nowIso
+                  });
+
+                  boxes.forEach((b, bIdx) => {
+                    const boxId = String(b.id || b.boxNumber || `B${bIdx + 1}`).trim();
+                    const bUid = `${lotId}__${boxId}`;
+                    const bGross = parseFloat(b.grossWeight) || parseFloat(b.weight) || 0;
+                    const bGr = parseFloat(b.grWeight || b.returnedWeight) || 0;
+                    const bRem = b.remainingWeight !== undefined ? parseFloat(b.remainingWeight) : Math.max(0, bGross - bGr);
+                    const bActive = parseFloat(b.weight) || (b.status === 'gr' ? bGross : bRem);
+
+                    boxRows.push({
+                      id: bUid,
+                      lot_id: lotId,
+                      box_number: boxId,
+                      cones: parseInt(b.cones, 10) || 0,
+                      gross_weight: parseFloat(bGross.toFixed(2)),
+                      remaining_weight: parseFloat(bRem.toFixed(2)),
+                      active_weight: parseFloat(bActive.toFixed(2)),
+                      status: b.status === 'issued' ? 'issued' : (b.status === 'gr' ? 'gr' : 'available'),
+                      issue_date: b.issueDate ? String(b.issueDate).split('T')[0] : null,
+                      issued_to: b.issuedTo || null,
+                      gr_date: b.grDate ? String(b.grDate).split('T')[0] : null,
+                      gr_weight: parseFloat(bGr.toFixed(2)),
+                      gr_remarks: b.grRemarks || null,
+                      updated_at: nowIso
+                    });
+                  });
+                });
+
+                if (lotRows.length > 0) {
+                  for (let i = 0; i < lotRows.length; i += 200) {
+                    const chunk = lotRows.slice(i, i + 200);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_lots?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+
+                if (boxRows.length > 0) {
+                  for (let i = 0; i < boxRows.length; i += 500) {
+                    const chunk = boxRows.slice(i, i + 500);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_boxes?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(e) {
+                console.warn('Yarn RM Relational Sync notice:', e);
+              }
+            }
+
             setSyncStatus(ws && ws.readyState === WebSocket.OPEN ? 'connected' : 'offline');
           } catch (err) {
             console.error('Supabase set error:', err);
@@ -2393,6 +2488,65 @@
               console.warn('Dedicated tables reconciliation notice:', err);
             }
 
+            // Reconcile Dedicated Yarn RM Relational Tables for enterprise data integrity
+            try {
+              const yarnLots = await fetchAllRowsPaginated('vf_yarn_rm_lots', '*', 'order=receive_date.desc');
+              const yarnBoxes = await fetchAllRowsPaginated('vf_yarn_rm_boxes', '*', 'order=box_number.asc');
+
+              if (Array.isArray(yarnLots) && yarnLots.length > 0) {
+                const boxesByLot = new Map();
+                (yarnBoxes || []).forEach(b => {
+                  if (!boxesByLot.has(b.lot_id)) boxesByLot.set(b.lot_id, []);
+                  boxesByLot.get(b.lot_id).push({
+                    id: b.box_number || b.id,
+                    boxNumber: b.box_number,
+                    cones: b.cones || 0,
+                    grossWeight: Number(b.gross_weight) || 0,
+                    remainingWeight: Number(b.remaining_weight) || 0,
+                    weight: Number(b.active_weight) || 0,
+                    status: b.status || 'available',
+                    issueDate: b.issue_date || null,
+                    issuedTo: b.issued_to || null,
+                    grDate: b.gr_date || null,
+                    grWeight: Number(b.gr_weight) || 0,
+                    grRemarks: b.gr_remarks || null
+                  });
+                });
+
+                const reconstructedStock = yarnLots.map(l => ({
+                  id: l.id,
+                  batchId: l.batch_id || '',
+                  lotNumber: l.lot_number,
+                  challanNo: l.challan_number || '',
+                  challanNumber: l.challan_number || '',
+                  receiveDate: l.receive_date,
+                  date: l.receive_date,
+                  supplier: l.supplier,
+                  quality: l.quality,
+                  itemType: l.item_type || 'Polyester',
+                  code: l.code || '',
+                  color: l.color || '',
+                  rate: Number(l.rate) || 0,
+                  orderRef: l.order_ref || '',
+                  notes: l.notes || '',
+                  boxes: boxesByLot.get(l.id) || []
+                }));
+
+                const yKey = 'vishwa_yarn_rm_stock_data';
+                const yStr = JSON.stringify(reconstructedStock);
+                const lastYarnWrite = lastLocalWrites[yKey] || 0;
+                if (Date.now() - lastYarnWrite >= 3000) {
+                  cache[yKey] = yStr;
+                  lastSavedHashes[yKey] = computeHash(yStr);
+                  safeLocalStorageSet(yKey, yStr);
+                  if (!updatedKeys.includes(yKey)) updatedKeys.push(yKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (yarnErr) {
+              console.warn('Yarn RM relational reconciliation notice:', yarnErr);
+            }
+
             isHydrated = true;
             window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
 
@@ -2494,6 +2648,107 @@
       } finally {
         isHydrated = true;
         window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
+      }
+    },
+    // --- Enterprise Yarn RM Stock Relational APIs ---
+    async fetchYarnStockRelational() {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const lots = await fetchAllRowsPaginated('vf_yarn_rm_lots', '*', 'order=receive_date.desc');
+        const boxes = await fetchAllRowsPaginated('vf_yarn_rm_boxes', '*', 'order=box_number.asc');
+        if (!Array.isArray(lots) || lots.length === 0) return null;
+
+        const boxesByLot = new Map();
+        (boxes || []).forEach(b => {
+          if (!boxesByLot.has(b.lot_id)) boxesByLot.set(b.lot_id, []);
+          boxesByLot.get(b.lot_id).push({
+            id: b.box_number || b.id,
+            boxNumber: b.box_number,
+            cones: b.cones || 0,
+            grossWeight: Number(b.gross_weight) || 0,
+            remainingWeight: Number(b.remaining_weight) || 0,
+            weight: Number(b.active_weight) || 0,
+            status: b.status || 'available',
+            issueDate: b.issue_date || null,
+            issuedTo: b.issued_to || null,
+            grDate: b.gr_date || null,
+            grWeight: Number(b.gr_weight) || 0,
+            grRemarks: b.gr_remarks || null
+          });
+        });
+
+        return lots.map(l => ({
+          id: l.id,
+          batchId: l.batch_id || '',
+          lotNumber: l.lot_number,
+          challanNo: l.challan_number || '',
+          challanNumber: l.challan_number || '',
+          receiveDate: l.receive_date,
+          date: l.receive_date,
+          supplier: l.supplier,
+          quality: l.quality,
+          itemType: l.item_type || 'Polyester',
+          code: l.code || '',
+          color: l.color || '',
+          rate: Number(l.rate) || 0,
+          orderRef: l.order_ref || '',
+          notes: l.notes || '',
+          boxes: boxesByLot.get(l.id) || []
+        }));
+      } catch (e) {
+        console.error('fetchYarnStockRelational error:', e);
+        return null;
+      }
+    },
+
+    async issueYarnBoxesAtomic(boxUids, issueData = {}) {
+      if (!Array.isArray(boxUids) || boxUids.length === 0) return { success: false, error: 'No boxes specified' };
+      const { issuedTo = 'General', issueDate = new Date().toISOString().split('T')[0], remarks = '' } = issueData;
+      const user = getLocalUserInfo().name || 'Operator';
+
+      if (activeConfig.isConfigured && SUPABASE_URL) {
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/vf_issue_yarn_boxes`, {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({
+              p_box_ids: boxUids,
+              p_issued_to: issuedTo,
+              p_issue_date: issueDate,
+              p_user: user,
+              p_remarks: remarks
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            return data;
+          }
+        } catch (e) {
+          console.warn('RPC vf_issue_yarn_boxes fallback to local update:', e);
+        }
+      }
+      return { success: true, fallback: true };
+    },
+
+    async deleteYarnLotRelational(lotId) {
+      if (!lotId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_lots?id=eq.${encodeURIComponent(lotId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    async fetchYarnTransactions(lotId = null) {
+      if (!activeConfig.isConfigured || !SUPABASE_URL) return [];
+      try {
+        let url = 'vf_yarn_rm_transactions?select=*&order=created_at.desc';
+        if (lotId) url += `&lot_id=eq.${encodeURIComponent(lotId)}`;
+        return await fetchAllRowsPaginated(url);
+      } catch (e) {
+        return [];
       }
     },
     // --- Realtime User Presence & Live Collaborative Editing APIs ---

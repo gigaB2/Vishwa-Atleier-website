@@ -376,15 +376,28 @@
         </a>
       </div>
     </div>
-    <!-- Yarn RM Stock Book Link (below Costing Sheet) -->
-    <a class="vf-sb-link" data-mode="yarn" href="modules/yarn/yarn-rm-stock.html">
+    <!-- Yarn RM Stock Book Folder -->
+    <button class="vf-sb-folder" data-mode="yarn" aria-expanded="false" onclick="_vfToggleFolder(this)">
       <span class="vf-sb-icon vf-sb-icon-green"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
       Yarn RM Stock Book
-    </a>
-    <a class="vf-sb-link" data-mode="yarn" href="modules/yarn/yarn-rm-analytics.html">
-      <span class="vf-sb-icon vf-sb-icon-pink"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-      Yarn RM Analytics
-    </a>
+      <svg class="vf-sb-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <div class="vf-sb-accordion-wrapper" data-mode="yarn">
+      <div class="vf-sb-accordion-inner" id="vf-mod-folder-yarn-stock">
+        <a class="vf-sb-link child" href="modules/yarn/yarn-rm-stock.html?tab=dashboard">
+          <span class="vf-sb-icon vf-sb-icon-green vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+          Yarn RM Stock Dashboard
+        </a>
+        <a class="vf-sb-link child" href="modules/yarn/yarn-rm-stock.html?tab=stock-book">
+          <span class="vf-sb-icon vf-sb-icon-green vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
+          Yarn RM Stock Book
+        </a>
+        <a class="vf-sb-link child" href="modules/yarn/yarn-rm-stock.html?tab=analytics">
+          <span class="vf-sb-icon vf-sb-icon-green vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+          Yarn RM Analytics
+        </a>
+      </div>
+    </div>
     <a class="vf-sb-link" data-mode="yarn" href="modules/yarn/yarn-production.html?tab=production">
       <span class="vf-sb-icon vf-sb-icon-blue"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
       Yarn Production
@@ -860,7 +873,7 @@
     'yarn-sales.html': 'modules/yarn/yarn-sales.html',
     'yarn-stock-dashboard.html': 'modules/yarn/yarn-stock-dashboard.html',
     'yarn-rm-stock.html': 'modules/yarn/yarn-rm-stock.html',
-    'yarn-rm-analytics.html': 'modules/yarn/yarn-rm-analytics.html',
+    'yarn-rm-analytics.html': 'modules/yarn/yarn-rm-stock.html?tab=analytics',
     'weaving-costing.html': 'modules/weaving/weaving-costing.html',
     'weaving-production.html': 'modules/weaving/weaving-production.html',
     'order-book.html': 'modules/weaving/order-book.html',
@@ -1141,6 +1154,10 @@
 
     // 6. Invoke global page-specific tab functions if available
     try {
+      if (typeof window.switchStockTab === 'function') {
+        window.switchStockTab(targetTab);
+        switched = true;
+      }
       if (typeof window.switchTab === 'function') {
         window.switchTab(targetTab);
         switched = true;
@@ -1792,10 +1809,13 @@
     'costing-covering': 'yarn-costing.html?tab=covering',
     'costing-compare-yarn': 'yarn-costing.html?tab=compare-yarn',
 
-    // Standalone Yarn Pages
+    // Standalone Yarn Pages & Sub-tabs
     'yarn-rm-orders': 'yarn-rm-orders.html',
     'yarn-rm-stock': 'yarn-rm-stock.html',
-    'yarn-rm-analytics': 'yarn-rm-analytics.html',
+    'yarn-stock-dashboard-tab': 'yarn-rm-stock.html?tab=dashboard',
+    'yarn-stock-book-tab': 'yarn-rm-stock.html?tab=stock-book',
+    'yarn-stock-analytics-tab': 'yarn-rm-stock.html?tab=analytics',
+    'yarn-rm-analytics': 'yarn-rm-stock.html?tab=analytics',
     'yarn-production': 'yarn-production.html',
     'yarn-sales': 'yarn-sales.html',
     'yarn-stock-dashboard': 'yarn-stock-dashboard.html',
@@ -1874,8 +1894,11 @@
     { pattern: /yarn-costing\.html\?tab=covering/i, key: 'costing-covering', parent: 'costing-sheet' },
     { pattern: /yarn-costing\.html\?tab=compare-yarn/i, key: 'costing-compare-yarn', parent: 'costing-sheet' },
 
-    // Yarn Standalone
+    // Yarn Standalone & Folders
     { pattern: /yarn-rm-orders\.html/i, key: 'yarn-rm-orders', parent: null },
+    { pattern: /yarn-rm-stock\.html\?tab=dashboard/i, key: 'yarn-stock-dashboard-tab', parent: 'yarn-rm-stock' },
+    { pattern: /yarn-rm-stock\.html\?tab=stock-book/i, key: 'yarn-stock-book-tab', parent: 'yarn-rm-stock' },
+    { pattern: /yarn-rm-stock\.html\?tab=analytics/i, key: 'yarn-stock-analytics-tab', parent: 'yarn-rm-stock' },
     { pattern: /yarn-rm-stock\.html/i, key: 'yarn-rm-stock', parent: null },
     { pattern: /yarn-rm-analytics\.html/i, key: 'yarn-rm-analytics', parent: null },
     { pattern: /yarn-production\.html/i, key: 'yarn-production', parent: null },
