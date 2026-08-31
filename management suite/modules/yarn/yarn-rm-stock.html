@@ -1235,10 +1235,6 @@
         <p id="rm-page-subtitle">Raw material stock ledger — Track incoming challans & box-level yarn issuance</p>
       </div>
       <div class="rm-header-actions" id="rm-header-actions-bar">
-        <button class="btn btn-secondary" onclick="openChallanModal()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          Inward Challan
-        </button>
         <button class="btn btn-primary" onclick="openIssueModal()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
           Issue Boxes
@@ -1682,95 +1678,97 @@
       };
     }
 
-    // Initial Data Seed and Auto-heal against Yarn RM Orders
+    // Initial Data Seed and Strict Auto-heal against Yarn RM Orders
     function initSeedData() {
-      // Re-sync directly from yarn-rm-orders if present
+      // Re-sync directly from yarn-rm-orders as the single source of truth for inward lots
       try {
         const rawOrders = localStorage.getItem('yarn-rm-orders');
-        const orders = rawOrders ? JSON.parse(rawOrders) : [];
-        if (Array.isArray(orders) && orders.length > 0) {
-          const rawStock = localStorage.getItem(STORAGE_KEY);
-          let stockList = rawStock ? JSON.parse(rawStock) : [];
-          if (!Array.isArray(stockList)) stockList = [];
+        if (rawOrders !== null) {
+          const orders = JSON.parse(rawOrders);
+          if (Array.isArray(orders)) {
+            const rawStock = localStorage.getItem(STORAGE_KEY);
+            let existingStockList = [];
+            try { existingStockList = JSON.parse(rawStock || '[]'); } catch(e) {}
+            if (!Array.isArray(existingStockList)) existingStockList = [];
 
-          orders.forEach(order => {
-            (order.batches || []).forEach((batch, bIdx) => {
-              const recDateOnly = (batch.receiveDate || new Date().toISOString().split('T')[0]).split('T')[0];
-              const batchChallan = String(batch.challanNumber || '').trim();
-              const batchLot = String(batch.lotNumber || '').trim();
-              const batchId = String(batch.id || `BATCH-${bIdx}`);
-              const orderId = String(order.orderNumber || order.id || '');
-              
-              const lotIdVal = batchLot 
-                ? (batchLot + (batchChallan ? `__${batchChallan}` : `__${batchId}`))
-                : (`LOT-${batchChallan || batchId || bIdx}`);
-
-              const existingIdx = stockList.findIndex(s => 
-                String(s.id) === String(lotIdVal) || 
-                String(s.batchId) === String(batch.id) ||
-                (batchLot && batchChallan && String(s.lotNumber).trim() === batchLot && String(s.challanNo || s.challanNumber).trim() === batchChallan) ||
-                (batchLot && !batchChallan && String(s.lotNumber).trim() === batchLot && String(s.orderRef) === orderId)
-              );
-
-              const existingLot = existingIdx >= 0 ? stockList[existingIdx] : null;
-              const existingBoxMap = existingLot && Array.isArray(existingLot.boxes) 
-                ? new Map(existingLot.boxes.map(b => [String(b.id || b.boxNumber), b])) 
-                : new Map();
-
-              const boxes = (batch.boxes || []).map((bx, idx) => {
-                const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
-                const grossWt = Number(bx.weight) || 0;
-                const retWt = Number(bx.returnedWeight) || 0;
-                const remWt = Math.max(0, grossWt - retWt);
-                const isFullyGr = retWt >= grossWt && grossWt > 0;
-                const isPartialGr = retWt > 0 && !isFullyGr;
-                const oldB = existingBoxMap.get(bId);
-
-                return {
-                  id: bId,
-                  boxNumber: bId,
-                  cones: Number(bx.cones) || 0,
-                  grossWeight: grossWt,
-                  remainingWeight: remWt,
-                  weight: isFullyGr ? grossWt : remWt,
-                  status: isFullyGr ? 'gr' : (oldB?.status === 'issued' ? 'issued' : 'available'),
-                  issueDate: isFullyGr ? null : (oldB?.issueDate || null),
-                  issuedTo: isFullyGr ? null : (oldB?.issuedTo || null),
-                  grWeight: retWt,
-                  grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
-                  grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(2)} kg)` : null)
-                };
+            // Map existing box statuses (issued/date/issuedTo) so issuance state is preserved across order changes
+            const existingBoxMap = new Map();
+            existingStockList.forEach(lot => {
+              (lot.boxes || []).forEach(b => {
+                if (b && (b.id || b.boxNumber)) {
+                  existingBoxMap.set(`${lot.id}__${b.id || b.boxNumber}`, b);
+                  existingBoxMap.set(`${lot.lotNumber}__${lot.challanNo || lot.challanNumber}__${b.id || b.boxNumber}`, b);
+                }
               });
-
-              const updatedLot = {
-                id: existingLot?.id || lotIdVal,
-                batchId: batch.id || '',
-                lotNumber: batchLot || (existingLot?.lotNumber || ('LOT-' + (batchChallan || 'AUTO'))),
-                challanNo: batchChallan || (existingLot?.challanNo || ''),
-                challanNumber: batchChallan || (existingLot?.challanNumber || ''),
-                receiveDate: recDateOnly,
-                date: recDateOnly,
-                supplier: order.supplier || (existingLot?.supplier || ''),
-                quality: order.quality || (existingLot?.quality || ''),
-                itemType: order.category || order.type || 'Polyester',
-                code: order.code || (existingLot?.code || ''),
-                color: order.color || (existingLot?.color || ''),
-                rate: order.price || (existingLot?.rate || ''),
-                orderRef: order.orderNumber || order.id,
-                boxes: boxes
-              };
-
-              if (existingIdx >= 0) {
-                stockList[existingIdx] = updatedLot;
-              } else {
-                stockList.unshift(updatedLot);
-              }
             });
-          });
 
-          stockData = stockList.map(normalizeLot).filter(Boolean);
-          saveStockData();
-          return;
+            const freshStockList = [];
+
+            orders.forEach(order => {
+              (order.batches || []).forEach((batch, bIdx) => {
+                const recDateOnly = (batch.receiveDate || new Date().toISOString().split('T')[0]).split('T')[0];
+                const batchChallan = String(batch.challanNumber || '').trim();
+                const batchLot = String(batch.lotNumber || '').trim();
+                const batchId = String(batch.id || `BATCH-${bIdx}`);
+                const orderId = String(order.orderNumber || order.id || '');
+                
+                const lotIdVal = batchLot 
+                  ? (batchLot + (batchChallan ? `__${batchChallan}` : `__${batchId}`))
+                  : (`LOT-${batchChallan || batchId || bIdx}`);
+
+                const boxes = (batch.boxes || []).map((bx, idx) => {
+                  const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
+                  const grossWt = Number(bx.weight) || 0;
+                  const retWt = Number(bx.returnedWeight) || 0;
+                  const remWt = Math.max(0, grossWt - retWt);
+                  const isFullyGr = retWt >= grossWt && grossWt > 0;
+                  const isPartialGr = retWt > 0 && !isFullyGr;
+                  const oldB = existingBoxMap.get(`${lotIdVal}__${bId}`) || existingBoxMap.get(`${batchLot}__${batchChallan}__${bId}`);
+
+                  return {
+                    id: bId,
+                    boxNumber: bId,
+                    cones: Number(bx.cones) || 0,
+                    grossWeight: grossWt,
+                    remainingWeight: remWt,
+                    weight: isFullyGr ? grossWt : remWt,
+                    status: isFullyGr ? 'gr' : (oldB?.status === 'issued' ? 'issued' : 'available'),
+                    issueDate: isFullyGr ? null : (oldB?.issueDate || null),
+                    issuedTo: isFullyGr ? null : (oldB?.issuedTo || null),
+                    grWeight: retWt,
+                    grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
+                    grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(2)} kg)` : null)
+                  };
+                });
+
+                // Only include lots that actually have boxes
+                if (boxes.length > 0) {
+                  const updatedLot = {
+                    id: lotIdVal,
+                    batchId: batch.id || '',
+                    lotNumber: batchLot || ('LOT-' + (batchChallan || 'AUTO')),
+                    challanNo: batchChallan || '',
+                    challanNumber: batchChallan || '',
+                    receiveDate: recDateOnly,
+                    date: recDateOnly,
+                    supplier: order.supplier || '',
+                    quality: order.quality || '',
+                    itemType: order.category || order.type || 'Polyester',
+                    code: order.code || '',
+                    color: order.color || '',
+                    rate: order.price || '',
+                    orderRef: order.orderNumber || order.id,
+                    boxes: boxes
+                  };
+                  freshStockList.push(updatedLot);
+                }
+              });
+            });
+
+            stockData = freshStockList.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
+            saveStockData();
+            return;
+          }
         }
       } catch(e) {
         console.error('Error auto-syncing from orders:', e);
@@ -1781,11 +1779,11 @@
         try {
           let data = JSON.parse(stored);
           if (Array.isArray(data)) {
-            data = data.filter(item => item && item.id !== 'LOT-8072-01' && item.id !== 'LOT-30C-02' && item.quality !== '80/72 Polyester DTY' && item.quality !== '30s Combed Cotton');
+            data = data.filter(item => item && Array.isArray(item.boxes) && item.boxes.length > 0 && item.id !== 'LOT-8072-01' && item.id !== 'LOT-30C-02' && item.quality !== '80/72 Polyester DTY' && item.quality !== '30s Combed Cotton');
           } else {
             data = [];
           }
-          stockData = data.map(normalizeLot).filter(Boolean);
+          stockData = data.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
           saveStockData();
           return;
         } catch(e) {
@@ -2821,36 +2819,38 @@
           ? `<span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.12); color: var(--error); border-color: rgba(239, 68, 68, 0.3);">✓ COMPLETED (0 Available)</span>`
           : `<span class="badge badge-success">${qAvailBoxes} / ${qTotalBoxes} Boxes Available</span>`;
 
-        groupEl.innerHTML = `
-          <div class="quality-header" oncontextmenu="handleLotContextMenu(event, '${lots[0] ? lots[0].id : ''}')">
-            <div class="quality-title-area" style="flex-wrap: wrap;">
-              <span class="quality-title">${qualityName}</span>
-              ${qItemType ? `<span class="badge" style="background: rgba(139, 92, 246, 0.12); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.3);">${qItemType}</span>` : ''}
-              ${qCode ? `<span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">Code: ${qCode}</span>` : ''}
-              ${qColor ? `<span class="badge" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">Color: ${qColor}</span>` : ''}
-              ${statusBadgeHtml}
+        if (lotsHtml) {
+          groupEl.innerHTML = `
+            <div class="quality-header" oncontextmenu="handleLotContextMenu(event, '${lots[0] ? lots[0].id : ''}')">
+              <div class="quality-title-area" style="flex-wrap: wrap;">
+                <span class="quality-title">${qualityName}</span>
+                ${qItemType ? `<span class="badge" style="background: rgba(139, 92, 246, 0.12); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.3);">${qItemType}</span>` : ''}
+                ${qCode ? `<span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">Code: ${qCode}</span>` : ''}
+                ${qColor ? `<span class="badge" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">Color: ${qColor}</span>` : ''}
+                ${statusBadgeHtml}
+              </div>
+              <div class="quality-summary">
+                <div class="qs-item">
+                  <span class="qs-label">Available Stock</span>
+                  <span class="qs-val" style="color: var(--success);"><strong>${qAvailWeight.toFixed(2)} kg</strong></span>
+                </div>
+                <div class="qs-item">
+                  <span class="qs-label">GR</span>
+                  <span class="qs-val" style="color: var(--accent3);"><strong>${qGrWeight.toFixed(2)} kg</strong></span>
+                </div>
+                <div class="qs-item">
+                  <span class="qs-label">Used</span>
+                  <span class="qs-val" style="color: var(--error);"><strong>${qIssuedWeight.toFixed(2)} kg</strong></span>
+                </div>
+              </div>
             </div>
-            <div class="quality-summary">
-              <div class="qs-item">
-                <span class="qs-label">Available Stock</span>
-                <span class="qs-val" style="color: var(--success);"><strong>${qAvailWeight.toFixed(2)} kg</strong></span>
-              </div>
-              <div class="qs-item">
-                <span class="qs-label">GR</span>
-                <span class="qs-val" style="color: var(--accent3);"><strong>${qGrWeight.toFixed(2)} kg</strong></span>
-              </div>
-              <div class="qs-item">
-                <span class="qs-label">Used</span>
-                <span class="qs-val" style="color: var(--error);"><strong>${qIssuedWeight.toFixed(2)} kg</strong></span>
-              </div>
+            <div class="quality-lots">
+              ${lotsHtml}
             </div>
-          </div>
-          <div class="quality-lots">
-            ${lotsHtml}
-          </div>
-        `;
+          `;
 
-        container.appendChild(groupEl);
+          container.appendChild(groupEl);
+        }
       });
 
       // Update floating issue button visibility and count based on selectedBoxes
@@ -3267,7 +3267,8 @@
     });
 
     window.addEventListener('storage', (e) => {
-      if (e.key === 'yarn-suppliers' || e.key === 'yarn-qualities' || e.key === STORAGE_KEY || (e.key && e.key.startsWith('yarn_'))) {
+      if (e.key === 'yarn-rm-orders' || e.key === 'yarn-suppliers' || e.key === 'yarn-qualities' || e.key === STORAGE_KEY || (e.key && e.key.startsWith('yarn_'))) {
+        initSeedData();
         populateSupplierDropdown();
         if (currentStockTab === 'dashboard') {
           renderStockDashboard();
