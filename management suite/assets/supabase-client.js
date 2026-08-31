@@ -2143,6 +2143,153 @@
               }
             }
 
+            // Dedicated Relational Synchronization for Weaving Loom Production Logs
+            if (key === 'productionLogs' && Array.isArray(value) && value.length > 0) {
+              try {
+                const prodRows = value.map(l => {
+                  if (!l || !l.productionDate || !l.machineNumber) return null;
+                  const logId = String(l.id || `PROD-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
+                  const prodDate = (l.productionDate || new Date().toISOString().split('T')[0]).split('T')[0];
+                  const pissDate = l.pissingDate ? String(l.pissingDate).split('T')[0] : null;
+                  const foldDate = l.foldingDate ? String(l.foldingDate).split('T')[0] : null;
+                  return {
+                    id: logId,
+                    production_date: prodDate,
+                    machine_number: String(l.machineNumber).trim(),
+                    beam_number: l.beamNumber ? String(l.beamNumber).trim() : null,
+                    secondary_beam_number: l.secondaryBeamNumber ? String(l.secondaryBeamNumber).trim() : null,
+                    pissing_date: pissDate,
+                    pissing_person: l.pissingPerson || null,
+                    day_worker: l.dayWorker || null,
+                    day_shift_hours: parseFloat(l.dayShiftHours) || 0,
+                    day_meters: parseFloat(l.dayMeters) || 0,
+                    night_worker: l.nightWorker || null,
+                    night_shift_hours: parseFloat(l.nightShiftHours) || 0,
+                    night_meters: parseFloat(l.nightMeters) || 0,
+                    picks: parseInt(l.picks, 10) || 0,
+                    product: l.product || null,
+                    total_meters: parseFloat(l.totalMeters) || 0,
+                    taka_serial: l.takaSerial ? String(l.takaSerial).trim() : null,
+                    folding_date: foldDate,
+                    taka_weight: l.takaWeight !== null && l.takaWeight !== undefined ? parseFloat(l.takaWeight) : null,
+                    taka_assign_id: l.takaAssignId || null,
+                    is_tp_roll: Boolean(l.isTpRoll),
+                    tp_source_serials: Array.isArray(l.tpSourceSerials) ? l.tpSourceSerials : [],
+                    updated_at: nowIso
+                  };
+                }).filter(Boolean);
+
+                if (prodRows.length > 0) {
+                  for (let i = 0; i < prodRows.length; i += 300) {
+                    const chunk = prodRows.slice(i, i + 300);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_weaving_production_logs?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(e) {
+                console.warn('Weaving Production Relational Sync notice:', e);
+              }
+            }
+
+            // Dedicated Relational Synchronization for Yarn Production Logs (Covering, TFO, Doubler)
+            if (key.startsWith('yarn_') && key.endsWith('_production_logs') && Array.isArray(value) && value.length > 0) {
+              try {
+                const division = key.replace('yarn_', '').replace('_production_logs', '');
+                const yarnProdRows = value.map(yp => {
+                  if (!yp || !yp.boriNo) return null;
+                  const ypId = String(yp.id || `YP-${division}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
+                  const ypDate = (yp.date || new Date().toISOString().split('T')[0]).split('T')[0];
+                  return {
+                    id: ypId,
+                    division: division,
+                    date: ypDate,
+                    bori_no: String(yp.boriNo).trim(),
+                    product_name: String(yp.productName || '').trim(),
+                    product_id: yp.productId || null,
+                    lot_no: yp.lotNo ? String(yp.lotNo).trim() : null,
+                    color: yp.color || null,
+                    denier: parseFloat(yp.denier) || null,
+                    tpm: parseInt(yp.tpm, 10) || null,
+                    twist: yp.twist || null,
+                    rolls: parseInt(yp.rolls, 10) || 0,
+                    qty: parseFloat(yp.qty) || 0,
+                    config_type: yp.configType || null,
+                    ply: yp.ply ? String(yp.ply) : null,
+                    yarns: Array.isArray(yp.yarns) ? yp.yarns : [],
+                    updated_at: nowIso
+                  };
+                }).filter(Boolean);
+
+                if (yarnProdRows.length > 0) {
+                  for (let i = 0; i < yarnProdRows.length; i += 300) {
+                    const chunk = yarnProdRows.slice(i, i + 300);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(e) {
+                console.warn('Yarn Production Relational Sync notice:', e);
+              }
+            }
+
+            // Dedicated Relational Synchronization for Yarn Sales Logs (Covering, TFO, Doubler)
+            if (key.startsWith('yarn_') && key.endsWith('_sales_logs') && Array.isArray(value) && value.length > 0) {
+              try {
+                const division = key.replace('yarn_', '').replace('_sales_logs', '');
+                const yarnSaleRows = value.map(ys => {
+                  if (!ys) return null;
+                  const ysId = String(ys.id || `YS-${division}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
+                  const ysDate = (ys.date || ys.saleDate || new Date().toISOString().split('T')[0]).split('T')[0];
+                  return {
+                    id: ysId,
+                    division: division,
+                    sale_date: ysDate,
+                    challan_no: ys.challanNo ? String(ys.challanNo).trim() : null,
+                    customer_name: String(ys.customerName || ys.customer || 'Unknown').trim(),
+                    items: Array.isArray(ys.items) ? ys.items : [],
+                    total_qty: parseFloat(ys.totalQty || ys.saleQty || ys.qty) || 0,
+                    total_amount: parseFloat(ys.totalAmount || ys.amount) || 0,
+                    gst_amount: parseFloat(ys.gstAmount || ys.gst) || 0,
+                    updated_at: nowIso
+                  };
+                }).filter(Boolean);
+
+                if (yarnSaleRows.length > 0) {
+                  for (let i = 0; i < yarnSaleRows.length; i += 300) {
+                    const chunk = yarnSaleRows.slice(i, i + 300);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_sales_logs?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(e) {
+                console.warn('Yarn Sales Relational Sync notice:', e);
+              }
+            }
+
             setSyncStatus(ws && ws.readyState === WebSocket.OPEN ? 'connected' : 'offline');
           } catch (err) {
             console.error('Supabase set error:', err);
@@ -3039,6 +3186,135 @@
               console.warn('Warp Beam Loadings relational reconciliation notice:', blErr);
             }
 
+            // Reconcile Dedicated Weaving Production Logs Relational Table
+            try {
+              const dbWeavLogs = await fetchAllRowsPaginated('vf_weaving_production_logs', '*', 'order=production_date.desc');
+              if (Array.isArray(dbWeavLogs) && dbWeavLogs.length > 0) {
+                const reconstructedWeavLogs = dbWeavLogs.map(l => ({
+                  id: isNaN(Number(l.id)) ? l.id : Number(l.id),
+                  productionDate: l.production_date,
+                  machineNumber: l.machine_number,
+                  beamNumber: l.beam_number || '',
+                  secondaryBeamNumber: l.secondary_beam_number || '',
+                  pissingDate: l.pissing_date || '',
+                  pissingPerson: l.pissing_person || '',
+                  dayWorker: l.day_worker || '',
+                  dayShiftHours: Number(l.day_shift_hours) || 0,
+                  dayMeters: Number(l.day_meters) || 0,
+                  nightWorker: l.night_worker || '',
+                  nightShiftHours: Number(l.night_shift_hours) || 0,
+                  nightMeters: Number(l.night_meters) || 0,
+                  picks: Number(l.picks) || 0,
+                  product: l.product || '',
+                  totalMeters: Number(l.total_meters) || 0,
+                  takaSerial: l.taka_serial || null,
+                  foldingDate: l.folding_date || null,
+                  takaWeight: l.taka_weight !== null ? Number(l.taka_weight) : null,
+                  takaAssignId: l.taka_assign_id || null,
+                  isTpRoll: Boolean(l.is_tp_roll),
+                  tpSourceSerials: Array.isArray(l.tp_source_serials) ? l.tp_source_serials : []
+                }));
+
+                const weavKey = 'productionLogs';
+                const weavStr = JSON.stringify(reconstructedWeavLogs);
+                const lastWeavWrite = lastLocalWrites[weavKey] || 0;
+                if (Date.now() - lastWeavWrite >= 3000) {
+                  cache[weavKey] = weavStr;
+                  lastSavedHashes[weavKey] = computeHash(weavStr);
+                  safeLocalStorageSet(weavKey, weavStr);
+                  if (!updatedKeys.includes(weavKey)) updatedKeys.push(weavKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (weavErr) {
+              console.warn('Weaving Production relational reconciliation notice:', weavErr);
+            }
+
+            // Reconcile Dedicated Yarn Production Logs Relational Table
+            try {
+              const dbYarnProd = await fetchAllRowsPaginated('vf_yarn_production_logs', '*', 'order=date.desc');
+              if (Array.isArray(dbYarnProd) && dbYarnProd.length > 0) {
+                const divisions = ['covering', 'tfo', 'doubler'];
+                divisions.forEach(div => {
+                  const divRows = dbYarnProd.filter(r => (r.division || '').toLowerCase() === div);
+                  if (divRows.length > 0) {
+                    const reconstructed = divRows.map(yp => ({
+                      id: yp.id,
+                      date: yp.date,
+                      boriNo: yp.bori_no,
+                      productName: yp.product_name,
+                      productId: yp.product_id || '',
+                      lotNo: yp.lot_no || '',
+                      color: yp.color || '',
+                      denier: yp.denier !== null ? Number(yp.denier) : '',
+                      tpm: yp.tpm !== null ? Number(yp.tpm) : '',
+                      twist: yp.twist || '',
+                      rolls: Number(yp.rolls) || 0,
+                      qty: Number(yp.qty) || 0,
+                      configType: yp.config_type || '',
+                      ply: yp.ply || '',
+                      yarns: Array.isArray(yp.yarns) ? yp.yarns : []
+                    }));
+
+                    const ypKey = `yarn_${div}_production_logs`;
+                    const ypStr = JSON.stringify(reconstructed);
+                    const lastYpWrite = lastLocalWrites[ypKey] || 0;
+                    if (Date.now() - lastYpWrite >= 3000) {
+                      cache[ypKey] = ypStr;
+                      lastSavedHashes[ypKey] = computeHash(ypStr);
+                      safeLocalStorageSet(ypKey, ypStr);
+                      if (!updatedKeys.includes(ypKey)) updatedKeys.push(ypKey);
+                      hasChanges = true;
+                    }
+                  }
+                });
+              }
+            } catch (ypErr) {
+              console.warn('Yarn Production relational reconciliation notice:', ypErr);
+            }
+
+            // Reconcile Dedicated Yarn Sales Logs Relational Table
+            try {
+              const dbYarnSales = await fetchAllRowsPaginated('vf_yarn_sales_logs', '*', 'order=sale_date.desc');
+              if (Array.isArray(dbYarnSales) && dbYarnSales.length > 0) {
+                const divisions = ['covering', 'tfo', 'doubler'];
+                divisions.forEach(div => {
+                  const divRows = dbYarnSales.filter(r => (r.division || '').toLowerCase() === div);
+                  if (divRows.length > 0) {
+                    const reconstructed = divRows.map(ys => ({
+                      id: ys.id,
+                      saleDate: ys.sale_date,
+                      date: ys.sale_date,
+                      challanNo: ys.challan_no || '',
+                      customerName: ys.customer_name,
+                      customer: ys.customer_name,
+                      items: Array.isArray(ys.items) ? ys.items : [],
+                      totalQty: Number(ys.total_qty) || 0,
+                      saleQty: Number(ys.total_qty) || 0,
+                      qty: Number(ys.total_qty) || 0,
+                      totalAmount: Number(ys.total_amount) || 0,
+                      amount: Number(ys.total_amount) || 0,
+                      gstAmount: Number(ys.gst_amount) || 0,
+                      gst: Number(ys.gst_amount) || 0
+                    }));
+
+                    const ysKey = `yarn_${div}_sales_logs`;
+                    const ysStr = JSON.stringify(reconstructed);
+                    const lastYsWrite = lastLocalWrites[ysKey] || 0;
+                    if (Date.now() - lastYsWrite >= 3000) {
+                      cache[ysKey] = ysStr;
+                      lastSavedHashes[ysKey] = computeHash(ysStr);
+                      safeLocalStorageSet(ysKey, ysStr);
+                      if (!updatedKeys.includes(ysKey)) updatedKeys.push(ysKey);
+                      hasChanges = true;
+                    }
+                  }
+                });
+              }
+            } catch (ysErr) {
+              console.warn('Yarn Sales relational reconciliation notice:', ysErr);
+            }
+
             isHydrated = true;
             window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
 
@@ -3327,6 +3603,132 @@
       if (!issueId || !activeConfig.isConfigured || !SUPABASE_URL) return;
       try {
         await fetch(`${SUPABASE_URL}/rest/v1/vf_weft_issues?id=eq.${encodeURIComponent(issueId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    // --- Enterprise Weaving Production Logs Relational APIs ---
+    async fetchWeavingProductionRelational() {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const rows = await fetchAllRowsPaginated('vf_weaving_production_logs', '*', 'order=production_date.desc');
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        return rows.map(l => ({
+          id: isNaN(Number(l.id)) ? l.id : Number(l.id),
+          productionDate: l.production_date,
+          machineNumber: l.machine_number,
+          beamNumber: l.beam_number || '',
+          secondaryBeamNumber: l.secondary_beam_number || '',
+          pissingDate: l.pissing_date || '',
+          pissingPerson: l.pissing_person || '',
+          dayWorker: l.day_worker || '',
+          dayShiftHours: Number(l.day_shift_hours) || 0,
+          dayMeters: Number(l.day_meters) || 0,
+          nightWorker: l.night_worker || '',
+          nightShiftHours: Number(l.night_shift_hours) || 0,
+          nightMeters: Number(l.night_meters) || 0,
+          picks: Number(l.picks) || 0,
+          product: l.product || '',
+          totalMeters: Number(l.total_meters) || 0,
+          takaSerial: l.taka_serial || null,
+          foldingDate: l.folding_date || null,
+          takaWeight: l.taka_weight !== null ? Number(l.taka_weight) : null,
+          takaAssignId: l.taka_assign_id || null,
+          isTpRoll: Boolean(l.is_tp_roll),
+          tpSourceSerials: Array.isArray(l.tp_source_serials) ? l.tp_source_serials : []
+        }));
+      } catch(e) {
+        console.error('fetchWeavingProductionRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteWeavingProductionLogRelational(logId) {
+      if (!logId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_weaving_production_logs?id=eq.${encodeURIComponent(logId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    // --- Enterprise Yarn Production & Sales Relational APIs ---
+    async fetchYarnProductionRelational(division) {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const query = division ? `division=eq.${encodeURIComponent(division)}&order=date.desc` : 'order=date.desc';
+        const rows = await fetchAllRowsPaginated('vf_yarn_production_logs', '*', query);
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        return rows.map(yp => ({
+          id: yp.id,
+          division: yp.division,
+          date: yp.date,
+          boriNo: yp.bori_no,
+          productName: yp.product_name,
+          productId: yp.product_id || '',
+          lotNo: yp.lot_no || '',
+          color: yp.color || '',
+          denier: yp.denier !== null ? Number(yp.denier) : '',
+          tpm: yp.tpm !== null ? Number(yp.tpm) : '',
+          twist: yp.twist || '',
+          rolls: Number(yp.rolls) || 0,
+          qty: Number(yp.qty) || 0,
+          configType: yp.config_type || '',
+          ply: yp.ply || '',
+          yarns: Array.isArray(yp.yarns) ? yp.yarns : []
+        }));
+      } catch(e) {
+        console.error('fetchYarnProductionRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteYarnProductionLogRelational(logId) {
+      if (!logId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?id=eq.${encodeURIComponent(logId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    async fetchYarnSalesRelational(division) {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const query = division ? `division=eq.${encodeURIComponent(division)}&order=sale_date.desc` : 'order=sale_date.desc';
+        const rows = await fetchAllRowsPaginated('vf_yarn_sales_logs', '*', query);
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        return rows.map(ys => ({
+          id: ys.id,
+          division: ys.division,
+          saleDate: ys.sale_date,
+          date: ys.sale_date,
+          challanNo: ys.challan_no || '',
+          customerName: ys.customer_name,
+          customer: ys.customer_name,
+          items: Array.isArray(ys.items) ? ys.items : [],
+          totalQty: Number(ys.total_qty) || 0,
+          saleQty: Number(ys.total_qty) || 0,
+          qty: Number(ys.total_qty) || 0,
+          totalAmount: Number(ys.total_amount) || 0,
+          amount: Number(ys.total_amount) || 0,
+          gstAmount: Number(ys.gst_amount) || 0,
+          gst: Number(ys.gst_amount) || 0
+        }));
+      } catch(e) {
+        console.error('fetchYarnSalesRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteYarnSaleLogRelational(saleId) {
+      if (!saleId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_sales_logs?id=eq.${encodeURIComponent(saleId)}`, {
           method: 'DELETE',
           headers: this.getAuthHeaders()
         });

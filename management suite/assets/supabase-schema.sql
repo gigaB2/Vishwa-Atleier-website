@@ -458,6 +458,85 @@ CREATE INDEX IF NOT EXISTS idx_vf_warp_loadings_beam ON public.vf_warp_beam_load
 CREATE INDEX IF NOT EXISTS idx_vf_warp_loadings_machine ON public.vf_warp_beam_loadings(machine_number);
 CREATE INDEX IF NOT EXISTS idx_vf_warp_loadings_date ON public.vf_warp_beam_loadings(date DESC);
 
+-- 18. Dedicated Relational Table: Weaving Loom Production Logs & Takas
+CREATE TABLE IF NOT EXISTS public.vf_weaving_production_logs (
+    id TEXT PRIMARY KEY,
+    production_date DATE NOT NULL,
+    machine_number TEXT NOT NULL,
+    beam_number TEXT,
+    secondary_beam_number TEXT,
+    pissing_date DATE,
+    pissing_person TEXT,
+    day_worker TEXT,
+    day_shift_hours NUMERIC(4, 2) DEFAULT 0,
+    day_meters NUMERIC(10, 2) DEFAULT 0,
+    night_worker TEXT,
+    night_shift_hours NUMERIC(4, 2) DEFAULT 0,
+    night_meters NUMERIC(10, 2) DEFAULT 0,
+    picks INTEGER DEFAULT 0,
+    product TEXT,
+    total_meters NUMERIC(10, 2) DEFAULT 0,
+    taka_serial TEXT,
+    folding_date DATE,
+    taka_weight NUMERIC(10, 3),
+    taka_assign_id TEXT,
+    is_tp_roll BOOLEAN DEFAULT false,
+    tp_source_serials JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_weav_prod_date ON public.vf_weaving_production_logs(production_date DESC);
+CREATE INDEX IF NOT EXISTS idx_vf_weav_prod_machine ON public.vf_weaving_production_logs(machine_number);
+CREATE INDEX IF NOT EXISTS idx_vf_weav_prod_beam ON public.vf_weaving_production_logs(beam_number);
+CREATE INDEX IF NOT EXISTS idx_vf_weav_prod_taka ON public.vf_weaving_production_logs(taka_serial);
+CREATE INDEX IF NOT EXISTS idx_vf_weav_prod_product ON public.vf_weaving_production_logs(product);
+
+-- 19. Dedicated Relational Table: Yarn Production Logs (Covering, TFO, Doubler)
+CREATE TABLE IF NOT EXISTS public.vf_yarn_production_logs (
+    id TEXT PRIMARY KEY,
+    division TEXT NOT NULL,
+    date DATE NOT NULL,
+    bori_no TEXT NOT NULL,
+    product_name TEXT NOT NULL,
+    product_id TEXT,
+    lot_no TEXT,
+    color TEXT,
+    denier NUMERIC(10, 2),
+    tpm INTEGER,
+    twist TEXT,
+    rolls INTEGER DEFAULT 0,
+    qty NUMERIC(10, 3) NOT NULL DEFAULT 0,
+    config_type TEXT,
+    ply TEXT,
+    yarns JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_prod_div ON public.vf_yarn_production_logs(division);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_prod_date ON public.vf_yarn_production_logs(date DESC);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_prod_bori ON public.vf_yarn_production_logs(bori_no);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_prod_prod ON public.vf_yarn_production_logs(product_name);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_prod_lot ON public.vf_yarn_production_logs(lot_no);
+
+-- 20. Dedicated Relational Table: Yarn Sales Logs (Covering, TFO, Doubler)
+CREATE TABLE IF NOT EXISTS public.vf_yarn_sales_logs (
+    id TEXT PRIMARY KEY,
+    division TEXT NOT NULL,
+    sale_date DATE NOT NULL,
+    challan_no TEXT,
+    customer_name TEXT NOT NULL,
+    items JSONB DEFAULT '[]'::jsonb,
+    total_qty NUMERIC(10, 3) DEFAULT 0,
+    total_amount NUMERIC(12, 2) DEFAULT 0,
+    gst_amount NUMERIC(12, 2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_sales_div ON public.vf_yarn_sales_logs(division);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_sales_date ON public.vf_yarn_sales_logs(sale_date DESC);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_sales_cust ON public.vf_yarn_sales_logs(customer_name);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_sales_challan ON public.vf_yarn_sales_logs(challan_no);
+
 -- ==============================================================================
 -- Row Level Security (RLS) Configuration
 -- ==============================================================================
@@ -478,6 +557,9 @@ ALTER TABLE public.vf_weft_issues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_warp_beams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_warp_issues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_warp_beam_loadings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_weaving_production_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_production_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_sales_logs ENABLE ROW LEVEL SECURITY;
 
 -- Dynamic Policy Configuration:
 -- Production Mode: Allows read/write for all authenticated API requests & anon key (matching client tokens)
@@ -562,6 +644,21 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_warp_beam_loadings' AND policyname = 'Allow public access to vf_warp_beam_loadings') THEN
         CREATE POLICY "Allow public access to vf_warp_beam_loadings" ON public.vf_warp_beam_loadings FOR ALL USING (true) WITH CHECK (true);
     END IF;
+
+    -- 17. vf_weaving_production_logs
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_weaving_production_logs' AND policyname = 'Allow public access to vf_weaving_production_logs') THEN
+        CREATE POLICY "Allow public access to vf_weaving_production_logs" ON public.vf_weaving_production_logs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 18. vf_yarn_production_logs
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_production_logs' AND policyname = 'Allow public access to vf_yarn_production_logs') THEN
+        CREATE POLICY "Allow public access to vf_yarn_production_logs" ON public.vf_yarn_production_logs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 19. vf_yarn_sales_logs
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_sales_logs' AND policyname = 'Allow public access to vf_yarn_sales_logs') THEN
+        CREATE POLICY "Allow public access to vf_yarn_sales_logs" ON public.vf_yarn_sales_logs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
 END $$;
 
 -- ==============================================================================
@@ -605,6 +702,9 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_warp_beams;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_warp_issues;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_warp_beam_loadings;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_weaving_production_logs;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_production_logs;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_sales_logs;
     END IF;
 EXCEPTION
     WHEN duplicate_object THEN NULL;
