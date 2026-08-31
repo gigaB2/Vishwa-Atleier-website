@@ -1215,14 +1215,24 @@
 
       // Auto-heal and sync all orders and batches into Yarn RM Stock Book
       useEffect(() => {
-        if (!Array.isArray(orders) || orders.length === 0) return;
+        if (!Array.isArray(orders)) return;
         try {
           const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
           let stockList = rawStock ? JSON.parse(rawStock) : [];
           if (!Array.isArray(stockList)) stockList = [];
 
           let changed = false;
+          const activeLotKeys = new Set();
+          const activeOrderRefs = new Set();
+
           orders.forEach(order => {
+            const orderRefId = String(order.orderNumber || order.id || '');
+            if (orderRefId) {
+              activeOrderRefs.add(orderRefId);
+              activeOrderRefs.add(String(order.id));
+              if (order.orderNumber) activeOrderRefs.add(String(order.orderNumber));
+            }
+
             (order.batches || []).forEach((batch, bIdx) => {
               const recDateOnly = (batch.receiveDate || new Date().toISOString().split('T')[0]).split('T')[0];
               const batchChallan = String(batch.challanNumber || '').trim();
@@ -1234,6 +1244,10 @@
               const lotIdVal = batch.lotNumber 
                 ? (batch.lotNumber + (batchChallan ? `__${batchChallan}` : `__${batchId}`))
                 : (`LOT-${batchChallan || batchId || bIdx}`);
+
+              activeLotKeys.add(lotIdVal);
+              if (batch.id) activeLotKeys.add(String(batch.id));
+              if (batchLot && batchChallan) activeLotKeys.add(`${batchLot}__${batchChallan}`);
               
               // Find existing lot by exact lotIdVal, batchId, or matching lotNumber AND challanNumber
               const existingIdx = stockList.findIndex(s => 
@@ -1299,6 +1313,21 @@
               changed = true;
             });
           });
+
+          // Clean up stock lots belonging to deleted orders or deleted batches
+          const initialLen = stockList.length;
+          stockList = stockList.filter(lot => {
+            if (!lot || !lot.orderRef) return true; // Keep manual lots not linked to orders
+            if (!activeOrderRefs.has(String(lot.orderRef))) return false; // Order was deleted
+            if (lot.batchId && !activeLotKeys.has(String(lot.batchId))) return false; // Batch was deleted
+            const rawChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+            const rawLot = String(lot.lotNumber || '').trim();
+            if (rawLot && rawChallan && !activeLotKeys.has(`${rawLot}__${rawChallan}`) && !activeLotKeys.has(String(lot.id))) {
+              return false; // Batch with lot and challan was deleted
+            }
+            return true;
+          });
+          if (stockList.length !== initialLen) changed = true;
 
           if (changed) {
             localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
@@ -2666,7 +2695,13 @@
               const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
               let stockList = rawStock ? JSON.parse(rawStock) : [];
               if (Array.isArray(stockList)) {
-                stockList = stockList.filter(s => String(s.id) !== String(delBatch.lotNumber) && String(s.lotNumber) !== String(delBatch.lotNumber) && String(s.challanNo || s.challanNumber) !== String(delBatch.challanNumber));
+                stockList = stockList.filter(s => 
+                  String(s.batchId) !== String(batchId) &&
+                  String(s.id) !== String(batchId) &&
+                  String(s.id) !== String(delBatch.lotNumber) &&
+                  String(s.lotNumber) !== String(delBatch.lotNumber) &&
+                  String(s.challanNo || s.challanNumber) !== String(delBatch.challanNumber)
+                );
                 localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
                 if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
                   window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
@@ -3220,6 +3255,7 @@
               }} />
               <input type="date" style={inputStyle(invalidFields[`grDate-${i}`])} value={box.returnedDate || ''} disabled={!box.returnedWeight} min={receiveDate} onChange={e => { let n = [...boxInputs]; n[i] = { ...n[i], returnedDate: e.target.value }; setBoxInputs(n); }} />
               <button 
+                type="button"
                 className="btn btn-outline" 
                 style={{ padding: '0.4rem', color: 'var(--error)', borderColor: 'transparent', width: '32px', height: '32px', justifyContent: 'center' }}
                 onClick={() => {
@@ -3233,7 +3269,7 @@
             </div>
           ))}
           
-          <button className="btn btn-outline" style={{width: '100%', marginTop: '0.5rem'}} onClick={() => setBoxInputs([...boxInputs, { boxNumber: `B${boxInputs.length + 1}`, cones: '', weight: '', returnedWeight: '', returnedDate: '' }])}>
+          <button type="button" className="btn btn-outline" style={{width: '100%', marginTop: '0.5rem'}} onClick={() => setBoxInputs([...boxInputs, { boxNumber: `B${boxInputs.length + 1}`, cones: '', weight: '', returnedWeight: '', returnedDate: '' }])}>
             + Add Box
           </button>
           
