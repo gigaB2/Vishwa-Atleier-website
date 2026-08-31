@@ -805,6 +805,15 @@
     .dark-mode .heat-level-5 { background-color: rgba(124, 58, 237, 1); }
 
     @media (max-width: 1024px) {
+      .ob-summary-row {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+      }
+
+      .ob-summary-row .card:hover {
+        transform: none;
+      }
+
       .app-container.ob-heatmap-page {
         height: auto !important;
         max-height: none !important;
@@ -1928,7 +1937,7 @@
               </div>
 
               {/* 3 Summary Cards matching order-book.html */}
-              <div className="ob-summary-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+              <div className="ob-summary-row">
                 <div className="card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                     <h3 style={{ fontSize: '1rem' }}>Active orders</h3>
