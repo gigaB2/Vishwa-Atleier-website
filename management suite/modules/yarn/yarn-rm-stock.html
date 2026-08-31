@@ -1122,7 +1122,7 @@
           issueDate: isFullyGr ? null : (b.issueDate || null),
           issuedTo: isFullyGr ? null : (b.issuedTo || null),
           grDate: grWeight > 0 ? (b.grDate || b.returnedDate || null) : null,
-          grRemarks: isFullyGr ? (b.grRemarks || 'Fully Returned in Challan GR') : (isPartialGr ? `Partial GR (-${grWeight.toFixed(1)} kg)` : null),
+          grRemarks: isFullyGr ? (b.grRemarks || 'Fully Returned in Challan GR') : (isPartialGr ? `Partial GR (-${grWeight.toFixed(2)} kg)` : null),
           grWeight: grWeight
         };
       }) : [];
@@ -1738,13 +1738,14 @@
       boxRowCount++;
       const rowId = `box-row-${boxRowCount}`;
       const defaultBoxNum = boxNum || `B${boxRowCount}`;
+      const formattedWeight = (weight !== '' && !isNaN(weight)) ? Number(weight).toFixed(2) : weight;
       
       const tr = document.createElement('tr');
       tr.id = rowId;
       tr.style.borderBottom = '1px solid var(--border)';
       tr.innerHTML = `
         <td style="padding: 0.35rem;"><input type="text" class="form-control row-box-num" value="${defaultBoxNum}" style="padding: 0.3rem 0.5rem; font-size: 0.85rem;" required></td>
-        <td style="padding: 0.35rem;"><input type="number" step="0.01" class="form-control row-weight" value="${weight}" placeholder="e.g. 50.0" style="padding: 0.3rem 0.5rem; font-size: 0.85rem;" required></td>
+        <td style="padding: 0.35rem;"><input type="number" step="0.01" class="form-control row-weight" value="${formattedWeight}" placeholder="e.g. 50.00" style="padding: 0.3rem 0.5rem; font-size: 0.85rem;" required></td>
         <td style="padding: 0.35rem; text-align: center;">
           <button type="button" onclick="removeChallanBoxRow('${rowId}')" style="background: transparent; border: none; color: var(--error); cursor: pointer; font-weight: bold; font-size: 1.1rem;">&times;</button>
         </td>
@@ -2197,20 +2198,20 @@
             let tooltipText = '';
 
             if (isFullyGr) {
-              weightHtml = `<span class="box-weight" style="color: var(--accent3); font-weight: 700;">-${gr.toFixed(1)} kg</span><span class="box-gr-pill">FULL GR</span>`;
-              tooltipText = `GR (Fully Returned): -${gr.toFixed(1)} kg on ${formatDateDisplay(box.grDate)} ${box.grRemarks ? `(${box.grRemarks})` : ''}`;
+              weightHtml = `<span class="box-weight" style="color: var(--accent3); font-weight: 700;">-${gr.toFixed(2)} kg</span><span class="box-gr-pill">FULL GR</span>`;
+              tooltipText = `GR (Fully Returned): -${gr.toFixed(2)} kg on ${formatDateDisplay(box.grDate)} ${box.grRemarks ? `(${box.grRemarks})` : ''}`;
             } else if (isPartialGr) {
               weightHtml = `
-                <span class="box-weight" style="font-weight: 700; color: ${box.status === 'issued' ? '#3b82f6' : 'var(--success)'};">${rem.toFixed(1)} kg</span>
-                <span class="box-gr-pill">(-${gr.toFixed(1)} GR)</span>
+                <span class="box-weight" style="font-weight: 700; color: ${box.status === 'issued' ? '#3b82f6' : 'var(--success)'};">${rem.toFixed(2)} kg</span>
+                <span class="box-gr-pill">(-${gr.toFixed(2)} GR)</span>
               `;
-              tooltipText = `Remaining Qty: ${rem.toFixed(1)} kg (Original Gross: ${gross.toFixed(1)} kg, Returned GR: -${gr.toFixed(1)} kg on ${formatDateDisplay(box.grDate)})`;
+              tooltipText = `Remaining Qty: ${rem.toFixed(2)} kg (Original Gross: ${gross.toFixed(2)} kg, Returned GR: -${gr.toFixed(2)} kg on ${formatDateDisplay(box.grDate)})`;
             } else if (box.status === 'issued') {
-              weightHtml = `<span class="box-weight" style="color: #3b82f6; font-weight: 600;">${rem.toFixed(1)} kg</span><span style="font-size: 0.65rem; font-weight: 700; color: #3b82f6;">ISSUED</span>`;
+              weightHtml = `<span class="box-weight" style="color: #3b82f6; font-weight: 600;">${rem.toFixed(2)} kg</span><span style="font-size: 0.65rem; font-weight: 700; color: #3b82f6;">ISSUED</span>`;
               tooltipText = `Issued to: ${box.issuedTo || 'Unknown'} on ${formatDateDisplay(box.issueDate)}`;
             } else {
-              weightHtml = `<span class="box-weight">${rem.toFixed(1)} kg</span>`;
-              tooltipText = `Available Qty: ${rem.toFixed(1)} kg ${box.cones ? `(${box.cones} cones)` : ''} (Click to Select)`;
+              weightHtml = `<span class="box-weight">${rem.toFixed(2)} kg</span>`;
+              tooltipText = `Available Qty: ${rem.toFixed(2)} kg ${box.cones ? `(${box.cones} cones)` : ''} (Click to Select)`;
             }
 
             const dateLabel = box.status === 'issued' 
