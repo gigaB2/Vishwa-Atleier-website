@@ -1800,23 +1800,7 @@
                 {view === 'orders' ? 'Yarn RM Orders' : view === 'analytics' ? 'Yarn Order Analytics' : 'Yarn Delivery Heat Map'}
               </span>
             </div>
-            <div className="ob-header-actions" style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>
-              <button 
-                className="btn btn-outline" 
-                onClick={performUndo} 
-                title="Undo last change (Ctrl+Z)"
-                style={{padding: '0.55rem 0.9rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem'}}
-              >
-                <span>↩</span> Undo <kbd style={{fontSize: '0.7rem', opacity: 0.7, padding: '0.1rem 0.3rem', background: 'rgba(0,0,0,0.06)', borderRadius: '4px'}}>Ctrl+Z</kbd>
-              </button>
-              <button 
-                className="btn btn-outline" 
-                onClick={performRedo} 
-                title="Redo change (Ctrl+Y or Ctrl+Shift+Z)"
-                style={{padding: '0.55rem 0.9rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem'}}
-              >
-                <span>↪</span> Redo <kbd style={{fontSize: '0.7rem', opacity: 0.7, padding: '0.1rem 0.3rem', background: 'rgba(0,0,0,0.06)', borderRadius: '4px'}}>Ctrl+Y</kbd>
-              </button>
+            <div className="ob-header-actions" style={{display: 'flex', gap: '0.75rem', alignItems: 'center'}}>
               {view === 'orders' && (
                 <button className="btn btn-primary" onClick={() => setShowOrderModal(true)}>
                   + Add New Order
