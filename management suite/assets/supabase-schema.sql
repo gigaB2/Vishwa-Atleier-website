@@ -537,6 +537,41 @@ CREATE INDEX IF NOT EXISTS idx_vf_yarn_sales_date ON public.vf_yarn_sales_logs(s
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_sales_cust ON public.vf_yarn_sales_logs(customer_name);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_sales_challan ON public.vf_yarn_sales_logs(challan_no);
 
+-- 21. Dedicated Relational Table: Fabric Dispatches & Outsource Pipeline
+CREATE TABLE IF NOT EXISTS public.vf_fabric_dispatches (
+    id TEXT PRIMARY KEY,
+    taka_serial TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'Warehouse',
+    current_stage TEXT DEFAULT 'Warehouse',
+    vendor TEXT,
+    customer TEXT,
+    invoice_no TEXT,
+    challan_no TEXT,
+    dispatch_date DATE,
+    selling_rate NUMERIC(10, 2),
+    is_partial_piece BOOLEAN DEFAULT false,
+    history JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_fabric_disp_serial ON public.vf_fabric_dispatches(taka_serial);
+CREATE INDEX IF NOT EXISTS idx_vf_fabric_disp_status ON public.vf_fabric_dispatches(status);
+CREATE INDEX IF NOT EXISTS idx_vf_fabric_disp_stage ON public.vf_fabric_dispatches(current_stage);
+CREATE INDEX IF NOT EXISTS idx_vf_fabric_disp_vendor ON public.vf_fabric_dispatches(vendor);
+CREATE INDEX IF NOT EXISTS idx_vf_fabric_disp_cust ON public.vf_fabric_dispatches(customer);
+CREATE INDEX IF NOT EXISTS idx_vf_fabric_disp_date ON public.vf_fabric_dispatches(dispatch_date DESC);
+
+-- 22. Dedicated Relational Table: Fabric Taka Piece Cut Relations
+CREATE TABLE IF NOT EXISTS public.vf_fabric_cut_relations (
+    id TEXT PRIMARY KEY,
+    parent_serial TEXT NOT NULL,
+    children JSONB NOT NULL DEFAULT '[]'::jsonb,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_fabric_cuts_parent ON public.vf_fabric_cut_relations(parent_serial);
+
 -- ==============================================================================
 -- Row Level Security (RLS) Configuration
 -- ==============================================================================
@@ -560,6 +595,8 @@ ALTER TABLE public.vf_warp_beam_loadings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_weaving_production_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_production_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_sales_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_fabric_dispatches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_fabric_cut_relations ENABLE ROW LEVEL SECURITY;
 
 -- Dynamic Policy Configuration:
 -- Production Mode: Allows read/write for all authenticated API requests & anon key (matching client tokens)
@@ -659,6 +696,16 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_sales_logs' AND policyname = 'Allow public access to vf_yarn_sales_logs') THEN
         CREATE POLICY "Allow public access to vf_yarn_sales_logs" ON public.vf_yarn_sales_logs FOR ALL USING (true) WITH CHECK (true);
     END IF;
+
+    -- 20. vf_fabric_dispatches
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fabric_dispatches' AND policyname = 'Allow public access to vf_fabric_dispatches') THEN
+        CREATE POLICY "Allow public access to vf_fabric_dispatches" ON public.vf_fabric_dispatches FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 21. vf_fabric_cut_relations
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fabric_cut_relations' AND policyname = 'Allow public access to vf_fabric_cut_relations') THEN
+        CREATE POLICY "Allow public access to vf_fabric_cut_relations" ON public.vf_fabric_cut_relations FOR ALL USING (true) WITH CHECK (true);
+    END IF;
 END $$;
 
 -- ==============================================================================
@@ -705,6 +752,8 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_weaving_production_logs;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_production_logs;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_sales_logs;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_dispatches;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_cut_relations;
     END IF;
 EXCEPTION
     WHEN duplicate_object THEN NULL;

@@ -2290,6 +2290,87 @@
               }
             }
 
+            // Dedicated Relational Synchronization for Fabric Dispatches & Outsource Pipeline
+            if (key === 'takaDispatchStates' && typeof value === 'object' && value !== null) {
+              try {
+                const dispatchEntries = Object.entries(value);
+                const dispatchRows = dispatchEntries.map(([serial, data]) => {
+                  if (!serial || !data) return null;
+                  const s = String(serial).trim();
+                  return {
+                    id: s,
+                    taka_serial: s,
+                    status: String(data.status || 'Warehouse').trim(),
+                    current_stage: String(data.currentStage || data.stage || 'Warehouse').trim(),
+                    vendor: data.vendor ? String(data.vendor).trim() : null,
+                    customer: data.customer ? String(data.customer).trim() : null,
+                    invoice_no: (data.invoice || data.invoiceNumber || data.invoiceNo) ? String(data.invoice || data.invoiceNumber || data.invoiceNo).trim() : null,
+                    challan_no: (data.challan || data.challanNumber || data.challanNo) ? String(data.challan || data.challanNumber || data.challanNo).trim() : null,
+                    dispatch_date: (data.dispatchDate || data.date) ? String(data.dispatchDate || data.date).split('T')[0] : null,
+                    selling_rate: (data.rate !== undefined && data.rate !== null && data.rate !== '') ? parseFloat(data.rate) : null,
+                    is_partial_piece: Boolean(data.isPartialPiece),
+                    history: Array.isArray(data.history) ? data.history : [],
+                    updated_at: nowIso
+                  };
+                }).filter(Boolean);
+
+                if (dispatchRows.length > 0) {
+                  for (let i = 0; i < dispatchRows.length; i += 300) {
+                    const chunk = dispatchRows.slice(i, i + 300);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_dispatches?on_conflict=taka_serial`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(e) {
+                console.warn('Fabric Dispatches Relational Sync notice:', e);
+              }
+            }
+
+            // Dedicated Relational Synchronization for Fabric Cut Relations
+            if (key === 'takaCutRelations' && typeof value === 'object' && value !== null) {
+              try {
+                const cutEntries = Object.entries(value);
+                const cutRows = cutEntries.map(([parentSerial, cutData]) => {
+                  if (!parentSerial || !cutData) return null;
+                  const ps = String(parentSerial).trim();
+                  const children = Array.isArray(cutData) ? cutData : (Array.isArray(cutData.children) ? cutData.children : []);
+                  return {
+                    id: ps,
+                    parent_serial: ps,
+                    children: children,
+                    metadata: typeof cutData === 'object' && !Array.isArray(cutData) ? cutData : {},
+                    updated_at: nowIso
+                  };
+                }).filter(Boolean);
+
+                if (cutRows.length > 0) {
+                  for (let i = 0; i < cutRows.length; i += 300) {
+                    const chunk = cutRows.slice(i, i + 300);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_cut_relations?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(e) {
+                console.warn('Fabric Cut Relations Relational Sync notice:', e);
+              }
+            }
+
             setSyncStatus(ws && ws.readyState === WebSocket.OPEN ? 'connected' : 'offline');
           } catch (err) {
             console.error('Supabase set error:', err);
@@ -3315,6 +3396,71 @@
               console.warn('Yarn Sales relational reconciliation notice:', ysErr);
             }
 
+            // Reconcile Dedicated Fabric Dispatches Relational Table
+            try {
+              const dbDispatches = await fetchAllRowsPaginated('vf_fabric_dispatches', '*', 'order=created_at.desc');
+              if (Array.isArray(dbDispatches) && dbDispatches.length > 0) {
+                const reconstructedStates = {};
+                dbDispatches.forEach(d => {
+                  if (!d.taka_serial) return;
+                  reconstructedStates[d.taka_serial] = {
+                    status: d.status || 'Warehouse',
+                    currentStage: d.current_stage || 'Warehouse',
+                    vendor: d.vendor || '',
+                    customer: d.customer || '',
+                    invoice: d.invoice_no || '',
+                    challan: d.challan_no || '',
+                    dispatchDate: d.dispatch_date || '',
+                    rate: d.selling_rate !== null ? Number(d.selling_rate) : '',
+                    isPartialPiece: Boolean(d.is_partial_piece),
+                    history: Array.isArray(d.history) ? d.history : []
+                  };
+                });
+
+                const dispKey = 'takaDispatchStates';
+                const dispStr = JSON.stringify(reconstructedStates);
+                const lastDispWrite = lastLocalWrites[dispKey] || 0;
+                if (Date.now() - lastDispWrite >= 3000) {
+                  cache[dispKey] = dispStr;
+                  lastSavedHashes[dispKey] = computeHash(dispStr);
+                  safeLocalStorageSet(dispKey, dispStr);
+                  if (!updatedKeys.includes(dispKey)) updatedKeys.push(dispKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (dispErr) {
+              console.warn('Fabric Dispatches relational reconciliation notice:', dispErr);
+            }
+
+            // Reconcile Dedicated Fabric Cut Relations Relational Table
+            try {
+              const dbCuts = await fetchAllRowsPaginated('vf_fabric_cut_relations', '*', 'order=created_at.desc');
+              if (Array.isArray(dbCuts) && dbCuts.length > 0) {
+                const reconstructedCuts = {};
+                dbCuts.forEach(c => {
+                  if (!c.parent_serial) return;
+                  if (c.metadata && typeof c.metadata === 'object' && Object.keys(c.metadata).length > 0) {
+                    reconstructedCuts[c.parent_serial] = c.metadata;
+                  } else {
+                    reconstructedCuts[c.parent_serial] = Array.isArray(c.children) ? c.children : [];
+                  }
+                });
+
+                const cutKey = 'takaCutRelations';
+                const cutStr = JSON.stringify(reconstructedCuts);
+                const lastCutWrite = lastLocalWrites[cutKey] || 0;
+                if (Date.now() - lastCutWrite >= 3000) {
+                  cache[cutKey] = cutStr;
+                  lastSavedHashes[cutKey] = computeHash(cutStr);
+                  safeLocalStorageSet(cutKey, cutStr);
+                  if (!updatedKeys.includes(cutKey)) updatedKeys.push(cutKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (cutErr) {
+              console.warn('Fabric Cut Relations relational reconciliation notice:', cutErr);
+            }
+
             isHydrated = true;
             window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
 
@@ -3729,6 +3875,77 @@
       if (!saleId || !activeConfig.isConfigured || !SUPABASE_URL) return;
       try {
         await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_sales_logs?id=eq.${encodeURIComponent(saleId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    // --- Enterprise Fabric Dispatches & Outsource Pipeline Relational APIs ---
+    async fetchFabricDispatchesRelational() {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const rows = await fetchAllRowsPaginated('vf_fabric_dispatches', '*', 'order=created_at.desc');
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        const result = {};
+        rows.forEach(d => {
+          if (!d.taka_serial) return;
+          result[d.taka_serial] = {
+            status: d.status || 'Warehouse',
+            currentStage: d.current_stage || 'Warehouse',
+            vendor: d.vendor || '',
+            customer: d.customer || '',
+            invoice: d.invoice_no || '',
+            challan: d.challan_no || '',
+            dispatchDate: d.dispatch_date || '',
+            rate: d.selling_rate !== null ? Number(d.selling_rate) : '',
+            isPartialPiece: Boolean(d.is_partial_piece),
+            history: Array.isArray(d.history) ? d.history : []
+          };
+        });
+        return result;
+      } catch(e) {
+        console.error('fetchFabricDispatchesRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteFabricDispatchRelational(takaSerial) {
+      if (!takaSerial || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_dispatches?taka_serial=eq.${encodeURIComponent(takaSerial)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
+    // --- Enterprise Fabric Cut Relations Relational APIs ---
+    async fetchFabricCutRelationsRelational() {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const rows = await fetchAllRowsPaginated('vf_fabric_cut_relations', '*', 'order=created_at.desc');
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        const result = {};
+        rows.forEach(c => {
+          if (!c.parent_serial) return;
+          if (c.metadata && typeof c.metadata === 'object' && Object.keys(c.metadata).length > 0) {
+            result[c.parent_serial] = c.metadata;
+          } else {
+            result[c.parent_serial] = Array.isArray(c.children) ? c.children : [];
+          }
+        });
+        return result;
+      } catch(e) {
+        console.error('fetchFabricCutRelationsRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteFabricCutRelationRelational(parentSerial) {
+      if (!parentSerial || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_cut_relations?id=eq.${encodeURIComponent(parentSerial)}`, {
           method: 'DELETE',
           headers: this.getAuthHeaders()
         });
