@@ -1571,7 +1571,7 @@
       const lotBatchId = String(lot.batchId || '').trim();
       const orderRef = String(lot.orderRef || '').trim();
 
-      // 1. First priority: match order with batch having the exact challan and lot number
+      // 1. First priority: match order with batch having exact batch ID or exact lot number AND challan number
       let matchingOrder = orders.find(o => 
         (o.batches || []).some(b => 
           (lotBatchId && String(b.id) === lotBatchId) ||
@@ -1579,21 +1579,21 @@
         )
       );
 
-      // 2. Second priority: match by lotNumber or challanNumber within batches
-      if (!matchingOrder) {
-        matchingOrder = orders.find(o => 
-          (o.batches || []).some(b => 
-            (lotChallan && String(b.challanNumber).trim() === lotChallan) ||
-            (lotNum && String(b.lotNumber).trim() === lotNum)
-          )
-        );
-      }
-
-      // 3. Third priority: match by orderRef (order ID or orderNumber)
+      // 2. Second priority: match by orderRef (order ID or orderNumber) if specified on the lot
       if (!matchingOrder && orderRef) {
         matchingOrder = orders.find(o => 
           String(o.id) === orderRef || 
           String(o.orderNumber) === orderRef
+        );
+      }
+
+      // 3. Third priority: match by lotNumber or challanNumber individually within batches
+      if (!matchingOrder) {
+        matchingOrder = orders.find(o => 
+          (o.batches || []).some(b => 
+            (lotNum && String(b.lotNumber).trim() === lotNum) ||
+            (lotChallan && String(b.challanNumber).trim() === lotChallan)
+          )
         );
       }
 
@@ -1638,7 +1638,7 @@
       const overlay = document.getElementById('modal-order-iframe-overlay');
       const iframe = document.getElementById('order-details-iframe');
       if (iframe && overlay) {
-        iframe.src = `yarn-rm-orders.html?view=orders&orderId=${encodeURIComponent(matchingOrder.id)}&challan=${encodeURIComponent(lotChallan)}&lot=${encodeURIComponent(lotNum)}&openModal=1&embedded=1`;
+        iframe.src = `yarn-rm-orders.html?view=orders&orderId=${encodeURIComponent(matchingOrder.id)}&batchId=${encodeURIComponent(lotBatchId)}&challan=${encodeURIComponent(lotChallan)}&lot=${encodeURIComponent(lotNum)}&openModal=1&embedded=1`;
         overlay.classList.add('active');
       }
     }

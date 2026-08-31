@@ -1324,25 +1324,33 @@
         if (!Array.isArray(orders) || orders.length === 0) return;
         const params = new URLSearchParams(window.location.search);
         const orderIdParam = params.get('orderId');
+        const batchIdParam = params.get('batchId');
         const challanParam = params.get('challan');
         const lotParam = params.get('lot');
         const shouldOpenModal = params.get('openModal') === '1';
 
-        if (orderIdParam || challanParam || lotParam) {
-          const match = orders.find(o => {
-            // Check order ID or number
-            if (orderIdParam && (String(o.id) === String(orderIdParam) || String(o.orderNumber) === String(orderIdParam))) {
-              return true;
-            }
-            // Check specific batch challan or lot inside order
-            if (challanParam && (o.batches || []).some(b => String(b.challanNumber).trim() === String(challanParam).trim())) {
-              return true;
-            }
-            if (lotParam && (o.batches || []).some(b => String(b.lotNumber).trim() === String(lotParam).trim())) {
-              return true;
-            }
-            return false;
-          });
+        if (orderIdParam || batchIdParam || challanParam || lotParam) {
+          // Match with priority: 1. Batch ID or exact (Lot + Challan), 2. Challan or Lot, 3. Order ID
+          let match = orders.find(o => 
+            (o.batches || []).some(b => 
+              (batchIdParam && String(b.id) === String(batchIdParam)) ||
+              (challanParam && lotParam && String(b.challanNumber).trim() === String(challanParam).trim() && String(b.lotNumber).trim() === String(lotParam).trim())
+            )
+          );
+
+          if (!match && orderIdParam) {
+            match = orders.find(o => String(o.id) === String(orderIdParam) || String(o.orderNumber) === String(orderIdParam));
+          }
+
+          if (!match && (challanParam || lotParam)) {
+            match = orders.find(o => 
+              (o.batches || []).some(b => 
+                (lotParam && String(b.lotNumber).trim() === String(lotParam).trim()) ||
+                (challanParam && String(b.challanNumber).trim() === String(challanParam).trim())
+              )
+            );
+          }
+
           if (match) {
             setSelectedOrder(match);
             if (shouldOpenModal && !isEmbedded) {
@@ -2427,6 +2435,27 @@
           price: order.price || ''
         });
       }, [order.id, order.orderedWeight, order.price, order.quality, order.supplier, order.code, order.color, order.category, order.orderDate]);
+
+      // Auto-open specific batch in edit mode if requested via URL (e.g. Right Click Edit Lot from Stock Book)
+      useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const batchIdParam = params.get('batchId');
+        const challanParam = params.get('challan');
+        const lotParam = params.get('lot');
+
+        if (batchIdParam || challanParam || lotParam) {
+          const targetBatch = (order.batches || []).find(b => 
+            (batchIdParam && String(b.id) === String(batchIdParam)) ||
+            (challanParam && lotParam && String(b.challanNumber).trim() === String(challanParam).trim() && String(b.lotNumber).trim() === String(lotParam).trim()) ||
+            (lotParam && String(b.lotNumber).trim() === String(lotParam).trim()) ||
+            (challanParam && String(b.challanNumber).trim() === String(challanParam).trim())
+          );
+          if (targetBatch) {
+            setEditingBatch(targetBatch);
+            setShowBatchForm(true);
+          }
+        }
+      }, [order.id]);
 
       // Cascading options for modal edit fields
       const modalFilteredQualities = useMemo(() => {
