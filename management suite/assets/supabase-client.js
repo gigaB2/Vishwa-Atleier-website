@@ -1850,6 +1850,126 @@
               }
             }
 
+            // Dedicated Relational Synchronization for Yarn RM Orders
+            if (key === 'yarn-rm-orders' && Array.isArray(value) && value.length > 0) {
+              try {
+                const orderRows = [];
+                const batchRows = [];
+                const boxRows = [];
+
+                value.forEach(order => {
+                  if (!order || !order.id) return;
+                  const orderId = String(order.id);
+                  const orderNum = String(order.orderNumber || order.id || 'YRN-AUTO');
+                  const orderDate = (order.orderDate || order.createdAt || new Date().toISOString().split('T')[0]).split('T')[0];
+
+                  orderRows.push({
+                    id: orderId,
+                    order_number: orderNum,
+                    order_date: orderDate,
+                    supplier: String(order.supplier || ''),
+                    category: String(order.category || order.type || 'Polyester'),
+                    quality: String(order.quality || ''),
+                    code: String(order.code || ''),
+                    color: String(order.color || ''),
+                    ordered_weight: parseFloat(order.orderedWeight) || 0,
+                    price: parseFloat(order.price) || 0,
+                    status: order.status === 'Completed' ? 'Completed' : (order.status === 'Cancelled' ? 'Cancelled' : 'Active'),
+                    remarks: order.remarks || order.notes || '',
+                    updated_at: nowIso
+                  });
+
+                  (order.batches || []).forEach((batch, bIdx) => {
+                    if (!batch) return;
+                    const batchId = String(batch.id || `${orderId}__BATCH-${bIdx}`);
+                    const bChallan = String(batch.challanNumber || '').trim();
+                    const bLot = String(batch.lotNumber || '').trim();
+                    const bDate = (batch.receiveDate || orderDate).split('T')[0];
+                    const bBoxes = Array.isArray(batch.boxes) ? batch.boxes : [];
+                    const bTotalWeight = parseFloat(batch.totalWeight) || bBoxes.reduce((sum, bx) => sum + (parseFloat(bx.weight) || 0), 0);
+
+                    batchRows.push({
+                      id: batchId,
+                      order_id: orderId,
+                      challan_number: bChallan,
+                      lot_number: bLot,
+                      receive_date: bDate,
+                      total_weight: parseFloat(bTotalWeight.toFixed(2)),
+                      notes: batch.notes || '',
+                      updated_at: nowIso
+                    });
+
+                    bBoxes.forEach((bx, bxIdx) => {
+                      const boxNum = String(bx.boxNumber || `B${bxIdx + 1}`).trim();
+                      const boxUid = `${batchId}__${boxNum}`;
+                      boxRows.push({
+                        id: boxUid,
+                        batch_id: batchId,
+                        order_id: orderId,
+                        box_number: boxNum,
+                        weight: parseFloat(bx.weight) || 0,
+                        cones: parseInt(bx.cones, 10) || 0,
+                        returned_weight: parseFloat(bx.returnedWeight) || 0,
+                        returned_date: bx.returnedDate ? String(bx.returnedDate).split('T')[0] : null,
+                        return_reason: bx.returnReason || null,
+                        updated_at: nowIso
+                      });
+                    });
+                  });
+                });
+
+                if (orderRows.length > 0) {
+                  for (let i = 0; i < orderRows.length; i += 200) {
+                    const chunk = orderRows.slice(i, i + 200);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_orders?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+
+                if (batchRows.length > 0) {
+                  for (let i = 0; i < batchRows.length; i += 300) {
+                    const chunk = batchRows.slice(i, i + 300);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_order_batches?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+
+                if (boxRows.length > 0) {
+                  for (let i = 0; i < boxRows.length; i += 500) {
+                    const chunk = boxRows.slice(i, i + 500);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_order_boxes?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(e) {
+                console.warn('Yarn RM Orders Relational Sync notice:', e);
+              }
+            }
+
             setSyncStatus(ws && ws.readyState === WebSocket.OPEN ? 'connected' : 'offline');
           } catch (err) {
             console.error('Supabase set error:', err);
@@ -2547,6 +2667,72 @@
               console.warn('Yarn RM relational reconciliation notice:', yarnErr);
             }
 
+            // Reconcile Dedicated Yarn RM Orders Relational Tables
+            try {
+              const dbOrders = await fetchAllRowsPaginated('vf_yarn_orders', '*', 'order=order_date.desc');
+              const dbBatches = await fetchAllRowsPaginated('vf_yarn_order_batches', '*', 'order=receive_date.desc');
+              const dbBoxes = await fetchAllRowsPaginated('vf_yarn_order_boxes', '*', 'order=box_number.asc');
+
+              if (Array.isArray(dbOrders) && dbOrders.length > 0) {
+                const boxesByBatch = new Map();
+                (dbBoxes || []).forEach(bx => {
+                  if (!boxesByBatch.has(bx.batch_id)) boxesByBatch.set(bx.batch_id, []);
+                  boxesByBatch.get(bx.batch_id).push({
+                    boxNumber: bx.box_number,
+                    weight: Number(bx.weight) || 0,
+                    cones: bx.cones || 0,
+                    returnedWeight: Number(bx.returned_weight) || 0,
+                    returnedDate: bx.returned_date || null,
+                    returnReason: bx.return_reason || null
+                  });
+                });
+
+                const batchesByOrder = new Map();
+                (dbBatches || []).forEach(b => {
+                  if (!batchesByOrder.has(b.order_id)) batchesByOrder.set(b.order_id, []);
+                  batchesByOrder.get(b.order_id).push({
+                    id: b.id,
+                    challanNumber: b.challan_number || '',
+                    lotNumber: b.lot_number || '',
+                    receiveDate: b.receive_date || '',
+                    totalWeight: Number(b.total_weight) || 0,
+                    notes: b.notes || '',
+                    boxes: boxesByBatch.get(b.id) || []
+                  });
+                });
+
+                const reconstructedOrders = dbOrders.map(o => ({
+                  id: o.id,
+                  orderNumber: o.order_number,
+                  orderDate: o.order_date,
+                  supplier: o.supplier,
+                  category: o.category || 'Polyester',
+                  type: o.category || 'Polyester',
+                  quality: o.quality,
+                  code: o.code || '',
+                  color: o.color || '',
+                  orderedWeight: Number(o.ordered_weight) || 0,
+                  price: Number(o.price) || 0,
+                  status: o.status || 'Active',
+                  remarks: o.remarks || '',
+                  batches: batchesByOrder.get(o.id) || []
+                }));
+
+                const oKey = 'yarn-rm-orders';
+                const oStr = JSON.stringify(reconstructedOrders);
+                const lastOrderWrite = lastLocalWrites[oKey] || 0;
+                if (Date.now() - lastOrderWrite >= 3000) {
+                  cache[oKey] = oStr;
+                  lastSavedHashes[oKey] = computeHash(oStr);
+                  safeLocalStorageSet(oKey, oStr);
+                  if (!updatedKeys.includes(oKey)) updatedKeys.push(oKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (orderErr) {
+              console.warn('Yarn RM Orders relational reconciliation notice:', orderErr);
+            }
+
             isHydrated = true;
             window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
 
@@ -2650,6 +2836,74 @@
         window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
       }
     },
+    // --- Enterprise Yarn RM Orders Relational APIs ---
+    async fetchYarnOrdersRelational() {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+      try {
+        const dbOrders = await fetchAllRowsPaginated('vf_yarn_orders', '*', 'order=order_date.desc');
+        const dbBatches = await fetchAllRowsPaginated('vf_yarn_order_batches', '*', 'order=receive_date.desc');
+        const dbBoxes = await fetchAllRowsPaginated('vf_yarn_order_boxes', '*', 'order=box_number.asc');
+        if (!Array.isArray(dbOrders) || dbOrders.length === 0) return null;
+
+        const boxesByBatch = new Map();
+        (dbBoxes || []).forEach(bx => {
+          if (!boxesByBatch.has(bx.batch_id)) boxesByBatch.set(bx.batch_id, []);
+          boxesByBatch.get(bx.batch_id).push({
+            boxNumber: bx.box_number,
+            weight: Number(bx.weight) || 0,
+            cones: bx.cones || 0,
+            returnedWeight: Number(bx.returned_weight) || 0,
+            returnedDate: bx.returned_date || null,
+            returnReason: bx.return_reason || null
+          });
+        });
+
+        const batchesByOrder = new Map();
+        (dbBatches || []).forEach(b => {
+          if (!batchesByOrder.has(b.order_id)) batchesByOrder.set(b.order_id, []);
+          batchesByOrder.get(b.order_id).push({
+            id: b.id,
+            challanNumber: b.challan_number || '',
+            lotNumber: b.lot_number || '',
+            receiveDate: b.receive_date || '',
+            totalWeight: Number(b.total_weight) || 0,
+            notes: b.notes || '',
+            boxes: boxesByBatch.get(b.id) || []
+          });
+        });
+
+        return dbOrders.map(o => ({
+          id: o.id,
+          orderNumber: o.order_number,
+          orderDate: o.order_date,
+          supplier: o.supplier,
+          category: o.category || 'Polyester',
+          type: o.category || 'Polyester',
+          quality: o.quality,
+          code: o.code || '',
+          color: o.color || '',
+          orderedWeight: Number(o.ordered_weight) || 0,
+          price: Number(o.price) || 0,
+          status: o.status || 'Active',
+          remarks: o.remarks || '',
+          batches: batchesByOrder.get(o.id) || []
+        }));
+      } catch (e) {
+        console.error('fetchYarnOrdersRelational error:', e);
+        return null;
+      }
+    },
+
+    async deleteYarnOrderRelational(orderId) {
+      if (!orderId || !activeConfig.isConfigured || !SUPABASE_URL) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_orders?id=eq.${encodeURIComponent(orderId)}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
+
     // --- Enterprise Yarn RM Stock Relational APIs ---
     async fetchYarnStockRelational() {
       if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;

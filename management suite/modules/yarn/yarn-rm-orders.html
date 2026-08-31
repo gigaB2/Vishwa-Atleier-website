@@ -1707,6 +1707,10 @@
           recordSnapshot(`Delete Order ${targetOrder.quality || ''}`);
           setOrders(prev => prev.filter(o => o.id !== id));
           
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.deleteYarnOrderRelational === 'function') {
+            window.VishwaSupabase.deleteYarnOrderRelational(id);
+          }
+
           // Remove linked stock lots from Yarn RM stock
           try {
             const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);

@@ -248,6 +248,63 @@ AS $$
     );
 $$;
 
+-- 10. Dedicated Relational Table: Yarn RM Purchase Orders
+CREATE TABLE IF NOT EXISTS public.vf_yarn_orders (
+    id TEXT PRIMARY KEY,
+    order_number TEXT NOT NULL,
+    order_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    supplier TEXT NOT NULL,
+    category TEXT DEFAULT 'Polyester',
+    quality TEXT NOT NULL,
+    code TEXT,
+    color TEXT,
+    ordered_weight NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    price NUMERIC(12, 2) DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Completed', 'Cancelled')),
+    remarks TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_orders_num ON public.vf_yarn_orders(order_number);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_orders_supplier ON public.vf_yarn_orders(supplier);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_orders_quality ON public.vf_yarn_orders(quality);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_orders_date ON public.vf_yarn_orders(order_date DESC);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_orders_status ON public.vf_yarn_orders(status);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_orders_updated_at ON public.vf_yarn_orders(updated_at DESC);
+
+-- 11. Dedicated Relational Table: Yarn RM Inward Batches (Challans per PO)
+CREATE TABLE IF NOT EXISTS public.vf_yarn_order_batches (
+    id TEXT PRIMARY KEY,
+    order_id TEXT NOT NULL REFERENCES public.vf_yarn_orders(id) ON DELETE CASCADE,
+    challan_number TEXT NOT NULL,
+    lot_number TEXT NOT NULL,
+    receive_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    total_weight NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    notes TEXT,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_batches_order_id ON public.vf_yarn_order_batches(order_id);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_batches_challan ON public.vf_yarn_order_batches(challan_number);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_batches_lot ON public.vf_yarn_order_batches(lot_number);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_batches_date ON public.vf_yarn_order_batches(receive_date DESC);
+
+-- 12. Dedicated Relational Table: Yarn RM Order Boxes
+CREATE TABLE IF NOT EXISTS public.vf_yarn_order_boxes (
+    id TEXT PRIMARY KEY,
+    batch_id TEXT NOT NULL REFERENCES public.vf_yarn_order_batches(id) ON DELETE CASCADE,
+    order_id TEXT NOT NULL REFERENCES public.vf_yarn_orders(id) ON DELETE CASCADE,
+    box_number TEXT NOT NULL,
+    weight NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    cones INTEGER DEFAULT 0,
+    returned_weight NUMERIC(10, 2) DEFAULT 0,
+    returned_date DATE,
+    return_reason TEXT,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_order_boxes_batch ON public.vf_yarn_order_boxes(batch_id);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_order_boxes_order ON public.vf_yarn_order_boxes(order_id);
+CREATE INDEX IF NOT EXISTS idx_vf_yarn_order_boxes_box_num ON public.vf_yarn_order_boxes(box_number);
+
 -- ==============================================================================
 -- Row Level Security (RLS) Configuration
 -- ==============================================================================
@@ -261,6 +318,9 @@ ALTER TABLE public.vf_audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_rm_lots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_rm_boxes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_rm_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_order_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_order_boxes ENABLE ROW LEVEL SECURITY;
 
 -- Dynamic Policy Configuration:
 -- Production Mode: Allows read/write for all authenticated API requests & anon key (matching client tokens)
@@ -310,6 +370,21 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_rm_transactions' AND policyname = 'Allow public access to vf_yarn_rm_transactions') THEN
         CREATE POLICY "Allow public access to vf_yarn_rm_transactions" ON public.vf_yarn_rm_transactions FOR ALL USING (true) WITH CHECK (true);
     END IF;
+
+    -- 10. vf_yarn_orders
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_orders' AND policyname = 'Allow public access to vf_yarn_orders') THEN
+        CREATE POLICY "Allow public access to vf_yarn_orders" ON public.vf_yarn_orders FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 11. vf_yarn_order_batches
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_order_batches' AND policyname = 'Allow public access to vf_yarn_order_batches') THEN
+        CREATE POLICY "Allow public access to vf_yarn_order_batches" ON public.vf_yarn_order_batches FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 12. vf_yarn_order_boxes
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_order_boxes' AND policyname = 'Allow public access to vf_yarn_order_boxes') THEN
+        CREATE POLICY "Allow public access to vf_yarn_order_boxes" ON public.vf_yarn_order_boxes FOR ALL USING (true) WITH CHECK (true);
+    END IF;
 END $$;
 
 -- ==============================================================================
@@ -346,6 +421,9 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_rm_lots;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_rm_boxes;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_rm_transactions;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_orders;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_order_batches;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_order_boxes;
     END IF;
 EXCEPTION
     WHEN duplicate_object THEN NULL;
