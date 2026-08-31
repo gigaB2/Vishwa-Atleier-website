@@ -207,6 +207,7 @@
       font-weight: 700;
       background: linear-gradient(135deg, var(--accent), var(--accent2));
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
@@ -1222,11 +1223,26 @@
 
           let changed = false;
           orders.forEach(order => {
-            (order.batches || []).forEach(batch => {
+            (order.batches || []).forEach((batch, bIdx) => {
               const recDateOnly = (batch.receiveDate || new Date().toISOString().split('T')[0]).split('T')[0];
-              const lotIdVal = batch.lotNumber || ('LOT-' + (batch.challanNumber || Date.now().toString().slice(-4)));
+              const batchChallan = String(batch.challanNumber || '').trim();
+              const batchLot = String(batch.lotNumber || '').trim();
+              const batchId = String(batch.id || `BATCH-${bIdx}`);
+              const orderId = String(order.orderNumber || order.id || '');
               
-              const existingIdx = stockList.findIndex(s => String(s.id) === String(lotIdVal) || String(s.lotNumber) === String(batch.lotNumber));
+              // Ensure unique lot ID per batch
+              const lotIdVal = batch.lotNumber 
+                ? (batch.lotNumber + (batchChallan ? `__${batchChallan}` : `__${batchId}`))
+                : (`LOT-${batchChallan || batchId || bIdx}`);
+              
+              // Find existing lot by exact lotIdVal, batchId, or matching lotNumber AND challanNumber
+              const existingIdx = stockList.findIndex(s => 
+                String(s.id) === String(lotIdVal) || 
+                String(s.batchId) === String(batch.id) ||
+                (batchLot && batchChallan && String(s.lotNumber).trim() === batchLot && String(s.challanNo || s.challanNumber).trim() === batchChallan) ||
+                (batchLot && !batchChallan && String(s.lotNumber).trim() === batchLot && String(s.orderRef) === orderId)
+              );
+
               const existingLot = existingIdx >= 0 ? stockList[existingIdx] : null;
               const existingBoxMap = existingLot && Array.isArray(existingLot.boxes) 
                 ? new Map(existingLot.boxes.map(b => [String(b.id || b.boxNumber), b])) 
@@ -1258,10 +1274,11 @@
               });
 
               const updatedLot = {
-                id: lotIdVal,
-                lotNumber: batch.lotNumber || ('LOT-' + (batch.challanNumber || 'AUTO')),
-                challanNo: batch.challanNumber || (existingLot?.challanNo || ''),
-                challanNumber: batch.challanNumber || (existingLot?.challanNumber || ''),
+                id: existingLot?.id || lotIdVal,
+                batchId: batch.id || '',
+                lotNumber: batchLot || (existingLot?.lotNumber || ('LOT-' + (batchChallan || 'AUTO'))),
+                challanNo: batchChallan || (existingLot?.challanNo || ''),
+                challanNumber: batchChallan || (existingLot?.challanNumber || ''),
                 receiveDate: recDateOnly,
                 date: recDateOnly,
                 supplier: order.supplier || (existingLot?.supplier || ''),
@@ -1312,11 +1329,20 @@
         const shouldOpenModal = params.get('openModal') === '1';
 
         if (orderIdParam || challanParam || lotParam) {
-          const match = orders.find(o => 
-            (orderIdParam && (String(o.id) === String(orderIdParam) || String(o.orderNumber) === String(orderIdParam))) ||
-            (challanParam && (o.batches || []).some(b => String(b.challanNumber) === String(challanParam))) ||
-            (lotParam && (o.batches || []).some(b => String(b.lotNumber) === String(lotParam)))
-          );
+          const match = orders.find(o => {
+            // Check order ID or number
+            if (orderIdParam && (String(o.id) === String(orderIdParam) || String(o.orderNumber) === String(orderIdParam))) {
+              return true;
+            }
+            // Check specific batch challan or lot inside order
+            if (challanParam && (o.batches || []).some(b => String(b.challanNumber).trim() === String(challanParam).trim())) {
+              return true;
+            }
+            if (lotParam && (o.batches || []).some(b => String(b.lotNumber).trim() === String(lotParam).trim())) {
+              return true;
+            }
+            return false;
+          });
           if (match) {
             setSelectedOrder(match);
             if (shouldOpenModal && !isEmbedded) {
@@ -1542,7 +1568,104 @@
         );
       };
 
+      const isUndoRedoActionRef = useRef(false);
+      const undoStackRef = useRef([]);
+      const redoStackRef = useRef([]);
+      const [undoToast, setUndoToast] = useState(null);
+      const toastTimerRef = useRef(null);
+
+      const showUndoToast = (msg, actionType = 'undo') => {
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        setUndoToast({ msg, actionType });
+        toastTimerRef.current = setTimeout(() => {
+          setUndoToast(null);
+        }, 3000);
+      };
+
+      const recordSnapshot = (description = 'Change') => {
+        if (isUndoRedoActionRef.current) return;
+        const currentOrders = JSON.parse(JSON.stringify(orders || []));
+        undoStackRef.current.push({ orders: currentOrders, description });
+        if (undoStackRef.current.length > 50) {
+          undoStackRef.current.shift();
+        }
+        redoStackRef.current = [];
+      };
+
+      const performUndo = () => {
+        if (undoStackRef.current.length === 0) {
+          showUndoToast("Nothing to undo", "info");
+          return;
+        }
+        isUndoRedoActionRef.current = true;
+        const currentOrders = JSON.parse(JSON.stringify(orders || []));
+        const prevSnapshot = undoStackRef.current.pop();
+        redoStackRef.current.push({ orders: currentOrders, description: prevSnapshot.description });
+
+        setOrders(prevSnapshot.orders);
+        if (selectedOrder) {
+          const matched = (prevSnapshot.orders || []).find(o => o.id === selectedOrder.id);
+          setSelectedOrder(matched || null);
+        }
+        showUndoToast(`↩ Undone: ${prevSnapshot.description || 'Action'} (Ctrl+Z)`, "undo");
+        setTimeout(() => { isUndoRedoActionRef.current = false; }, 50);
+      };
+
+      const performRedo = () => {
+        if (redoStackRef.current.length === 0) {
+          showUndoToast("Nothing to redo", "info");
+          return;
+        }
+        isUndoRedoActionRef.current = true;
+        const currentOrders = JSON.parse(JSON.stringify(orders || []));
+        const nextSnapshot = redoStackRef.current.pop();
+        undoStackRef.current.push({ orders: currentOrders, description: nextSnapshot.description });
+
+        setOrders(nextSnapshot.orders);
+        if (selectedOrder) {
+          const matched = (nextSnapshot.orders || []).find(o => o.id === selectedOrder.id);
+          setSelectedOrder(matched || null);
+        }
+        showUndoToast(`↪ Redone: ${nextSnapshot.description || 'Action'} (Ctrl+Y)`, "redo");
+        setTimeout(() => { isUndoRedoActionRef.current = false; }, 50);
+      };
+
+      // Global Keyboard Shortcut Listener for Ctrl+Z and Ctrl+Y / Ctrl+Shift+Z
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+          if (!isCtrlOrCmd) return;
+
+          const key = e.key.toLowerCase();
+          const activeElem = document.activeElement;
+          const isTextInput = activeElem && (
+            activeElem.tagName === 'INPUT' || 
+            activeElem.tagName === 'TEXTAREA' || 
+            activeElem.isContentEditable
+          );
+
+          if (key === 'z') {
+            if (e.shiftKey) {
+              e.preventDefault();
+              performRedo();
+            } else if (!isTextInput) {
+              e.preventDefault();
+              performUndo();
+            }
+          } else if (key === 'y') {
+            if (!isTextInput) {
+              e.preventDefault();
+              performRedo();
+            }
+          }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [orders, selectedOrder]);
+
       const handleAddOrder = (orderData) => {
+        recordSnapshot(`Add Order ${orderData.quality || ''}`);
         const newOrder = {
           ...orderData,
           id: 'YRN-ORD-' + Date.now(),
@@ -1556,12 +1679,15 @@
       };
 
       const updateOrder = (o) => {
+        recordSnapshot(`Update Order ${o.quality || ''}`);
         const processed = { ...o, orderDate: addTimestampToDate(o.orderDate) };
         setOrders(prev => prev.map(x => x.id === o.id ? processed : x));
         if (selectedOrder?.id === o.id) setSelectedOrder(processed);
       };
 
       const completeOrder = (id) => {
+        const target = (orders || []).find(o => o.id === id);
+        recordSnapshot(`Complete Order ${target?.quality || ''}`);
         setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Completed' } : o));
       };
 
@@ -1570,6 +1696,7 @@
         if (!targetOrder) return;
         
         if (confirm(`Delete order for ${targetOrder.quality} (${targetOrder.supplier})? Associated inward lots will be removed from Yarn RM Stock Book.`)) {
+          recordSnapshot(`Delete Order ${targetOrder.quality || ''}`);
           setOrders(prev => prev.filter(o => o.id !== id));
           
           // Remove linked stock lots from Yarn RM stock
@@ -1600,13 +1727,55 @@
 
       return (
         <div className={`app-container${view === 'heat-map' ? ' ob-heatmap-page' : ''}`}>
+          {undoToast && (
+            <div 
+              style={{
+                position: 'fixed',
+                bottom: '2rem',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: undoToast.actionType === 'info' ? 'rgba(15, 23, 42, 0.95)' : 'linear-gradient(135deg, var(--accent), var(--accent2))',
+                color: 'white',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '12px',
+                boxShadow: 'var(--shadow-xl)',
+                zIndex: 100000,
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.88rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                animation: 'fadeIn 0.2s ease',
+                pointerEvents: 'none'
+              }}
+            >
+              <span>{undoToast.msg}</span>
+            </div>
+          )}
           <header>
             <div className="logo-section">
               <span className="logo" style={{cursor: 'default'}}>
                 {view === 'orders' ? 'Yarn RM Orders' : view === 'analytics' ? 'Yarn Order Analytics' : 'Yarn Delivery Heat Map'}
               </span>
             </div>
-            <div className="ob-header-actions">
+            <div className="ob-header-actions" style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>
+              <button 
+                className="btn btn-outline" 
+                onClick={performUndo} 
+                title="Undo last change (Ctrl+Z)"
+                style={{padding: '0.55rem 0.9rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem'}}
+              >
+                <span>↩</span> Undo <kbd style={{fontSize: '0.7rem', opacity: 0.7, padding: '0.1rem 0.3rem', background: 'rgba(0,0,0,0.06)', borderRadius: '4px'}}>Ctrl+Z</kbd>
+              </button>
+              <button 
+                className="btn btn-outline" 
+                onClick={performRedo} 
+                title="Redo change (Ctrl+Y or Ctrl+Shift+Z)"
+                style={{padding: '0.55rem 0.9rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem'}}
+              >
+                <span>↪</span> Redo <kbd style={{fontSize: '0.7rem', opacity: 0.7, padding: '0.1rem 0.3rem', background: 'rgba(0,0,0,0.06)', borderRadius: '4px'}}>Ctrl+Y</kbd>
+              </button>
               {view === 'orders' && (
                 <button className="btn btn-primary" onClick={() => setShowOrderModal(true)}>
                   + Add New Order

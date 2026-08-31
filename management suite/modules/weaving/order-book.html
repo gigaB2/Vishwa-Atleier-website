@@ -2265,8 +2265,104 @@
             const requestOrderSort = (key) => setOrderSort(prev => toggleSort(prev, key));
             const requestQualitySort = (key) => setQualitySort(prev => toggleSort(prev, key));
             const requestSupplierSort = (key) => setSupplierSort(prev => toggleSort(prev, key));
+            const isUndoRedoActionRef = React.useRef(false);
+            const undoStackRef = React.useRef([]);
+            const redoStackRef = React.useRef([]);
+            const [undoToast, setUndoToast] = useState(null);
+            const toastTimerRef = React.useRef(null);
+
+            const showUndoToast = (msg, actionType = 'undo') => {
+                if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                setUndoToast({ msg, actionType });
+                toastTimerRef.current = setTimeout(() => {
+                    setUndoToast(null);
+                }, 3000);
+            };
+
+            const recordSnapshot = (description = 'Change') => {
+                if (isUndoRedoActionRef.current) return;
+                const currentOrders = JSON.parse(JSON.stringify(orders || []));
+                undoStackRef.current.push({ orders: currentOrders, description });
+                if (undoStackRef.current.length > 50) {
+                    undoStackRef.current.shift();
+                }
+                redoStackRef.current = [];
+            };
+
+            const performUndo = () => {
+                if (undoStackRef.current.length === 0) {
+                    showUndoToast("Nothing to undo", "info");
+                    return;
+                }
+                isUndoRedoActionRef.current = true;
+                const currentOrders = JSON.parse(JSON.stringify(orders || []));
+                const prevSnapshot = undoStackRef.current.pop();
+                redoStackRef.current.push({ orders: currentOrders, description: prevSnapshot.description });
+
+                setOrders(prevSnapshot.orders);
+                if (selectedOrder) {
+                    const matched = (prevSnapshot.orders || []).find(o => o.id === selectedOrder.id);
+                    setSelectedOrder(matched || null);
+                }
+                showUndoToast(`↩ Undone: ${prevSnapshot.description || 'Action'} (Ctrl+Z)`, "undo");
+                setTimeout(() => { isUndoRedoActionRef.current = false; }, 50);
+            };
+
+            const performRedo = () => {
+                if (redoStackRef.current.length === 0) {
+                    showUndoToast("Nothing to redo", "info");
+                    return;
+                }
+                isUndoRedoActionRef.current = true;
+                const currentOrders = JSON.parse(JSON.stringify(orders || []));
+                const nextSnapshot = redoStackRef.current.pop();
+                undoStackRef.current.push({ orders: currentOrders, description: nextSnapshot.description });
+
+                setOrders(nextSnapshot.orders);
+                if (selectedOrder) {
+                    const matched = (nextSnapshot.orders || []).find(o => o.id === selectedOrder.id);
+                    setSelectedOrder(matched || null);
+                }
+                showUndoToast(`↪ Redone: ${nextSnapshot.description || 'Action'} (Ctrl+Y)`, "redo");
+                setTimeout(() => { isUndoRedoActionRef.current = false; }, 50);
+            };
+
+            // Global Keyboard Shortcut Listener for Ctrl+Z and Ctrl+Y / Ctrl+Shift+Z
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+                    if (!isCtrlOrCmd) return;
+
+                    const key = e.key.toLowerCase();
+                    const activeElem = document.activeElement;
+                    const isTextInput = activeElem && (
+                        activeElem.tagName === 'INPUT' || 
+                        activeElem.tagName === 'TEXTAREA' || 
+                        activeElem.isContentEditable
+                    );
+
+                    if (key === 'z') {
+                        if (e.shiftKey) {
+                            e.preventDefault();
+                            performRedo();
+                        } else if (!isTextInput) {
+                            e.preventDefault();
+                            performUndo();
+                        }
+                    } else if (key === 'y') {
+                        if (!isTextInput) {
+                            e.preventDefault();
+                            performRedo();
+                        }
+                    }
+                };
+
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [orders, selectedOrder]);
 
             const addOrder = (o) => {
+                recordSnapshot(`Add Order ${o.quality || ''}`);
                 const q = qualities.find(x => x.quality === o.quality && x.code === o.code && x.color === o.color && x.supplier === o.supplier);
                 const orderDate = addTimestampToDate(o.orderDate);
                 setOrders([...orders, { ...o, orderDate, qualityId: q?.id, id: Date.now().toString(), createdAt: new Date().toISOString(), status: 'Active', batches: [] }]);
@@ -2283,6 +2379,7 @@
                     alert('Quality already exists.'); return;
                 }
                 if (editingQuality) {
+                    recordSnapshot(`Edit Quality ${fd.quality}`);
                     setQualities(qualities.map(q => q.id === editingQuality.id ? { ...q, ...fd } : q));
                     setOrders(orders.map(o => (o.qualityId === editingQuality.id || (!o.qualityId && o.quality === editingQuality.quality && o.code === editingQuality.code && o.color === editingQuality.color && o.supplier === editingQuality.supplier)) ? { ...o, ...fd, qualityId: editingQuality.id } : o));
                     
@@ -2346,11 +2443,16 @@
             const deleteQuality = (id) => confirm('Delete quality?') && setQualities(qualities.filter(q => q.id !== id));
             const deleteSupplier = (id) => confirm('Delete supplier?') && setSuppliers(suppliers.filter(s => s.id !== id));
             const updateOrder = (o) => {
+                recordSnapshot(`Update Order ${o.quality || ''}`);
                 const processed = { ...o, orderDate: addTimestampToDate(o.orderDate) };
                 setOrders(orders.map(x => x.id === o.id ? processed : x));
                 if (selectedOrder?.id === o.id) setSelectedOrder(processed);
             };
-            const completeOrder = (id) => setOrders(orders.map(o => o.id === id ? { ...o, status: 'Completed' } : o));
+            const completeOrder = (id) => {
+                const target = (orders || []).find(o => o.id === id);
+                recordSnapshot(`Complete Order ${target?.quality || ''}`);
+                setOrders(orders.map(o => o.id === id ? { ...o, status: 'Completed' } : o));
+            };
             const showDeletionToast = (msg) => {
                 const toast = document.createElement('div');
                 toast.innerText = msg;
@@ -2387,6 +2489,7 @@
                 const warningMsg = `WARNING: Deleting this order will permanently delete all associated stock, issues, and beams for this quality (${targetOrder.quality}) across the entire application!\n\nAre you sure you want to proceed with deleting this item in the whole app?`;
                 
                 if (confirm(warningMsg)) {
+                    recordSnapshot(`Delete Order ${targetOrder.quality || ''}`);
                     setOrders(orders.filter(o => o.id !== id));
                     
                     try {
@@ -2473,7 +2576,7 @@
                     quality: qualityFilter, 
                     supplier: supplierFilter, 
                     code: codeFilter, 
-                    color: colorFilter,
+                    color: colorFilter, 
                     [field]: value 
                 };
                 
@@ -2500,13 +2603,55 @@
 
             return (
                 <div className={`app-container${view === 'heat-map' ? ' ob-heatmap-page' : ''}`}>
+                    {undoToast && (
+                        <div 
+                            style={{
+                                position: 'fixed',
+                                bottom: '2rem',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                background: undoToast.actionType === 'info' ? 'rgba(15, 23, 42, 0.95)' : 'linear-gradient(135deg, var(--accent), var(--accent2))',
+                                color: 'white',
+                                padding: '0.75rem 1.5rem',
+                                borderRadius: '12px',
+                                boxShadow: 'var(--shadow-xl)',
+                                zIndex: 100000,
+                                fontFamily: 'var(--font-body)',
+                                fontSize: '0.88rem',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                animation: 'fadeIn 0.2s ease',
+                                pointerEvents: 'none'
+                            }}
+                        >
+                            <span>{undoToast.msg}</span>
+                        </div>
+                    )}
                     <header>
                         <div className="logo-section">
                             <span className="logo" style={{cursor: 'default'}}>
                                 {view === 'orders' ? 'RM Orders' : view === 'analytics' ? 'RM order analytics' : view === 'heat-map' ? 'RM delivery heat map' : 'RM Order Book'}
                             </span>
                         </div>
-                        <div className="ob-header-actions">
+                        <div className="ob-header-actions" style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>
+                            <button 
+                                className="btn btn-outline" 
+                                onClick={performUndo} 
+                                title="Undo last change (Ctrl+Z)"
+                                style={{padding: '0.55rem 0.9rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem'}}
+                            >
+                                <span>↩</span> Undo <kbd style={{fontSize: '0.7rem', opacity: 0.7, padding: '0.1rem 0.3rem', background: 'rgba(0,0,0,0.06)', borderRadius: '4px'}}>Ctrl+Z</kbd>
+                            </button>
+                            <button 
+                                className="btn btn-outline" 
+                                onClick={performRedo} 
+                                title="Redo change (Ctrl+Y or Ctrl+Shift+Z)"
+                                style={{padding: '0.55rem 0.9rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem'}}
+                            >
+                                <span>↪</span> Redo <kbd style={{fontSize: '0.7rem', opacity: 0.7, padding: '0.1rem 0.3rem', background: 'rgba(0,0,0,0.06)', borderRadius: '4px'}}>Ctrl+Y</kbd>
+                            </button>
                             {view !== 'analytics' && (
                                 <button className="btn btn-primary" onClick={() => setShowOrderModal(true)}>+ Add New Order</button>
                             )}

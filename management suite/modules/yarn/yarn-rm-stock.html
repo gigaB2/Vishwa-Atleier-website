@@ -1072,9 +1072,18 @@
     // Normalize Lot & Box records from any source (Yarn RM Orders, manual challans, etc.)
     function normalizeLot(lot, idx = 0) {
       if (!lot) return null;
-      const lotId = String(lot.id || lot.lotNumber || `LOT-${Date.now()}-${idx}`);
-      const lotNumber = String(lot.lotNumber || lot.id || 'LOT-UNKNOWN');
-      const challanNo = String(lot.challanNo || lot.challanNumber || '');
+      const rawChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+      const rawLotNum = String(lot.lotNumber || '').trim();
+      const rawId = String(lot.id || '').trim();
+
+      // If lotNumber was set to a synthetic ID like LOT-xxx or rawId, extract cleaner lot number
+      let lotNumber = rawLotNum || (rawId && !rawId.includes('__') ? rawId : '');
+      if (!lotNumber) {
+        lotNumber = rawChallan ? `LOT-${rawChallan}` : `LOT-AUTO-${idx + 1}`;
+      }
+
+      const lotId = rawId || (lotNumber + (rawChallan ? `__${rawChallan}` : `__${idx}`));
+      const challanNo = rawChallan;
       const rawDate = String(lot.receiveDate || lot.date || '');
       const receiveDate = rawDate.includes('T') ? rawDate.split('T')[0] : (rawDate.includes(' ') ? rawDate.split(' ')[0] : rawDate);
       const supplier = String(lot.supplier || '');
@@ -1121,6 +1130,7 @@
       return {
         ...lot,
         id: lotId,
+        batchId: lot.batchId || '',
         lotNumber: lotNumber,
         challanNo: challanNo,
         challanNumber: challanNo,
@@ -1139,12 +1149,103 @@
 
     // Initial Data Seed and Auto-heal against Yarn RM Orders
     function initSeedData() {
+      // Re-sync directly from yarn-rm-orders if present
+      try {
+        const rawOrders = localStorage.getItem('yarn-rm-orders');
+        const orders = rawOrders ? JSON.parse(rawOrders) : [];
+        if (Array.isArray(orders) && orders.length > 0) {
+          const rawStock = localStorage.getItem(STORAGE_KEY);
+          let stockList = rawStock ? JSON.parse(rawStock) : [];
+          if (!Array.isArray(stockList)) stockList = [];
+
+          orders.forEach(order => {
+            (order.batches || []).forEach((batch, bIdx) => {
+              const recDateOnly = (batch.receiveDate || new Date().toISOString().split('T')[0]).split('T')[0];
+              const batchChallan = String(batch.challanNumber || '').trim();
+              const batchLot = String(batch.lotNumber || '').trim();
+              const batchId = String(batch.id || `BATCH-${bIdx}`);
+              const orderId = String(order.orderNumber || order.id || '');
+              
+              const lotIdVal = batchLot 
+                ? (batchLot + (batchChallan ? `__${batchChallan}` : `__${batchId}`))
+                : (`LOT-${batchChallan || batchId || bIdx}`);
+
+              const existingIdx = stockList.findIndex(s => 
+                String(s.id) === String(lotIdVal) || 
+                String(s.batchId) === String(batch.id) ||
+                (batchLot && batchChallan && String(s.lotNumber).trim() === batchLot && String(s.challanNo || s.challanNumber).trim() === batchChallan) ||
+                (batchLot && !batchChallan && String(s.lotNumber).trim() === batchLot && String(s.orderRef) === orderId)
+              );
+
+              const existingLot = existingIdx >= 0 ? stockList[existingIdx] : null;
+              const existingBoxMap = existingLot && Array.isArray(existingLot.boxes) 
+                ? new Map(existingLot.boxes.map(b => [String(b.id || b.boxNumber), b])) 
+                : new Map();
+
+              const boxes = (batch.boxes || []).map((bx, idx) => {
+                const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
+                const grossWt = Number(bx.weight) || 0;
+                const retWt = Number(bx.returnedWeight) || 0;
+                const remWt = Math.max(0, grossWt - retWt);
+                const isFullyGr = retWt >= grossWt && grossWt > 0;
+                const isPartialGr = retWt > 0 && !isFullyGr;
+                const oldB = existingBoxMap.get(bId);
+
+                return {
+                  id: bId,
+                  boxNumber: bId,
+                  cones: Number(bx.cones) || 0,
+                  grossWeight: grossWt,
+                  remainingWeight: remWt,
+                  weight: isFullyGr ? grossWt : remWt,
+                  status: isFullyGr ? 'gr' : (oldB?.status === 'issued' ? 'issued' : 'available'),
+                  issueDate: isFullyGr ? null : (oldB?.issueDate || null),
+                  issuedTo: isFullyGr ? null : (oldB?.issuedTo || null),
+                  grWeight: retWt,
+                  grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
+                  grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(1)} kg)` : null)
+                };
+              });
+
+              const updatedLot = {
+                id: existingLot?.id || lotIdVal,
+                batchId: batch.id || '',
+                lotNumber: batchLot || (existingLot?.lotNumber || ('LOT-' + (batchChallan || 'AUTO'))),
+                challanNo: batchChallan || (existingLot?.challanNo || ''),
+                challanNumber: batchChallan || (existingLot?.challanNumber || ''),
+                receiveDate: recDateOnly,
+                date: recDateOnly,
+                supplier: order.supplier || (existingLot?.supplier || ''),
+                quality: order.quality || (existingLot?.quality || ''),
+                itemType: order.category || order.type || 'Polyester',
+                code: order.code || (existingLot?.code || ''),
+                color: order.color || (existingLot?.color || ''),
+                rate: order.price || (existingLot?.rate || ''),
+                orderRef: order.orderNumber || order.id,
+                boxes: boxes
+              };
+
+              if (existingIdx >= 0) {
+                stockList[existingIdx] = updatedLot;
+              } else {
+                stockList.unshift(updatedLot);
+              }
+            });
+          });
+
+          stockData = stockList.map(normalizeLot).filter(Boolean);
+          saveStockData();
+          return;
+        }
+      } catch(e) {
+        console.error('Error auto-syncing from orders:', e);
+      }
+
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         try {
           let data = JSON.parse(stored);
           if (Array.isArray(data)) {
-            // Purge demo/sample lots if present from previous sessions
             data = data.filter(item => item && item.id !== 'LOT-8072-01' && item.id !== 'LOT-30C-02' && item.quality !== '80/72 Polyester DTY' && item.quality !== '30s Combed Cotton');
           } else {
             data = [];
@@ -1157,7 +1258,6 @@
         }
       }
 
-      // Default empty stock array (no demo/sample data)
       stockData = [];
       saveStockData();
     }
@@ -1466,10 +1566,36 @@
         orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
       } catch(e) { orders = []; }
 
+      const lotChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+      const lotNum = String(lot.lotNumber || '').trim();
+      const lotBatchId = String(lot.batchId || '').trim();
+      const orderRef = String(lot.orderRef || '').trim();
+
+      // 1. First priority: match order with batch having the exact challan and lot number
       let matchingOrder = orders.find(o => 
-        (lot.orderRef && (String(o.id) === String(lot.orderRef) || String(o.orderNumber) === String(lot.orderRef))) ||
-        (o.batches || []).some(b => (lot.challanNo && String(b.challanNumber) === String(lot.challanNo)) || (lot.lotNumber && String(b.lotNumber) === String(lot.lotNumber)))
+        (o.batches || []).some(b => 
+          (lotBatchId && String(b.id) === lotBatchId) ||
+          (lotChallan && lotNum && String(b.challanNumber).trim() === lotChallan && String(b.lotNumber).trim() === lotNum)
+        )
       );
+
+      // 2. Second priority: match by lotNumber or challanNumber within batches
+      if (!matchingOrder) {
+        matchingOrder = orders.find(o => 
+          (o.batches || []).some(b => 
+            (lotChallan && String(b.challanNumber).trim() === lotChallan) ||
+            (lotNum && String(b.lotNumber).trim() === lotNum)
+          )
+        );
+      }
+
+      // 3. Third priority: match by orderRef (order ID or orderNumber)
+      if (!matchingOrder && orderRef) {
+        matchingOrder = orders.find(o => 
+          String(o.id) === orderRef || 
+          String(o.orderNumber) === orderRef
+        );
+      }
 
       if (!matchingOrder) {
         const newOrderId = `ORD-${Date.now().toString().slice(-4)}`;
@@ -1487,10 +1613,10 @@
           price: lot.rate || '',
           status: 'Completed',
           batches: [{
-            id: `BATCH-${Date.now()}`,
+            id: lotBatchId || `BATCH-${Date.now()}`,
             receiveDate: lot.receiveDate || new Date().toISOString().split('T')[0],
-            challanNumber: lot.challanNo || `CH-${Date.now().toString().slice(-4)}`,
-            lotNumber: lot.lotNumber || `LOT-${Date.now().toString().slice(-4)}`,
+            challanNumber: lotChallan || `CH-${Date.now().toString().slice(-4)}`,
+            lotNumber: lotNum || `LOT-${Date.now().toString().slice(-4)}`,
             totalWeight: totalBatchWt,
             boxes: (lot.boxes || []).map(b => ({
               boxNumber: b.id || b.boxNumber,
@@ -1512,7 +1638,7 @@
       const overlay = document.getElementById('modal-order-iframe-overlay');
       const iframe = document.getElementById('order-details-iframe');
       if (iframe && overlay) {
-        iframe.src = `yarn-rm-orders.html?view=orders&orderId=${encodeURIComponent(matchingOrder.id)}&challan=${encodeURIComponent(lot.challanNo || '')}&lot=${encodeURIComponent(lot.lotNumber || '')}&openModal=1&embedded=1`;
+        iframe.src = `yarn-rm-orders.html?view=orders&orderId=${encodeURIComponent(matchingOrder.id)}&challan=${encodeURIComponent(lotChallan)}&lot=${encodeURIComponent(lotNum)}&openModal=1&embedded=1`;
         overlay.classList.add('active');
       }
     }
