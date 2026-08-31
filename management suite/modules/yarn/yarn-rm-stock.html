@@ -1570,15 +1570,15 @@
     <iframe id="order-details-iframe" style="width: 100%; height: 100%; border: none; background: transparent;" src="about:blank"></iframe>
   </div>
 
-  <!-- Custom Context Menu for Lot Right-Click (Edit / Delete) -->
+  <!-- Custom Context Menu for Lot / Quality Right-Click (Edit / Delete) -->
   <div class="context-menu" id="lot-context-menu">
-    <div class="context-menu-item" onclick="editContextLot()">
+    <div class="context-menu-item context-menu-item-edit" onclick="editContextLot()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      Edit Lot
+      <span>Edit Lot</span>
     </div>
-    <div class="context-menu-item" onclick="deleteContextLot()" style="color: var(--error);">
+    <div class="context-menu-item context-menu-item-delete" onclick="deleteContextLot()" style="color: var(--error);">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-      Delete Lot
+      <span>Delete Lot</span>
     </div>
   </div>
 
@@ -2023,10 +2023,11 @@
       }
     }
 
-    // Context Menu Handlers for Lots
+    // Context Menu Handlers for Lots & Quality Groups
     let contextLotId = null;
+    let contextQualityName = null;
 
-    function handleLotContextMenu(e, lotId) {
+    function handleLotContextMenu(e, lotId, qualityName = null) {
       const evt = e || window.event;
       if (evt) {
         if (evt.preventDefault) evt.preventDefault();
@@ -2034,9 +2035,24 @@
         evt.returnValue = false;
       }
       
-      contextLotId = lotId;
+      contextLotId = lotId || null;
+      contextQualityName = qualityName || null;
       let menu = document.getElementById('lot-context-menu');
       if (!menu) return false;
+
+      // Update menu items based on whether user right-clicked a lot or quality header
+      const menuTitle = menu.querySelector('.context-menu-title');
+      const editItem = menu.querySelector('.context-menu-item-edit');
+      const deleteItem = menu.querySelector('.context-menu-item-delete');
+
+      if (contextLotId) {
+        const lot = stockData.find(l => String(l.id) === String(contextLotId));
+        if (editItem) editItem.style.display = 'flex';
+        if (deleteItem) deleteItem.textContent = lot ? `Delete Lot (${lot.lotNumber})` : 'Delete Lot';
+      } else if (contextQualityName) {
+        if (editItem) editItem.style.display = 'none';
+        if (deleteItem) deleteItem.textContent = `Delete Quality (${contextQualityName})`;
+      }
 
       // Move menu to body if not already
       if (menu.parentElement !== document.body) {
@@ -2051,7 +2067,7 @@
       const winW = window.innerWidth || document.documentElement.clientWidth;
       const winH = window.innerHeight || document.documentElement.clientHeight;
       
-      if (x + 160 > winW) x = winW - 170;
+      if (x + 180 > winW) x = winW - 190;
       if (y + 100 > winH) y = winH - 110;
 
       menu.style.left = `${Math.max(10, x)}px`;
@@ -2090,7 +2106,7 @@
       if (menu) menu.style.display = 'none';
 
       if (!contextLotId) return;
-      const lot = stockData.find(l => l.id === contextLotId);
+      const lot = stockData.find(l => String(l.id) === String(contextLotId));
       if (!lot) return;
 
       // Find matching order in yarn-rm-orders
@@ -2198,8 +2214,38 @@
       const menu = document.getElementById('lot-context-menu');
       if (menu) menu.style.display = 'none';
 
+      // 1. Check if deleting an entire quality group
+      if (!contextLotId && contextQualityName) {
+        if (!confirm(`Are you sure you want to delete all inward lots and stock for Quality "${contextQualityName}"?\n\nThis will completely delete all inward batches of this quality from Yarn RM Orders and update the Stock Book.`)) {
+          return;
+        }
+
+        try {
+          let orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
+          if (Array.isArray(orders) && orders.length > 0) {
+            orders.forEach(order => {
+              if (order.quality === contextQualityName) {
+                order.batches = [];
+                order.status = 'Active';
+              }
+            });
+            localStorage.setItem('yarn-rm-orders', JSON.stringify(orders));
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+              window.VishwaSupabase.saveToSupabase('yarn-rm-orders', orders);
+            }
+          }
+        } catch(e) {
+          console.error("Error clearing quality from yarn-rm-orders:", e);
+        }
+
+        stockData = stockData.filter(l => l.quality !== contextQualityName);
+        saveStockData();
+        renderStockBook();
+        return;
+      }
+
       if (!contextLotId) return;
-      const lot = stockData.find(l => l.id === contextLotId);
+      const lot = stockData.find(l => String(l.id) === String(contextLotId));
       if (!lot) return;
 
       const challanInfo = lot.challanNo ? ` (Challan: ${lot.challanNo})` : '';
@@ -2216,10 +2262,20 @@
             if (Array.isArray(order.batches) && order.batches.length > 0) {
               const prevBatchCount = order.batches.length;
               order.batches = order.batches.filter(b => {
-                const matchChallan = lot.challanNo && String(b.challanNumber).trim() === String(lot.challanNo).trim();
-                const matchLot = lot.lotNumber && String(b.lotNumber).trim() === String(lot.lotNumber).trim();
-                const matchOrderRef = lot.orderRef && (String(order.id) === String(lot.orderRef) || String(order.orderNumber) === String(lot.orderRef));
-                return !(matchChallan || matchLot || (matchOrderRef && prevBatchCount === 1));
+                const bChallan = String(b.challanNumber || '').trim();
+                const bLot = String(b.lotNumber || '').trim();
+                const bId = String(b.id || '').trim();
+                const lotChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+                const lotNum = String(lot.lotNumber || '').trim();
+                const lotBatchId = String(lot.batchId || '').trim();
+
+                const matchBatchId = lotBatchId && bId === lotBatchId;
+                const matchBoth = lotChallan && lotNum && bChallan === lotChallan && bLot === lotNum;
+                const matchChallan = lotChallan && bChallan === lotChallan;
+                const matchLot = lotNum && bLot === lotNum;
+                const matchOrderRef = lot.orderRef && (String(order.id) === String(lot.orderRef) || String(order.orderNumber) === String(lot.orderRef)) && prevBatchCount === 1;
+
+                return !(matchBatchId || matchBoth || matchChallan || matchLot || matchOrderRef);
               });
 
               if (order.batches.length !== prevBatchCount) {
@@ -2250,7 +2306,7 @@
       }
 
       // Remove from stockData
-      stockData = stockData.filter(l => l.id !== contextLotId);
+      stockData = stockData.filter(l => String(l.id) !== String(contextLotId));
       saveStockData();
       renderStockBook();
     }
@@ -2819,9 +2875,10 @@
           ? `<span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.12); color: var(--error); border-color: rgba(239, 68, 68, 0.3);">✓ COMPLETED (0 Available)</span>`
           : `<span class="badge badge-success">${qAvailBoxes} / ${qTotalBoxes} Boxes Available</span>`;
 
+        const escapedQName = qualityName.replace(/'/g, "\\'");
         if (lotsHtml) {
           groupEl.innerHTML = `
-            <div class="quality-header" oncontextmenu="handleLotContextMenu(event, '${lots[0] ? lots[0].id : ''}')">
+            <div class="quality-header" oncontextmenu="handleLotContextMenu(event, null, '${escapedQName}')">
               <div class="quality-title-area" style="flex-wrap: wrap;">
                 <span class="quality-title">${qualityName}</span>
                 ${qItemType ? `<span class="badge" style="background: rgba(139, 92, 246, 0.12); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.3);">${qItemType}</span>` : ''}
