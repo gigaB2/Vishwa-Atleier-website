@@ -1643,12 +1643,8 @@
       </div>
     </div>
 
-    <!-- MAIN UNIFIED SUITE TABS (Dashboard | Stock Book | Analytics) -->
+    <!-- MAIN UNIFIED SUITE TABS (Stock Book | Analytics) -->
     <div class="main-tabs-bar">
-      <button class="main-tab-btn" id="main-tab-dashboard" onclick="switchStockTab('dashboard')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        <span>Stock Dashboard</span>
-      </button>
       <button class="main-tab-btn active" id="main-tab-stock-book" onclick="switchStockTab('stock-book')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         <span>Stock Book</span>
@@ -3725,15 +3721,20 @@
       // Update Header Title & Actions
       const pageTitle = document.getElementById('rm-page-title');
       const pageSub = document.getElementById('rm-page-subtitle');
+      const headerActions = document.getElementById('rm-header-actions-bar');
+
       if (tabName === 'dashboard') {
         if (pageTitle) pageTitle.textContent = 'Yarn RM Stock Dashboard';
         if (pageSub) pageSub.textContent = 'High-level inventory overview — Quality breakdown, cones & available stock (kg to 2 decimals)';
+        if (headerActions) headerActions.style.display = 'flex';
       } else if (tabName === 'stock-book') {
         if (pageTitle) pageTitle.textContent = 'Yarn RM Stock Book';
         if (pageSub) pageSub.textContent = 'Raw material stock ledger — Track incoming challans & box-level yarn issuance';
+        if (headerActions) headerActions.style.display = 'flex';
       } else if (tabName === 'analytics') {
         if (pageTitle) pageTitle.textContent = 'Yarn RM Analytics';
         if (pageSub) pageSub.textContent = 'Executive procurement, consumption & sales performance intelligence';
+        if (headerActions) headerActions.style.display = 'none';
       }
 
       // Update URL without full page reload
