@@ -59,6 +59,7 @@
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <!-- Sidebar Component -->
   <link rel="stylesheet" href="../../sidebar.css">
@@ -495,6 +496,66 @@
       justify-content: center;
       z-index: 10;
       border-radius: var(--radius);
+    }
+
+    .ai-scan-glow-ring {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.25));
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: 0 0 24px rgba(139, 92, 246, 0.35);
+      animation: aiPulse 2s infinite ease-in-out;
+      margin-bottom: 1.25rem;
+    }
+
+    @keyframes aiPulse {
+      0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.5); transform: scale(0.97); }
+      70% { box-shadow: 0 0 0 16px rgba(139, 92, 246, 0); transform: scale(1.03); }
+      100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); transform: scale(0.97); }
+    }
+
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .live-dot-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+      box-shadow: 0 0 0 rgba(139, 92, 246, 0.6);
+      animation: livePulse 1.5s infinite;
+    }
+
+    @keyframes livePulse {
+      0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.8); }
+      70% { box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+    }
+
+    .scan-progress-bar-bg {
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 0.9rem 0 0.4rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .scan-progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #8b5cf6, #ec4899, #f97316);
+      border-radius: 999px;
+      transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 14px rgba(139, 92, 246, 0.75);
     }
 
     .spinner {
@@ -2962,7 +3023,7 @@
       );
     };
 
-    // Component: Batch Form with AI Scan (Exact replica of order-book.html)
+    // Component: Batch Form with AI Scan & Mobile QR Upload
     const BatchForm = ({ order, onCancel, onSubmit, initialData, geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
       const [challan, setChallan] = useState(initialData?.challanNumber || '');
       const [receiveDate, setReceiveDate] = useState(initialData?.receiveDate?.split('T')[0] || new Date().toISOString().split('T')[0]);
@@ -2971,8 +3032,102 @@
       const [error, setError] = useState(null);
       const [invalidFields, setInvalidFields] = useState({});
       const [isScanning, setIsScanning] = useState(false);
+      const [scanProgress, setScanProgress] = useState(0);
+      const [scanStage, setScanStage] = useState('');
+      const scanIntervalRef = useRef(null);
 
-      const scanChallan = async (file) => {
+      // Mobile QR Upload State
+      const [showQrModal, setShowQrModal] = useState(false);
+      const [qrSessionId, setQrSessionId] = useState('');
+      const [qrStatus, setQrStatus] = useState('waiting');
+      const qrPollRef = useRef(null);
+
+      const openQrScanModal = () => {
+        const sessionId = 'ch_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
+        setQrSessionId(sessionId);
+        setQrStatus('waiting');
+        setShowQrModal(true);
+      };
+
+      const closeQrScanModal = () => {
+        if (qrPollRef.current) {
+          clearInterval(qrPollRef.current);
+          qrPollRef.current = null;
+        }
+        setShowQrModal(false);
+      };
+
+      useEffect(() => {
+        if (!showQrModal || !qrSessionId) return;
+
+        const scanUrl = new URL('../../upload.html', window.location.href).href + `?session=${qrSessionId}&type=challan`;
+        
+        const t = setTimeout(() => {
+          const container = document.getElementById('qr-code-canvas-container-yarn');
+          if (container) {
+            container.innerHTML = '';
+            if (typeof QRCode !== 'undefined') {
+              try {
+                new QRCode(container, {
+                  text: scanUrl,
+                  width: 190,
+                  height: 190,
+                  colorDark: '#0f172a',
+                  colorLight: '#ffffff',
+                  correctLevel: QRCode.CorrectLevel.M
+                });
+              } catch(e) {
+                const encoded = encodeURIComponent(scanUrl);
+                container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encoded}" alt="QR" style="width:190px;height:190px;border-radius:12px;" />`;
+              }
+            } else {
+              const encoded = encodeURIComponent(scanUrl);
+              container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encoded}" alt="QR" style="width:190px;height:190px;border-radius:12px;" />`;
+            }
+          }
+        }, 60);
+
+        const pollKey = `bl_qr_session_${qrSessionId}`;
+        qrPollRef.current = setInterval(async () => {
+          let payload = null;
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+            try {
+              payload = await window.VishwaSupabase.get(pollKey);
+            } catch(e) {}
+          }
+          if (!payload) {
+            try {
+              const raw = localStorage.getItem(pollKey);
+              if (raw) payload = JSON.parse(raw);
+            } catch(e) {}
+          }
+
+          if (payload && payload.imageUrl) {
+            clearInterval(qrPollRef.current);
+            qrPollRef.current = null;
+            setQrStatus('received');
+            
+            setTimeout(() => {
+              setShowQrModal(false);
+              setChallan('');
+              setLotNumber('');
+              setBoxInputs([]);
+              setError(null);
+              scanChallan(payload.imageUrl);
+            }, 600);
+          }
+        }, 1500);
+
+        return () => {
+          clearTimeout(t);
+          if (qrPollRef.current) {
+            clearInterval(qrPollRef.current);
+            qrPollRef.current = null;
+          }
+        };
+      }, [showQrModal, qrSessionId]);
+
+      const scanChallan = async (fileOrDataUrl) => {
         if (!geminiApiKey) {
           setError(
             <span>
@@ -2984,13 +3139,54 @@
 
         setIsScanning(true);
         setError(null);
+        setScanProgress(8);
+        setScanStage('Initializing Gemini AI engine...');
+
+        // Smooth progress animation while in flight
+        const startTime = Date.now();
+        if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+        scanIntervalRef.current = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          if (elapsed < 1200) {
+            setScanProgress(prev => Math.min(28, prev + 3));
+            setScanStage('Uploading challan image...');
+          } else if (elapsed < 3000) {
+            setScanProgress(prev => Math.min(58, prev + 2.5));
+            setScanStage('Analyzing challan header & supplier data...');
+          } else if (elapsed < 6000) {
+            setScanProgress(prev => Math.min(84, prev + 1.5));
+            setScanStage('Extracting box weights, lot & cones breakdown...');
+          } else {
+            setScanProgress(prev => Math.min(94, prev + 0.5));
+            setScanStage('Parsing & validating extracted fields...');
+          }
+        }, 150);
 
         try {
-          const base64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result.split(',')[1]);
-            reader.readAsDataURL(file);
-          });
+          let base64 = '';
+          let mimeType = 'image/jpeg';
+
+          if (typeof fileOrDataUrl === 'string') {
+            if (fileOrDataUrl.startsWith('data:')) {
+              const match = fileOrDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+              if (match) {
+                mimeType = match[1];
+                base64 = match[2];
+              } else {
+                base64 = fileOrDataUrl.split(',')[1] || fileOrDataUrl;
+              }
+            } else {
+              base64 = fileOrDataUrl;
+            }
+          } else if (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob) {
+            mimeType = fileOrDataUrl.type || 'image/jpeg';
+            base64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result.split(',')[1]);
+              reader.onerror = reject;
+              reader.readAsDataURL(fileOrDataUrl);
+            });
+          }
 
           const prompt = `Extract details from this yarn challan image. Return ONLY a JSON object with: 
             {
@@ -3031,7 +3227,7 @@
                   contents: [{
                     parts: [
                       { text: prompt },
-                      { inline_data: { mime_type: file.type, data: base64 } }
+                      { inline_data: { mime_type: mimeType, data: base64 } }
                     ]
                   }]
                 })
@@ -3083,9 +3279,16 @@
 
           if (!success) throw new Error(lastError || "All models failed to respond.");
 
+          clearInterval(scanIntervalRef.current);
+          setScanProgress(100);
+          setScanStage('✨ Extraction complete! Populating details...');
+          await new Promise(r => setTimeout(r, 400));
+
         } catch (err) {
+          if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
           setError("Failed to scan challan: " + err.message);
         } finally {
+          if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
           setIsScanning(false);
         }
       };
@@ -3152,18 +3355,177 @@
 
       return (
         <div className="card" style={{border: '1.5px solid var(--accent)', marginBottom: '1.5rem', position: 'relative'}}>
+          {/* Enhanced Gemini AI Progress Bar Overlay */}
           {isScanning && (
-            <div className="loading-overlay">
-              <div className="spinner"></div>
-              <p style={{fontWeight: '600'}}>Scanning Challan with Gemini AI...</p>
-              <p style={{fontSize: '0.8rem', color: 'var(--muted)', marginTop: '0.5rem'}}>Extracting weights and details</p>
+            <div className="loading-overlay" style={{
+              background: 'rgba(15, 23, 42, 0.92)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              padding: '2.25rem 1.5rem',
+              color: '#ffffff',
+              borderRadius: 'var(--radius)',
+              zIndex: 30,
+              textAlign: 'center'
+            }}>
+              <div className="ai-scan-glow-ring">
+                <span style={{ fontSize: '28px', animation: 'spinSlow 6s linear infinite' }}>✨</span>
+              </div>
+
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.3rem 0.9rem',
+                borderRadius: '20px',
+                background: 'rgba(139, 92, 246, 0.25)',
+                border: '1px solid rgba(139, 92, 246, 0.45)',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                color: '#c4b5fd',
+                marginBottom: '0.85rem'
+              }}>
+                <span className="live-dot-pulse"></span>
+                Gemini Vision AI
+              </div>
+
+              <h4 style={{ margin: '0 0 0.35rem', fontSize: '1.2rem', fontWeight: '700', color: '#ffffff' }}>
+                Scanning Challan Document
+              </h4>
+              
+              <div className="scan-progress-bar-bg" style={{ width: '100%', maxWidth: '340px', margin: '0.9rem auto 0.4rem' }}>
+                <div 
+                  className="scan-progress-bar-fill" 
+                  style={{ width: `${Math.max(4, scanProgress)}%` }} 
+                />
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                width: '100%',
+                maxWidth: '340px',
+                fontSize: '0.82rem',
+                margin: '0.25rem auto 0'
+              }}>
+                <span style={{ color: '#94a3b8', fontWeight: '500' }}>{scanStage}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: '#a78bfa' }}>
+                  {Math.round(scanProgress)}%
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{
+                  marginTop: '1.5rem',
+                  padding: '0.35rem 1.1rem',
+                  fontSize: '0.8rem',
+                  color: '#94a3b8',
+                  borderColor: 'rgba(255,255,255,0.2)',
+                  borderRadius: '20px'
+                }}
+                onClick={() => {
+                  if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+                  setIsScanning(false);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {/* Mobile QR Upload Modal */}
+          {showQrModal && (
+            <div className="modal-overlay" style={{ zIndex: 10000 }}>
+              <div className="modal" style={{ maxWidth: '460px', textAlign: 'center', padding: '2rem 1.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '1.4rem' }}>📱</span>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Scan with Mobile</h3>
+                  </div>
+                  <button 
+                    type="button"
+                    className="btn btn-outline" 
+                    style={{ border: 'none', padding: '0.3rem 0.6rem', fontSize: '1.1rem', lineHeight: 1 }}
+                    onClick={closeQrScanModal}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
+                  Scan this QR code with your phone camera to take a photo or select the challan from your gallery.
+                </p>
+
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  margin: '0 auto 1.25rem',
+                  padding: '1rem',
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  width: '210px',
+                  height: '210px'
+                }}>
+                  <div id="qr-code-canvas-container-yarn" style={{ width: '190px', height: '190px' }}></div>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.6rem 1rem',
+                  borderRadius: '10px',
+                  background: qrStatus === 'received' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(139, 92, 246, 0.1)',
+                  color: qrStatus === 'received' ? 'var(--success)' : 'var(--accent)',
+                  fontWeight: '600',
+                  fontSize: '0.85rem',
+                  marginBottom: '1.25rem'
+                }}>
+                  <span className={qrStatus === 'received' ? '' : 'live-dot-pulse'}></span>
+                  {qrStatus === 'received' ? '✅ Photo received! Analyzing...' : 'Waiting for phone camera upload...'}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ flex: 1, padding: '0.6rem', fontSize: '0.82rem', justifyContent: 'center' }}
+                    onClick={() => {
+                      const url = new URL('../../upload.html', window.location.href).href + `?session=${qrSessionId}&type=challan`;
+                      navigator.clipboard.writeText(url);
+                      alert('Upload link copied to clipboard!');
+                    }}
+                  >
+                    📋 Copy Link
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ padding: '0.6rem 1rem', fontSize: '0.82rem' }}
+                    onClick={() => {
+                      const url = new URL('../../upload.html', window.location.href).href + `?session=${qrSessionId}&type=challan`;
+                      window.open(url, '_blank');
+                    }}
+                    title="Open upload form in a new tab"
+                  >
+                    ↗️ Open Tab
+                  </button>
+                </div>
+              </div>
             </div>
           )}
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
             <h3 style={{ margin: 0 }}>{initialData ? 'Edit Batch' : 'Add New Batch'}</h3>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <button 
+                type="button"
                 className="btn btn-outline" 
                 style={{ color: 'var(--error)', borderColor: 'var(--error)', padding: '0.4rem 0.8rem' }}
                 onClick={() => {
@@ -3175,7 +3537,16 @@
               >
                 🔄 Reset
               </button>
-              <label className="btn btn-outline" style={{ cursor: 'pointer', margin: 0, padding: '0.4rem 0.8rem' }}>
+              <button 
+                type="button"
+                className="btn btn-outline"
+                style={{ padding: '0.4rem 0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                onClick={openQrScanModal}
+                title="Scan QR with phone camera to upload photo"
+              >
+                📱 Phone Upload
+              </button>
+              <label className="btn btn-outline" style={{ cursor: 'pointer', margin: 0, padding: '0.4rem 0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                 📷 Scan Challan
                 <input 
                   type="file" 

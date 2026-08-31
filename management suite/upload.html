@@ -142,8 +142,8 @@
 <body>
   <div class="card">
     <div class="header">
-      <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🏗️</div>
-      <h1>Upload Beam Card</h1>
+      <div id="type-icon" style="font-size: 2.2rem; margin-bottom: 0.5rem;">🏗️</div>
+      <h1 id="type-heading">Upload Beam Card</h1>
       <p id="session-info">Connected to desktop Beam Loading form</p>
     </div>
 
@@ -167,7 +167,18 @@
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     let sessionId = urlParams.get('session');
+    const uploadType = urlParams.get('type') || 'beam';
     let imageDataUrl = '';
+
+    if (uploadType === 'challan') {
+      document.title = 'Yarn Challan Photo Upload - Vishwa Fashions';
+      const iconEl = document.getElementById('type-icon');
+      const h1El = document.getElementById('type-heading');
+      const sessionEl = document.getElementById('session-info');
+      if (iconEl) iconEl.textContent = '📄';
+      if (h1El) h1El.textContent = 'Upload Yarn Challan';
+      if (sessionEl) sessionEl.textContent = 'Connected to desktop Challan Scanner';
+    }
 
     if (!sessionId && window.location.hash) {
       sessionId = window.location.hash.replace('#', '');
