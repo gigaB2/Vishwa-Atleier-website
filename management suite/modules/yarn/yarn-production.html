@@ -559,9 +559,26 @@
     }
 
     .actions-cell {
-      display: flex;
-      gap: 0.5rem;
+      text-align: right;
+      white-space: nowrap;
+      vertical-align: middle;
+      min-width: 180px;
+      padding: 0.75rem 1rem !important;
+    }
+
+    .actions-wrapper {
+      display: inline-flex;
+      gap: 0.4rem;
       align-items: center;
+      justify-content: flex-end;
+      width: 100%;
+    }
+
+    th.actions-col {
+      text-align: right !important;
+      min-width: 180px;
+      padding-right: 1.25rem !important;
+      white-space: nowrap;
     }
 
     /* Mesh Background */
@@ -1051,18 +1068,30 @@
 
       .table-container table {
         width: max-content;
-        min-width: 100%;
+        min-width: 1000px;
       }
 
       .table-container th,
       .table-container td {
-        padding: 0.7rem 0.65rem;
+        padding: 0.75rem 0.75rem;
         font-size: 0.82rem;
         white-space: nowrap;
       }
 
       .table-container th {
-        font-size: 0.7rem;
+        font-size: 0.72rem;
+      }
+
+      .btn-sm {
+        min-height: 34px;
+        padding: 0 0.85rem;
+        font-size: 0.82rem;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .actions-cell {
+        min-width: 195px;
       }
 
       .modal-content {
@@ -1445,7 +1474,7 @@
                 <th onclick="toggleProdSort('qty')" style="cursor: pointer; user-select: none;">
                   Qty (Kg) <span id="sort-icon-qty">↕</span>
                 </th>
-                <th>Actions</th>
+                <th class="actions-col">Actions</th>
               </tr>
             </thead>
             <tbody id="production-table-body">
@@ -1595,7 +1624,7 @@
                 <th>Amount</th>
                 <th>GST</th>
                 <th>Total Amount</th>
-                <th>Actions</th>
+                <th class="actions-col">Actions</th>
               </tr>
             </thead>
             <tbody id="sales-table-body">
@@ -1686,12 +1715,31 @@
       });
     }
 
+    // Refresh all tables, dropdowns, KPIs, and dashboard views with latest data
+    function refreshAllViews() {
+      loadLogs();
+      calculateSummaryMetrics();
+      populateProductNameDropdown();
+      if (typeof populateProdLotDropdown === 'function') populateProdLotDropdown();
+      if (typeof populateBoriDropdown === 'function') populateBoriDropdown();
+      renderProductionTable();
+      renderSalesTable();
+      renderStockDashboard();
+      if (typeof updateBatchSellButtonState === 'function') updateBatchSellButtonState();
+
+      // If production form is in new/unsubmitted state (not editing), keep next Bori No updated
+      const editId = document.getElementById('prod-edit-id')?.value;
+      const boriInput = document.getElementById('prod-bori');
+      if (!editId && boriInput && !boriInput.dataset.userEdited) {
+        boriInput.value = generateNextBoriNumber(activeDivision);
+      }
+    }
+
     // Save logs to localStorage for current active division
     function saveLogs() {
       localStorage.setItem(`yarn_${activeDivision}_production_logs`, JSON.stringify(dataStore[activeDivision].production));
       localStorage.setItem(`yarn_${activeDivision}_sales_logs`, JSON.stringify(dataStore[activeDivision].sales));
-      calculateSummaryMetrics();
-      populateBoriDropdown();
+      refreshAllViews();
     }
 
     // Toast alert triggers
@@ -3606,9 +3654,11 @@
           <td>${rollsDisplay}</td>
           <td>${qtyDisplay}</td>
           <td class="actions-cell">
-            <button class="btn btn-secondary btn-sm" onclick="editProductionLog('${l.id}')">Edit</button>
-            <button class="btn btn-secondary btn-sm" onclick="repeatProductionLog('${l.id}')">Repeat</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteProductionLog('${l.id}')">Delete</button>
+            <div class="actions-wrapper">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); editProductionLog('${l.id}')">Edit</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); repeatProductionLog('${l.id}')">Repeat</button>
+              <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteProductionLog('${l.id}')">Delete</button>
+            </div>
           </td>
         `;
         body.appendChild(tr);
@@ -3790,8 +3840,8 @@
           <td><strong style="color: var(--accent);">${item.boriCount}</strong> Bori</td>
           <td>${item.remainingRolls}</td>
           <td><strong style="color: #22c55e;">${item.remainingQty.toFixed(2)} Kg</strong></td>
-          <td style="text-align: center;">
-            <button class="btn btn-primary btn-sm" onclick="openStockSellPrompt('${safeKey}')" style="background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; padding: 4px 14px; font-weight: 600;">
+          <td style="text-align: center; white-space: nowrap; min-width: 110px;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openStockSellPrompt('${safeKey}')" style="background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; padding: 4px 14px; font-weight: 600;">
               Sell
             </button>
           </td>
@@ -4092,8 +4142,10 @@
           <td>${s.gstRate}%</td>
           <td><strong>₹${grandTotalVal.toFixed(2)}</strong></td>
           <td class="actions-cell">
-            <button class="btn btn-secondary btn-sm" onclick="editSalesLog('${s.id}')">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteSalesLog('${s.id}')">Delete</button>
+            <div class="actions-wrapper">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); editSalesLog('${s.id}')">Edit</button>
+              <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteSalesLog('${s.id}')">Delete</button>
+            </div>
           </td>
         `;
         body.appendChild(tr);
@@ -4334,6 +4386,45 @@
       }, 10);
     };
 
+    // Touch & iPad friendly Deletion Modal helper
+    let deleteConfirmCallback = null;
+    function showConfirmDelete(title, message, onConfirm) {
+      const modal = document.getElementById('yarn-delete-confirm-modal');
+      if (!modal) {
+        if (confirm(message || 'Are you sure you want to delete?')) {
+          if (typeof onConfirm === 'function') onConfirm();
+        }
+        return;
+      }
+      document.getElementById('delete-confirm-title').innerText = title || 'Confirm Deletion';
+      document.getElementById('delete-confirm-msg').innerText = message || 'Are you sure you want to delete this record?';
+      deleteConfirmCallback = onConfirm;
+
+      modal.style.display = 'flex';
+      setTimeout(() => {
+        modal.classList.add('active');
+      }, 10);
+    }
+
+    window.closeDeleteConfirmModal = function() {
+      const modal = document.getElementById('yarn-delete-confirm-modal');
+      if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+          modal.style.display = 'none';
+        }, 200);
+      }
+      deleteConfirmCallback = null;
+    };
+
+    window.executeDeleteConfirmAction = function() {
+      const cb = deleteConfirmCallback;
+      closeDeleteConfirmModal();
+      if (typeof cb === 'function') {
+        cb();
+      }
+    };
+
     // Delete actions
     window.deleteProductionLog = function(id) {
       const log = dataStore[activeDivision].production.find(l => l.id === id);
@@ -4344,26 +4435,41 @@
           showToast('Sold items must be brought back to stock before deleting', 'error');
           return;
         }
-      }
-      if (confirm('Are you sure you want to delete this production entry?')) {
-        if (log && dataStore[activeDivision].sales.some(s => s.boriNo === log.boriNo)) {
+        const boriNoClean = (log.boriNo || '').trim().toLowerCase();
+        const hasLinkedSales = dataStore[activeDivision].sales.some(s => {
+          if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+            return s.items.some(i => (i.boriNo || '').trim().toLowerCase() === boriNoClean);
+          }
+          return (s.boriNo || '').trim().toLowerCase() === boriNoClean;
+        });
+        if (hasLinkedSales) {
           showToast('Cannot delete production entry: linked sales logs exist.', 'error');
           return;
         }
-        dataStore[activeDivision].production = dataStore[activeDivision].production.filter(l => l.id !== id);
-        saveLogs();
-        renderProductionTable();
-        showToast('Production entry deleted', 'info');
       }
+      showConfirmDelete(
+        'Delete Production Entry',
+        `Are you sure you want to delete production bori "${log ? log.boriNo : id}"? This action cannot be undone.`,
+        function() {
+          dataStore[activeDivision].production = dataStore[activeDivision].production.filter(l => l.id !== id);
+          saveLogs();
+          showToast('Production entry deleted', 'info');
+        }
+      );
     };
 
     window.deleteSalesLog = function(id) {
-      if (confirm('Are you sure you want to delete this sale record?')) {
-        dataStore[activeDivision].sales = dataStore[activeDivision].sales.filter(s => s.id !== id);
-        saveLogs();
-        renderSalesTable();
-        showToast('Sale record deleted', 'info');
-      }
+      const sale = dataStore[activeDivision].sales.find(s => s.id === id);
+      const challan = sale ? sale.challanNo : id;
+      showConfirmDelete(
+        'Delete Sale Record',
+        `Are you sure you want to delete sale challan "${challan}"? Sold boris will be restored back to available stock.`,
+        function() {
+          dataStore[activeDivision].sales = dataStore[activeDivision].sales.filter(s => s.id !== id);
+          saveLogs();
+          showToast('Sale record deleted and stock restored', 'info');
+        }
+      );
     };
 
     // Summary math
@@ -4433,6 +4539,16 @@
       }
     }
 
+    let remoteSyncDebounceTimer = null;
+    function handleRemoteDataSync(key) {
+      if (!key || key.startsWith('yarn_') || key.startsWith('costing-') || key.includes('production') || key.includes('sales') || key === 'vf_deleted_entity_ids') {
+        clearTimeout(remoteSyncDebounceTimer);
+        remoteSyncDebounceTimer = setTimeout(() => {
+          refreshAllViews();
+        }, 30);
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       loadLogs();
       initProdTwistCustomSelect();
@@ -4441,26 +4557,24 @@
       setInterval(updateClock, 1000);
       updateClock();
 
-      window.addEventListener('storage', () => {
-        populateProductNameDropdown();
-        renderProductionTable();
-        renderStockDashboard();
+      window.addEventListener('storage', (e) => {
+        handleRemoteDataSync(e.key);
       });
-      window.addEventListener('focus', () => {
-        populateProductNameDropdown();
-        renderProductionTable();
-        renderStockDashboard();
-        broadcastYarnPresence();
-      });
-      window.addEventListener('supabase-sync', () => {
-        populateProductNameDropdown();
-        renderProductionTable();
-        renderStockDashboard();
+      window.addEventListener('supabase-sync', (e) => {
+        handleRemoteDataSync(e?.detail?.key);
       });
       window.addEventListener('supabase-ready', () => {
-        populateProductNameDropdown();
-        renderProductionTable();
-        renderStockDashboard();
+        handleRemoteDataSync();
+      });
+      window.addEventListener('focus', () => {
+        refreshAllViews();
+        broadcastYarnPresence();
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          refreshAllViews();
+          broadcastYarnPresence();
+        }
       });
     });
   </script>
@@ -4617,6 +4731,21 @@
           <button type="button" class="btn btn-primary" onclick="printSaleBill()">Print Bill</button>
           <button type="button" class="btn btn-secondary" onclick="closeSaleDetailsModal()">Close</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal (Touch & iPad Friendly) -->
+  <div id="yarn-delete-confirm-modal" class="modal-overlay" style="display: none; z-index: 99999;">
+    <div class="modal-content" style="max-width: 440px; border-radius: 16px; background: var(--surface); padding: 1.75rem 1.5rem; text-align: center; border: 1px solid var(--border); box-shadow: var(--shadow-lg);">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.12); color: #ef4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; font-size: 1.6rem; border: 1px solid rgba(239, 68, 68, 0.25);">
+        ⚠️
+      </div>
+      <h3 id="delete-confirm-title" style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--fg);">Confirm Deletion</h3>
+      <p id="delete-confirm-msg" style="font-size: 0.9rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.5;">Are you sure you want to delete this record?</p>
+      <div style="display: flex; gap: 0.75rem; justify-content: center;">
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteConfirmModal()" style="flex: 1; min-height: 42px; font-weight: 600;">Cancel</button>
+        <button type="button" class="btn btn-danger" onclick="executeDeleteConfirmAction()" style="flex: 1; min-height: 42px; font-weight: 600;">Delete</button>
       </div>
     </div>
   </div>
