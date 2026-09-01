@@ -568,32 +568,81 @@
       margin-bottom: 1rem;
     }
 
+    /* Timeline styles */
+    .timeline-container {
+      position: relative;
+      padding-left: 2rem;
+      border-left: 2px dashed var(--border);
+      margin-left: 1rem;
+    }
+
+    .ob-arrival-timeline.timeline-container {
+      position: relative;
+      margin-top: 1.5rem;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding: 7rem 0;
+      display: flex;
+      align-items: center;
+      min-height: 520px;
+      max-width: 100%;
+      width: 100%;
+      box-sizing: border-box;
+      border-left: none !important;
+      margin-left: 0 !important;
+      padding-left: 0 !important;
+      cursor: grab;
+    }
+
+    .ob-arrival-timeline:active {
+      cursor: grabbing;
+    }
+
     .ob-timeline-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
+      align-items: flex-start;
+      gap: 0.85rem 1.25rem;
+      margin-bottom: 1.5rem;
       flex-wrap: wrap;
-      gap: 1rem;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      min-width: 0;
     }
+
+    .ob-timeline-header h3 {
+      margin: 0;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
     .ob-timeline-header-actions {
       display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
       align-items: center;
-      gap: 1.25rem;
+      justify-content: flex-end;
+      min-width: 0;
+      max-width: 100%;
     }
+
     .ob-timeline-hint {
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       color: var(--muted);
+      line-height: 1.35;
+      max-width: 100%;
+      min-width: 0;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
-    .ob-arrival-timeline {
-      overflow-x: auto;
-      padding: 6rem 0;
-      position: relative;
-      -webkit-overflow-scrolling: touch;
-      cursor: grab;
-    }
-    .ob-arrival-timeline:active {
-      cursor: grabbing;
+
+    .ob-timeline-dir-btn {
+      flex: 0 1 auto;
+      min-width: 0;
+      max-width: 100%;
     }
 
     /* Heat map styles — square cells; scroll allowed when content overflows */
@@ -866,6 +915,39 @@
     .dark-mode .heat-level-5 { background-color: rgba(124, 58, 237, 1); }
 
     @media (max-width: 1024px) {
+      .ob-timeline-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+
+      .ob-timeline-header-actions {
+        justify-content: stretch;
+        width: 100%;
+      }
+
+      .ob-timeline-dir-btn {
+        width: 100%;
+        justify-content: center !important;
+      }
+
+      .ob-timeline-hint {
+        width: 100%;
+        order: 3;
+        font-size: 0.78rem;
+        padding: 0.55rem 0.75rem;
+        border-radius: 10px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        box-sizing: border-box;
+      }
+
+      .ob-arrival-timeline.timeline-container {
+        padding: 6.5rem 0;
+        min-height: 500px;
+      }
+
       .ob-summary-row {
         grid-template-columns: 1fr !important;
         gap: 1rem !important;

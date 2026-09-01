@@ -86,10 +86,17 @@
 
     /* Main Container */
     .rm-container {
-      max-width: 1300px;
-      margin: 0 auto;
-      padding: 2rem 1.5rem 4rem 1.5rem;
+      max-width: 100%;
+      margin: 0;
+      padding: 1.75rem 2rem 4rem 2rem;
       width: 100%;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 768px) {
+      .rm-container {
+        padding: 1.25rem 1rem 3rem 1rem;
+      }
     }
 
     /* Page Header */
@@ -1305,7 +1312,7 @@
         <h1 id="rm-page-title">Yarn RM Stock Book</h1>
         <p id="rm-page-subtitle">Raw material stock ledger — Track incoming challans & box-level yarn issuance</p>
       </div>
-      <div class="rm-header-actions" id="rm-header-actions-bar">
+      <div class="rm-header-actions" id="rm-header-actions-bar" style="display: none;">
         <button class="btn btn-primary" onclick="openIssueModal()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
           Issue Boxes
@@ -2448,6 +2455,18 @@
       document.getElementById('issue-box-list').value = boxNames.join(', ');
     }
 
+    function updateFloatingIssueButton() {
+      const btn = document.getElementById('floating-issue-btn');
+      const countEl = document.getElementById('floating-issue-count');
+      if (!btn) return;
+      if (currentStockTab === 'stock-book' && selectedBoxes && selectedBoxes.length > 0) {
+        btn.classList.add('visible');
+        if (countEl) countEl.textContent = selectedBoxes.length;
+      } else {
+        btn.classList.remove('visible');
+      }
+    }
+
     function closeModal(id) {
       document.getElementById(id).classList.remove('active');
     }
@@ -3070,12 +3089,14 @@
       if (tabName === 'dashboard') {
         if (pageTitle) pageTitle.textContent = 'Yarn RM Stock Dashboard';
         if (pageSub) pageSub.textContent = 'High-level inventory overview — Quality breakdown, cones & available stock';
-        if (headerActions) headerActions.style.display = 'flex';
+        if (headerActions) headerActions.style.display = 'none';
       } else if (tabName === 'stock-book') {
         if (pageTitle) pageTitle.textContent = 'Yarn RM Stock Book';
         if (pageSub) pageSub.textContent = 'Raw material stock ledger — Track incoming challans & box-level yarn issuance';
         if (headerActions) headerActions.style.display = 'flex';
       }
+
+      updateFloatingIssueButton();
 
       // Update URL without full page reload
       if (updateUrl) {
