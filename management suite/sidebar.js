@@ -947,7 +947,7 @@
       'yarn-stock-dashboard': 'Yarn Stock',
       'covering': 'Covering',
       'tfo': 'TFO',
-      'doubler': 'Doubler',
+      'doubler': 'Doubler/MX',
       'orders': 'RM Orders',
       'heat-map': 'Delivery Heat Map',
       'item-detail': 'Weft Stock Register',

@@ -1052,7 +1052,7 @@
     <div class="main-tabs">
       <button class="main-tab-btn active" id="tab-btn-covering" onclick="switchDivision('covering')">Covering</button>
       <button class="main-tab-btn" id="tab-btn-tfo" onclick="switchDivision('tfo')">TFO</button>
-      <button class="main-tab-btn" id="tab-btn-doubler" onclick="switchDivision('doubler')">Doubler</button>
+      <button class="main-tab-btn" id="tab-btn-doubler" onclick="switchDivision('doubler')">Doubler/MX</button>
     </div>
 
     <!-- Active Division Header Title & Navigation Tabs -->
@@ -1505,7 +1505,7 @@
       const titles = {
         covering: 'Covering Yarn Management',
         tfo: 'TFO Yarn Management',
-        doubler: 'Doubler Yarn Management'
+        doubler: 'Doubler/MX Yarn Management'
       };
       const titleEl = document.getElementById('division-title');
       if (titleEl) titleEl.innerText = titles[divisionId] || 'Yarn Management';
@@ -1533,7 +1533,7 @@
     };
 
     function broadcastYarnPresence() {
-      const divName = (typeof activeDivision !== 'undefined' && activeDivision) ? activeDivision.toUpperCase() : 'COVERING';
+      const divName = (typeof activeDivision !== 'undefined' && activeDivision) ? (activeDivision === 'doubler' ? 'DOUBLER/MX' : activeDivision.toUpperCase()) : 'COVERING';
       const tabName = (typeof activeSubTab !== 'undefined' && activeSubTab) ? activeSubTab : 'sales';
       const displayDivision = `${divName} Division`;
 
@@ -1837,7 +1837,6 @@
       };
       const key = storageKeys[div];
       const products = JSON.parse(localStorage.getItem(key) || '[]');
-      const yarnQualities = JSON.parse(localStorage.getItem('yarn-qualities') || '[]');
 
       // If the log item is fully sold, preserve its historical name at time of sale
       if (!ignoreSold && typeof getBoriStock === 'function') {
@@ -1864,18 +1863,16 @@
         }
       }
       if (!costingProd && log.productName) {
-        // Match by exact or normalized name across all yarn costing keys
+        // Match by exact or normalized name in current division costing sheet first, then fallback across other costing sheets
         const targetName = log.productName.trim().toLowerCase();
-        for (const k of [key, ...Object.values(storageKeys)]) {
-          const allP = JSON.parse(localStorage.getItem(k) || '[]');
-          const found = allP.find(p => (p.name || '').trim().toLowerCase() === targetName);
-          if (found) { costingProd = found; break; }
-        }
-      }
-      if (!costingProd && log.productName) {
-        const yq = yarnQualities.find(q => (q.quality || q.name || '').trim().toLowerCase() === log.productName.trim().toLowerCase());
-        if (yq) {
-          costingProd = { name: yq.quality || yq.name, mySalePrice: yq.price || yq.rate || 0 };
+        costingProd = products.find(p => (p.name || '').trim().toLowerCase() === targetName);
+        if (!costingProd) {
+          for (const k of Object.values(storageKeys)) {
+            if (k === key) continue;
+            const allP = JSON.parse(localStorage.getItem(k) || '[]');
+            const found = allP.find(p => (p.name || '').trim().toLowerCase() === targetName);
+            if (found) { costingProd = found; break; }
+          }
         }
       }
 
@@ -1915,20 +1912,17 @@
 
       const key = storageKeys[activeDivision];
       const products = JSON.parse(localStorage.getItem(key) || '[]');
-      const yarnQualities = JSON.parse(localStorage.getItem('yarn-qualities') || '[]');
 
-      const costingNames = products.map(p => p.name).filter(Boolean);
-      const qualityNames = yarnQualities.map(q => q.quality || q.name).filter(Boolean);
-
-      const combined = [...costingNames, ...qualityNames];
-      prodNameOptions = combined.filter((val, id, self) => val && self.indexOf(val) === id);
+      // Only show the costing sheet qualities for the active division
+      const costingNames = products.map(p => (p && p.name ? p.name.trim() : '')).filter(Boolean);
+      prodNameOptions = costingNames.filter((val, id, self) => val && self.indexOf(val) === id);
 
       const hiddenName = document.getElementById('prod-name');
       const searchName = document.getElementById('prod-name-search');
       
-      if (hiddenName.value) {
+      if (hiddenName && hiddenName.value) {
         searchName.value = hiddenName.value;
-      } else {
+      } else if (searchName) {
         searchName.value = '';
       }
 
@@ -1937,9 +1931,11 @@
 
     function renderProdNameDropdown(optionsList) {
       const dropdown = document.getElementById('prod-name-dropdown');
+      if (!dropdown) return;
       dropdown.innerHTML = '';
       if (optionsList.length === 0) {
-        dropdown.innerHTML = '<div class="dropdown-item muted" style="text-align: center;">No products in Costing Calculator</div>';
+        const divLabel = activeDivision === 'covering' ? 'Covering' : (activeDivision === 'tfo' ? 'TFO' : 'Doubler/MX');
+        dropdown.innerHTML = `<div class="dropdown-item muted" style="text-align: center;">No ${divLabel} products in Costing Calculator</div>`;
         return;
       }
 
@@ -1956,7 +1952,8 @@
     }
 
     window.showProdNameDropdown = function() {
-      document.getElementById('prod-name-dropdown').style.display = 'block';
+      const dropdown = document.getElementById('prod-name-dropdown');
+      if (dropdown) dropdown.style.display = 'block';
       renderProdNameDropdown(prodNameOptions);
     }
 
