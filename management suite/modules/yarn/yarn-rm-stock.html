@@ -482,6 +482,77 @@
       margin-right: 0.75rem;
     }
 
+    .lot-summary {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .lot-stat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.22rem 0.6rem;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-family: var(--font-body);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.15s ease;
+    }
+
+    .lot-stat-badge .stat-lbl {
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .lot-stat-badge .stat-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+
+    .lot-stat-badge.avail {
+      background: rgba(16, 185, 129, 0.08);
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+    .lot-stat-badge.avail .stat-val {
+      color: var(--success);
+    }
+
+    .lot-stat-badge.gr {
+      background: rgba(249, 115, 22, 0.08);
+      border-color: rgba(249, 115, 22, 0.25);
+    }
+    .lot-stat-badge.gr .stat-val {
+      color: var(--accent3);
+    }
+
+    .lot-stat-badge.used {
+      background: rgba(59, 130, 246, 0.08);
+      border-color: rgba(59, 130, 246, 0.25);
+    }
+    .lot-stat-badge.used .stat-val {
+      color: #3b82f6;
+    }
+
+    @media (max-width: 640px) {
+      .lot-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.65rem;
+      }
+      .lot-summary {
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
+
     /* Box Matrix / Grid */
     .box-grid {
       display: flex;
@@ -2760,6 +2831,29 @@
         let lotsHtml = '';
 
         lots.forEach(lot => {
+          // Calculate lot-level summary aggregates (Available, GR, Used)
+          let lotAvailBoxes = 0;
+          let lotTotalBoxes = 0;
+          let lotAvailWeight = 0;
+          let lotIssuedWeight = 0;
+          let lotGrWeight = 0;
+
+          lot.boxes.forEach(b => {
+            lotTotalBoxes++;
+            const rem = (b.remainingWeight !== undefined ? b.remainingWeight : b.weight);
+            const gr = b.grWeight || 0;
+            if (b.status === 'available') {
+              lotAvailBoxes++;
+              lotAvailWeight += rem;
+              if (gr > 0) lotGrWeight += gr;
+            } else if (b.status === 'issued') {
+              lotIssuedWeight += rem;
+              if (gr > 0) lotGrWeight += gr;
+            } else if (b.status === 'gr') {
+              lotGrWeight += (gr || b.grossWeight || b.weight || 0);
+            }
+          });
+
           // Filter boxes by status, date, and search terms
           const isBoxSpecificSearch = searchTerms.some(term => 
             lot.boxes.some(b => b.id.toLowerCase().includes(term))
@@ -2851,6 +2945,20 @@
                   <div class="lot-subinfo" style="margin-top: 0.35rem;">
                     <span>Mill: <strong>${lot.supplier}</strong></span>
                     <span>Received: <strong>${formatDateDisplay(lot.receiveDate)}</strong></span>
+                  </div>
+                </div>
+                <div class="lot-summary">
+                  <div class="lot-stat-badge avail" title="Available stock for Lot ${lot.lotNumber} (Challan: ${lot.challanNo})">
+                    <span class="stat-lbl">Available</span>
+                    <span class="stat-val">${lotAvailWeight.toFixed(2)} kg</span>
+                  </div>
+                  <div class="lot-stat-badge gr" title="Goods Return (GR) for Lot ${lot.lotNumber} (Challan: ${lot.challanNo})">
+                    <span class="stat-lbl">GR</span>
+                    <span class="stat-val">${lotGrWeight.toFixed(2)} kg</span>
+                  </div>
+                  <div class="lot-stat-badge used" title="Used / Issued stock for Lot ${lot.lotNumber} (Challan: ${lot.challanNo})">
+                    <span class="stat-lbl">Used</span>
+                    <span class="stat-val">${lotIssuedWeight.toFixed(2)} kg</span>
                   </div>
                 </div>
               </div>
