@@ -1643,6 +1643,23 @@
     </div>
   </div>
 
+  <!-- MODAL: Confirmation for Un-issue / Revert to Available -->
+  <div class="modal-overlay" id="modal-confirm-unissue" style="z-index: 100020;">
+    <div class="modal-card" style="max-width: 440px; text-align: center; padding: 2rem 1.75rem; border-radius: var(--radius);">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(59, 130, 246, 0.12); color: #3b82f6; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto; font-size: 1.6rem; border: 1.5px solid rgba(59, 130, 246, 0.25);">
+        ↺
+      </div>
+      <h3 id="unissue-modal-title" style="font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--fg);">Revert Box to In Stock?</h3>
+      <div id="unissue-modal-desc" style="font-size: 0.92rem; color: var(--muted); line-height: 1.6; margin-bottom: 1.75rem; background: var(--bg); padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid var(--border); text-align: left;">
+        Are you sure you want to revert this box back to <strong>AVAILABLE</strong>?
+      </div>
+      <div style="display: flex; gap: 0.75rem; justify-content: center;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-confirm-unissue')" style="flex: 1; padding: 0.7rem 1.25rem; font-weight: 600;">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-unissue" onclick="executePendingUnissue()" style="flex: 1.2; padding: 0.7rem 1.25rem; font-weight: 600; background: linear-gradient(135deg, #3b82f6, #6366f1); border: none;">Yes, Revert</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: Exact React Order Details & Inward Challans Modal (Embedded) -->
   <div class="modal-overlay" id="modal-order-iframe-overlay" style="z-index: 100010; padding: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px);">
     <iframe id="order-details-iframe" style="width: 100%; height: 100%; border: none; background: transparent;" src="about:blank"></iframe>
@@ -2601,34 +2618,108 @@
       }, 2200);
     }
 
-    // Dynamic Select/Toggle Box (Fast, Frictionless & Realtime)
+    let pendingUnissueAction = null;
+
+    function promptUnissueBox(lotId, boxId) {
+      const sLotId = String(lotId);
+      const sBoxId = String(boxId);
+      const lot = stockData.find(l => String(l.id) === sLotId);
+      const box = lot ? lot.boxes.find(b => String(b.id) === sBoxId) : null;
+      if (!box) return;
+
+      const issuedInfo = box.issuedTo ? ` to <strong style="color: #3b82f6;">${box.issuedTo}</strong>` : '';
+      const dateInfo = box.issueDate ? ` on <strong>${formatDateDisplay(box.issueDate)}</strong>` : '';
+      const wtInfo = (box.remainingWeight !== undefined ? box.remainingWeight : box.weight).toFixed(2);
+
+      const titleEl = document.getElementById('unissue-modal-title');
+      const descEl = document.getElementById('unissue-modal-desc');
+      if (titleEl) titleEl.textContent = `Revert Box ${box.id} to Available?`;
+      if (descEl) {
+        descEl.innerHTML = `
+          Box <strong>${box.id}</strong> (${wtInfo} kg) of <strong>${lot ? lot.quality : ''}</strong> (Lot: ${lot ? lot.lotNumber : ''}) was issued${issuedInfo}${dateInfo}.<br><br>
+          Are you sure you want to revert this box back to <strong style="color: var(--success);">AVAILABLE (In Stock)</strong>?
+        `;
+      }
+
+      pendingUnissueAction = () => {
+        box.status = 'available';
+        box.issueDate = null;
+        box.issuedTo = null;
+        if (lot) syncBoxStatusToOrders(lot, box.id, 'available');
+
+        const bUid = `${lot ? lot.id : sLotId}__${box.id}`;
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.unissueYarnBoxesAtomic === 'function') {
+          window.VishwaSupabase.unissueYarnBoxesAtomic([bUid], { remarks: 'Reverted to available' })
+            .catch(err => console.warn('Unissue notice:', err));
+        }
+
+        // Also remove from selectedBoxes if it was selected
+        const selIdx = selectedBoxes.findIndex(b => String(b.lotId) === sLotId && String(b.boxId) === sBoxId);
+        if (selIdx >= 0) selectedBoxes.splice(selIdx, 1);
+
+        saveStockData();
+        renderStockBook();
+        showToastNotification(`✓ Box ${box.id} reverted to Available`);
+      };
+
+      document.getElementById('modal-confirm-unissue').classList.add('active');
+    }
+
+    function promptUnissueAllInLot(lotId) {
+      const sLotId = String(lotId);
+      const lot = stockData.find(l => String(l.id) === sLotId);
+      if (!lot || !Array.isArray(lot.boxes)) return;
+      const issuedBoxes = lot.boxes.filter(b => b.status === 'issued');
+      if (issuedBoxes.length === 0) return;
+
+      const titleEl = document.getElementById('unissue-modal-title');
+      const descEl = document.getElementById('unissue-modal-desc');
+      if (titleEl) titleEl.textContent = `Revert ${issuedBoxes.length} Boxes in Lot ${lot.lotNumber}?`;
+      if (descEl) {
+        descEl.innerHTML = `
+          Are you sure you want to revert all <strong>${issuedBoxes.length} issued boxes</strong> in Lot <strong>${lot.lotNumber}</strong> (${lot.quality}) back to <strong style="color: var(--success);">AVAILABLE</strong>?
+        `;
+      }
+
+      pendingUnissueAction = () => {
+        const boxUids = [];
+        issuedBoxes.forEach(b => {
+          b.status = 'available';
+          b.issueDate = null;
+          b.issuedTo = null;
+          boxUids.push(`${lot.id}__${b.id}`);
+          syncBoxStatusToOrders(lot, b.id, 'available');
+        });
+
+        if (boxUids.length > 0 && window.VishwaSupabase && typeof window.VishwaSupabase.unissueYarnBoxesAtomic === 'function') {
+          window.VishwaSupabase.unissueYarnBoxesAtomic(boxUids, { remarks: 'Batch reverted to available' })
+            .catch(err => console.warn('Unissue notice:', err));
+        }
+
+        saveStockData();
+        renderStockBook();
+        showToastNotification(`✓ Reverted ${issuedBoxes.length} boxes in Lot ${lot.lotNumber} to Available`);
+      };
+
+      document.getElementById('modal-confirm-unissue').classList.add('active');
+    }
+
+    function executePendingUnissue() {
+      closeModal('modal-confirm-unissue');
+      if (typeof pendingUnissueAction === 'function') {
+        const action = pendingUnissueAction;
+        pendingUnissueAction = null;
+        action();
+      }
+    }
+
+    // Dynamic Select/Toggle Box
     function toggleBoxSelection(lotId, boxId, status) {
       const sLotId = String(lotId);
       const sBoxId = String(boxId);
 
       if (status === 'issued') {
-        const lot = stockData.find(l => String(l.id) === sLotId);
-        const box = lot ? lot.boxes.find(b => String(b.id) === sBoxId) : null;
-        if (box) {
-          box.status = 'available';
-          box.issueDate = null;
-          box.issuedTo = null;
-          if (lot) syncBoxStatusToOrders(lot, box.id, 'available');
-
-          const bUid = `${lot ? lot.id : sLotId}__${box.id}`;
-          if (window.VishwaSupabase && typeof window.VishwaSupabase.unissueYarnBoxesAtomic === 'function') {
-            window.VishwaSupabase.unissueYarnBoxesAtomic([bUid], { remarks: 'Reverted to available' })
-              .catch(err => console.warn('Unissue notice:', err));
-          }
-
-          // Also remove from selectedBoxes if it was selected
-          const selIdx = selectedBoxes.findIndex(b => String(b.lotId) === sLotId && String(b.boxId) === sBoxId);
-          if (selIdx >= 0) selectedBoxes.splice(selIdx, 1);
-
-          saveStockData();
-          renderStockBook();
-          showToastNotification(`✓ Box ${box.id} reverted to Available`);
-        }
+        promptUnissueBox(sLotId, sBoxId);
         return;
       }
 
@@ -2650,29 +2741,7 @@
     }
 
     function unissueAllInLot(lotId) {
-      const sLotId = String(lotId);
-      const lot = stockData.find(l => String(l.id) === sLotId);
-      if (!lot || !Array.isArray(lot.boxes)) return;
-      const issuedBoxes = lot.boxes.filter(b => b.status === 'issued');
-      if (issuedBoxes.length === 0) return;
-
-      const boxUids = [];
-      issuedBoxes.forEach(b => {
-        b.status = 'available';
-        b.issueDate = null;
-        b.issuedTo = null;
-        boxUids.push(`${lot.id}__${b.id}`);
-        syncBoxStatusToOrders(lot, b.id, 'available');
-      });
-
-      if (boxUids.length > 0 && window.VishwaSupabase && typeof window.VishwaSupabase.unissueYarnBoxesAtomic === 'function') {
-        window.VishwaSupabase.unissueYarnBoxesAtomic(boxUids, { remarks: 'Batch reverted to available' })
-          .catch(err => console.warn('Unissue notice:', err));
-      }
-
-      saveStockData();
-      renderStockBook();
-      showToastNotification(`✓ Reverted ${issuedBoxes.length} boxes in Lot ${lot.lotNumber} to Available`);
+      promptUnissueAllInLot(lotId);
     }
 
     // Form Save Handlers
