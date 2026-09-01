@@ -1507,9 +1507,9 @@
                              (batchLot ? existingBoxMap.get(`${batchLot}__${bId}`) : null) ||
                              (existingLot && Array.isArray(existingLot.boxes) ? existingLot.boxes.find(x => String(x.id || x.boxNumber).trim() === bId) : null);
 
-                const isIssued = (oldB?.status === 'issued') || (bx.status === 'issued');
-                const issueDate = oldB?.issueDate || bx.issueDate || null;
-                const issuedTo = oldB?.issuedTo || bx.issuedTo || null;
+                const isIssued = oldB ? (oldB.status === 'issued') : (bx.status === 'issued');
+                const issueDate = isIssued ? (oldB?.issueDate || bx.issueDate || null) : null;
+                const issuedTo = isIssued ? (oldB?.issuedTo || bx.issuedTo || null) : null;
 
                 return {
                   id: bId,

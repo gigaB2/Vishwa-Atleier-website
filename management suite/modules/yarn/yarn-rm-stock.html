@@ -1896,9 +1896,9 @@
                                (batchLot ? existingBoxMap.get(`${batchLot}__${bId}`) : null) ||
                                (existingLot && Array.isArray(existingLot.boxes) ? existingLot.boxes.find(x => String(x.id || x.boxNumber).trim() === bId) : null);
 
-                  const isIssued = (oldB?.status === 'issued') || (bx.status === 'issued');
-                  const issueDate = oldB?.issueDate || bx.issueDate || null;
-                  const issuedTo = oldB?.issuedTo || bx.issuedTo || null;
+                  const isIssued = oldB ? (oldB.status === 'issued') : (bx.status === 'issued');
+                  const issueDate = isIssued ? (oldB?.issueDate || bx.issueDate || null) : null;
+                  const issuedTo = isIssued ? (oldB?.issuedTo || bx.issuedTo || null) : null;
 
                   return {
                     id: bId,
@@ -2560,7 +2560,48 @@
       document.getElementById(id).classList.remove('active');
     }
 
-    // Dynamic Select/Toggle Box
+    function showToastNotification(msg) {
+      let toast = document.getElementById('vf-stock-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'vf-stock-toast';
+        toast.style.cssText = `
+          position: fixed;
+          bottom: 2rem;
+          right: 2rem;
+          background: #18181b;
+          color: #f4f4f5;
+          padding: 0.75rem 1.25rem;
+          border-radius: 12px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+          font-family: var(--font-body);
+          font-size: 0.88rem;
+          font-weight: 600;
+          z-index: 99999;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          opacity: 0;
+          transform: translateY(12px) scale(0.96);
+          pointer-events: none;
+          border: 1px solid rgba(255,255,255,0.15);
+        `;
+        document.body.appendChild(toast);
+      }
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0) scale(1)';
+      clearTimeout(window.__vf_toast_timer);
+      window.__vf_toast_timer = setTimeout(() => {
+        if (toast) {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(12px) scale(0.96)';
+        }
+      }, 2200);
+    }
+
+    // Dynamic Select/Toggle Box (Fast, Frictionless & Realtime)
     function toggleBoxSelection(lotId, boxId, status) {
       const sLotId = String(lotId);
       const sBoxId = String(boxId);
@@ -2569,19 +2610,24 @@
         const lot = stockData.find(l => String(l.id) === sLotId);
         const box = lot ? lot.boxes.find(b => String(b.id) === sBoxId) : null;
         if (box) {
-          const issuedInfo = box.issuedTo ? ` to ${box.issuedTo}` : '';
-          const dateInfo = box.issueDate ? ` on ${formatDateDisplay(box.issueDate)}` : '';
-          if (confirm(`Box ${box.id} of ${lot ? lot.quality : ''} (${lot ? lot.lotNumber : ''}) was issued${issuedInfo}${dateInfo}.\n\nDo you want to revert this box back to in stock (AVAILABLE)?`)) {
-            box.status = 'available';
-            box.issueDate = null;
-            box.issuedTo = null;
-            if (lot) syncBoxStatusToOrders(lot, box.id, 'available');
-            // Also remove from selectedBoxes if it was selected
-            const selIdx = selectedBoxes.findIndex(b => String(b.lotId) === sLotId && String(b.boxId) === sBoxId);
-            if (selIdx >= 0) selectedBoxes.splice(selIdx, 1);
-            saveStockData();
-            renderStockBook();
+          box.status = 'available';
+          box.issueDate = null;
+          box.issuedTo = null;
+          if (lot) syncBoxStatusToOrders(lot, box.id, 'available');
+
+          const bUid = `${lot ? lot.id : sLotId}__${box.id}`;
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.unissueYarnBoxesAtomic === 'function') {
+            window.VishwaSupabase.unissueYarnBoxesAtomic([bUid], { remarks: 'Reverted to available' })
+              .catch(err => console.warn('Unissue notice:', err));
           }
+
+          // Also remove from selectedBoxes if it was selected
+          const selIdx = selectedBoxes.findIndex(b => String(b.lotId) === sLotId && String(b.boxId) === sBoxId);
+          if (selIdx >= 0) selectedBoxes.splice(selIdx, 1);
+
+          saveStockData();
+          renderStockBook();
+          showToastNotification(`✓ Box ${box.id} reverted to Available`);
         }
         return;
       }
@@ -2601,6 +2647,32 @@
       }
 
       renderStockBook();
+    }
+
+    function unissueAllInLot(lotId) {
+      const sLotId = String(lotId);
+      const lot = stockData.find(l => String(l.id) === sLotId);
+      if (!lot || !Array.isArray(lot.boxes)) return;
+      const issuedBoxes = lot.boxes.filter(b => b.status === 'issued');
+      if (issuedBoxes.length === 0) return;
+
+      const boxUids = [];
+      issuedBoxes.forEach(b => {
+        b.status = 'available';
+        b.issueDate = null;
+        b.issuedTo = null;
+        boxUids.push(`${lot.id}__${b.id}`);
+        syncBoxStatusToOrders(lot, b.id, 'available');
+      });
+
+      if (boxUids.length > 0 && window.VishwaSupabase && typeof window.VishwaSupabase.unissueYarnBoxesAtomic === 'function') {
+        window.VishwaSupabase.unissueYarnBoxesAtomic(boxUids, { remarks: 'Batch reverted to available' })
+          .catch(err => console.warn('Unissue notice:', err));
+      }
+
+      saveStockData();
+      renderStockBook();
+      showToastNotification(`✓ Reverted ${issuedBoxes.length} boxes in Lot ${lot.lotNumber} to Available`);
     }
 
     // Form Save Handlers
@@ -3018,8 +3090,8 @@
               `;
               tooltipText = `Remaining Qty: ${rem.toFixed(2)} kg (Original Gross: ${gross.toFixed(2)} kg, Returned GR: -${gr.toFixed(2)} kg on ${formatDateDisplay(box.grDate)})`;
             } else if (box.status === 'issued') {
-              weightHtml = `<span class="box-weight" style="color: #3b82f6; font-weight: 600;">${rem.toFixed(2)} kg</span><span style="font-size: 0.65rem; font-weight: 700; color: #3b82f6;">ISSUED</span>`;
-              tooltipText = `Issued to: ${box.issuedTo || 'Unknown'} on ${formatDateDisplay(box.issueDate)}`;
+              weightHtml = `<span class="box-weight" style="color: #3b82f6; font-weight: 600;">${rem.toFixed(2)} kg</span><span style="font-size: 0.65rem; font-weight: 700; color: #3b82f6;">ISSUED ↺</span>`;
+              tooltipText = `Issued to: ${box.issuedTo || 'Unknown'} on ${formatDateDisplay(box.issueDate)} (Click to Un-issue / Revert to Available)`;
             } else {
               weightHtml = `<span class="box-weight">${rem.toFixed(2)} kg</span>`;
               tooltipText = `Available Qty: ${rem.toFixed(2)} kg ${box.cones ? `(${box.cones} cones)` : ''} (Click to Select)`;
@@ -3066,8 +3138,8 @@
                     <span class="stat-lbl">GR</span>
                     <span class="stat-val">${lotGrWeight.toFixed(2)} kg</span>
                   </div>
-                  <div class="lot-stat-badge used" title="Used / Issued stock for Lot ${lot.lotNumber} (Challan: ${lot.challanNo})">
-                    <span class="stat-lbl">Used</span>
+                  <div class="lot-stat-badge used" title="${lotIssuedWeight > 0 ? `Click to revert all issued boxes in Lot ${lot.lotNumber} back to available` : `Used / Issued stock for Lot ${lot.lotNumber}`}" ${lotIssuedWeight > 0 ? `onclick="unissueAllInLot('${lot.id}')" style="cursor: pointer;"` : ''}>
+                    <span class="stat-lbl">Used ${lotIssuedWeight > 0 ? '↺' : ''}</span>
                     <span class="stat-val">${lotIssuedWeight.toFixed(2)} kg</span>
                   </div>
                 </div>
