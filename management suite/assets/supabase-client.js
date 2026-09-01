@@ -208,6 +208,12 @@
     if (item.uuid !== undefined && item.uuid !== null && String(item.uuid).trim() !== '') {
       return String(item.uuid).trim();
     }
+    if (item.boriNo !== undefined && item.boriNo !== null && String(item.boriNo).trim() !== '') {
+      return 'bori_' + String(item.boriNo).trim().toLowerCase();
+    }
+    if (item.challanNo !== undefined && item.challanNo !== null && String(item.challanNo).trim() !== '') {
+      return 'challan_' + String(item.challanNo).trim().toLowerCase();
+    }
     if (item.loanId !== undefined && item.loanId !== null && String(item.loanId).trim() !== '') {
       return String(item.loanId).trim();
     }
@@ -221,7 +227,7 @@
       return 'inv_' + String(item.billNo || item.invoiceNo).trim();
     }
     if (item.lotNo || item.lot) {
-      return 'lot_' + String(item.lotNo || item.lot).trim() + '_' + (item.date || '');
+      return 'lot_' + String(item.lotNo || item.lot).trim() + '_' + (item.date || '') + '_' + (item.productName || item.color || '');
     }
     // Composite log key for shift entries without explicit ID
     if (item.date && (item.shift || item.machine || item.machineNo || item.loom || item.loomNo || item.worker)) {
@@ -321,21 +327,26 @@
       const cleanRemote = filterDeletedEntities(parsedRemote);
       const lastWrite = lastLocalWrites[key] || 0;
 
-      // Build Map combining remote and local items by unique identifier
+      // Build Map combining local and remote items by unique identifier
       const itemMap = new Map();
-      cleanRemote.forEach(item => {
+
+      // 1. Put local items in map first
+      cleanLocal.forEach(item => {
         const id = getItemIdentifier(item);
         if (id) itemMap.set(String(id), item);
       });
 
-      cleanLocal.forEach(item => {
+      // 2. Merge remote items (remote takes precedence on conflicts unless local item is explicitly newer)
+      cleanRemote.forEach(item => {
         const id = getItemIdentifier(item);
         if (id) {
           if (!itemMap.has(String(id))) {
             itemMap.set(String(id), item);
           } else {
-            // If both contain the item, preserve local if edited recently (< 10s)
-            if (Date.now() - lastWrite < 10000) {
+            const localItem = itemMap.get(String(id));
+            const remoteTime = item.updated_at ? new Date(item.updated_at).getTime() : (item.timestamp || 0);
+            const localTime = localItem.updated_at ? new Date(localItem.updated_at).getTime() : (localItem.timestamp || 0);
+            if (remoteTime >= localTime) {
               itemMap.set(String(id), item);
             }
           }
@@ -1085,7 +1096,10 @@
       if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return null;
       if (el.type === 'password' || el.type === 'hidden' || el.type === 'file') return null;
       
-      if (el.dataset && el.dataset.collabId) return el.dataset.collabId;
+      // ONLY broadcast collaborative sync for elements explicitly opting in via data-collab-sync="true"
+      if (!el.dataset || el.dataset.collabSync !== 'true') return null;
+
+      if (el.dataset.collabId) return el.dataset.collabId;
       if (el.id && !el.id.startsWith('__')) return el.id;
       if (el.name) return el.name;
 

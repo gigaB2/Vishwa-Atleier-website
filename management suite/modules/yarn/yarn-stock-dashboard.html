@@ -1550,17 +1550,23 @@
     }
 
     // Save logs to localStorage for current active division
-    function saveLogs() {
-      let prod = dataStore[activeDivision].production;
-      let sales = dataStore[activeDivision].sales;
-      if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
-        prod = window.VishwaSupabase.filterDeletedEntities(prod);
-        sales = window.VishwaSupabase.filterDeletedEntities(sales);
-        dataStore[activeDivision].production = prod;
-        dataStore[activeDivision].sales = sales;
+    function saveLogs(target = 'both') {
+      if (target === 'production' || target === 'both') {
+        let prod = dataStore[activeDivision].production;
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+          prod = window.VishwaSupabase.filterDeletedEntities(prod);
+          dataStore[activeDivision].production = prod;
+        }
+        localStorage.setItem(`yarn_${activeDivision}_production_logs`, JSON.stringify(prod));
       }
-      localStorage.setItem(`yarn_${activeDivision}_production_logs`, JSON.stringify(prod));
-      localStorage.setItem(`yarn_${activeDivision}_sales_logs`, JSON.stringify(sales));
+      if (target === 'sales' || target === 'both') {
+        let sales = dataStore[activeDivision].sales;
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+          sales = window.VishwaSupabase.filterDeletedEntities(sales);
+          dataStore[activeDivision].sales = sales;
+        }
+        localStorage.setItem(`yarn_${activeDivision}_sales_logs`, JSON.stringify(sales));
+      }
       refreshAllViews();
     }
 
@@ -1863,7 +1869,7 @@
         dataStore[activeDivision].production.push(data);
       }
 
-      saveLogs();
+      saveLogs('production');
       resetProductionForm();
       renderProductionTable();
     });
@@ -3474,7 +3480,7 @@
         showToast('Sale recorded successfully', 'success');
       }
 
-      saveLogs();
+      saveLogs('sales');
       closeBatchSellModal();
       
       renderProductionTable();
@@ -4590,7 +4596,7 @@
           if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
             window.VishwaSupabase.recordDeletion(`yarn_${activeDivision}_production_logs`, id);
           }
-          saveLogs();
+          saveLogs('production');
           showToast('Production entry deleted', 'info');
         }
       );
@@ -4607,7 +4613,7 @@
           if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
             window.VishwaSupabase.recordDeletion(`yarn_${activeDivision}_sales_logs`, id);
           }
-          saveLogs();
+          saveLogs('sales');
           showToast('Sale record deleted and stock restored', 'info');
         }
       );
