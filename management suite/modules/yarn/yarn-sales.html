@@ -2949,6 +2949,332 @@
       printWindow.document.close();
     };
 
+    window.printSaleChallan = function() {
+      if (!currentDetailSaleId) return;
+      const sale = dataStore[activeDivision].sales.find(s => s.id === currentDetailSaleId);
+      if (!sale) return;
+
+      let items = [];
+      if (sale.items && sale.items.length > 0) {
+        items = [...sale.items];
+      } else {
+        items = [{
+          boriNo: sale.boriNo,
+          composition: sale.composition,
+          color: sale.color,
+          denier: sale.denier,
+          tpm: sale.tpm,
+          twist: sale.twist,
+          rollsQty: sale.rollsQty,
+          saleQty: sale.saleQty
+        }];
+      }
+
+      const totalBoris = items.length;
+      const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
+      const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
+
+      // Create new window
+      const printWindow = window.open('', '_blank', 'width=900,height=700');
+      
+      printWindow.document.write(`
+        <html>
+        <head>
+          <title>Delivery Challan - Challan No: ${sale.challanNo}</title>
+          <style>
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin: 15mm;
+              }
+              body {
+                padding: 0 !important;
+                margin: 0 !important;
+              }
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              color: #000000;
+              background-color: #ffffff;
+              line-height: 1.4;
+              font-size: 12px;
+            }
+            .invoice-box {
+              width: 100%;
+              margin: auto;
+            }
+            .header-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+            }
+            .header-table td {
+              border: none !important;
+              padding: 0 !important;
+            }
+            .company-name {
+              font-size: 24px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              line-height: 1.1;
+              color: #000000;
+            }
+            .company-details {
+              font-size: 10px;
+              color: #333333;
+              margin-top: 5px;
+              line-height: 1.5;
+            }
+            .invoice-title {
+              text-align: right;
+              font-size: 18px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              color: #000000;
+            }
+            .details-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+              border: 1px solid #000000;
+            }
+            .details-table td {
+              width: 50%;
+              vertical-align: top;
+              padding: 10px;
+              border: none !important;
+            }
+            .details-table td:first-child {
+              border-right: 1px solid #000000 !important;
+            }
+            .section-title {
+              font-size: 10px;
+              font-weight: 700;
+              text-transform: uppercase;
+              color: #555555;
+              margin-bottom: 8px;
+              border-bottom: 1px solid #cccccc;
+              padding-bottom: 3px;
+            }
+            .info-item {
+              margin: 4px 0;
+            }
+            .info-item span {
+              display: inline-block;
+              width: 95px;
+              color: #555555;
+            }
+            .info-item strong {
+              color: #000000;
+            }
+            .items-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+              border: 1px solid #000000;
+            }
+            .items-table th {
+              background-color: #f3f4f6;
+              color: #000000;
+              font-weight: 700;
+              text-transform: uppercase;
+              font-size: 10px;
+              padding: 8px 10px;
+              border: 1px solid #000000;
+              text-align: left;
+            }
+            .items-table td {
+              padding: 8px 10px;
+              border: 1px solid #cccccc;
+              font-size: 11px;
+            }
+            .items-table tr:last-child td {
+              border-bottom: 1px solid #000000;
+            }
+            .bottom-section {
+              width: 100%;
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 30px;
+            }
+            .declarations {
+              width: 52%;
+              font-size: 10px;
+              color: #444444;
+              line-height: 1.6;
+              border: 1px solid #000000;
+              padding: 10px;
+              border-radius: 4px;
+            }
+            .summary-table {
+              width: 42%;
+              border-collapse: collapse;
+              border: 1px solid #000000;
+            }
+            .summary-table td {
+              padding: 6px 10px;
+              font-size: 11px;
+              border: 1px solid #cccccc;
+            }
+            .summary-table tr.total-row td {
+              font-weight: 700;
+              font-size: 13px;
+              border-top: 1px solid #000000;
+              border-bottom: 1px solid #000000;
+              background-color: #f3f4f6;
+            }
+            .signatures {
+              margin-top: 50px;
+              width: 100%;
+              display: flex;
+              justify-content: space-between;
+            }
+            .sig-box {
+              width: 220px;
+              text-align: center;
+              border-top: 1px solid #000000;
+              padding-top: 5px;
+              font-size: 11px;
+              font-weight: 600;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-box">
+            <table class="header-table">
+              <tr>
+                <td>
+                  <div class="company-name">${(function(){
+                    try {
+                      const stored = localStorage.getItem('vishwa_fashions_settings');
+                      if (stored) {
+                        const s = JSON.parse(stored);
+                        if (s.sellerName && s.sellerName.trim()) return s.sellerName.trim();
+                      }
+                    } catch(e){}
+                    const c = localStorage.getItem('vf_company_name');
+                    return (c && c.trim()) ? c.trim() : "Vishwa Fashions";
+                  })()}</div>
+                  <div class="company-details">
+                    Factory: Survey No. 124, Industrial Zone, Pipodara, Surat, Gujarat<br>
+                    Email: contact@vishwafashions.com | Mobile: +91 98765 43210
+                  </div>
+                </td>
+                <td style="text-align: right; vertical-align: top;">
+                  <div class="invoice-title">DELIVERY CHALLAN</div>
+                  <div style="font-size: 11px; margin-top: 5px; font-weight: 600;">
+                    Division: ${activeDivision.toUpperCase()}
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <table class="details-table">
+              <tr>
+                <td>
+                  <div class="section-title">Consignee / Delivered To</div>
+                  <div style="font-size: 12px; font-weight: 700; margin-bottom: 5px;">${sale.customerName}</div>
+                  <div style="color: #444444; font-size: 11px; line-height: 1.5;">
+                    Address: Industrial Area, Surat, Gujarat, India<br>
+                    State Code: 24 (Gujarat)
+                  </div>
+                </td>
+                <td>
+                  <div class="section-title">Challan Details</div>
+                  <div class="info-item"><span>Challan No:</span> <strong>${sale.challanNo}</strong></div>
+                  <div class="info-item"><span>Lot No:</span> <strong>${sale.lotNo || '-'}</strong></div>
+                  <div class="info-item"><span>Date:</span> <strong>${formatDate(sale.date)}</strong></div>
+                </td>
+              </tr>
+            </table>
+
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th style="width: 8%; text-align: center;">Sr. No.</th>
+                  <th style="width: 16%;">Bori No</th>
+                  <th style="width: 26%;">Composition / Item</th>
+                  <th style="width: 14%;">Color</th>
+                  <th style="width: 20%;">Specs</th>
+                  <th style="width: 8%; text-align: center;">Rolls</th>
+                  <th style="width: 16%; text-align: right;">Weight (Kg)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items.map((item, index) => {
+                  const specs = `${item.denier || '-'}D | ${item.tpm || '-'} | ${item.twist || '-'}`;
+                  return `
+                    <tr>
+                      <td style="text-align: center;">${index + 1}</td>
+                      <td><strong>${item.boriNo}</strong></td>
+                      <td>${item.composition}</td>
+                      <td>${item.color || '-'}</td>
+                      <td>${specs}</td>
+                      <td style="text-align: center;">${item.rollsQty || 0}</td>
+                      <td style="text-align: right; font-weight: 600;">${(parseFloat(item.saleQty) || 0).toFixed(2)} Kg</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+
+            <div class="bottom-section">
+              <div class="declarations">
+                <div style="font-weight: 700; margin-bottom: 5px; text-transform: uppercase;">Delivery Terms & Conditions</div>
+                1. Goods dispatched as per delivery challan.<br>
+                2. Please verify goods at delivery; discrepancies must be reported immediately.<br>
+                3. Received above goods in good order and condition.
+              </div>
+              <table class="summary-table">
+                <tr>
+                  <td>Total Boris</td>
+                  <td style="text-align: right; font-weight: 600;">${totalBoris}</td>
+                </tr>
+                <tr>
+                  <td>Total Rolls</td>
+                  <td style="text-align: right; font-weight: 600;">${totalRolls}</td>
+                </tr>
+                <tr class="total-row">
+                  <td><strong>Total Weight</strong></td>
+                  <td style="text-align: right; font-weight: 700;">${totalWeight.toFixed(2)} Kg</td>
+                </tr>
+              </table>
+            </div>
+
+            <div class="signatures">
+              <div class="sig-box">Receiver's Signature & Stamp</div>
+              <div style="text-align: right;">
+                <div style="font-size: 10px; margin-bottom: 45px; font-weight: 700; text-transform: uppercase;">For ${(function(){
+                  try {
+                    const stored = localStorage.getItem('vishwa_fashions_settings');
+                    if (stored) {
+                      const s = JSON.parse(stored);
+                      if (s.sellerName && s.sellerName.trim()) return s.sellerName.trim();
+                    }
+                  } catch(e){}
+                  const c = localStorage.getItem('vf_company_name');
+                  return (c && c.trim()) ? c.trim() : "Vishwa Fashions";
+                })()}</div>
+                <div class="sig-box">Authorized Signatory</div>
+              </div>
+            </div>
+          </div>
+          
+          <scr` + `ipt>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </scr` + `ipt>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    };
+
     function renderModalItems() {
       const tbody = document.getElementById('modal-sales-items-body');
       tbody.innerHTML = '';
@@ -4501,8 +4827,9 @@
           </div>
         </div>
 
-        <div class="form-actions" style="justify-content: flex-end; margin-top: 15px; gap: 0.5rem;">
+        <div class="form-actions" style="justify-content: flex-end; margin-top: 15px; gap: 0.5rem; flex-wrap: wrap;">
           <button type="button" class="btn btn-primary" onclick="printSaleBill()">Print Bill</button>
+          <button type="button" class="btn btn-primary" onclick="printSaleChallan()" style="background: linear-gradient(135deg, #0284c7, #2563eb); box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);">Print Challan</button>
           <button type="button" class="btn btn-secondary" onclick="closeSaleDetailsModal()">Close</button>
         </div>
       </div>
