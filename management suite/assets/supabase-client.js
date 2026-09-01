@@ -3289,110 +3289,114 @@
               console.warn('Dedicated tables reconciliation notice:', err);
             }
 
-            // Reconcile Dedicated Yarn RM Relational Tables for enterprise data integrity (Fallback if KV store missing)
+            // Reconcile Dedicated Yarn RM Relational Tables for enterprise data integrity
             try {
               const yKey = 'vishwa_yarn_rm_stock_data';
-              const existingStockData = kvMap[yKey] || cache[yKey];
-              const hasExistingStock = Array.isArray(existingStockData) ? existingStockData.length > 0 : Boolean(existingStockData && existingStockData !== '[]');
+              const yarnLots = await fetchAllRowsPaginated('vf_yarn_rm_lots', '*', 'order=receive_date.desc');
+              const yarnBoxes = await fetchAllRowsPaginated('vf_yarn_rm_boxes', '*', 'order=box_number.asc');
 
-              if (!hasExistingStock) {
-                const yarnLots = await fetchAllRowsPaginated('vf_yarn_rm_lots', '*', 'order=receive_date.desc');
-                const yarnBoxes = await fetchAllRowsPaginated('vf_yarn_rm_boxes', '*', 'order=box_number.asc');
-
-                if (Array.isArray(yarnLots) && yarnLots.length > 0) {
-                  const boxesByLot = new Map();
-                  (yarnBoxes || []).forEach(b => {
-                    if (!boxesByLot.has(b.lot_id)) boxesByLot.set(b.lot_id, []);
-                    boxesByLot.get(b.lot_id).push({
-                      id: b.box_number || b.id,
-                      boxNumber: b.box_number,
-                      cones: b.cones || 0,
-                      grossWeight: Number(b.gross_weight) || 0,
-                      remainingWeight: Number(b.remaining_weight) || 0,
-                      weight: Number(b.active_weight) || 0,
-                      status: b.status || 'available',
-                      issueDate: b.issue_date || null,
-                      issuedTo: b.issued_to || null,
-                      grDate: b.gr_date || null,
-                      grWeight: Number(b.gr_weight) || 0,
-                      grRemarks: b.gr_remarks || null
-                    });
+              if (Array.isArray(yarnLots) && yarnLots.length > 0) {
+                const boxesByLot = new Map();
+                (yarnBoxes || []).forEach(b => {
+                  if (!boxesByLot.has(b.lot_id)) boxesByLot.set(b.lot_id, []);
+                  boxesByLot.get(b.lot_id).push({
+                    id: b.box_number || b.id,
+                    boxNumber: b.box_number,
+                    cones: b.cones || 0,
+                    grossWeight: Number(b.gross_weight) || 0,
+                    remainingWeight: Number(b.remaining_weight) || 0,
+                    weight: Number(b.active_weight) || 0,
+                    status: b.status || 'available',
+                    issueDate: b.issue_date || null,
+                    issuedTo: b.issued_to || null,
+                    grDate: b.gr_date || null,
+                    grWeight: Number(b.gr_weight) || 0,
+                    grRemarks: b.gr_remarks || null
                   });
+                });
 
-                  const reconstructedStock = yarnLots.map(l => ({
-                    id: l.id,
-                    batchId: l.batch_id || '',
-                    lotNumber: l.lot_number,
-                    challanNo: l.challan_number || '',
-                    challanNumber: l.challan_number || '',
-                    receiveDate: l.receive_date,
-                    date: l.receive_date,
-                    supplier: l.supplier,
-                    quality: l.quality,
-                    itemType: l.item_type || 'Polyester',
-                    code: l.code || '',
-                    color: l.color || '',
-                    rate: Number(l.rate) || 0,
-                    orderRef: l.order_ref || '',
-                    notes: l.notes || '',
-                    boxes: boxesByLot.get(l.id) || []
-                  }));
+                const reconstructedStock = yarnLots.map(l => ({
+                  id: l.id,
+                  batchId: l.batch_id || '',
+                  lotNumber: l.lot_number,
+                  challanNo: l.challan_number || '',
+                  challanNumber: l.challan_number || '',
+                  receiveDate: l.receive_date,
+                  date: l.receive_date,
+                  supplier: l.supplier,
+                  quality: l.quality,
+                  itemType: l.item_type || 'Polyester',
+                  code: l.code || '',
+                  color: l.color || '',
+                  rate: Number(l.rate) || 0,
+                  orderRef: l.order_ref || '',
+                  notes: l.notes || '',
+                  boxes: boxesByLot.get(l.id) || []
+                }));
 
-                  const yStr = JSON.stringify(reconstructedStock);
-                  const lastYarnWrite = lastLocalWrites[yKey] || 0;
-                  if (Date.now() - lastYarnWrite >= 3000) {
-                    cache[yKey] = yStr;
-                    lastSavedHashes[yKey] = computeHash(yStr);
-                    safeLocalStorageSet(yKey, yStr);
-                    if (!updatedKeys.includes(yKey)) updatedKeys.push(yKey);
-                    hasChanges = true;
-                  }
+                const yStr = JSON.stringify(reconstructedStock);
+                const lastYarnWrite = lastLocalWrites[yKey] || 0;
+                if (Date.now() - lastYarnWrite >= 3000) {
+                  cache[yKey] = yStr;
+                  lastSavedHashes[yKey] = computeHash(yStr);
+                  safeLocalStorageSet(yKey, yStr);
+                  if (!updatedKeys.includes(yKey)) updatedKeys.push(yKey);
+                  hasChanges = true;
                 }
               }
             } catch (yarnErr) {
               console.warn('Yarn RM relational reconciliation notice:', yarnErr);
             }
 
-            // Reconcile Dedicated Yarn RM Orders Relational Tables (Fallback if KV store missing)
+            // Reconcile Dedicated Yarn RM Orders Relational Tables
             try {
               const oKey = 'yarn-rm-orders';
-              const existingOrderData = kvMap[oKey] || cache[oKey];
-              const hasExistingOrders = Array.isArray(existingOrderData) ? existingOrderData.length > 0 : Boolean(existingOrderData && existingOrderData !== '[]');
+              const dbOrders = await fetchAllRowsPaginated('vf_yarn_orders', '*', 'order=order_date.desc');
+              const dbBatches = await fetchAllRowsPaginated('vf_yarn_order_batches', '*', 'order=receive_date.desc');
+              const dbBoxes = await fetchAllRowsPaginated('vf_yarn_order_boxes', '*', 'order=box_number.asc');
 
-              if (!hasExistingOrders) {
-                const dbOrders = await fetchAllRowsPaginated('vf_yarn_orders', '*', 'order=order_date.desc');
-                const dbBatches = await fetchAllRowsPaginated('vf_yarn_order_batches', '*', 'order=receive_date.desc');
-                const dbBoxes = await fetchAllRowsPaginated('vf_yarn_order_boxes', '*', 'order=box_number.asc');
-
-                if (Array.isArray(dbOrders) && dbOrders.length > 0) {
-                  const boxesByBatch = new Map();
-                  (dbBoxes || []).forEach(bx => {
-                    if (!boxesByBatch.has(bx.batch_id)) boxesByBatch.set(bx.batch_id, []);
-                    boxesByBatch.get(bx.batch_id).push({
-                      boxNumber: bx.box_number,
-                      weight: Number(bx.weight) || 0,
-                      cones: bx.cones || 0,
-                      returnedWeight: Number(bx.returned_weight) || 0,
-                      returnedDate: bx.returned_date || null,
-                      returnReason: bx.return_reason || null
-                    });
+              if (Array.isArray(dbOrders) && dbOrders.length > 0) {
+                const boxesByBatch = new Map();
+                (dbBoxes || []).forEach(bx => {
+                  if (!boxesByBatch.has(bx.batch_id)) boxesByBatch.set(bx.batch_id, []);
+                  boxesByBatch.get(bx.batch_id).push({
+                    boxNumber: bx.box_number,
+                    weight: Number(bx.weight) || 0,
+                    cones: bx.cones || 0,
+                    returnedWeight: Number(bx.returned_weight) || 0,
+                    returnedDate: bx.returned_date || null,
+                    returnReason: bx.return_reason || null
                   });
+                });
 
-                  const batchesByOrder = new Map();
-                  (dbBatches || []).forEach(b => {
-                    if (!batchesByOrder.has(b.order_id)) batchesByOrder.set(b.order_id, []);
-                    batchesByOrder.get(b.order_id).push({
-                      id: b.id,
-                      challanNumber: b.challan_number || '',
-                      lotNumber: b.lot_number || '',
-                      receiveDate: b.receive_date || '',
-                      totalWeight: Number(b.total_weight) || 0,
-                      notes: b.notes || '',
-                      boxes: boxesByBatch.get(b.id) || []
-                    });
+                const batchesByOrder = new Map();
+                (dbBatches || []).forEach(b => {
+                  if (!batchesByOrder.has(b.order_id)) batchesByOrder.set(b.order_id, []);
+                  batchesByOrder.get(b.order_id).push({
+                    id: b.id,
+                    challanNumber: b.challan_number || '',
+                    lotNumber: b.lot_number || '',
+                    receiveDate: b.receive_date || '',
+                    totalWeight: Number(b.total_weight) || 0,
+                    notes: b.notes || '',
+                    boxes: boxesByBatch.get(b.id) || []
                   });
+                });
 
-                  const reconstructedOrders = dbOrders.map(o => ({
+                const reconstructedOrders = dbOrders.map(o => {
+                  const relBatches = batchesByOrder.get(o.id) || [];
+                  let finalBatches = relBatches;
+                  try {
+                    const kvOrders = JSON.parse(kvMap[oKey] || cache[oKey] || '[]');
+                    if (Array.isArray(kvOrders)) {
+                      const kvOrder = kvOrders.find(x => x.id === o.id);
+                      if (kvOrder && Array.isArray(kvOrder.batches) && kvOrder.batches.length > finalBatches.length) {
+                        finalBatches = kvOrder.batches;
+                      }
+                    }
+                  } catch(e) {}
+
+                  return {
                     id: o.id,
                     orderNumber: o.order_number,
                     orderDate: o.order_date,
@@ -3406,18 +3410,18 @@
                     price: Number(o.price) || 0,
                     status: o.status || 'Active',
                     remarks: o.remarks || '',
-                    batches: batchesByOrder.get(o.id) || []
-                  }));
+                    batches: finalBatches
+                  };
+                });
 
-                  const oStr = JSON.stringify(reconstructedOrders);
-                  const lastOrderWrite = lastLocalWrites[oKey] || 0;
-                  if (Date.now() - lastOrderWrite >= 3000) {
-                    cache[oKey] = oStr;
-                    lastSavedHashes[oKey] = computeHash(oStr);
-                    safeLocalStorageSet(oKey, oStr);
-                    if (!updatedKeys.includes(oKey)) updatedKeys.push(oKey);
-                    hasChanges = true;
-                  }
+                const oStr = JSON.stringify(reconstructedOrders);
+                const lastOrderWrite = lastLocalWrites[oKey] || 0;
+                if (Date.now() - lastOrderWrite >= 3000) {
+                  cache[oKey] = oStr;
+                  lastSavedHashes[oKey] = computeHash(oStr);
+                  safeLocalStorageSet(oKey, oStr);
+                  if (!updatedKeys.includes(oKey)) updatedKeys.push(oKey);
+                  hasChanges = true;
                 }
               }
             } catch (orderErr) {
@@ -4809,6 +4813,11 @@
           parsedVal = JSON.parse(valStr);
         }
       } catch(e) {}
+
+      // Guard against pre-hydration empty state overwriting cloud tables
+      if (!isHydrated && (valStr === '[]' || valStr === '{}')) {
+        return;
+      }
 
       supabaseApi.set(key, parsedVal);
     },

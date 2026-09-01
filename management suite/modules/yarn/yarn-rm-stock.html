@@ -1763,7 +1763,7 @@
         const rawOrders = localStorage.getItem('yarn-rm-orders');
         if (rawOrders !== null) {
           const orders = JSON.parse(rawOrders);
-          if (Array.isArray(orders)) {
+          if (Array.isArray(orders) && orders.length > 0) {
             const rawStock = localStorage.getItem(STORAGE_KEY);
             let existingStockList = [];
             try { existingStockList = JSON.parse(rawStock || '[]'); } catch(e) {}
@@ -1843,9 +1843,11 @@
               });
             });
 
-            stockData = freshStockList.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
-            saveStockData();
-            return;
+            if (freshStockList.length > 0) {
+              stockData = freshStockList.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
+              saveStockData();
+              return;
+            }
           }
         }
       } catch(e) {
@@ -1861,23 +1863,20 @@
           } else {
             data = [];
           }
-          stockData = data.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
-          saveStockData();
-          return;
+          if (data.length > 0) {
+            stockData = data.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
+            return;
+          }
         } catch(e) {
           console.error('Error loading stock data:', e);
         }
       }
 
       stockData = [];
-      saveStockData();
     }
 
     function saveStockData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stockData));
-      if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
-        window.VishwaSupabase.saveToSupabase(STORAGE_KEY, stockData);
-      }
     }
 
     let boxRowCount = 0;
@@ -3452,8 +3451,8 @@
       switchStockTab(requestedTab, false);
     });
 
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'yarn-rm-orders' || e.key === 'yarn-suppliers' || e.key === 'yarn-qualities' || e.key === STORAGE_KEY || (e.key && e.key.startsWith('yarn_'))) {
+    function handleRemoteDataSync(key) {
+      if (!key || key === 'yarn-rm-orders' || key === 'yarn-suppliers' || key === 'yarn-qualities' || key === STORAGE_KEY || key.startsWith('yarn_')) {
         initSeedData();
         populateSupplierDropdown();
         if (currentStockTab === 'dashboard') {
@@ -3462,6 +3461,18 @@
           renderStockBook();
         }
       }
+    }
+
+    window.addEventListener('storage', (e) => {
+      handleRemoteDataSync(e.key);
+    });
+
+    window.addEventListener('supabase-sync', (e) => {
+      handleRemoteDataSync(e?.detail?.key);
+    });
+
+    window.addEventListener('supabase-ready', () => {
+      handleRemoteDataSync(STORAGE_KEY);
     });
   </script>
 </body>

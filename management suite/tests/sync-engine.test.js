@@ -179,4 +179,17 @@ test('SyncEngine — mergeDatasets', async (t) => {
       lastView: 'weaving'
     });
   });
+
+  await t.test('preserves authoritative server records when client initializes with empty array (fresh computer)', () => {
+    const serverOrders = [
+      { id: 'YRN-ORD-1', orderNumber: 'YRN-9019', quality: '70/30 VISCOSE', batches: [{ challanNumber: '1204', totalWeight: 1667.48 }] }
+    ];
+    const freshClientOrders = []; // Empty local storage on Computer B
+
+    const merged = mergeDatasets(freshClientOrders, serverOrders);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].orderNumber, 'YRN-9019');
+    assert.equal(merged[0].batches.length, 1);
+    assert.equal(merged[0].batches[0].challanNumber, '1204');
+  });
 });

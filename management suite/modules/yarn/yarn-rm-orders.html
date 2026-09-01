@@ -1177,27 +1177,81 @@
       return `${dateStr}T${timeStr}`;
     };
 
-    // Synced storage hook
+    // Synced storage hook (Safe multi-device cloud sync without empty-mount overwrites)
     const useSyncedStorage = (key, initialValue) => {
-      const [data, setData] = useState(() => {
+      const [storedValue, setStoredValue] = useState(() => {
         try {
-          const item = localStorage.getItem(key);
-          return item ? JSON.parse(item) : initialValue;
+          const item = window.localStorage.getItem(key);
+          if (!item) return initialValue;
+          const parsed = JSON.parse(item);
+          if (Array.isArray(initialValue) && !Array.isArray(parsed)) return initialValue;
+          return parsed;
         } catch (e) {
           return initialValue;
         }
       });
 
       useEffect(() => {
-        try {
-          localStorage.setItem(key, JSON.stringify(data));
-          if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
-            window.VishwaSupabase.saveToSupabase(key, data);
+        const handleStorageChange = (e) => {
+          if (!e || e.key === key || !e.key) {
+            try {
+              const item = window.localStorage.getItem(key);
+              if (!item) {
+                if (!window.VishwaSupabase || (typeof window.VishwaSupabase.isHydrated === 'function' && window.VishwaSupabase.isHydrated())) {
+                  setStoredValue(initialValue);
+                }
+              } else {
+                const parsed = JSON.parse(item);
+                if (Array.isArray(initialValue) && !Array.isArray(parsed)) {
+                  setStoredValue(initialValue);
+                } else {
+                  setStoredValue(parsed);
+                }
+              }
+            } catch (error) {
+              console.error('Error parsing storage change in useSyncedStorage:', error);
+            }
           }
-        } catch(e) {}
-      }, [key, data]);
+        };
 
-      return [data, setData];
+        const handleSupabaseSync = (e) => {
+          if (!e || !e.detail || e.detail.key === key || !e.detail.key) {
+            handleStorageChange({ key });
+          }
+        };
+
+        const handleSupabaseReady = () => {
+          handleStorageChange({ key });
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('supabase-sync', handleSupabaseSync);
+        window.addEventListener('supabase-ready', handleSupabaseReady);
+
+        return () => {
+          window.removeEventListener('storage', handleStorageChange);
+          window.removeEventListener('supabase-sync', handleSupabaseSync);
+          window.removeEventListener('supabase-ready', handleSupabaseReady);
+        };
+      }, [key, initialValue]);
+
+      const setValue = useCallback((value) => {
+        try {
+          setStoredValue(prevValue => {
+            const valueToStore = value instanceof Function ? value(prevValue) : value;
+            try {
+              window.localStorage.setItem(key, JSON.stringify(valueToStore));
+            } catch (err) {
+              console.error('Storage set error:', err);
+            }
+            return valueToStore;
+          });
+        } catch (error) {
+          console.error('setValue error:', error);
+        }
+      }, [key]);
+
+      return [storedValue, setValue];
     };
 
     // Component: Searchable Dropdown
@@ -1367,7 +1421,7 @@
 
       // Auto-heal and sync all orders and batches into Yarn RM Stock Book
       useEffect(() => {
-        if (!Array.isArray(orders)) return;
+        if (!Array.isArray(orders) || orders.length === 0) return;
         try {
           const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
           let stockList = rawStock ? JSON.parse(rawStock) : [];
@@ -1466,26 +1520,25 @@
             });
           });
 
-          // Clean up stock lots belonging to deleted orders or deleted batches
-          const initialLen = stockList.length;
-          stockList = stockList.filter(lot => {
-            if (!lot || !lot.orderRef) return true; // Keep manual lots not linked to orders
-            if (!activeOrderRefs.has(String(lot.orderRef))) return false; // Order was deleted
-            if (lot.batchId && !activeLotKeys.has(String(lot.batchId))) return false; // Batch was deleted
-            const rawChallan = String(lot.challanNo || lot.challanNumber || '').trim();
-            const rawLot = String(lot.lotNumber || '').trim();
-            if (rawLot && rawChallan && !activeLotKeys.has(`${rawLot}__${rawChallan}`) && !activeLotKeys.has(String(lot.id))) {
-              return false; // Batch with lot and challan was deleted
-            }
-            return true;
-          });
-          if (stockList.length !== initialLen) changed = true;
+          // Clean up stock lots belonging to deleted orders or deleted batches (ONLY if orders is populated)
+          if (activeOrderRefs.size > 0) {
+            const initialLen = stockList.length;
+            stockList = stockList.filter(lot => {
+              if (!lot || !lot.orderRef) return true; // Keep manual lots not linked to orders
+              if (!activeOrderRefs.has(String(lot.orderRef))) return false; // Order was deleted
+              if (lot.batchId && !activeLotKeys.has(String(lot.batchId))) return false; // Batch was deleted
+              const rawChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+              const rawLot = String(lot.lotNumber || '').trim();
+              if (rawLot && rawChallan && !activeLotKeys.has(`${rawLot}__${rawChallan}`) && !activeLotKeys.has(String(lot.id))) {
+                return false; // Batch with lot and challan was deleted
+              }
+              return true;
+            });
+            if (stockList.length !== initialLen) changed = true;
+          }
 
           if (changed) {
             localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
-            if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
-              window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
-            }
           }
         } catch(e) {
           console.error("Yarn stock auto-heal sync error:", e);
