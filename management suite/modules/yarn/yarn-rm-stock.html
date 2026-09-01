@@ -1329,7 +1329,7 @@
         <div class="chart-card-header">
           <div class="chart-title-group">
             <h3>Top Yarn Qualities by Available Stock (Kg)</h3>
-            <p>Available weight (strictly to 2 decimal places) for highest volume qualities currently in stock</p>
+            <p>Available weight for highest volume qualities currently in stock</p>
           </div>
         </div>
         <div class="chart-container-wrapper" style="height: 260px;">
@@ -2961,7 +2961,7 @@
 
       if (tabName === 'dashboard') {
         if (pageTitle) pageTitle.textContent = 'Yarn RM Stock Dashboard';
-        if (pageSub) pageSub.textContent = 'High-level inventory overview — Quality breakdown, cones & available stock (kg to 2 decimals)';
+        if (pageSub) pageSub.textContent = 'High-level inventory overview — Quality breakdown, cones & available stock';
         if (headerActions) headerActions.style.display = 'flex';
       } else if (tabName === 'stock-book') {
         if (pageTitle) pageTitle.textContent = 'Yarn RM Stock Book';
@@ -3111,7 +3111,7 @@
         });
       });
 
-      // Update Dashboard Top KPI Cards (All weights strictly to 2 decimal places)
+      // Update Dashboard Top KPI Cards
       const elAvailWt = document.getElementById('dash-avail-weight');
       const elAvailBoxes = document.getElementById('dash-avail-boxes');
       const elAvailCones = document.getElementById('dash-avail-cones');

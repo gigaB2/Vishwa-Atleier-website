@@ -3187,15 +3187,19 @@
     }
   });
 
-  // Dynamic formatter for Rs and kg to 1 decimal place
+  // Dynamic formatter for Rs and kg
   (function () {
-    function formatToOneDecimal(numStr) {
+    const isYarnRMStock = window.location.href.includes('yarn-rm-stock') || 
+                          window.location.href.includes('yarn-stock-dashboard') ||
+                          (document.title && (document.title.toLowerCase().includes('stock book') || document.title.toLowerCase().includes('stock dashboard')));
+
+    function formatNumber(numStr, decimals = 1) {
       const cleanNumStr = numStr.replace(/,/g, '');
       const num = parseFloat(cleanNumStr);
       if (isNaN(num)) return numStr;
       return num.toLocaleString('en-IN', {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
       });
     }
 
@@ -3207,13 +3211,14 @@
         changed = true;
         let cleanPrefix = prefix;
         if (/Rs\.?/i.test(prefix)) cleanPrefix = 'Rs.';
-        return cleanPrefix + ' ' + formatToOneDecimal(num);
+        return cleanPrefix + ' ' + formatNumber(num, 1);
       });
 
       // Pattern 2: number followed by weight unit (including commas)
+      const kgDecimals = isYarnRMStock ? 2 : 1;
       const newText2 = newText1.replace(/((?:\d{1,3}(?:,\d{2,3})+|\d+)(?:\.\d+)?)\s*(kg|Kg|KG|kgs|Kgs)\b/gi, (match, num, suffix) => {
         changed = true;
-        return formatToOneDecimal(num) + ' ' + suffix;
+        return formatNumber(num, kgDecimals) + ' ' + suffix;
       });
 
       return { text: newText2, changed: newText1 !== text || newText2 !== newText1 };
