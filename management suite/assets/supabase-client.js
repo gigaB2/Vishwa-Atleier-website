@@ -299,6 +299,118 @@
       }
     } catch(e) {}
 
+    // Special Case: Yarn RM Stock Book Array Merge (Preserve Box Issue & GR States Across Devices)
+    if (key === 'vishwa_yarn_rm_stock_data' && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
+      const cleanLocal = filterDeletedEntities(parsedLocal);
+      const cleanRemote = filterDeletedEntities(parsedRemote);
+      const lotMap = new Map();
+
+      // Seed with remote lots first
+      cleanRemote.forEach(lot => {
+        if (!lot) return;
+        const lKey = String(lot.id || (lot.lotNumber + (lot.challanNo ? `__${lot.challanNo}` : '')));
+        lotMap.set(lKey, JSON.parse(JSON.stringify(lot)));
+      });
+
+      // Merge local lots
+      cleanLocal.forEach(localLot => {
+        if (!localLot) return;
+        const lKey = String(localLot.id || (localLot.lotNumber + (localLot.challanNo ? `__${localLot.challanNo}` : '')));
+        if (!lotMap.has(lKey)) {
+          lotMap.set(lKey, JSON.parse(JSON.stringify(localLot)));
+        } else {
+          const targetLot = lotMap.get(lKey);
+          const boxMap = new Map();
+          (targetLot.boxes || []).forEach(b => {
+            const bId = String(b.id || b.boxNumber || '');
+            if (bId) boxMap.set(bId, b);
+          });
+
+          (localLot.boxes || []).forEach(lb => {
+            const bId = String(lb.id || lb.boxNumber || '');
+            if (!bId) return;
+            if (!boxMap.has(bId)) {
+              boxMap.set(bId, lb);
+            } else {
+              const tb = boxMap.get(bId);
+              if (lb.status === 'issued' && tb.status !== 'issued') {
+                tb.status = 'issued';
+                tb.issueDate = lb.issueDate || tb.issueDate || new Date().toISOString().split('T')[0];
+                tb.issuedTo = lb.issuedTo || tb.issuedTo || 'Department';
+              } else if (tb.status === 'issued' && lb.status !== 'issued') {
+                // tb is already issued, keep it
+              } else if (lb.status === 'gr' || tb.status === 'gr') {
+                tb.status = 'gr';
+                tb.grWeight = lb.grWeight || tb.grWeight || 0;
+                tb.grDate = lb.grDate || tb.grDate || null;
+                tb.grRemarks = lb.grRemarks || tb.grRemarks || null;
+              }
+            }
+          });
+          targetLot.boxes = Array.from(boxMap.values());
+        }
+      });
+      return Array.from(lotMap.values());
+    }
+
+    // Special Case: Yarn RM Orders Array Merge (Preserve Box Issue & GR States inside batches)
+    if (key === 'yarn-rm-orders' && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
+      const cleanLocal = filterDeletedEntities(parsedLocal);
+      const cleanRemote = filterDeletedEntities(parsedRemote);
+      const orderMap = new Map();
+
+      cleanRemote.forEach(ord => {
+        if (!ord) return;
+        const oId = String(ord.id || ord.orderNumber || '');
+        orderMap.set(oId, JSON.parse(JSON.stringify(ord)));
+      });
+
+      cleanLocal.forEach(localOrd => {
+        if (!localOrd) return;
+        const oId = String(localOrd.id || localOrd.orderNumber || '');
+        if (!orderMap.has(oId)) {
+          orderMap.set(oId, JSON.parse(JSON.stringify(localOrd)));
+        } else {
+          const targetOrd = orderMap.get(oId);
+          const batchMap = new Map();
+          (targetOrd.batches || []).forEach(b => {
+            const bKey = String(b.id || `${b.lotNumber}__${b.challanNumber}`);
+            batchMap.set(bKey, b);
+          });
+          (localOrd.batches || []).forEach(lb => {
+            const bKey = String(lb.id || `${lb.lotNumber}__${lb.challanNumber}`);
+            if (!batchMap.has(bKey)) {
+              batchMap.set(bKey, lb);
+            } else {
+              const tb = batchMap.get(bKey);
+              const boxMap = new Map();
+              (tb.boxes || []).forEach(bx => {
+                const bxId = String(bx.boxNumber || bx.id || '');
+                if (bxId) boxMap.set(bxId, bx);
+              });
+              (lb.boxes || []).forEach(lbx => {
+                const bxId = String(lbx.boxNumber || lbx.id || '');
+                if (!bxId) return;
+                if (!boxMap.has(bxId)) {
+                  boxMap.set(bxId, lbx);
+                } else {
+                  const tbx = boxMap.get(bxId);
+                  if (lbx.status === 'issued' && tbx.status !== 'issued') {
+                    tbx.status = 'issued';
+                    tbx.issueDate = lbx.issueDate || tbx.issueDate || null;
+                    tbx.issuedTo = lbx.issuedTo || tbx.issuedTo || null;
+                  }
+                }
+              });
+              tb.boxes = Array.from(boxMap.values());
+            }
+          });
+          targetOrd.batches = Array.from(batchMap.values());
+        }
+      });
+      return Array.from(orderMap.values());
+    }
+
     // Case 1: Both are Arrays -> Strictly filter deletions on both and prioritize latest authority
     if (Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
       const cleanLocal = filterDeletedEntities(parsedLocal);
@@ -2838,6 +2950,45 @@
         }
       } catch(e) {}
     },
+    // Dedicated Atomic Yarn Box Issuance RPC
+    async issueYarnBoxesAtomic(boxUids, params = {}) {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return { error: 'Not configured' };
+      try {
+        const boxIds = Array.isArray(boxUids) ? boxUids : [boxUids];
+        const userInfo = getLocalUserInfo();
+        const payload = {
+          p_box_ids: boxIds,
+          p_issued_to: params.issuedTo || params.issueTo || 'Department',
+          p_issue_date: (params.issueDate || new Date().toISOString().split('T')[0]).split('T')[0],
+          p_user: userInfo.email || userInfo.name || 'Operator',
+          p_remarks: params.remarks || `Issued to ${params.issuedTo || 'Department'}`
+        };
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/vf_issue_yarn_boxes`, {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return { data, error: null };
+        } else {
+          const err = await res.json().catch(() => ({}));
+          return { data: null, error: err };
+        }
+      } catch (e) {
+        return { data: null, error: e };
+      }
+    },
+    // Dedicated Relational Lot Deletion
+    async deleteYarnLotRelational(lotId) {
+      if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY || !lotId) return;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_lots?id=eq.${encodeURIComponent(String(lotId))}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+      } catch(e) {}
+    },
     // --- Supabase Authentication API Integration ---
     getAuthHeaders(extraHeaders = {}) {
       let token = null;
@@ -3294,11 +3445,30 @@
               const yKey = 'vishwa_yarn_rm_stock_data';
               const yarnLots = await fetchAllRowsPaginated('vf_yarn_rm_lots', '*', 'order=receive_date.desc');
               const yarnBoxes = await fetchAllRowsPaginated('vf_yarn_rm_boxes', '*', 'order=box_number.asc');
+              let yarnTx = [];
+              try {
+                yarnTx = await fetchAllRowsPaginated('vf_yarn_rm_transactions', '*', 'order=created_at.asc');
+              } catch(e) {}
+
+              // Build transaction ledger map to guarantee issue state cannot be lost
+              const txIssueMap = new Map();
+              if (Array.isArray(yarnTx)) {
+                yarnTx.forEach(tx => {
+                  if (tx.transaction_type === 'issue' && tx.box_id) {
+                    txIssueMap.set(String(tx.box_id), tx);
+                  }
+                });
+              }
 
               if (Array.isArray(yarnLots) && yarnLots.length > 0) {
                 const boxesByLot = new Map();
                 (yarnBoxes || []).forEach(b => {
                   if (!boxesByLot.has(b.lot_id)) boxesByLot.set(b.lot_id, []);
+                  const txIssue = txIssueMap.get(String(b.id));
+                  const isIssued = b.status === 'issued' || (!b.status && txIssue) || (b.status !== 'gr' && txIssue);
+                  const issueDate = b.issue_date || (txIssue ? (txIssue.issue_date || (txIssue.created_at ? txIssue.created_at.split('T')[0] : null)) : null);
+                  const issuedTo = b.issued_to || (txIssue ? txIssue.issued_to : null);
+
                   boxesByLot.get(b.lot_id).push({
                     id: b.box_number || b.id,
                     boxNumber: b.box_number,
@@ -3306,9 +3476,9 @@
                     grossWeight: Number(b.gross_weight) || 0,
                     remainingWeight: Number(b.remaining_weight) || 0,
                     weight: Number(b.active_weight) || 0,
-                    status: b.status || 'available',
-                    issueDate: b.issue_date || null,
-                    issuedTo: b.issued_to || null,
+                    status: b.status === 'gr' ? 'gr' : (isIssued ? 'issued' : (b.status || 'available')),
+                    issueDate: isIssued ? issueDate : null,
+                    issuedTo: isIssued ? issuedTo : null,
                     grDate: b.gr_date || null,
                     grWeight: Number(b.gr_weight) || 0,
                     grRemarks: b.gr_remarks || null

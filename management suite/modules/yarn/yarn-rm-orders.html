@@ -1431,6 +1431,34 @@
           const activeLotKeys = new Set();
           const activeOrderRefs = new Set();
 
+          // Build comprehensive index of existing boxes and lots so issue statuses are 100% preserved
+          const existingBoxMap = new Map();
+          const existingLotMap = new Map();
+
+          stockList.forEach(lot => {
+            if (!lot) return;
+            const lId = String(lot.id || '');
+            const lNum = String(lot.lotNumber || '').trim();
+            const lChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+            const bId = String(lot.batchId || '').trim();
+
+            if (lId) existingLotMap.set(lId, lot);
+            if (bId) existingLotMap.set(bId, lot);
+            if (lNum && lChallan) existingLotMap.set(`${lNum}__${lChallan}`, lot);
+
+            (lot.boxes || []).forEach(b => {
+              if (!b) return;
+              const boxNum = String(b.id || b.boxNumber || '').trim();
+              if (boxNum) {
+                if (lId) existingBoxMap.set(`${lId}__${boxNum}`, b);
+                if (bId) existingBoxMap.set(`${bId}__${boxNum}`, b);
+                if (lNum && lChallan) existingBoxMap.set(`${lNum}__${lChallan}__${boxNum}`, b);
+                if (lNum) existingBoxMap.set(`${lNum}__${boxNum}`, b);
+                if (!existingBoxMap.has(boxNum)) existingBoxMap.set(boxNum, b);
+              }
+            });
+          });
+
           orders.forEach(order => {
             const orderRefId = String(order.orderNumber || order.id || '');
             if (orderRefId) {
@@ -1464,9 +1492,6 @@
               );
 
               const existingLot = existingIdx >= 0 ? stockList[existingIdx] : null;
-              const existingBoxMap = existingLot && Array.isArray(existingLot.boxes) 
-                ? new Map(existingLot.boxes.map(b => [String(b.id || b.boxNumber), b])) 
-                : new Map();
 
               const boxes = (batch.boxes || []).map((bx, idx) => {
                 const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
@@ -1475,18 +1500,27 @@
                 const remWt = Math.max(0, grossWt - retWt);
                 const isFullyGr = retWt >= grossWt && grossWt > 0;
                 const isPartialGr = retWt > 0 && !isFullyGr;
-                const oldB = existingBoxMap.get(bId);
+
+                const oldB = existingBoxMap.get(`${lotIdVal}__${bId}`) || 
+                             (batch.id ? existingBoxMap.get(`${batch.id}__${bId}`) : null) ||
+                             (batchLot && batchChallan ? existingBoxMap.get(`${batchLot}__${batchChallan}__${bId}`) : null) ||
+                             (batchLot ? existingBoxMap.get(`${batchLot}__${bId}`) : null) ||
+                             (existingLot && Array.isArray(existingLot.boxes) ? existingLot.boxes.find(x => String(x.id || x.boxNumber).trim() === bId) : null);
+
+                const isIssued = (oldB?.status === 'issued') || (bx.status === 'issued');
+                const issueDate = oldB?.issueDate || bx.issueDate || null;
+                const issuedTo = oldB?.issuedTo || bx.issuedTo || null;
 
                 return {
                   id: bId,
                   boxNumber: bId,
-                  cones: Number(bx.cones) || 0,
+                  cones: Number(bx.cones) || (oldB?.cones || 0),
                   grossWeight: grossWt,
                   remainingWeight: remWt,
                   weight: isFullyGr ? grossWt : remWt,
-                  status: isFullyGr ? 'gr' : (oldB?.status === 'issued' ? 'issued' : 'available'),
-                  issueDate: isFullyGr ? null : (oldB?.issueDate || null),
-                  issuedTo: isFullyGr ? null : (oldB?.issuedTo || null),
+                  status: isFullyGr ? 'gr' : (isIssued ? 'issued' : 'available'),
+                  issueDate: isFullyGr ? null : (isIssued ? issueDate : null),
+                  issuedTo: isFullyGr ? null : (isIssued ? issuedTo : null),
                   grWeight: retWt,
                   grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
                   grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(1)} kg)` : null)
@@ -1503,7 +1537,7 @@
                 date: recDateOnly,
                 supplier: order.supplier || (existingLot?.supplier || ''),
                 quality: order.quality || (existingLot?.quality || ''),
-                itemType: order.category || order.type || 'Polyester',
+                itemType: order.category || order.type || (existingLot?.itemType || 'Polyester'),
                 code: order.code || (existingLot?.code || ''),
                 color: order.color || (existingLot?.color || ''),
                 rate: order.price || (existingLot?.rate || ''),
@@ -1512,11 +1546,16 @@
               };
 
               if (existingIdx >= 0) {
-                stockList[existingIdx] = updatedLot;
+                const prevSerialized = JSON.stringify(stockList[existingIdx]);
+                const nextSerialized = JSON.stringify(updatedLot);
+                if (prevSerialized !== nextSerialized) {
+                  stockList[existingIdx] = updatedLot;
+                  changed = true;
+                }
               } else {
                 stockList.unshift(updatedLot);
+                changed = true;
               }
-              changed = true;
             });
           });
 

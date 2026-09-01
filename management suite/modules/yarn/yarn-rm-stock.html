@@ -1756,32 +1756,114 @@
       };
     }
 
+    function syncBoxStatusToOrders(lot, boxId, status, issueDate = null, issuedTo = null) {
+      if (!lot || !boxId) return;
+      try {
+        const rawOrders = localStorage.getItem('yarn-rm-orders');
+        if (!rawOrders) return;
+        const orders = JSON.parse(rawOrders);
+        if (!Array.isArray(orders) || orders.length === 0) return;
+
+        const lotChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+        const lotNum = String(lot.lotNumber || '').trim();
+        const lotBatchId = String(lot.batchId || '').trim();
+        const orderRef = String(lot.orderRef || '').trim();
+        let modified = false;
+
+        orders.forEach(order => {
+          (order.batches || []).forEach(batch => {
+            const bChallan = String(batch.challanNumber || '').trim();
+            const bLot = String(batch.lotNumber || '').trim();
+            const bId = String(batch.id || '').trim();
+
+            const isMatchingBatch = (lotBatchId && bId === lotBatchId) ||
+              (lotChallan && lotNum && bChallan === lotChallan && bLot === lotNum) ||
+              (lotChallan && bChallan === lotChallan) ||
+              (lotNum && bLot === lotNum) ||
+              (orderRef && (String(order.id) === orderRef || String(order.orderNumber) === orderRef));
+
+            if (isMatchingBatch && Array.isArray(batch.boxes)) {
+              batch.boxes.forEach(bx => {
+                if (String(bx.boxNumber || bx.id).trim() === String(boxId).trim()) {
+                  bx.status = status;
+                  bx.issueDate = (status === 'issued') ? (issueDate || new Date().toISOString().split('T')[0]) : null;
+                  bx.issuedTo = (status === 'issued') ? (issuedTo || 'Department') : null;
+                  modified = true;
+                }
+              });
+            }
+          });
+        });
+
+        if (modified) {
+          localStorage.setItem('yarn-rm-orders', JSON.stringify(orders));
+        }
+      } catch(e) {
+        console.warn('Sync box status to orders notice:', e);
+      }
+    }
+
     // Initial Data Seed and Strict Auto-heal against Yarn RM Orders
     function initSeedData() {
-      // Re-sync directly from yarn-rm-orders as the single source of truth for inward lots
+      // 1. First load existing stock data from localStorage (authoritative for box issue statuses)
+      let existingStockList = [];
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          let data = JSON.parse(stored);
+          if (Array.isArray(data)) {
+            data = data.filter(item => item && Array.isArray(item.boxes) && item.boxes.length > 0 && item.id !== 'LOT-8072-01' && item.id !== 'LOT-30C-02' && item.quality !== '80/72 Polyester DTY' && item.quality !== '30s Combed Cotton');
+            existingStockList = data;
+          }
+        } catch(e) {
+          console.error('Error parsing stored stock data:', e);
+        }
+      }
+
+      // 2. Build comprehensive map of all known box states (issued/available/gr)
+      const existingBoxMap = new Map();
+      const existingLotMap = new Map();
+
+      existingStockList.forEach(lot => {
+        if (!lot) return;
+        const lId = String(lot.id || '');
+        const lNum = String(lot.lotNumber || '').trim();
+        const lChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+        const bId = String(lot.batchId || '').trim();
+
+        if (lId) existingLotMap.set(lId, lot);
+        if (bId) existingLotMap.set(bId, lot);
+        if (lNum && lChallan) existingLotMap.set(`${lNum}__${lChallan}`, lot);
+
+        (lot.boxes || []).forEach(b => {
+          if (!b) return;
+          const boxNum = String(b.id || b.boxNumber || '').trim();
+          if (boxNum) {
+            if (lId) existingBoxMap.set(`${lId}__${boxNum}`, b);
+            if (bId) existingBoxMap.set(`${bId}__${boxNum}`, b);
+            if (lNum && lChallan) existingBoxMap.set(`${lNum}__${lChallan}__${boxNum}`, b);
+            if (lNum) existingBoxMap.set(`${lNum}__${boxNum}`, b);
+            if (!existingBoxMap.has(boxNum)) existingBoxMap.set(boxNum, b);
+          }
+        });
+      });
+
+      // 3. Merge lots and batches from yarn-rm-orders without destroying issue statuses
+      let hasStructuralChange = false;
       try {
         const rawOrders = localStorage.getItem('yarn-rm-orders');
         if (rawOrders !== null) {
           const orders = JSON.parse(rawOrders);
           if (Array.isArray(orders) && orders.length > 0) {
-            const rawStock = localStorage.getItem(STORAGE_KEY);
-            let existingStockList = [];
-            try { existingStockList = JSON.parse(rawStock || '[]'); } catch(e) {}
-            if (!Array.isArray(existingStockList)) existingStockList = [];
+            const mergedStockMap = new Map();
 
-            // Map existing box statuses (issued/date/issuedTo) so issuance state is preserved across order changes
-            const existingBoxMap = new Map();
-            existingStockList.forEach(lot => {
-              (lot.boxes || []).forEach(b => {
-                if (b && (b.id || b.boxNumber)) {
-                  existingBoxMap.set(`${lot.id}__${b.id || b.boxNumber}`, b);
-                  existingBoxMap.set(`${lot.lotNumber}__${lot.challanNo || lot.challanNumber}__${b.id || b.boxNumber}`, b);
-                }
-              });
+            // First index existing stock lots
+            existingStockList.forEach(l => {
+              const key = String(l.id || (l.lotNumber + (l.challanNo ? `__${l.challanNo}` : '')));
+              mergedStockMap.set(key, l);
             });
 
-            const freshStockList = [];
-
+            // Iterate orders and batches
             orders.forEach(order => {
               (order.batches || []).forEach((batch, bIdx) => {
                 const recDateOnly = (batch.receiveDate || new Date().toISOString().split('T')[0]).split('T')[0];
@@ -1794,6 +1876,12 @@
                   ? (batchLot + (batchChallan ? `__${batchChallan}` : `__${batchId}`))
                   : (`LOT-${batchChallan || batchId || bIdx}`);
 
+                // Check if this lot already exists
+                const existingLot = existingLotMap.get(lotIdVal) ||
+                  (batch.id ? existingLotMap.get(String(batch.id)) : null) ||
+                  (batchLot && batchChallan ? existingLotMap.get(`${batchLot}__${batchChallan}`) : null) ||
+                  mergedStockMap.get(lotIdVal);
+
                 const boxes = (batch.boxes || []).map((bx, idx) => {
                   const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
                   const grossWt = Number(bx.weight) || 0;
@@ -1801,51 +1889,66 @@
                   const remWt = Math.max(0, grossWt - retWt);
                   const isFullyGr = retWt >= grossWt && grossWt > 0;
                   const isPartialGr = retWt > 0 && !isFullyGr;
-                  const oldB = existingBoxMap.get(`${lotIdVal}__${bId}`) || existingBoxMap.get(`${batchLot}__${batchChallan}__${bId}`);
+
+                  const oldB = existingBoxMap.get(`${lotIdVal}__${bId}`) || 
+                               (batch.id ? existingBoxMap.get(`${batch.id}__${bId}`) : null) ||
+                               (batchLot && batchChallan ? existingBoxMap.get(`${batchLot}__${batchChallan}__${bId}`) : null) ||
+                               (batchLot ? existingBoxMap.get(`${batchLot}__${bId}`) : null) ||
+                               (existingLot && Array.isArray(existingLot.boxes) ? existingLot.boxes.find(x => String(x.id || x.boxNumber).trim() === bId) : null);
+
+                  const isIssued = (oldB?.status === 'issued') || (bx.status === 'issued');
+                  const issueDate = oldB?.issueDate || bx.issueDate || null;
+                  const issuedTo = oldB?.issuedTo || bx.issuedTo || null;
 
                   return {
                     id: bId,
                     boxNumber: bId,
-                    cones: Number(bx.cones) || 0,
+                    cones: Number(bx.cones) || (oldB?.cones || 0),
                     grossWeight: grossWt,
                     remainingWeight: remWt,
                     weight: isFullyGr ? grossWt : remWt,
-                    status: isFullyGr ? 'gr' : (oldB?.status === 'issued' ? 'issued' : 'available'),
-                    issueDate: isFullyGr ? null : (oldB?.issueDate || null),
-                    issuedTo: isFullyGr ? null : (oldB?.issuedTo || null),
+                    status: isFullyGr ? 'gr' : (isIssued ? 'issued' : 'available'),
+                    issueDate: isFullyGr ? null : (isIssued ? issueDate : null),
+                    issuedTo: isFullyGr ? null : (isIssued ? issuedTo : null),
                     grWeight: retWt,
                     grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
                     grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(2)} kg)` : null)
                   };
                 });
 
-                // Only include lots that actually have boxes
                 if (boxes.length > 0) {
                   const updatedLot = {
-                    id: lotIdVal,
+                    id: existingLot?.id || lotIdVal,
                     batchId: batch.id || '',
-                    lotNumber: batchLot || ('LOT-' + (batchChallan || 'AUTO')),
-                    challanNo: batchChallan || '',
-                    challanNumber: batchChallan || '',
+                    lotNumber: batchLot || (existingLot?.lotNumber || ('LOT-' + (batchChallan || 'AUTO'))),
+                    challanNo: batchChallan || (existingLot?.challanNo || ''),
+                    challanNumber: batchChallan || (existingLot?.challanNumber || ''),
                     receiveDate: recDateOnly,
                     date: recDateOnly,
-                    supplier: order.supplier || '',
-                    quality: order.quality || '',
-                    itemType: order.category || order.type || 'Polyester',
-                    code: order.code || '',
-                    color: order.color || '',
-                    rate: order.price || '',
+                    supplier: order.supplier || (existingLot?.supplier || ''),
+                    quality: order.quality || (existingLot?.quality || ''),
+                    itemType: order.category || order.type || (existingLot?.itemType || 'Polyester'),
+                    code: order.code || (existingLot?.code || ''),
+                    color: order.color || (existingLot?.color || ''),
+                    rate: order.price || (existingLot?.rate || ''),
                     orderRef: order.orderNumber || order.id,
                     boxes: boxes
                   };
-                  freshStockList.push(updatedLot);
+
+                  if (!mergedStockMap.has(updatedLot.id)) {
+                    hasStructuralChange = true;
+                  }
+                  mergedStockMap.set(updatedLot.id, updatedLot);
                 }
               });
             });
 
-            if (freshStockList.length > 0) {
-              stockData = freshStockList.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
-              saveStockData();
+            const mergedList = Array.from(mergedStockMap.values());
+            if (mergedList.length > 0) {
+              stockData = mergedList.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
+              if (hasStructuralChange) {
+                saveStockData();
+              }
               return;
             }
           }
@@ -1854,22 +1957,9 @@
         console.error('Error auto-syncing from orders:', e);
       }
 
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          let data = JSON.parse(stored);
-          if (Array.isArray(data)) {
-            data = data.filter(item => item && Array.isArray(item.boxes) && item.boxes.length > 0 && item.id !== 'LOT-8072-01' && item.id !== 'LOT-30C-02' && item.quality !== '80/72 Polyester DTY' && item.quality !== '30s Combed Cotton');
-          } else {
-            data = [];
-          }
-          if (data.length > 0) {
-            stockData = data.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
-            return;
-          }
-        } catch(e) {
-          console.error('Error loading stock data:', e);
-        }
+      if (existingStockList.length > 0) {
+        stockData = existingStockList.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
+        return;
       }
 
       stockData = [];
@@ -2485,6 +2575,7 @@
             box.status = 'available';
             box.issueDate = null;
             box.issuedTo = null;
+            if (lot) syncBoxStatusToOrders(lot, box.id, 'available');
             // Also remove from selectedBoxes if it was selected
             const selIdx = selectedBoxes.findIndex(b => String(b.lotId) === sLotId && String(b.boxId) === sBoxId);
             if (selIdx >= 0) selectedBoxes.splice(selIdx, 1);
@@ -2616,6 +2707,7 @@
             box.issueDate = issueDate;
             box.issuedTo = issuedTo;
             boxUids.push(`${lot.id}__${box.id}`);
+            syncBoxStatusToOrders(lot, box.id, 'issued', issueDate, issuedTo);
           }
         }
       });
