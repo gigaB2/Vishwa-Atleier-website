@@ -1524,13 +1524,15 @@
 
     // Load logs for all divisions from localStorage
     function loadLogs() {
-      const sampleYarns = [];
-
-      ['covering', 'tfo', 'doubler'].forEach((div, dIdx) => {
+      ['covering', 'tfo', 'doubler'].forEach((div) => {
         let prod = JSON.parse(localStorage.getItem(`yarn_${div}_production_logs`) || '[]');
-        /* disabled dummy sample prod generation */
-        dataStore[div].production = prod;
-        dataStore[div].sales = JSON.parse(localStorage.getItem(`yarn_${div}_sales_logs`) || '[]');
+        let sales = JSON.parse(localStorage.getItem(`yarn_${div}_sales_logs`) || '[]');
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+          prod = window.VishwaSupabase.filterDeletedEntities(prod);
+          sales = window.VishwaSupabase.filterDeletedEntities(sales);
+        }
+        dataStore[div].production = Array.isArray(prod) ? prod : [];
+        dataStore[div].sales = Array.isArray(sales) ? sales : [];
       });
     }
 
@@ -1549,8 +1551,16 @@
 
     // Save logs to localStorage for current active division
     function saveLogs() {
-      localStorage.setItem(`yarn_${activeDivision}_production_logs`, JSON.stringify(dataStore[activeDivision].production));
-      localStorage.setItem(`yarn_${activeDivision}_sales_logs`, JSON.stringify(dataStore[activeDivision].sales));
+      let prod = dataStore[activeDivision].production;
+      let sales = dataStore[activeDivision].sales;
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+        prod = window.VishwaSupabase.filterDeletedEntities(prod);
+        sales = window.VishwaSupabase.filterDeletedEntities(sales);
+        dataStore[activeDivision].production = prod;
+        dataStore[activeDivision].sales = sales;
+      }
+      localStorage.setItem(`yarn_${activeDivision}_production_logs`, JSON.stringify(prod));
+      localStorage.setItem(`yarn_${activeDivision}_sales_logs`, JSON.stringify(sales));
       refreshAllViews();
     }
 
@@ -1811,12 +1821,13 @@
 
       const editId = document.getElementById('prod-edit-id').value;
       const prefix = document.getElementById('prod-bori-prefix').innerText;
-      const numPart = document.getElementById('prod-bori').value.trim();
+      let numPart = document.getElementById('prod-bori').value.trim();
+      numPart = numPart.replace(/^[C|T|D|B]-?/i, '');
       const boriNo = prefix + numPart;
 
       const lotPrefix = document.getElementById('prod-lot-prefix') ? document.getElementById('prod-lot-prefix').innerText : '';
       const lotNumPart = document.getElementById('prod-lot').value.trim();
-      const lotNo = lotPrefix + lotNumPart;
+      const lotNo = lotNumPart ? (lotPrefix + (typeof cleanLotNumber === 'function' ? cleanLotNumber(lotNumPart) : lotNumPart.replace(/^[C|T|D|B]-Lot\s*/i, ''))) : '';
 
       const costingProd = window._currentSelectedCostingProduct;
       const data = {
@@ -1838,7 +1849,7 @@
       };
 
       // Check duplicate bori no inside current division
-      if (!editId && dataStore[activeDivision].production.some(l => l.boriNo.toLowerCase() === boriNo.toLowerCase())) {
+      if (!editId && dataStore[activeDivision].production.some(l => (l.boriNo || '').toLowerCase() === boriNo.toLowerCase())) {
         showToast(`Bori number ${boriNo} already exists in ${activeDivision.toUpperCase()} production!`, 'error');
         return;
       }
@@ -1859,35 +1870,41 @@
 
     // Helper to calculate Bori stock
     function getBoriStock(prod, editSalesId = '', division = null) {
-      const targetDiv = division || prod.division || activeDivision;
+      if (!prod || !prod.boriNo) return { remainingRolls: 0, remainingQty: 0 };
+      const targetDiv = division || prod.division || prod._division || activeDivision;
       const salesList = (dataStore[targetDiv] && dataStore[targetDiv].sales) ? dataStore[targetDiv].sales : [];
+      const targetBoriClean = String(prod.boriNo).trim().toLowerCase();
 
       const boriSales = salesList.filter(s => {
-        if (s.id === editSalesId) return false;
-        if (s.items && s.items.length > 0) {
-          return s.items.some(i => i.boriNo === prod.boriNo);
+        if (!s) return false;
+        if (editSalesId && String(s.id) === String(editSalesId)) return false;
+        if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+          return s.items.some(i => i && String(i.boriNo || '').trim().toLowerCase() === targetBoriClean);
         }
-        return s.boriNo === prod.boriNo;
+        return String(s.boriNo || '').trim().toLowerCase() === targetBoriClean;
       });
 
       let soldRolls = 0;
       let soldQty = 0;
 
       boriSales.forEach(s => {
-        if (s.items && s.items.length > 0) {
-          s.items.filter(i => i.boriNo === prod.boriNo).forEach(i => {
-            soldRolls += i.rollsQty;
-            soldQty += i.saleQty;
+        if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+          s.items.filter(i => i && String(i.boriNo || '').trim().toLowerCase() === targetBoriClean).forEach(i => {
+            soldRolls += (parseInt(i.rollsQty, 10) || 0);
+            soldQty += (parseFloat(i.saleQty) || 0);
           });
-        } else if (s.boriNo === prod.boriNo) {
-          soldRolls += s.rollsQty;
-          soldQty += s.saleQty;
+        } else if (String(s.boriNo || '').trim().toLowerCase() === targetBoriClean) {
+          soldRolls += (parseInt(s.rollsQty, 10) || 0);
+          soldQty += (parseFloat(s.saleQty) || 0);
         }
       });
 
+      const prodRolls = parseInt(prod.rolls, 10) || 0;
+      const prodQty = parseFloat(prod.qty) || 0;
+
       return {
-        remainingRolls: Math.max(0, prod.rolls - soldRolls),
-        remainingQty: Math.max(0, prod.qty - soldQty)
+        remainingRolls: Math.max(0, prodRolls - soldRolls),
+        remainingQty: Math.max(0, parseFloat((prodQty - soldQty).toFixed(3)))
       };
     }
 
@@ -4117,9 +4134,12 @@
           dataStore[div].production.forEach(log => {
             const stock = getBoriStock(log, '', div);
             if (stock.remainingRolls > 0 && stock.remainingQty > 0.001) {
-              const matches = (log.productName || '').trim().toLowerCase() === (itemGroup.productName || '').trim().toLowerCase() &&
+              const dyn = getDynamicProductInfo(log, div, true);
+              const currentProdName = dyn.productName || log.productName;
+              const currentColor = dyn.color || log.color || '-';
+              const matches = (currentProdName || '').trim().toLowerCase() === (itemGroup.productName || '').trim().toLowerCase() &&
                               (log.lotNo || '').trim().toLowerCase() === (itemGroup.lotNo || '').trim().toLowerCase() &&
-                              (log.color || '').trim().toLowerCase() === (itemGroup.color || '').trim().toLowerCase();
+                              (currentColor || '').trim().toLowerCase() === (itemGroup.color || '').trim().toLowerCase();
               if (matches) {
                 candidateLogs.push({
                   log: log,
@@ -4567,6 +4587,9 @@
         `Are you sure you want to delete production bori "${log ? log.boriNo : id}"? This action cannot be undone.`,
         function() {
           dataStore[activeDivision].production = dataStore[activeDivision].production.filter(l => l.id !== id);
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+            window.VishwaSupabase.recordDeletion(`yarn_${activeDivision}_production_logs`, id);
+          }
           saveLogs();
           showToast('Production entry deleted', 'info');
         }
@@ -4581,6 +4604,9 @@
         `Are you sure you want to delete sale challan "${challan}"? Sold boris will be restored back to available stock.`,
         function() {
           dataStore[activeDivision].sales = dataStore[activeDivision].sales.filter(s => s.id !== id);
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+            window.VishwaSupabase.recordDeletion(`yarn_${activeDivision}_sales_logs`, id);
+          }
           saveLogs();
           showToast('Sale record deleted and stock restored', 'info');
         }

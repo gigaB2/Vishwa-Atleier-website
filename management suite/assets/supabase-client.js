@@ -315,12 +315,39 @@
       return (Date.now() - lastWrite < 3000) ? cleanLocal : cleanRemote;
     }
 
-    // Case 1: Both are Arrays -> Strictly filter deletions on both and prioritize latest authority
+    // Case 1: Both are Arrays -> Intelligent Item-Level Union Merge for multi-user safety
     if (Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
       const cleanLocal = filterDeletedEntities(parsedLocal);
       const cleanRemote = filterDeletedEntities(parsedRemote);
       const lastWrite = lastLocalWrites[key] || 0;
-      return (Date.now() - lastWrite < 3000) ? cleanLocal : cleanRemote;
+
+      // Build Map combining remote and local items by unique identifier
+      const itemMap = new Map();
+      cleanRemote.forEach(item => {
+        const id = getItemIdentifier(item);
+        if (id) itemMap.set(String(id), item);
+      });
+
+      cleanLocal.forEach(item => {
+        const id = getItemIdentifier(item);
+        if (id) {
+          if (!itemMap.has(String(id))) {
+            itemMap.set(String(id), item);
+          } else {
+            // If both contain the item, preserve local if edited recently (< 10s)
+            if (Date.now() - lastWrite < 10000) {
+              itemMap.set(String(id), item);
+            }
+          }
+        }
+      });
+
+      const mergedList = filterDeletedEntities(Array.from(itemMap.values()));
+      // If neither had identifiable items, fallback to latest authority
+      if (mergedList.length === 0 && (cleanLocal.length > 0 || cleanRemote.length > 0)) {
+        return (Date.now() - lastWrite < 3000) ? cleanLocal : cleanRemote;
+      }
+      return mergedList;
     }
 
     if (Array.isArray(parsedRemote)) {
@@ -1406,7 +1433,11 @@
         }
 
         // Clean from all known entity keys in cache immediately
-        const entityKeys = ['yarn-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines'];
+        const entityKeys = [
+          'yarn-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines',
+          'yarn_covering_production_logs', 'yarn_tfo_production_logs', 'yarn_doubler_production_logs',
+          'yarn_covering_sales_logs', 'yarn_tfo_sales_logs', 'yarn_doubler_sales_logs'
+        ];
         if (key && !entityKeys.includes(key)) entityKeys.push(key);
 
         entityKeys.forEach(k => {
@@ -2760,12 +2791,14 @@
           } catch(e) {}
         }
 
-        // Delete from dedicated table if costing key
+        // Delete from dedicated table if costing or yarn key
         let table = null;
         if (key === 'costing-products-v4') table = 'vf_costing_products';
         else if (key === 'costing-tfo-products-v1') table = 'vf_costing_tfo_products';
         else if (key === 'costing-doubler-products-v1') table = 'vf_costing_doubler_products';
         else if (key === 'costing-covering-products-v1') table = 'vf_costing_covering_products';
+        else if (key && key.startsWith('yarn_') && key.endsWith('_production_logs')) table = 'vf_yarn_production_logs';
+        else if (key && key.startsWith('yarn_') && key.endsWith('_sales_logs')) table = 'vf_yarn_sales_logs';
 
         if (table && activeConfig.isConfigured && SUPABASE_URL) {
           fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(idStr)}`, {
@@ -2830,6 +2863,8 @@
     async unrecordCostingDeletion(key, itemId, itemData = null) {
       return this.unrecordDeletion(key, itemId, itemData);
     },
+    filterDeletedEntities: filterDeletedEntities,
+    getDeletedTombstones: getDeletedTombstones,
     async clearAll() {
       try {
         Object.keys(lastKnownTimestamps).forEach(k => delete lastKnownTimestamps[k]);
@@ -3698,38 +3733,70 @@
             try {
               const dbYarnProd = await fetchAllRowsPaginated('vf_yarn_production_logs', '*', 'order=date.desc');
               if (Array.isArray(dbYarnProd) && dbYarnProd.length > 0) {
+                const tombstones = getDeletedTombstones();
+                const tombstoneSet = new Set(tombstones);
                 const divisions = ['covering', 'tfo', 'doubler'];
                 divisions.forEach(div => {
-                  const divRows = dbYarnProd.filter(r => (r.division || '').toLowerCase() === div);
-                  if (divRows.length > 0) {
-                    const reconstructed = divRows.map(yp => ({
-                      id: yp.id,
-                      date: yp.date,
-                      boriNo: yp.bori_no,
-                      productName: yp.product_name,
-                      productId: yp.product_id || '',
-                      lotNo: yp.lot_no || '',
-                      color: yp.color || '',
-                      denier: yp.denier !== null ? Number(yp.denier) : '',
-                      tpm: yp.tpm !== null ? Number(yp.tpm) : '',
-                      twist: yp.twist || '',
-                      rolls: Number(yp.rolls) || 0,
-                      qty: Number(yp.qty) || 0,
-                      configType: yp.config_type || '',
-                      ply: yp.ply || '',
-                      yarns: Array.isArray(yp.yarns) ? yp.yarns : []
-                    }));
+                  // Strictly filter out any deleted/tombstoned entities
+                  const divRows = dbYarnProd.filter(r => (r.division || '').toLowerCase() === div && !tombstoneSet.has(String(r.id)));
 
-                    const ypKey = `yarn_${div}_production_logs`;
-                    const ypStr = JSON.stringify(reconstructed);
-                    const lastYpWrite = lastLocalWrites[ypKey] || 0;
-                    if (Date.now() - lastYpWrite >= 3000) {
-                      cache[ypKey] = ypStr;
-                      lastSavedHashes[ypKey] = computeHash(ypStr);
-                      safeLocalStorageSet(ypKey, ypStr);
-                      if (!updatedKeys.includes(ypKey)) updatedKeys.push(ypKey);
-                      hasChanges = true;
-                    }
+                  // Background permanent purge of tombstoned records still on DB
+                  const tombstonedInDb = dbYarnProd.filter(r => (r.division || '').toLowerCase() === div && tombstoneSet.has(String(r.id)));
+                  if (tombstonedInDb.length > 0 && activeConfig.isConfigured && SUPABASE_URL) {
+                    tombstonedInDb.forEach(tRow => {
+                      fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?id=eq.${encodeURIComponent(tRow.id)}`, {
+                        method: 'DELETE',
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                      }).catch(() => {});
+                    });
+                  }
+
+                  const reconstructed = divRows.map(yp => ({
+                    id: yp.id,
+                    date: yp.date,
+                    boriNo: yp.bori_no,
+                    productName: yp.product_name,
+                    productId: yp.product_id || '',
+                    lotNo: yp.lot_no || '',
+                    color: yp.color || '',
+                    denier: yp.denier !== null ? Number(yp.denier) : '',
+                    tpm: yp.tpm !== null ? Number(yp.tpm) : '',
+                    twist: yp.twist || '',
+                    rolls: Number(yp.rolls) || 0,
+                    qty: Number(yp.qty) || 0,
+                    configType: yp.config_type || '',
+                    ply: yp.ply || '',
+                    yarns: Array.isArray(yp.yarns) ? yp.yarns : []
+                  }));
+
+                  const ypKey = `yarn_${div}_production_logs`;
+
+                  // Preserve locally created items that haven't reached the server yet
+                  let localItems = [];
+                  try {
+                    const localRaw = cache[ypKey] || nativeLocalStorage.getItem(ypKey);
+                    if (localRaw) localItems = JSON.parse(localRaw);
+                  } catch(e) {}
+                  if (Array.isArray(localItems)) {
+                    localItems = filterDeletedEntities(localItems);
+                    localItems.forEach(lItem => {
+                      if (lItem && lItem.id && !tombstoneSet.has(String(lItem.id))) {
+                        if (!reconstructed.some(rItem => String(rItem.id) === String(lItem.id))) {
+                          reconstructed.push(lItem);
+                        }
+                      }
+                    });
+                  }
+
+                  const cleanReconstructed = filterDeletedEntities(reconstructed);
+                  const ypStr = JSON.stringify(cleanReconstructed);
+                  const lastYpWrite = lastLocalWrites[ypKey] || 0;
+                  if (Date.now() - lastYpWrite >= 3000) {
+                    cache[ypKey] = ypStr;
+                    lastSavedHashes[ypKey] = computeHash(ypStr);
+                    safeLocalStorageSet(ypKey, ypStr);
+                    if (!updatedKeys.includes(ypKey)) updatedKeys.push(ypKey);
+                    hasChanges = true;
                   }
                 });
               }
@@ -3741,37 +3808,69 @@
             try {
               const dbYarnSales = await fetchAllRowsPaginated('vf_yarn_sales_logs', '*', 'order=sale_date.desc');
               if (Array.isArray(dbYarnSales) && dbYarnSales.length > 0) {
+                const tombstones = getDeletedTombstones();
+                const tombstoneSet = new Set(tombstones);
                 const divisions = ['covering', 'tfo', 'doubler'];
                 divisions.forEach(div => {
-                  const divRows = dbYarnSales.filter(r => (r.division || '').toLowerCase() === div);
-                  if (divRows.length > 0) {
-                    const reconstructed = divRows.map(ys => ({
-                      id: ys.id,
-                      saleDate: ys.sale_date,
-                      date: ys.sale_date,
-                      challanNo: ys.challan_no || '',
-                      customerName: ys.customer_name,
-                      customer: ys.customer_name,
-                      items: Array.isArray(ys.items) ? ys.items : [],
-                      totalQty: Number(ys.total_qty) || 0,
-                      saleQty: Number(ys.total_qty) || 0,
-                      qty: Number(ys.total_qty) || 0,
-                      totalAmount: Number(ys.total_amount) || 0,
-                      amount: Number(ys.total_amount) || 0,
-                      gstAmount: Number(ys.gst_amount) || 0,
-                      gst: Number(ys.gst_amount) || 0
-                    }));
+                  // Strictly filter out any deleted/tombstoned entities
+                  const divRows = dbYarnSales.filter(r => (r.division || '').toLowerCase() === div && !tombstoneSet.has(String(r.id)));
 
-                    const ysKey = `yarn_${div}_sales_logs`;
-                    const ysStr = JSON.stringify(reconstructed);
-                    const lastYsWrite = lastLocalWrites[ysKey] || 0;
-                    if (Date.now() - lastYsWrite >= 3000) {
-                      cache[ysKey] = ysStr;
-                      lastSavedHashes[ysKey] = computeHash(ysStr);
-                      safeLocalStorageSet(ysKey, ysStr);
-                      if (!updatedKeys.includes(ysKey)) updatedKeys.push(ysKey);
-                      hasChanges = true;
-                    }
+                  // Background permanent purge of tombstoned records still on DB
+                  const tombstonedInDb = dbYarnSales.filter(r => (r.division || '').toLowerCase() === div && tombstoneSet.has(String(r.id)));
+                  if (tombstonedInDb.length > 0 && activeConfig.isConfigured && SUPABASE_URL) {
+                    tombstonedInDb.forEach(tRow => {
+                      fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_sales_logs?id=eq.${encodeURIComponent(tRow.id)}`, {
+                        method: 'DELETE',
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                      }).catch(() => {});
+                    });
+                  }
+
+                  const reconstructed = divRows.map(ys => ({
+                    id: ys.id,
+                    saleDate: ys.sale_date,
+                    date: ys.sale_date,
+                    challanNo: ys.challan_no || '',
+                    customerName: ys.customer_name,
+                    customer: ys.customer_name,
+                    items: Array.isArray(ys.items) ? ys.items : [],
+                    totalQty: Number(ys.total_qty) || 0,
+                    saleQty: Number(ys.total_qty) || 0,
+                    qty: Number(ys.total_qty) || 0,
+                    totalAmount: Number(ys.total_amount) || 0,
+                    amount: Number(ys.total_amount) || 0,
+                    gstAmount: Number(ys.gst_amount) || 0,
+                    gst: Number(ys.gst_amount) || 0
+                  }));
+
+                  const ysKey = `yarn_${div}_sales_logs`;
+
+                  // Preserve locally created items that haven't reached the server yet
+                  let localItems = [];
+                  try {
+                    const localRaw = cache[ysKey] || nativeLocalStorage.getItem(ysKey);
+                    if (localRaw) localItems = JSON.parse(localRaw);
+                  } catch(e) {}
+                  if (Array.isArray(localItems)) {
+                    localItems = filterDeletedEntities(localItems);
+                    localItems.forEach(lItem => {
+                      if (lItem && lItem.id && !tombstoneSet.has(String(lItem.id))) {
+                        if (!reconstructed.some(rItem => String(rItem.id) === String(lItem.id))) {
+                          reconstructed.push(lItem);
+                        }
+                      }
+                    });
+                  }
+
+                  const cleanReconstructed = filterDeletedEntities(reconstructed);
+                  const ysStr = JSON.stringify(cleanReconstructed);
+                  const lastYsWrite = lastLocalWrites[ysKey] || 0;
+                  if (Date.now() - lastYsWrite >= 3000) {
+                    cache[ysKey] = ysStr;
+                    lastSavedHashes[ysKey] = computeHash(ysStr);
+                    safeLocalStorageSet(ysKey, ysStr);
+                    if (!updatedKeys.includes(ysKey)) updatedKeys.push(ysKey);
+                    hasChanges = true;
                   }
                 });
               }
