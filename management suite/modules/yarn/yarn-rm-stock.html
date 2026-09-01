@@ -356,6 +356,12 @@
       margin-bottom: 1.75rem;
       position: relative;
       transition: all 0.3s ease;
+      z-index: 1;
+    }
+
+    .quality-group:hover,
+    .quality-group:focus-within {
+      z-index: 50000;
     }
 
     .quality-group.is-completed {
@@ -365,6 +371,7 @@
     }
     .quality-group.is-completed:hover {
       opacity: 0.95;
+      z-index: 50000;
     }
 
     .quality-header {
@@ -452,6 +459,11 @@
     .lot-block {
       padding: 1.25rem 1.5rem;
       border-bottom: 1px dashed var(--border);
+    }
+
+    .lot-block:hover {
+      position: relative;
+      z-index: 50002;
     }
 
     .lot-block:last-child {
@@ -592,7 +604,7 @@
     .box-item:hover {
       transform: translateY(-2px);
       box-shadow: var(--shadow-sm);
-      z-index: 100;
+      z-index: 50005;
     }
 
     /* Box States */
@@ -731,26 +743,32 @@
 
     .box-tooltip {
       position: absolute;
-      bottom: calc(100% + 6px);
+      bottom: calc(100% + 8px);
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.95);
+      background: rgba(15, 23, 42, 0.96);
       color: #ffffff;
-      padding: 0.4rem 0.65rem;
-      border-radius: 6px;
-      font-size: 0.72rem;
-      font-family: var(--font-sans);
+      padding: 0.45rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-family: var(--font-body), sans-serif;
+      font-weight: 500;
       white-space: nowrap;
       pointer-events: none;
       opacity: 0;
-      transition: opacity 0.15s ease, transform 0.15s ease;
-      z-index: 1000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-      border: 1px solid rgba(255,255,255,0.1);
+      visibility: hidden;
+      transition: opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.15s;
+      z-index: 60000;
+      box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.45), 0 4px 10px -2px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      line-height: 1.35;
     }
 
     .box-item:hover .box-tooltip {
       opacity: 1;
+      visibility: visible;
       transform: translateX(-50%) translateY(-2px);
     }
 
@@ -859,28 +877,7 @@
       background: rgba(0, 0, 0, 0.02);
     }
 
-    /* Tooltip / Details Popover */
-    .box-tooltip {
-      position: absolute;
-      bottom: 110%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--fg);
-      color: var(--bg);
-      padding: 0.4rem 0.75rem;
-      border-radius: 8px;
-      font-size: 0.75rem;
-      white-space: nowrap;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      z-index: 9999;
-      box-shadow: var(--shadow-md);
-    }
 
-    .box-item:hover .box-tooltip {
-      opacity: 1;
-    }
     /* Context Menu for Lots */
     .context-menu {
       position: fixed;
