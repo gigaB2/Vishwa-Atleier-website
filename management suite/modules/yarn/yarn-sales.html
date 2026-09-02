@@ -1104,7 +1104,7 @@
       <!-- Summary metrics -->
       <div class="summary-grid">
         <div class="summary-card">
-          <label>Total Bori Produced</label>
+          <label>Total Boris/Boxes Produced</label>
           <div class="val" id="prod-summary-bori">0</div>
         </div>
         <div class="summary-card">
@@ -1132,7 +1132,7 @@
               <input type="date" id="prod-date" required>
             </div>
             <div class="form-group">
-              <label for="prod-bori">Bori No</label>
+              <label for="prod-bori">Bori/Box No</label>
               <div style="display: flex; align-items: center; gap: 4px;">
                 <span id="prod-bori-prefix" style="font-weight: bold; color: var(--accent); padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid var(--border-color);">C-</span>
                 <input type="text" id="prod-bori" placeholder="Number" style="flex: 1; min-width: 60px;" required>
@@ -1242,7 +1242,7 @@
                   Date <span id="sort-icon-date">↕</span>
                 </th>
                 <th onclick="toggleProdSort('boriNo')" style="cursor: pointer; user-select: none;">
-                  Bori No <span id="sort-icon-boriNo">↕</span>
+                  Bori/Box No <span id="sort-icon-boriNo">↕</span>
                 </th>
                 <th onclick="toggleProdSort('productName')" style="cursor: pointer; user-select: none;">
                   Product Name <span id="sort-icon-productName">↕</span>
@@ -1270,7 +1270,7 @@
       <!-- Summary metrics for Stock Dashboard -->
       <div class="summary-grid">
         <div class="summary-card">
-          <label>Total Available Bori</label>
+          <label>Total Available Boris/Boxes</label>
           <div class="val" id="stock-dash-total-bori">0</div>
         </div>
         <div class="summary-card">
@@ -1324,7 +1324,7 @@
                 <th>Denier</th>
                 <th>TPM</th>
                 <th>Twist</th>
-                <th>Total Bori Count</th>
+                <th>Total Boris/Boxes Count</th>
                 <th>Total Rolls</th>
                 <th>Total Available Stock (Kg)</th>
                 <th style="text-align: center;">Action</th>
@@ -1358,7 +1358,7 @@
           <div class="val" id="sales-summary-weight">0.00 Kg</div>
         </div>
         <div class="summary-card">
-          <label>Bori In Stock</label>
+          <label>Boris/Boxes In Stock</label>
           <div class="val" id="sales-summary-stock">0</div>
         </div>
       </div>
@@ -1382,7 +1382,7 @@
                   Sale Date <span id="sales-sort-icon-date">▼</span>
                 </th>
                 <th onclick="toggleSalesSort('boriNo')" style="cursor: pointer; user-select: none;">
-                  Bori No <span id="sales-sort-icon-boriNo">↕</span>
+                  Bori/Box No <span id="sales-sort-icon-boriNo">↕</span>
                 </th>
                 <th onclick="toggleSalesSort('customerName')" style="cursor: pointer; user-select: none;">
                   Customer Name <span id="sales-sort-icon-customerName">↕</span>
@@ -1438,7 +1438,7 @@
           <div id="stock-sell-item-specs" style="font-size: 0.85rem; color: var(--muted); margin-top: 4px;"></div>
           <div style="display: flex; gap: 1rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border);">
             <div>
-              <span style="font-size: 0.75rem; color: var(--muted);">Available Boris:</span>
+              <span style="font-size: 0.75rem; color: var(--muted);">Available Boris/Boxes:</span>
               <strong id="stock-sell-item-bori-count" style="color: var(--accent); margin-left: 4px;"></strong>
             </div>
             <div>
@@ -1452,7 +1452,7 @@
           <div class="form-group" style="margin-bottom: 1.25rem;">
             <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; display: block;">Enter Quantity to Sell (Kg)</label>
             <input type="number" step="0.001" id="stock-sell-input-qty" placeholder="Enter weight in Kg" required min="0.001" style="width: 100%; font-size: 1.1rem; font-weight: 600; padding: 0.65rem 0.85rem; border-radius: 8px;">
-            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 4px;">FIFO Rule: Older manufactured Boris will be automatically selected first.</div>
+            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 4px;">FIFO Rule: Older manufactured Boris/Boxes will be automatically selected first.</div>
           </div>
 
           <div class="form-group" style="margin-bottom: 1.5rem;">
@@ -1463,7 +1463,7 @@
           <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
             <button type="button" class="btn btn-secondary" onclick="closeStockSellModal()">Cancel</button>
             <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.25rem; font-weight: 600;">
-              Auto-Select Boris & Proceed &rarr;
+              Auto-Select Boris/Boxes & Proceed &rarr;
             </button>
           </div>
         </form>
@@ -2434,11 +2434,11 @@
     window.openBatchSellModal = function() {
       const checkedBoxes = document.querySelectorAll('.prod-select-checkbox:checked');
       if (checkedBoxes.length === 0) {
-        showToast('Please select at least one Bori to sell.', 'error');
+        showToast('Please select at least one Bori/Box to sell.', 'error');
         return;
       }
 
-      // Check if all selected Boris belong to the same Lot Number
+      // Check if all selected Boris/Boxes belong to the same Lot Number
       const uniqueLots = new Set();
       checkedBoxes.forEach(cb => {
         const prodId = cb.value;
@@ -2449,12 +2449,12 @@
       });
 
       if (uniqueLots.size > 1) {
-        showToast('Cannot sell: Selected Boris have different Lot Numbers. All items in a single Challan must belong to the same Lot.', 'error');
+        showToast('Cannot sell: Selected Boris/Boxes have different Lot Numbers. All items in a single Challan must belong to the same Lot.', 'error');
         return;
       }
 
       document.getElementById('modal-sales-edit-id').value = '';
-      document.getElementById('modal-title').innerText = `Batch Sell Selected Boris (${activeDivision.toUpperCase()})`;
+      document.getElementById('modal-title').innerText = `Batch Sell Selected Boris/Boxes (${activeDivision.toUpperCase()})`;
       document.getElementById('modal-sales-submit-btn').innerText = 'Record Sale';
 
       // Set default date
@@ -2607,9 +2607,10 @@
       }
     };
 
-    window.printSaleBill = function() {
-      if (!currentDetailSaleId) return;
-      const sale = dataStore[activeDivision].sales.find(s => s.id === currentDetailSaleId);
+    window.printSaleBill = function(saleId) {
+      const targetId = saleId || currentDetailSaleId;
+      if (!targetId) return;
+      const sale = dataStore[activeDivision].sales.find(s => s.id === targetId);
       if (!sale) return;
 
       let items = [];
@@ -2640,24 +2641,41 @@
 
       // Create new window
       const printWindow = window.open('', '_blank', 'width=900,height=700');
+      if (!printWindow) {
+        showToast('Popup blocked! Please allow popups for this site to print bills.', 'error');
+        return;
+      }
       
+      const companyName = (function(){
+        try {
+          const stored = localStorage.getItem('vishwa_fashions_settings');
+          if (stored) {
+            const s = JSON.parse(stored);
+            if (s.sellerName && s.sellerName.trim()) return s.sellerName.trim();
+          }
+        } catch(e){}
+        const c = localStorage.getItem('vf_company_name');
+        return (c && c.trim()) ? c.trim() : "Vishwa Fashions";
+      })();
+
       const itemsHtml = items.map(item => {
         const specs = `${item.denier || '-'}D | ${item.tpm || '-'} | ${item.twist || '-'}`;
         return `
           <tr>
-            <td>${item.boriNo}</td>
+            <td><strong>${item.boriNo}</strong></td>
             <td>${item.composition}</td>
             <td>${item.color || '-'}</td>
             <td>${specs}</td>
             <td style="text-align: center;">${item.rollsQty || 0}</td>
             <td style="text-align: right;">${(item.saleQty || 0).toFixed(2)} Kg</td>
             <td style="text-align: right;">₹${(item.rate || 0).toFixed(2)}</td>
-            <td style="text-align: right;">₹${(item.amount || 0).toFixed(2)}</td>
+            <td style="text-align: right; font-weight: 600;">₹${(item.amount || 0).toFixed(2)}</td>
           </tr>
         `;
       }).join('');
 
       printWindow.document.write(`
+        <!DOCTYPE html>
         <html>
         <head>
           <title>Sales Bill - Challan No: ${sale.challanNo}</title>
@@ -2671,6 +2689,9 @@
                 padding: 0 !important;
                 margin: 0 !important;
               }
+              .no-print {
+                display: none !important;
+              }
             }
             body {
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -2678,10 +2699,42 @@
               background-color: #ffffff;
               line-height: 1.4;
               font-size: 12px;
+              padding: 20px;
             }
             .invoice-box {
               width: 100%;
               margin: auto;
+              max-width: 850px;
+            }
+            .no-print-bar {
+              margin-bottom: 20px;
+              display: flex;
+              gap: 10px;
+              justify-content: flex-end;
+              padding: 10px 14px;
+              background: #f1f5f9;
+              border-radius: 8px;
+              border: 1px solid #e2e8f0;
+            }
+            .no-print-btn {
+              padding: 8px 18px;
+              border-radius: 6px;
+              font-size: 13px;
+              font-weight: 600;
+              cursor: pointer;
+              border: none;
+              transition: opacity 0.2s;
+            }
+            .no-print-btn:hover {
+              opacity: 0.9;
+            }
+            .btn-print {
+              background: #7c3aed;
+              color: #ffffff;
+            }
+            .btn-close {
+              background: #e2e8f0;
+              color: #334155;
             }
             .header-table {
               width: 100%;
@@ -2827,20 +2880,15 @@
         </head>
         <body>
           <div class="invoice-box">
+            <div class="no-print no-print-bar">
+              <button type="button" class="no-print-btn btn-print" onclick="window.print()">Print Bill</button>
+              <button type="button" class="no-print-btn btn-close" onclick="window.close()">Close</button>
+            </div>
+
             <table class="header-table">
               <tr>
                 <td>
-                  <div class="company-name">${(function(){
-                    try {
-                      const stored = localStorage.getItem('vishwa_fashions_settings');
-                      if (stored) {
-                        const s = JSON.parse(stored);
-                        if (s.sellerName && s.sellerName.trim()) return s.sellerName.trim();
-                      }
-                    } catch(e){}
-                    const c = localStorage.getItem('vf_company_name');
-                    return (c && c.trim()) ? c.trim() : "Vishwa Fashions";
-                  })()}</div>
+                  <div class="company-name">${companyName}</div>
                   <div class="company-details">
                     Factory: Survey No. 124, Industrial Zone, Pipodara, Surat, Gujarat<br>
                     Email: contact@vishwafashions.com | Mobile: +91 98765 43210
@@ -2877,10 +2925,10 @@
             <table class="items-table">
               <thead>
                 <tr>
-                  <th style="width: 12%;">Bori No</th>
+                  <th style="width: 14%;">Bori/Box No</th>
                   <th style="width: 20%;">Composition</th>
                   <th style="width: 12%;">Color</th>
-                  <th style="width: 22%;">Specs</th>
+                  <th style="width: 20%;">Specs</th>
                   <th style="width: 8%; text-align: center;">Rolls</th>
                   <th style="width: 13%; text-align: right;">Weight</th>
                   <th style="width: 13%; text-align: right;">Rate/Kg</th>
@@ -2888,21 +2936,7 @@
                 </tr>
               </thead>
               <tbody>
-                ${items.map(item => {
-                  const specs = `${item.denier || '-'}D | ${item.tpm || '-'} | ${item.twist || '-'}`;
-                  return `
-                    <tr>
-                      <td><strong>${item.boriNo}</strong></td>
-                      <td>${item.composition}</td>
-                      <td>${item.color || '-'}</td>
-                      <td>${specs}</td>
-                      <td style="text-align: center;">${item.rollsQty || 0}</td>
-                      <td style="text-align: right;">${(item.saleQty || 0).toFixed(2)} Kg</td>
-                      <td style="text-align: right;">₹${(item.rate || 0).toFixed(2)}</td>
-                      <td style="text-align: right; font-weight: 600;">₹${(item.amount || 0).toFixed(2)}</td>
-                    </tr>
-                  `;
-                }).join('')}
+                ${itemsHtml}
               </tbody>
             </table>
 
@@ -2915,7 +2949,7 @@
               </div>
               <table class="summary-table">
                 <tr>
-                  <td>Total Boris</td>
+                  <td>Total Boris/Boxes</td>
                   <td style="text-align: right; font-weight: 600;">${totalBoris}</td>
                 </tr>
                 <tr>
@@ -2944,27 +2978,27 @@
             <div class="signatures">
               <div class="sig-box">Receiver's Signature</div>
               <div style="text-align: right;">
-                <div style="font-size: 10px; margin-bottom: 45px; font-weight: 700; text-transform: uppercase;">For ${(function(){
-                  try {
-                    const stored = localStorage.getItem('vishwa_fashions_settings');
-                    if (stored) {
-                      const s = JSON.parse(stored);
-                      if (s.sellerName && s.sellerName.trim()) return s.sellerName.trim();
-                    }
-                  } catch(e){}
-                  const c = localStorage.getItem('vf_company_name');
-                  return (c && c.trim()) ? c.trim() : "Vishwa Fashions";
-                })()}</div>
+                <div style="font-size: 10px; margin-bottom: 45px; font-weight: 700; text-transform: uppercase;">For ${companyName}</div>
                 <div class="sig-box">Authorized Signatory</div>
               </div>
             </div>
           </div>
           
           <scr` + `ipt>
-            window.onload = function() {
+            function triggerPrint() {
+              window.focus();
               window.print();
-              setTimeout(function() { window.close(); }, 500);
             }
+            if (document.readyState === 'complete') {
+              setTimeout(triggerPrint, 300);
+            } else {
+              window.addEventListener('load', function() {
+                setTimeout(triggerPrint, 300);
+              });
+            }
+            window.addEventListener('afterprint', function() {
+              setTimeout(function() { window.close(); }, 500);
+            });
           </scr` + `ipt>
         </body>
         </html>
@@ -2972,9 +3006,10 @@
       printWindow.document.close();
     };
 
-    window.printSaleChallan = function() {
-      if (!currentDetailSaleId) return;
-      const sale = dataStore[activeDivision].sales.find(s => s.id === currentDetailSaleId);
+    window.printSaleChallan = function(saleId) {
+      const targetId = saleId || currentDetailSaleId;
+      if (!targetId) return;
+      const sale = dataStore[activeDivision].sales.find(s => s.id === targetId);
       if (!sale) return;
 
       let items = [];
@@ -2999,8 +3034,40 @@
 
       // Create new window
       const printWindow = window.open('', '_blank', 'width=900,height=700');
+      if (!printWindow) {
+        showToast('Popup blocked! Please allow popups for this site to print delivery challans.', 'error');
+        return;
+      }
       
+      const companyName = (function(){
+        try {
+          const stored = localStorage.getItem('vishwa_fashions_settings');
+          if (stored) {
+            const s = JSON.parse(stored);
+            if (s.sellerName && s.sellerName.trim()) return s.sellerName.trim();
+          }
+        } catch(e){}
+        const c = localStorage.getItem('vf_company_name');
+        return (c && c.trim()) ? c.trim() : "Vishwa Fashions";
+      })();
+
+      const itemsHtml = items.map((item, index) => {
+        const specs = `${item.denier || '-'}D | ${item.tpm || '-'} | ${item.twist || '-'}`;
+        return `
+          <tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td><strong>${item.boriNo}</strong></td>
+            <td>${item.composition}</td>
+            <td>${item.color || '-'}</td>
+            <td>${specs}</td>
+            <td style="text-align: center;">${item.rollsQty || 0}</td>
+            <td style="text-align: right; font-weight: 600;">${(parseFloat(item.saleQty) || 0).toFixed(2)} Kg</td>
+          </tr>
+        `;
+      }).join('');
+
       printWindow.document.write(`
+        <!DOCTYPE html>
         <html>
         <head>
           <title>Delivery Challan - Challan No: ${sale.challanNo}</title>
@@ -3014,6 +3081,9 @@
                 padding: 0 !important;
                 margin: 0 !important;
               }
+              .no-print {
+                display: none !important;
+              }
             }
             body {
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -3021,10 +3091,42 @@
               background-color: #ffffff;
               line-height: 1.4;
               font-size: 12px;
+              padding: 20px;
             }
             .invoice-box {
               width: 100%;
               margin: auto;
+              max-width: 850px;
+            }
+            .no-print-bar {
+              margin-bottom: 20px;
+              display: flex;
+              gap: 10px;
+              justify-content: flex-end;
+              padding: 10px 14px;
+              background: #f1f5f9;
+              border-radius: 8px;
+              border: 1px solid #e2e8f0;
+            }
+            .no-print-btn {
+              padding: 8px 18px;
+              border-radius: 6px;
+              font-size: 13px;
+              font-weight: 600;
+              cursor: pointer;
+              border: none;
+              transition: opacity 0.2s;
+            }
+            .no-print-btn:hover {
+              opacity: 0.9;
+            }
+            .btn-print {
+              background: #0284c7;
+              color: #ffffff;
+            }
+            .btn-close {
+              background: #e2e8f0;
+              color: #334155;
             }
             .header-table {
               width: 100%;
@@ -3167,20 +3269,15 @@
         </head>
         <body>
           <div class="invoice-box">
+            <div class="no-print no-print-bar">
+              <button type="button" class="no-print-btn btn-print" onclick="window.print()">Print Challan</button>
+              <button type="button" class="no-print-btn btn-close" onclick="window.close()">Close</button>
+            </div>
+
             <table class="header-table">
               <tr>
                 <td>
-                  <div class="company-name">${(function(){
-                    try {
-                      const stored = localStorage.getItem('vishwa_fashions_settings');
-                      if (stored) {
-                        const s = JSON.parse(stored);
-                        if (s.sellerName && s.sellerName.trim()) return s.sellerName.trim();
-                      }
-                    } catch(e){}
-                    const c = localStorage.getItem('vf_company_name');
-                    return (c && c.trim()) ? c.trim() : "Vishwa Fashions";
-                  })()}</div>
+                  <div class="company-name">${companyName}</div>
                   <div class="company-details">
                     Factory: Survey No. 124, Industrial Zone, Pipodara, Surat, Gujarat<br>
                     Email: contact@vishwafashions.com | Mobile: +91 98765 43210
@@ -3218,29 +3315,16 @@
               <thead>
                 <tr>
                   <th style="width: 8%; text-align: center;">Sr. No.</th>
-                  <th style="width: 16%;">Bori No</th>
+                  <th style="width: 18%;">Bori/Box No</th>
                   <th style="width: 26%;">Composition / Item</th>
                   <th style="width: 14%;">Color</th>
-                  <th style="width: 20%;">Specs</th>
+                  <th style="width: 18%;">Specs</th>
                   <th style="width: 8%; text-align: center;">Rolls</th>
                   <th style="width: 16%; text-align: right;">Weight (Kg)</th>
                 </tr>
               </thead>
               <tbody>
-                ${items.map((item, index) => {
-                  const specs = `${item.denier || '-'}D | ${item.tpm || '-'} | ${item.twist || '-'}`;
-                  return `
-                    <tr>
-                      <td style="text-align: center;">${index + 1}</td>
-                      <td><strong>${item.boriNo}</strong></td>
-                      <td>${item.composition}</td>
-                      <td>${item.color || '-'}</td>
-                      <td>${specs}</td>
-                      <td style="text-align: center;">${item.rollsQty || 0}</td>
-                      <td style="text-align: right; font-weight: 600;">${(parseFloat(item.saleQty) || 0).toFixed(2)} Kg</td>
-                    </tr>
-                  `;
-                }).join('')}
+                ${itemsHtml}
               </tbody>
             </table>
 
@@ -3253,7 +3337,7 @@
               </div>
               <table class="summary-table">
                 <tr>
-                  <td>Total Boris</td>
+                  <td>Total Boris/Boxes</td>
                   <td style="text-align: right; font-weight: 600;">${totalBoris}</td>
                 </tr>
                 <tr>
@@ -3270,27 +3354,27 @@
             <div class="signatures">
               <div class="sig-box">Receiver's Signature & Stamp</div>
               <div style="text-align: right;">
-                <div style="font-size: 10px; margin-bottom: 45px; font-weight: 700; text-transform: uppercase;">For ${(function(){
-                  try {
-                    const stored = localStorage.getItem('vishwa_fashions_settings');
-                    if (stored) {
-                      const s = JSON.parse(stored);
-                      if (s.sellerName && s.sellerName.trim()) return s.sellerName.trim();
-                    }
-                  } catch(e){}
-                  const c = localStorage.getItem('vf_company_name');
-                  return (c && c.trim()) ? c.trim() : "Vishwa Fashions";
-                })()}</div>
+                <div style="font-size: 10px; margin-bottom: 45px; font-weight: 700; text-transform: uppercase;">For ${companyName}</div>
                 <div class="sig-box">Authorized Signatory</div>
               </div>
             </div>
           </div>
           
           <scr` + `ipt>
-            window.onload = function() {
+            function triggerPrint() {
+              window.focus();
               window.print();
-              setTimeout(function() { window.close(); }, 500);
             }
+            if (document.readyState === 'complete') {
+              setTimeout(triggerPrint, 300);
+            } else {
+              window.addEventListener('load', function() {
+                setTimeout(triggerPrint, 300);
+              });
+            }
+            window.addEventListener('afterprint', function() {
+              setTimeout(function() { window.close(); }, 500);
+            });
           </scr` + `ipt>
         </body>
         </html>
@@ -3899,7 +3983,7 @@
           <td>${groupBy === 'product' || groupBy === 'lot' ? '-' : `${item.denier}D`}</td>
           <td>${groupBy === 'product' || groupBy === 'lot' ? '-' : item.tpm}</td>
           <td>${groupBy === 'product' || groupBy === 'lot' ? '-' : item.twist}</td>
-          <td><strong style="color: var(--accent);">${item.boriCount}</strong> Bori</td>
+          <td><strong style="color: var(--accent);">${item.boriCount}</strong> Boris/Boxes</td>
           <td>${item.remainingRolls}</td>
           <td><strong style="color: #22c55e;">${item.remainingQty.toFixed(2)} Kg</strong></td>
           <td style="text-align: center; white-space: nowrap; min-width: 110px;">
@@ -3915,7 +3999,7 @@
         foot.innerHTML = `
           <tr style="font-weight: bold; background: rgba(139, 92, 246, 0.05); border-top: 2px solid var(--border);">
             <td colspan="6" style="text-align: right;">Total Pipeline Stock:</td>
-            <td style="color: var(--accent);">${filterTotalBori} Bori</td>
+            <td style="color: var(--accent);">${filterTotalBori} Boris/Boxes</td>
             <td>${filterTotalRolls}</td>
             <td style="color: #22c55e; font-size: 1rem;">${filterTotalWeight.toFixed(2)} Kg</td>
             <td>-</td>
@@ -3942,7 +4026,7 @@
 
       document.getElementById('stock-sell-item-title').innerText = `${dyn.productName || item.productName} (${item.lotNo})`;
       document.getElementById('stock-sell-item-specs').innerText = `Color: ${currentColor} | Denier: ${currentDenier}D | TPM: ${currentTpm} | Twist: ${currentTwist}`;
-      document.getElementById('stock-sell-item-bori-count').innerText = `${item.boriCount} Boris`;
+      document.getElementById('stock-sell-item-bori-count').innerText = `${item.boriCount} Boris/Boxes`;
       document.getElementById('stock-sell-item-weight').innerText = `${item.remainingQty.toFixed(2)} Kg`;
 
       document.getElementById('stock-sell-input-qty').value = '';
@@ -4089,15 +4173,15 @@
       candidateLogs.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 
       if (candidateLogs.length === 0) {
-        showToast('No matching available Boris found for this item.', 'error');
+        showToast('No matching available Boris/Boxes found for this item.', 'error');
         return;
       }
 
-      // 3. Auto-select WHOLE Boris (no breaking up rolls/boris) nearest to targetQty
+      // 3. Auto-select WHOLE Boris/Boxes (no breaking up rolls/boris) nearest to targetQty
       const selectedBoris = findNearestWholeBoriSubset(candidateLogs, targetQty);
 
       if (selectedBoris.length === 0) {
-        showToast('No suitable whole Boris found for this item.', 'error');
+        showToast('No suitable whole Boris/Boxes found for this item.', 'error');
         return;
       }
 
@@ -4127,7 +4211,7 @@
       const totalSelectedWeight = selectedItems.reduce((sum, item) => sum + item.saleQty, 0);
 
       if (Math.abs(totalSelectedWeight - targetQty) > 0.001) {
-        showToast(`Selected nearest whole Boris totaling ${totalSelectedWeight.toFixed(2)} Kg for requested ${targetQty.toFixed(2)} Kg.`, 'info');
+        showToast(`Selected nearest whole Boris/Boxes totaling ${totalSelectedWeight.toFixed(2)} Kg for requested ${targetQty.toFixed(2)} Kg.`, 'info');
       }
 
       closeStockSellModal();
@@ -4156,7 +4240,7 @@
       batchModal.style.display = 'flex';
       setTimeout(() => batchModal.classList.add('active'), 10);
 
-      showToast(`Auto-selected ${selectedItems.length} Bori(s) following FIFO rule (Earliest Manufacturing Date).`, 'info');
+      showToast(`Auto-selected ${selectedItems.length} Bori/Box(es) following FIFO rule (Earliest Manufacturing Date).`, 'info');
     };
 
     let salesSortKey = 'date';
@@ -4252,7 +4336,7 @@
           openSaleDetailsModal(s.id);
         };
         const boriDisplay = s.items && s.items.length > 0 ? 
-          `${s.items.map(i => i.boriNo).join(', ')} <span class="badge" style="font-size:0.7rem;">(${s.items.length} Boris)</span>` : 
+          `${s.items.map(i => i.boriNo).join(', ')} <span class="badge" style="font-size:0.7rem;">(${s.items.length} Boris/Boxes)</span>` : 
           s.boriNo;
         const rollsTotal = s.items && s.items.length > 0 ? s.items.reduce((a,b)=>a+b.rollsQty,0) : s.rollsQty;
         const qtyTotal = s.items && s.items.length > 0 ? s.items.reduce((a,b)=>a+b.saleQty,0) : s.saleQty;
@@ -4273,6 +4357,7 @@
           <td><strong>₹${grandTotalVal.toFixed(2)}</strong></td>
           <td class="actions-cell">
             <div class="actions-wrapper">
+              <button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation(); printSaleBill('${s.id}')" title="Print Bill">Bill</button>
               <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); editSalesLog('${s.id}')">Edit</button>
               <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteSalesLog('${s.id}')">Delete</button>
             </div>
@@ -4340,7 +4425,7 @@
       document.getElementById('prod-repeat-btn').style.display = 'none';
       document.getElementById('prod-cancel-btn').style.display = 'inline-flex';
       
-      showToast(`Entry duplicated! Assigned new sequential Bori No: "${nextBori}". Click Save New Entry.`, 'info');
+      showToast(`Entry duplicated! Assigned new sequential Bori/Box No: "${nextBori}". Click Save New Entry.`, 'info');
       document.getElementById('prod-bori').focus();
     };
 
@@ -4373,7 +4458,7 @@
       document.getElementById('prod-repeat-btn').style.display = 'none';
       document.getElementById('prod-cancel-btn').style.display = 'inline-flex';
       
-      showToast(`Entry duplicated! Assigned new sequential Bori No: "${nextBori}". Click Save New Entry.`, 'info');
+      showToast(`Entry duplicated! Assigned new sequential Bori/Box No: "${nextBori}". Click Save New Entry.`, 'info');
       document.getElementById('production-form').scrollIntoView({ behavior: 'smooth' });
       document.getElementById('prod-bori').focus();
     };
@@ -4497,7 +4582,7 @@
       });
 
       if (modalChallanItems.length === 0) {
-        showToast('Cannot repeat: Bori is fully sold out!', 'error');
+        showToast('Cannot repeat: Bori/Box is fully sold out!', 'error');
         return;
       }
 
@@ -4579,7 +4664,7 @@
       }
       showConfirmDelete(
         'Delete Production Entry',
-        `Are you sure you want to delete production bori "${log ? log.boriNo : id}"? This action cannot be undone.`,
+        `Are you sure you want to delete production bori/box "${log ? log.boriNo : id}"? This action cannot be undone.`,
         function() {
           dataStore[activeDivision].production = dataStore[activeDivision].production.filter(l => l.id !== id);
           if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
@@ -4596,7 +4681,7 @@
       const challan = sale ? sale.challanNo : id;
       showConfirmDelete(
         'Delete Sale Record',
-        `Are you sure you want to delete sale challan "${challan}"? Sold boris will be restored back to available stock.`,
+        `Are you sure you want to delete sale challan "${challan}"? Sold boris/boxes will be restored back to available stock.`,
         function() {
           dataStore[activeDivision].sales = dataStore[activeDivision].sales.filter(s => s.id !== id);
           if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
@@ -4714,7 +4799,7 @@
   <div id="batch-sell-modal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="modal-title">Batch Sell Selected Boris</h2>
+        <h2 id="modal-title">Batch Sell Selected Boris/Boxes</h2>
         <button type="button" class="modal-close-btn" onclick="closeBatchSellModal()">&times;</button>
       </div>
       <div class="modal-body">
@@ -4755,7 +4840,7 @@
             <table class="data-table" style="font-size: 0.85rem; width: 100%; border: none; margin: 0;">
               <thead>
                 <tr>
-                  <th>Bori No</th>
+                  <th>Bori/Box No</th>
                   <th>Composition</th>
                   <th>Color</th>
                   <th>Specs</th>
@@ -4774,7 +4859,7 @@
           <!-- Summary & Action Bar -->
           <div class="form-inline" style="justify-content: space-between; align-items: center; background: var(--bg-card-hover, rgba(255,255,255,0.03)); padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; gap: 1rem;">
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-              <span style="font-size: 0.88rem;">Total Boris: <strong id="modal-summary-total-boris">0</strong></span>
+              <span style="font-size: 0.88rem;">Total Boris/Boxes: <strong id="modal-summary-total-boris">0</strong></span>
               <span style="font-size: 0.88rem;">Total Rolls: <strong id="modal-summary-total-rolls">0</strong></span>
               <span style="font-size: 0.88rem;">Total Weight: <strong id="modal-summary-total-weight">0.00 Kg</strong></span>
               <span style="font-size: 0.88rem;">Subtotal: <strong id="modal-summary-subtotal">₹0.00</strong></span>
@@ -4830,7 +4915,7 @@
           <table class="data-table" style="font-size: 0.85rem; width: 100%; border: none; margin: 0;">
             <thead>
               <tr>
-                <th>Bori No</th>
+                <th>Bori/Box No</th>
                 <th>Composition</th>
                 <th>Color</th>
                 <th>Specs</th>
@@ -4849,7 +4934,7 @@
         <!-- Summary Bar -->
         <div class="form-inline" style="justify-content: space-between; align-items: center; background: var(--bg-card-hover, rgba(255,255,255,0.03)); padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; gap: 1rem;">
           <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            <span style="font-size: 0.88rem;">Total Boris: <strong id="details-summary-total-boris">0</strong></span>
+            <span style="font-size: 0.88rem;">Total Boris/Boxes: <strong id="details-summary-total-boris">0</strong></span>
             <span style="font-size: 0.88rem;">Total Rolls: <strong id="details-summary-total-rolls">0</strong></span>
             <span style="font-size: 0.88rem;">Total Weight: <strong id="details-summary-total-weight">0.00 Kg</strong></span>
             <span style="font-size: 0.88rem;">Subtotal: <strong id="details-summary-subtotal">₹0.00</strong></span>
