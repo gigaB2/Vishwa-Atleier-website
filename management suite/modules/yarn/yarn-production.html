@@ -2630,8 +2630,12 @@
       
       updateBoriPrefix();
       updateLotPrefix();
-      // Auto-assign sequential numeric part
-      document.getElementById('prod-bori').value = generateNextBoriNumber(activeDivision);
+      // Auto-assign sequential numeric part and clear manual edit state
+      const boriInput = document.getElementById('prod-bori');
+      if (boriInput) {
+        delete boriInput.dataset.userEdited;
+        boriInput.value = generateNextBoriNumber(activeDivision);
+      }
     }
 
 
@@ -3161,6 +3165,17 @@
       prodNameSearchEl.addEventListener('change', function() {
         const hiddenEl = document.getElementById('prod-name');
         if (hiddenEl) hiddenEl.value = this.value;
+      });
+    }
+
+    // Mark prod-bori as user-edited when manually entered or changed
+    const prodBoriEl = document.getElementById('prod-bori');
+    if (prodBoriEl) {
+      prodBoriEl.addEventListener('input', function() {
+        this.dataset.userEdited = 'true';
+      });
+      prodBoriEl.addEventListener('change', function() {
+        this.dataset.userEdited = 'true';
       });
     }
 
@@ -5603,7 +5618,11 @@
       // Separate prefix and number part
       updateBoriPrefix();
       const cleanBori = log.boriNo.replace(/^[C|T|D|B]-?/i, '');
-      document.getElementById('prod-bori').value = cleanBori;
+      const prodBoriInput = document.getElementById('prod-bori');
+      if (prodBoriInput) {
+        delete prodBoriInput.dataset.userEdited;
+        prodBoriInput.value = cleanBori;
+      }
 
       document.getElementById('prod-name').value = log.productName;
       document.getElementById('prod-name-search').value = log.productName;
@@ -5637,7 +5656,11 @@
       const nextBori = generateNextBoriNumber(activeDivision);
       
       document.getElementById('prod-edit-id').value = '';
-      document.getElementById('prod-bori').value = nextBori;
+      const prodBoriInput = document.getElementById('prod-bori');
+      if (prodBoriInput) {
+        delete prodBoriInput.dataset.userEdited;
+        prodBoriInput.value = nextBori;
+      }
       document.getElementById('prod-form-title').innerText = `Add ${activeDivision.toUpperCase()} Production Log (Repeat Entry)`;
       document.getElementById('prod-submit-btn').innerText = 'Save New Entry';
       document.getElementById('prod-repeat-btn').style.display = 'none';
@@ -5657,7 +5680,11 @@
       document.getElementById('prod-date').value = log.date;
       
       updateBoriPrefix();
-      document.getElementById('prod-bori').value = nextBori;
+      const prodBoriInput = document.getElementById('prod-bori');
+      if (prodBoriInput) {
+        delete prodBoriInput.dataset.userEdited;
+        prodBoriInput.value = nextBori;
+      }
 
       document.getElementById('prod-name').value = log.productName;
       document.getElementById('prod-name-search').value = log.productName;
