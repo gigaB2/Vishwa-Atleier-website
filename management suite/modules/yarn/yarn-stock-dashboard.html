@@ -4273,7 +4273,7 @@
               <div class="slip-header">
                 <div class="slip-header-left">
                   <div class="slip-company-name">${companyName}</div>
-                  <div class="slip-company-sub">YARN MANUFACTURING & PROCESSING DIVISION</div>
+                  <div class="slip-company-sub">YARN MANUFACTURING & PROCESSING DIVISION &bull; ${activeDivision.toUpperCase()}</div>
                 </div>
                 <div class="slip-header-right">
                   <div class="slip-badge">PACKING SLIP</div>
@@ -4295,31 +4295,29 @@
                 </div>
                 <div class="meta-cell">
                   <span class="meta-label">LOT NO</span>
-                  <span class="meta-val">${itemLot}</span>
-                </div>
-                <div class="meta-cell">
-                  <span class="meta-label">DIVISION</span>
-                  <span class="meta-val">${activeDivision.toUpperCase()}</span>
+                  <span class="meta-val lot-val">${itemLot}</span>
                 </div>
               </div>
 
               <div class="slip-body">
-                <table class="slip-table">
-                  <tr>
-                    <td class="lbl-col">Yarn Quality:</td>
-                    <td class="val-col strong-val">${item.composition || '-'}</td>
-                    <td class="lbl-col">Shade / Color:</td>
-                    <td class="val-col">${item.color || '-'}</td>
-                  </tr>
-                  <tr>
-                    <td class="lbl-col">Twist:</td>
-                    <td class="val-col strong-val" colspan="3">${item.twist || '-'}</td>
-                  </tr>
-                </table>
+                <div class="slip-details-grid">
+                  <div class="detail-block">
+                    <span class="detail-label">YARN QUALITY / COMPOSITION</span>
+                    <span class="detail-value quality-val">${item.composition || '-'}</span>
+                  </div>
+                  <div class="detail-block">
+                    <span class="detail-label">SHADE / COLOR</span>
+                    <span class="detail-value color-val">${item.color || '-'}</span>
+                  </div>
+                  <div class="detail-block">
+                    <span class="detail-label">TWIST</span>
+                    <span class="detail-value twist-val">${item.twist || '-'}</span>
+                  </div>
+                </div>
 
                 <div class="slip-metrics-row">
                   <div class="metric-box">
-                    <span class="metric-lbl">ROLLS / CONES</span>
+                    <span class="metric-lbl">TOTAL ROLLS / CONES</span>
                     <span class="metric-num">${item.rollsQty || 0} <small>Nos</small></span>
                   </div>
                   <div class="metric-box highlight-metric">
@@ -4328,7 +4326,7 @@
                   </div>
                   <div class="metric-box">
                     <span class="metric-lbl">GROSS WEIGHT</span>
-                    <span class="metric-num" style="color: #64748b; font-weight: 400; letter-spacing: 2px;">_______ <small style="font-weight: 700; color: #0f172a; letter-spacing: normal;">Kg</small></span>
+                    <span class="metric-num gross-val">_______ <small>Kg</small></span>
                   </div>
                 </div>
               </div>
@@ -4361,7 +4359,7 @@
           <style>
             @page {
               size: A4 portrait;
-              margin: 6mm 8mm;
+              margin: 5mm 7mm;
             }
             * {
               margin: 0;
@@ -4372,8 +4370,8 @@
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
               color: #000000;
               background-color: #ffffff;
-              line-height: 1.25;
-              font-size: 11px;
+              line-height: 1.3;
+              font-size: 12px;
             }
             @media print {
               .no-print {
@@ -4385,8 +4383,8 @@
               }
               .page-box {
                 page-break-after: always;
-                height: 284mm;
-                max-height: 284mm;
+                height: 287mm;
+                max-height: 287mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
@@ -4404,9 +4402,9 @@
               .page-box {
                 background: #ffffff;
                 width: 210mm;
-                min-height: 284mm;
+                min-height: 287mm;
                 margin: 0 auto 30px auto;
-                padding: 6mm 8mm;
+                padding: 5mm 7mm;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.15);
                 display: flex;
                 flex-direction: column;
@@ -4443,188 +4441,231 @@
               color: #334155;
             }
             .slip-card {
-              border: 1.5px solid #0f172a;
-              border-radius: 4px;
-              padding: 6px 10px 5px 10px;
+              border: 2px solid #0f172a;
+              border-radius: 6px;
+              padding: 8px 12px 7px 12px;
               background: #ffffff;
               display: flex;
               flex-direction: column;
-              height: 89mm;
-              max-height: 89mm;
+              height: 90mm;
+              max-height: 90mm;
+              box-sizing: border-box;
               overflow: hidden;
+              justify-content: space-between;
             }
             .slip-header {
               display: flex;
               justify-content: space-between;
-              align-items: flex-start;
-              border-bottom: 1.5px solid #0f172a;
-              padding-bottom: 4px;
-              margin-bottom: 4px;
+              align-items: center;
+              border-bottom: 2px solid #0f172a;
+              padding-bottom: 5px;
+              margin-bottom: 5px;
             }
             .slip-company-name {
-              font-size: 14px;
-              font-weight: 800;
+              font-size: 18px;
+              font-weight: 900;
               text-transform: uppercase;
-              letter-spacing: 0.5px;
+              letter-spacing: 0.8px;
               color: #000000;
               line-height: 1.1;
             }
             .slip-company-sub {
-              font-size: 8.5px;
+              font-size: 9.5px;
               color: #475569;
-              font-weight: 600;
-              letter-spacing: 0.3px;
-              margin-top: 1px;
+              font-weight: 700;
+              letter-spacing: 0.5px;
+              margin-top: 2px;
             }
             .slip-header-right {
               text-align: right;
               display: flex;
               flex-direction: column;
               align-items: flex-end;
-              gap: 2px;
             }
             .slip-badge {
               background: #0f172a;
               color: #ffffff;
-              font-size: 10.5px;
-              font-weight: 800;
-              padding: 2px 8px;
-              border-radius: 3px;
-              letter-spacing: 0.8px;
+              font-size: 12px;
+              font-weight: 900;
+              padding: 4px 12px;
+              border-radius: 4px;
+              letter-spacing: 1px;
               display: inline-block;
-            }
-            .slip-copy-tag {
-              font-size: 7.5px;
-              font-weight: 700;
-              color: #64748b;
-              letter-spacing: 0.4px;
-              text-transform: uppercase;
             }
             .slip-meta-strip {
               display: flex;
-              border: 1px solid #cbd5e1;
+              border: 1.5px solid #0f172a;
               background: #f8fafc;
-              border-radius: 3px;
-              margin-bottom: 4px;
+              border-radius: 4px;
+              margin-bottom: 6px;
             }
             .meta-cell {
               flex: 1;
-              padding: 3px 6px;
+              padding: 4px 8px;
               border-right: 1px solid #cbd5e1;
               display: flex;
               flex-direction: column;
+              justify-content: center;
             }
             .meta-cell:last-child {
               border-right: none;
             }
             .meta-cell.highlight-cell {
-              background: #f1f5f9;
+              flex: 1.3;
+              background: #0f172a;
+              color: #ffffff;
               border-left: 1.5px solid #0f172a;
               border-right: 1.5px solid #0f172a;
             }
             .meta-label {
-              font-size: 7.5px;
-              font-weight: 700;
+              font-size: 8.5px;
+              font-weight: 800;
               color: #475569;
               text-transform: uppercase;
-              letter-spacing: 0.3px;
+              letter-spacing: 0.5px;
+              margin-bottom: 1px;
+            }
+            .highlight-cell .meta-label {
+              color: #94a3b8;
             }
             .meta-val {
-              font-size: 10px;
-              font-weight: 700;
+              font-size: 12.5px;
+              font-weight: 800;
               color: #0f172a;
               white-space: nowrap;
             }
-            .meta-val.bori-val {
-              font-size: 12px;
+            .meta-val.lot-val {
+              font-size: 13px;
               font-weight: 900;
-              color: #000000;
+              color: #0f172a;
+            }
+            .meta-val.bori-val {
+              font-size: 16px;
+              font-weight: 900;
+              color: #ffffff;
+              letter-spacing: 0.5px;
             }
             .slip-body {
               flex: 1;
               display: flex;
               flex-direction: column;
-              gap: 4px;
+              justify-content: space-around;
+              gap: 5px;
+              min-height: 0;
             }
-            .slip-table {
-              width: 100%;
-              border-collapse: collapse;
+            .slip-details-grid {
+              display: grid;
+              grid-template-columns: 2fr 1.2fr 1fr;
+              gap: 6px;
+              border: 1px solid #e2e8f0;
+              background: #ffffff;
+              border-radius: 4px;
+              padding: 5px 8px;
             }
-            .slip-table td {
-              padding: 2px 4px;
-              font-size: 10px;
-              vertical-align: middle;
+            .detail-block {
+              display: flex;
+              flex-direction: column;
             }
-            .lbl-col {
-              width: 18%;
-              color: #475569;
-              font-weight: 600;
-              font-size: 9px;
+            .detail-label {
+              font-size: 8px;
+              font-weight: 800;
+              color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 0.4px;
+              margin-bottom: 2px;
             }
-            .val-col {
-              width: 32%;
-              color: #000000;
-              font-size: 10px;
+            .detail-value {
+              font-size: 13.5px;
+              font-weight: 800;
+              color: #0f172a;
+              line-height: 1.2;
             }
-            .strong-val {
-              font-weight: 700;
-              font-size: 10.5px;
+            .detail-value.quality-val {
+              font-size: 14.5px;
+              font-weight: 900;
+              color: #0f172a;
             }
-            .font-bold {
-              font-weight: 700;
+            .detail-value.color-val {
+              font-size: 13.5px;
+              font-weight: 800;
+            }
+            .detail-value.twist-val {
+              font-size: 13.5px;
+              font-weight: 800;
             }
             .slip-metrics-row {
               display: flex;
-              gap: 6px;
-              margin-top: 1px;
+              gap: 8px;
             }
             .metric-box {
               flex: 1;
-              border: 1px solid #cbd5e1;
-              border-radius: 3px;
-              padding: 3px 6px;
+              border: 1.5px solid #cbd5e1;
+              border-radius: 4px;
+              padding: 5px 8px;
               text-align: center;
               background: #f8fafc;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
             }
             .metric-box.highlight-metric {
-              border: 1.5px solid #0f172a;
+              flex: 1.2;
+              border: 2px solid #0f172a;
               background: #ffffff;
             }
             .metric-lbl {
               display: block;
-              font-size: 7.5px;
-              font-weight: 700;
+              font-size: 8.5px;
+              font-weight: 800;
               color: #475569;
               text-transform: uppercase;
-              letter-spacing: 0.3px;
+              letter-spacing: 0.5px;
+              margin-bottom: 2px;
             }
             .metric-num {
-              font-size: 13px;
-              font-weight: 800;
+              font-size: 18px;
+              font-weight: 900;
               color: #0f172a;
+              line-height: 1.1;
+            }
+            .metric-box.highlight-metric .metric-num {
+              font-size: 21px;
+              font-weight: 900;
+              color: #000000;
             }
             .metric-num small {
-              font-size: 9px;
-              font-weight: 600;
+              font-size: 11px;
+              font-weight: 700;
+              color: #475569;
+            }
+            .metric-num.gross-val {
               color: #64748b;
+              font-weight: 400;
+              letter-spacing: 2px;
+              font-size: 15px;
+            }
+            .metric-num.gross-val small {
+              letter-spacing: normal;
+              font-weight: 700;
+              color: #0f172a;
             }
             .slip-footer {
               display: flex;
               justify-content: space-between;
-              border-top: 1px solid #cbd5e1;
-              padding-top: 3px;
+              border-top: 1.5px solid #cbd5e1;
+              padding-top: 4px;
               margin-top: 2px;
             }
             .footer-sig {
-              font-size: 8px;
-              color: #475569;
-              font-weight: 600;
+              font-size: 9.5px;
+              color: #334155;
+              font-weight: 700;
             }
             .cut-line {
               text-align: center;
               position: relative;
-              margin: 3px 0;
-              height: 12px;
+              margin: 2px 0;
+              height: 10px;
               display: flex;
               align-items: center;
               justify-content: center;
