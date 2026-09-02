@@ -3403,6 +3403,13 @@
       }
     };
 
+    function cleanYarnQualityName(name) {
+      if (!name) return '-';
+      const str = String(name).trim();
+      const cleaned = str.replace(/\s*\[.*\]\s*$/, '').trim();
+      return cleaned || str;
+    }
+
     window.printSaleBill = function(saleId) {
       const targetId = saleId || currentDetailSaleId;
       if (!targetId) return;
@@ -3458,7 +3465,7 @@
       // Aggregate invoice items by composition, twist, color, rate
       const aggregatedMap = new Map();
       items.forEach(item => {
-        const comp = item.composition || '-';
+        const comp = cleanYarnQualityName(item.composition);
         const twist = item.twist || '-';
         const color = item.color || '-';
         const rate = parseFloat(item.rate) || 0;
@@ -3892,7 +3899,7 @@
           <tr>
             <td style="text-align: center;">${index + 1}</td>
             <td><strong>${item.boriNo}</strong></td>
-            <td>${item.composition}</td>
+            <td>${cleanYarnQualityName(item.composition)}</td>
             <td>${item.twist || '-'}</td>
             <td>${item.color || '-'}</td>
             <td style="text-align: center;">${item.rollsQty || 0}</td>
@@ -4303,7 +4310,7 @@
                 <div class="slip-details-grid">
                   <div class="detail-block">
                     <span class="detail-label">NAME</span>
-                    <span class="detail-value quality-val">${item.composition || '-'}</span>
+                    <span class="detail-value quality-val">${cleanYarnQualityName(item.composition)}</span>
                   </div>
                   <div class="detail-block">
                     <span class="detail-label">SHADE / COLOR</span>
