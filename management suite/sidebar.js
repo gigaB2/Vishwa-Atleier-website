@@ -2490,6 +2490,15 @@
         }
       }, { passive: true });
 
+      // Auto close drawer when clicking a link on mobile
+      sidebar.querySelectorAll('.vf-sb-link').forEach(function (link) {
+        link.addEventListener('click', function () {
+          if (window.innerWidth <= 1024) {
+            setDrawerOpen(false);
+          }
+        });
+      });
+
       // Clean up drawer states if window is resized above tablet breakpoint
       window.addEventListener('resize', function () {
         if (window.innerWidth > 1024) {

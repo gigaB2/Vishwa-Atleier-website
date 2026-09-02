@@ -7,55 +7,115 @@
 }
 
 /* Loading states to prevent flashing of unstyled content */
-/* Dark Mode Overrides for Sidebar */
-.dark-mode .vf-sidebar {
+/* Explicit Contrast & Theming for Sidebar */
+.vf-sidebar {
+  --sb-bg: #ffffff;
+  --sb-surface: #ffffff;
+  --sb-surface-subtle: #f8f7fc;
+  --sb-fg: #1e293b;
+  --sb-fg-muted: #64748b;
+  --sb-border: #e8e7f1;
+  --sb-accent: #7c3aed;
+  --sb-accent-hover: rgba(124, 58, 237, 0.08);
+  --sb-accent-active: rgba(124, 58, 237, 0.12);
+  --sb-icon-chevron: #64748b;
+}
+
+.dark-mode .vf-sidebar,
+html.dark-mode .vf-sidebar,
+body.dark-mode .vf-sidebar {
+  --sb-bg: #0a0a0a;
+  --sb-surface: #0a0a0a;
+  --sb-surface-subtle: #18181b;
+  --sb-fg: #f1f5f9;
+  --sb-fg-muted: #94a3b8;
+  --sb-border: #27272a;
+  --sb-accent: #a78bfa;
+  --sb-accent-hover: rgba(124, 58, 237, 0.15);
+  --sb-accent-active: rgba(124, 58, 237, 0.22);
+  --sb-icon-chevron: #94a3b8;
   background: #0a0a0a !important;
   border-right: 1px solid #27272a !important;
 }
-.dark-mode .vf-sb-header {
+
+.dark-mode .vf-sb-header,
+html.dark-mode .vf-sb-header,
+body.dark-mode .vf-sb-header {
   border-bottom: 1px solid #27272a !important;
 }
+
 .dark-mode .vf-sb-link, 
-.dark-mode .vf-sb-folder {
-  color: #a1a1aa !important;
+.dark-mode .vf-sb-folder,
+html.dark-mode .vf-sb-link, 
+html.dark-mode .vf-sb-folder,
+body.dark-mode .vf-sb-link, 
+body.dark-mode .vf-sb-folder {
+  color: #cbd5e1 !important;
 }
+
 .dark-mode .vf-sb-link:hover, 
-.dark-mode .vf-sb-folder:hover {
-  background: rgba(124, 58, 237, 0.08) !important;
-  color: #a78bfa !important;
-}
-.dark-mode .vf-sb-link.active {
+.dark-mode .vf-sb-folder:hover,
+html.dark-mode .vf-sb-link:hover, 
+html.dark-mode .vf-sb-folder:hover,
+body.dark-mode .vf-sb-link:hover, 
+body.dark-mode .vf-sb-folder:hover {
   background: rgba(124, 58, 237, 0.12) !important;
   color: #a78bfa !important;
 }
-.dark-mode .vf-sb-toggle {
+
+.dark-mode .vf-sb-link.active,
+html.dark-mode .vf-sb-link.active,
+body.dark-mode .vf-sb-link.active {
+  background: rgba(124, 58, 237, 0.18) !important;
+  color: #a78bfa !important;
+}
+
+.dark-mode .vf-sb-toggle,
+html.dark-mode .vf-sb-toggle,
+body.dark-mode .vf-sb-toggle {
   background: #18181b !important;
   border-color: #27272a !important;
   color: #f4f4f5 !important;
 }
-.dark-mode .vf-sb-toggle svg {
+
+.dark-mode .vf-sb-toggle svg,
+html.dark-mode .vf-sb-toggle svg,
+body.dark-mode .vf-sb-toggle svg {
   color: #f4f4f5 !important;
-  stroke: currentColor !important;
+  stroke: #f4f4f5 !important;
 }
+
 .dark-mode .vf-sb-toggle svg line,
 .dark-mode .vf-sb-toggle svg path,
-.dark-mode .vf-sb-toggle svg polyline {
-  stroke: currentColor !important;
+.dark-mode .vf-sb-toggle svg polyline,
+html.dark-mode .vf-sb-toggle svg line,
+html.dark-mode .vf-sb-toggle svg path,
+html.dark-mode .vf-sb-toggle svg polyline,
+body.dark-mode .vf-sb-toggle svg line,
+body.dark-mode .vf-sb-toggle svg path,
+body.dark-mode .vf-sb-toggle svg polyline {
+  stroke: #f4f4f5 !important;
 }
-.dark-mode .vf-sb-chevron {
-  color: #71717a !important;
+
+.dark-mode .vf-sb-chevron,
+html.dark-mode .vf-sb-chevron,
+body.dark-mode .vf-sb-chevron {
+  color: #94a3b8 !important;
 }
-.dark-mode .vf-sb-folder:hover .vf-sb-chevron {
+
+.dark-mode .vf-sb-folder:hover .vf-sb-chevron,
+.dark-mode .vf-sb-folder[aria-expanded="true"] .vf-sb-chevron,
+html.dark-mode .vf-sb-folder:hover .vf-sb-chevron,
+html.dark-mode .vf-sb-folder[aria-expanded="true"] .vf-sb-chevron,
+body.dark-mode .vf-sb-folder:hover .vf-sb-chevron,
+body.dark-mode .vf-sb-folder[aria-expanded="true"] .vf-sb-chevron {
   color: #a78bfa !important;
 }
-.dark-mode .vf-sb-folder[aria-expanded="true"] .vf-sb-chevron {
-  color: #a78bfa !important;
-}
-.dark-mode .vf-sb-nav::-webkit-scrollbar-thumb {
+
+.dark-mode .vf-sb-nav::-webkit-scrollbar-thumb,
+html.dark-mode .vf-sb-nav::-webkit-scrollbar-thumb,
+body.dark-mode .vf-sb-nav::-webkit-scrollbar-thumb {
   background: #27272a !important;
-}
-.dark-mode .vf-sb-folder {
-  color: #a1a1aa !important;
 }
 
 .nav-tabs, .tabs, .vf-top-tab-hidden, .vf-perm-hidden { display: none !important; }
@@ -498,19 +558,21 @@ body.timeline-modal-open .vf-sb-toggle {
 @media (max-width: 1024px) {
   .vf-sidebar {
     transform: translate3d(-100%, 0, 0) !important;
-    width: 280px !important;
-    max-width: 85vw !important;
+    width: 290px !important;
+    max-width: 86vw !important;
     z-index: 100002 !important;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
     will-change: transform;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    box-shadow: 8px 0 32px rgba(0,0,0,0.18) !important;
+    box-shadow: 12px 0 40px rgba(0,0,0,0.3) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
   .vf-sidebar.open {
     transform: translate3d(0, 0, 0) !important;
   }
-  /* When drawer is open, move toggle to top-right so it does not cover the brand title */
+  /* When drawer is open, move toggle to top-right inside drawer or header */
   .vf-sidebar.open + .vf-sb-toggle {
     left: auto !important;
     right: 0.75rem !important;
@@ -534,9 +596,12 @@ body.timeline-modal-open .vf-sb-toggle {
     z-index: 100003 !important;
     touch-action: manipulation !important;
   }
-  .dark-mode .vf-sb-toggle {
+  .dark-mode .vf-sb-toggle,
+  html.dark-mode .vf-sb-toggle,
+  body.dark-mode .vf-sb-toggle {
     background: #18181b !important;
     border-color: #27272a !important;
+    color: #f4f4f5 !important;
   }
   body {
     margin-left: 0 !important;
@@ -547,132 +612,167 @@ body.timeline-modal-open .vf-sb-toggle {
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px)) !important;
   }
 
-  /* Ensure text and chevrons show on tablet/mobile even if html is collapsed */
-  html.vf-sidebar-collapsed .brand-full { display: block !important; }
-  html.vf-sidebar-collapsed .brand-mini { display: none !important; }
-  html.vf-sidebar-collapsed .vf-sb-subtitle,
-  html.vf-sidebar-collapsed .vf-sb-fy-wrapper,
-  html.vf-sidebar-collapsed .vf-sb-chevron,
-  html.vf-sidebar-collapsed .vf-sb-label,
-  html.vf-sidebar-collapsed .vf-sb-collapse-text {
+  /* Guarantee all drawer items, text, chevrons, buttons, and folders are 100% visible and expanded on mobile/tablet */
+  .vf-sidebar .brand-full { display: block !important; }
+  .vf-sidebar .brand-mini { display: none !important; }
+  .vf-sidebar .vf-sb-subtitle,
+  .vf-sidebar .vf-sb-fy-wrapper,
+  .vf-sidebar .vf-sb-chevron,
+  .vf-sidebar .vf-sb-label,
+  .vf-sidebar .vf-sb-user-info,
+  .vf-sidebar .vf-sb-logout-btn,
+  .vf-sidebar .vf-sb-mode-selector {
+    display: flex !important;
+  }
+  .vf-sidebar .vf-sb-subtitle,
+  .vf-sidebar .vf-sb-label {
     display: block !important;
   }
-  html.vf-sidebar-collapsed .vf-sb-link,
-  html.vf-sidebar-collapsed .vf-sb-folder {
-    font-size: 13px !important;
-    gap: 0.6rem !important;
+  .vf-sidebar .vf-sb-user-badge {
+    display: flex !important;
     justify-content: flex-start !important;
-    padding: 0.6rem 0.75rem !important;
+    width: 100% !important;
+    padding: 0.5rem 0.65rem !important;
+    background: rgba(139, 92, 246, 0.08) !important;
+    border: 1px solid rgba(139, 92, 246, 0.15) !important;
+  }
+  .vf-sidebar .vf-sb-link,
+  .vf-sidebar .vf-sb-folder {
+    display: flex !important;
+    font-size: 13px !important;
+    gap: 0.65rem !important;
+    justify-content: flex-start !important;
+    padding: 0.65rem 0.75rem !important;
     min-height: 44px !important;
+    color: #1e293b !important;
   }
-  html.vf-sidebar-collapsed .vf-sb-link.child,
-  html.vf-sidebar-collapsed .vf-sb-folder.child {
+  .dark-mode .vf-sidebar .vf-sb-link,
+  .dark-mode .vf-sidebar .vf-sb-folder,
+  html.dark-mode .vf-sidebar .vf-sb-link,
+  html.dark-mode .vf-sidebar .vf-sb-folder,
+  body.dark-mode .vf-sidebar .vf-sb-link,
+  body.dark-mode .vf-sidebar .vf-sb-folder {
+    color: #e2e8f0 !important;
+  }
+  .vf-sidebar .vf-sb-link.child,
+  .vf-sidebar .vf-sb-folder.child {
     padding-left: 1.6rem !important;
+    font-size: 12.5px !important;
+    min-height: 40px !important;
   }
-  html.vf-sidebar-collapsed .vf-sb-link.grandchild {
+  .vf-sidebar .vf-sb-link.grandchild {
     padding-left: 2.6rem !important;
+    font-size: 12px !important;
+    min-height: 38px !important;
   }
-  html.vf-sidebar-collapsed .vf-sb-header {
+  .vf-sidebar .vf-sb-header {
     padding: 1.35rem 1.25rem 1rem !important;
     align-items: flex-start !important;
-  }
-  html.vf-sidebar-collapsed .vf-sb-footer {
-    display: none !important;
+    display: block !important;
   }
   .vf-sb-footer {
     display: none !important;
   }
 }
 
-/* Desktop Sidebar Collapsible Styles */
-html.vf-sidebar-collapsed {
-  --sidebar-w: var(--sidebar-collapsed-w);
+/* ==========================================================================
+   DESKTOP COLLAPSIBLE SIDEBAR RULES ONLY (>= 1025px)
+   Never affect mobile / tablet slide-out drawer navigation
+   ========================================================================== */
+@media (min-width: 1025px) {
+  html.vf-sidebar-collapsed {
+    --sidebar-w: var(--sidebar-collapsed-w);
+  }
+
+  html.vf-sidebar-collapsed .brand-full,
+  html.vf-sidebar-collapsed .vf-sb-subtitle,
+  html.vf-sidebar-collapsed .vf-sb-fy-wrapper,
+  html.vf-sidebar-collapsed .vf-sb-chevron,
+  html.vf-sidebar-collapsed .vf-sb-label,
+  html.vf-sidebar-collapsed .vf-sb-collapse-text,
+  html.vf-sidebar-collapsed .vf-sb-user-info,
+  html.vf-sidebar-collapsed .vf-sb-logout-btn,
+  html.vf-sidebar-collapsed .vf-sb-mode-selector {
+    display: none !important;
+  }
+
+  html.vf-sidebar-collapsed .vf-sb-user-badge {
+    justify-content: center !important;
+    padding: 0.4rem 0 !important;
+    margin-top: 0.5rem !important;
+    border: none !important;
+    background: transparent !important;
+    width: 100% !important;
+  }
+
+  html.vf-sidebar-collapsed .vf-sb-accordion-wrapper {
+    grid-template-rows: 0fr !important;
+  }
+
+  html.vf-sidebar-collapsed .brand-mini {
+    display: block !important;
+    font-size: 20px;
+    text-align: center;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+  }
+
+  html.vf-sidebar-collapsed .vf-sb-header {
+    padding: 1.35rem 0.5rem 1rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  html.vf-sidebar-collapsed .vf-sb-link,
+  html.vf-sidebar-collapsed .vf-sb-folder {
+    font-size: 0 !important;
+    gap: 0 !important;
+    justify-content: center !important;
+    padding: 0.5rem 0 !important;
+  }
+
+  html.vf-sidebar-collapsed .vf-sb-icon {
+    margin: 0 !important;
+  }
+
+  html.vf-sidebar-collapsed .vf-sb-link.child,
+  html.vf-sidebar-collapsed .vf-sb-link.grandchild,
+  html.vf-sidebar-collapsed .vf-sb-folder.child {
+    padding-left: 0 !important;
+  }
+
+  html.vf-sidebar-collapsed .vf-sb-footer {
+    padding: 0.75rem 0.5rem;
+  }
+
+  html.vf-sidebar-collapsed .vf-sb-collapse-btn {
+    justify-content: center !important;
+    padding: 0.5rem 0 !important;
+  }
+
+  html.vf-sidebar-collapsed .vf-sb-collapse-icon {
+    transform: rotate(180deg) !important;
+  }
 }
 
-/* Hide brand full name, subtitle, dropdown/labels, and user info text when collapsed */
-html.vf-sidebar-collapsed .brand-full,
-html.vf-sidebar-collapsed .vf-sb-subtitle,
-html.vf-sidebar-collapsed .vf-sb-fy-wrapper,
-html.vf-sidebar-collapsed .vf-sb-chevron,
-html.vf-sidebar-collapsed .vf-sb-label,
-html.vf-sidebar-collapsed .vf-sb-collapse-text,
-html.vf-sidebar-collapsed .vf-sb-user-info,
-html.vf-sidebar-collapsed .vf-sb-logout-btn {
-  display: none !important;
-}
-
-html.vf-sidebar-collapsed .vf-sb-user-badge {
-  justify-content: center !important;
-  padding: 0.4rem 0 !important;
-  margin-top: 0.5rem !important;
-  border: none !important;
-  background: transparent !important;
-  width: 100% !important;
-}
-
-/* Force all accordion folders to collapse when sidebar is collapsed */
-html.vf-sidebar-collapsed .vf-sb-accordion-wrapper {
-  grid-template-rows: 0fr !important;
-}
-
-/* Show brand mini monogram when collapsed */
-.brand-mini {
-  display: none;
-}
-html.vf-sidebar-collapsed .brand-mini {
-  display: block;
-  font-size: 20px;
-  text-align: center;
-  background: linear-gradient(135deg, #8b5cf6, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-weight: 700;
-}
-
-/* Adjust header padding when collapsed */
-html.vf-sidebar-collapsed .vf-sb-header {
-  padding: 1.35rem 0.5rem 1rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* Adjust links and folders when collapsed: hide text & center icons */
-html.vf-sidebar-collapsed .vf-sb-link,
-html.vf-sidebar-collapsed .vf-sb-folder {
-  font-size: 0 !important;
-  gap: 0 !important;
-  justify-content: center;
-  padding: 0.5rem 0 !important;
-}
-
-/* Center all icon types */
-html.vf-sidebar-collapsed .vf-sb-icon {
-  margin: 0 !important;
-}
-
-/* Remove indentation for nested links when collapsed */
-html.vf-sidebar-collapsed .vf-sb-link.child,
-html.vf-sidebar-collapsed .vf-sb-link.grandchild,
-html.vf-sidebar-collapsed .vf-sb-folder.child {
-  padding-left: 0 !important;
-}
-
-/* Collapsed Footer & Button Styles */
+/* Collapsed Footer & Button Styles for Desktop */
 .vf-sb-footer {
   padding: 0.75rem 0.65rem;
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
 }
-.dark-mode .vf-sb-footer {
+.dark-mode .vf-sb-footer,
+html.dark-mode .vf-sb-footer,
+body.dark-mode .vf-sb-footer {
   border-top: 1px solid #27272a !important;
   background: #0a0a0a !important;
 }
-html.vf-sidebar-collapsed .vf-sb-footer {
-  padding: 0.75rem 0.5rem;
-}
+
 .vf-sb-collapse-btn {
   display: flex !important;
   align-items: center !important;
@@ -684,7 +784,7 @@ html.vf-sidebar-collapsed .vf-sb-footer {
   background: transparent !important;
   border: none !important;
   border-radius: 8px !important;
-  color: #8b8fa3 !important;
+  color: #64748b !important;
   font-family: inherit !important;
   font-size: 12px !important;
   font-weight: 600 !important;
@@ -692,18 +792,18 @@ html.vf-sidebar-collapsed .vf-sb-footer {
   transition: all 0.15s ease-out !important;
   box-shadow: none !important;
 }
-html.vf-sidebar-collapsed .vf-sb-collapse-btn {
-  justify-content: center !important;
-  padding: 0.5rem 0 !important;
-}
 .vf-sb-collapse-btn:hover {
   background: rgba(139, 92, 246, 0.08) !important;
   color: #7c3aed !important;
 }
-.dark-mode .vf-sb-collapse-btn {
-  color: #a1a1aa !important;
+.dark-mode .vf-sb-collapse-btn,
+html.dark-mode .vf-sb-collapse-btn,
+body.dark-mode .vf-sb-collapse-btn {
+  color: #94a3b8 !important;
 }
-.dark-mode .vf-sb-collapse-btn:hover {
+.dark-mode .vf-sb-collapse-btn:hover,
+html.dark-mode .vf-sb-collapse-btn:hover,
+body.dark-mode .vf-sb-collapse-btn:hover {
   background: rgba(124, 58, 237, 0.12) !important;
   color: #a78bfa !important;
 }
@@ -714,62 +814,41 @@ html.vf-sidebar-collapsed .vf-sb-collapse-btn {
   transition: transform 0.2s ease !important;
   flex-shrink: 0 !important;
 }
-html.vf-sidebar-collapsed .vf-sb-collapse-icon {
-  transform: rotate(180deg) !important;
+
+/* Explicit Financial Year Select Dropdown Styles (Light & Dark) */
+#vfSidebarFYSelect {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0 !important;
+  background-color: #f8f7fc !important;
+  color: #1e293b !important;
+  font-family: 'Inter', -apple-system, sans-serif !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+  color-scheme: light !important;
+}
+#vfSidebarFYSelect option {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
 }
 
-/* Mode Selector Styles */
-.vf-sb-mode-selector {
-  display: flex;
-  background: rgba(0, 0, 0, 0.04);
-  padding: 3px;
-  border-radius: 10px;
-  margin: 0.5rem 0.75rem 1rem 0.75rem;
-  border: 1px solid var(--border);
-  position: relative;
-}
-.dark-mode .vf-sb-mode-selector {
-  background: rgba(255, 255, 255, 0.03);
-}
-.vf-sb-mode-btn {
-  flex: 1;
-  text-align: center;
-  padding: 6px 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--muted);
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  outline: none;
-}
-.vf-sb-mode-btn.active {
-  color: var(--accent) !important;
-  background: var(--surface) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-.dark-mode .vf-sb-mode-btn.active {
-  color: #a78bfa !important;
-  background: #18181b !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-.vf-sb-mode-btn:hover:not(.active) {
-  color: var(--fg);
-}
-html.vf-sidebar-collapsed .vf-sb-mode-selector {
-  display: none !important;
-}
-.dark-mode #vfSidebarFYSelect {
-  background-color: var(--surface) !important;
-  color: var(--fg) !important;
-  border-color: var(--border) !important;
+.dark-mode #vfSidebarFYSelect,
+html.dark-mode #vfSidebarFYSelect,
+body.dark-mode #vfSidebarFYSelect {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: #27272a !important;
   color-scheme: dark !important;
 }
-.dark-mode #vfSidebarFYSelect option {
-  background-color: var(--surface) !important;
-  color: var(--fg) !important;
+.dark-mode #vfSidebarFYSelect option,
+html.dark-mode #vfSidebarFYSelect option,
+body.dark-mode #vfSidebarFYSelect option {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
 }
 
 /* --- Global Typography Standardization & Clickable Card Triggers --- */
