@@ -3355,7 +3355,7 @@
     function getSaleDiscountInfo(sale) {
       if (!sale) return { amount: 0, percent: 0, type: 'percent', value: 0 };
 
-      let discType = sale.discountType || sale.discount_type || 'percent';
+      const discType = sale.discountType || sale.discount_type || 'percent';
 
       let discValue = 0;
       let hasExplicitValue = false;
@@ -3380,28 +3380,14 @@
         hasExplicitAmount = true;
       }
 
-      // Calculate exact subtotal from items if available, or sale.subtotalAmount
       let subtotalVal = 0;
       if (sale.items && Array.isArray(sale.items) && sale.items.length > 0) {
         subtotalVal = sale.items.reduce((sum, item) => sum + (parseFloat(item.amount) || ((parseFloat(item.saleQty) || 0) * (parseFloat(item.rate) || 0))), 0);
       } else {
-        subtotalVal = sale.subtotalAmount || 0;
-        if (!subtotalVal && sale.taxableAmount !== undefined && hasExplicitAmount) {
-          subtotalVal = parseFloat(sale.taxableAmount) + discAmount;
-        }
-        if (!subtotalVal) {
-          subtotalVal = sale.amount || 0;
-        }
+        subtotalVal = sale.subtotalAmount || sale.amount || 0;
       }
 
-      // If explicit discount amount or value was set to 0, discount is 0
-      if (hasExplicitAmount && discAmount === 0 && (!hasExplicitValue || discValue === 0)) {
-        return { amount: 0, percent: 0, type: discType, value: 0 };
-      }
-      if (hasExplicitValue && discValue === 0 && (!hasExplicitAmount || discAmount === 0)) {
-        return { amount: 0, percent: 0, type: discType, value: 0 };
-      }
-
+      // If user entered or stored discValue > 0, calculate discAmount
       if (hasExplicitValue && discValue > 0) {
         if (discType === 'percent') {
           discAmount = subtotalVal * (discValue / 100);

@@ -208,11 +208,11 @@
     if (item.uuid !== undefined && item.uuid !== null && String(item.uuid).trim() !== '') {
       return String(item.uuid).trim();
     }
-    if (item.boriNo !== undefined && item.boriNo !== null && String(item.boriNo).trim() !== '') {
-      return 'bori_' + String(item.boriNo).trim().toLowerCase();
-    }
     if (item.challanNo !== undefined && item.challanNo !== null && String(item.challanNo).trim() !== '') {
       return 'challan_' + String(item.challanNo).trim().toLowerCase();
+    }
+    if (item.boriNo !== undefined && item.boriNo !== null && String(item.boriNo).trim() !== '') {
+      return 'bori_' + String(item.boriNo).trim().toLowerCase();
     }
     if (item.loanId !== undefined && item.loanId !== null && String(item.loanId).trim() !== '') {
       return String(item.loanId).trim();
