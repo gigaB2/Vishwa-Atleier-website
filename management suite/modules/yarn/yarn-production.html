@@ -452,11 +452,42 @@
       margin-bottom: 1.5rem;
     }
 
-    .form-inline .form-group {
+    /* 2-Row Production Form Layout */
+    .yp-form-2row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .yp-form-row {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-end;
+      gap: 0.85rem;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .yp-form-row .form-group {
+      min-width: 100px;
+    }
+
+    .yp-form-row .form-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+      margin-bottom: 1px;
+    }
+
+    .form-inline .form-group,
+    .yp-form-row .form-group {
       flex: 1 1 120px;
     }
 
-    .form-inline .form-group label {
+    .form-inline .form-group label,
+    .yp-form-row .form-group label {
       white-space: normal;
       word-break: break-word;
       font-size: 0.72rem;
@@ -467,19 +498,23 @@
       align-items: flex-end;
     }
 
-    .form-inline .form-group:has(input[type="date"]) {
+    .form-inline .form-group:has(input[type="date"]),
+    .yp-form-row .form-group:has(input[type="date"]) {
       flex: 1 1 140px;
     }
 
-    .form-inline .form-group:has(.long-field) {
+    .form-inline .form-group:has(.long-field),
+    .yp-form-row .form-group:has(.long-field) {
       flex: 2.5 1 280px;
     }
 
-    .form-inline .form-group:has(.extra-long-field) {
+    .form-inline .form-group:has(.extra-long-field),
+    .yp-form-row .form-group:has(.extra-long-field) {
       flex: 3.5 1 360px;
     }
     
-    .form-inline .form-group:has(.short-field) {
+    .form-inline .form-group:has(.short-field),
+    .yp-form-row .form-group:has(.short-field) {
       flex: 0.5 1 75px;
       min-width: 70px;
     }
@@ -1724,71 +1759,78 @@
         <h3 id="prod-form-title">Add Yarn Production Log</h3>
         <form id="production-form">
           <input type="hidden" id="prod-edit-id">
-          <div class="form-inline">
-            <div class="form-group">
-              <label for="prod-date">Date</label>
-              <input type="date" id="prod-date" required>
-            </div>
-            <div class="form-group">
-              <label for="prod-bori">Bori/Box No</label>
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <span id="prod-bori-prefix" style="font-weight: bold; color: var(--accent); padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid var(--border-color);">C-</span>
-                <input type="text" id="prod-bori" placeholder="Number" style="flex: 1; min-width: 60px;" required>
+          <div class="yp-form-2row">
+            <!-- Row 1: Date, Bori/Box No, Product Name, Lot No -->
+            <div class="yp-form-row">
+              <div class="form-group" style="flex: 1 1 140px;">
+                <label for="prod-date">Date</label>
+                <input type="date" id="prod-date" required>
+              </div>
+              <div class="form-group" style="flex: 1 1 150px;">
+                <label for="prod-bori">Bori/Box No</label>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <span id="prod-bori-prefix" style="font-weight: bold; color: var(--accent); padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid var(--border-color);">C-</span>
+                  <input type="text" id="prod-bori" placeholder="Number" style="flex: 1; min-width: 60px;" required>
+                </div>
+              </div>
+              <div class="form-group" style="flex: 3 1 320px; position: relative;">
+                <label for="prod-name-search">Product Name</label>
+                <input type="hidden" id="prod-name" required>
+                <input type="text" id="prod-name-search" class="long-field" placeholder="Search Product..." autocomplete="off" onfocus="showProdNameDropdown()" oninput="filterProdNameDropdown()" style="width: 100%;">
+                <div id="prod-name-dropdown" class="dropdown-list" style="display: none;"></div>
+              </div>
+              <div class="form-group" style="flex: 1.8 1 200px; position: relative;">
+                <label for="prod-lot">Lot No</label>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <span id="prod-lot-prefix" style="font-weight: bold; color: var(--accent); padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid var(--border-color); white-space: nowrap;">C-Lot </span>
+                  <input type="text" id="prod-lot" placeholder="Select or enter Lot No..." style="flex: 1; min-width: 60px;" autocomplete="off" required onfocus="showProdLotDropdown()" oninput="filterProdLotDropdown()">
+                </div>
+                <div id="prod-lot-dropdown" class="dropdown-list" style="display: none;"></div>
               </div>
             </div>
-            <div class="form-group" style="position: relative;">
-              <label for="prod-name-search">Product Name</label>
-              <input type="hidden" id="prod-name" required>
-              <input type="text" id="prod-name-search" class="long-field" placeholder="Search Product..." autocomplete="off" onfocus="showProdNameDropdown()" oninput="filterProdNameDropdown()">
-              <div id="prod-name-dropdown" class="dropdown-list" style="display: none;"></div>
-            </div>
-            <div class="form-group" style="position: relative;">
-              <label for="prod-lot">Lot No</label>
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <span id="prod-lot-prefix" style="font-weight: bold; color: var(--accent); padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid var(--border-color); white-space: nowrap;">C-Lot </span>
-                <input type="text" id="prod-lot" placeholder="Select or enter Lot No..." style="flex: 1; min-width: 60px;" autocomplete="off" required onfocus="showProdLotDropdown()" oninput="filterProdLotDropdown()">
+
+            <!-- Row 2: Color, Denier, TPM, Twist, Rolls, Production Qty, Actions -->
+            <div class="yp-form-row">
+              <div class="form-group" style="flex: 1.2 1 120px;">
+                <label for="prod-color">Color</label>
+                <input type="text" id="prod-color" placeholder="Color" required>
               </div>
-              <div id="prod-lot-dropdown" class="dropdown-list" style="display: none;"></div>
-            </div>
-            <div class="form-group">
-              <label for="prod-color">Color</label>
-              <input type="text" id="prod-color" placeholder="Color" required>
-            </div>
-            <div class="form-group">
-              <label for="prod-denier">Denier</label>
-              <input type="number" id="prod-denier" placeholder="Denier" required min="1" step="any">
-            </div>
-            <div class="form-group">
-              <label for="prod-tpm">TPM</label>
-              <input type="number" id="prod-tpm" placeholder="TPM" required min="0">
-            </div>
-            <div class="form-group yp-twist-group">
-              <label for="prod-twist-trigger">Twist</label>
-              <div class="yp-custom-select" id="prod-twist-custom">
-                <select id="prod-twist" required tabindex="-1" aria-hidden="true">
-                  <option value="S">S Twist</option>
-                  <option value="Z">Z Twist</option>
-                  <option value="S/Z">S/Z Twist</option>
-                  <option value="Z/S">Z/S Twist</option>
-                  <option value="S/S">S/S Twist</option>
-                  <option value="Z/Z">Z/Z Twist</option>
-                </select>
-                <button type="button" class="yp-select-trigger" id="prod-twist-trigger" aria-haspopup="listbox" aria-expanded="false">S Twist</button>
-                <div class="dropdown-list" id="prod-twist-menu" role="listbox"></div>
+              <div class="form-group" style="flex: 1 1 95px;">
+                <label for="prod-denier">Denier</label>
+                <input type="number" id="prod-denier" placeholder="Denier" required min="1" step="any">
               </div>
-            </div>
-            <div class="form-group">
-              <label for="prod-rolls">Rolls</label>
-              <input type="number" id="prod-rolls" placeholder="Rolls" required min="1">
-            </div>
-            <div class="form-group">
-              <label for="prod-qty">Production Qty (Kg)</label>
-              <input type="number" step="any" id="prod-qty" placeholder="Qty (Kg)" required min="0.01">
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="btn btn-primary" id="prod-submit-btn">Save</button>
-              <button type="button" class="btn btn-secondary" style="display: none;" id="prod-repeat-btn" onclick="repeatProductionForm()">Repeat Entry</button>
-              <button type="button" class="btn btn-secondary" style="display: none;" id="prod-cancel-btn" onclick="resetProductionForm()">Cancel</button>
+              <div class="form-group" style="flex: 1 1 95px;">
+                <label for="prod-tpm">TPM</label>
+                <input type="number" id="prod-tpm" placeholder="TPM" required min="0">
+              </div>
+              <div class="form-group yp-twist-group" style="flex: 1 1 110px;">
+                <label for="prod-twist-trigger">Twist</label>
+                <div class="yp-custom-select" id="prod-twist-custom">
+                  <select id="prod-twist" required tabindex="-1" aria-hidden="true">
+                    <option value="S">S Twist</option>
+                    <option value="Z">Z Twist</option>
+                    <option value="S/Z">S/Z Twist</option>
+                    <option value="Z/S">Z/S Twist</option>
+                    <option value="S/S">S/S Twist</option>
+                    <option value="Z/Z">Z/Z Twist</option>
+                  </select>
+                  <button type="button" class="yp-select-trigger" id="prod-twist-trigger" aria-haspopup="listbox" aria-expanded="false">S Twist</button>
+                  <div class="dropdown-list" id="prod-twist-menu" role="listbox"></div>
+                </div>
+              </div>
+              <div class="form-group" style="flex: 1 1 90px;">
+                <label for="prod-rolls">Rolls</label>
+                <input type="number" id="prod-rolls" placeholder="Rolls" required min="1">
+              </div>
+              <div class="form-group" style="flex: 1.2 1 120px;">
+                <label for="prod-qty">Production Qty (Kg)</label>
+                <input type="number" step="any" id="prod-qty" placeholder="Qty (Kg)" required min="0.01">
+              </div>
+              <div class="form-actions" style="margin-left: auto;">
+                <button type="submit" class="btn btn-primary" id="prod-submit-btn">Save</button>
+                <button type="button" class="btn btn-secondary" style="display: none;" id="prod-repeat-btn" onclick="repeatProductionForm()">Repeat Entry</button>
+                <button type="button" class="btn btn-secondary" style="display: none;" id="prod-cancel-btn" onclick="resetProductionForm()">Cancel</button>
+              </div>
             </div>
           </div>
         </form>
@@ -2793,17 +2835,9 @@
     let prodNameOptions = [];
 
     function populateProductNameDropdown() {
-      const storageKeys = {
-        covering: 'costing-covering-products-v1',
-        tfo: 'costing-tfo-products-v1',
-        doubler: 'costing-doubler-products-v1'
-      };
-
-      const key = storageKeys[activeDivision];
-      const products = JSON.parse(localStorage.getItem(key) || '[]');
       const fpQualities = JSON.parse(localStorage.getItem('yarn-fp-qualities') || '[]');
 
-      // 1. Fetch FP Qualities for the active division formatted as Name [Composition]
+      // Fetch FP Qualities for the active division formatted as Name [Composition]
       const fpDivisionItems = fpQualities
         .filter(q => (q.division || '').toLowerCase() === activeDivision.toLowerCase())
         .map(q => {
@@ -2819,24 +2853,10 @@
         })
         .filter(Boolean);
 
-      // 2. Fetch Costing sheet qualities for the active division
-      const costingItems = products
-        .map(p => {
-          const name = (p && p.name) ? p.name.trim() : '';
-          if (!name) return null;
-          return {
-            label: name,
-            value: name,
-            rawName: name,
-            product: p
-          };
-        })
-        .filter(Boolean);
-
-      // Combined unique list with FP qualities prioritised
+      // Unique list of FP qualities
       const seen = new Set();
       prodNameOptions = [];
-      [...fpDivisionItems, ...costingItems].forEach(item => {
+      fpDivisionItems.forEach(item => {
         if (item && item.value && !seen.has(item.value.toLowerCase())) {
           seen.add(item.value.toLowerCase());
           prodNameOptions.push(item);
