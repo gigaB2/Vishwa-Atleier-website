@@ -27,10 +27,14 @@
         }
       }
 
-      // Restrict Settings page exclusively to Admins
+      // Check Settings permission for Non-Admin employees
       if (session && session.role !== 'admin') {
-        try { document.documentElement.style.display = 'none'; } catch(e) {}
-        window.location.replace('../index.html');
+        const perms = session.permissions || {};
+        if (perms.settings === 'none' || perms.settings === false) {
+          try { document.documentElement.style.display = 'none'; } catch(e) {}
+          window.location.replace('../index.html');
+          return;
+        }
       }
     })();
   </script>
@@ -1258,6 +1262,16 @@
                 </select>
               </div>
 
+              <!-- SETTINGS -->
+              <div class="vf-perm-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 4px 6px; border-radius: 6px; background: rgba(255,255,255,0.02); margin-top: 4px;">
+                <span style="font-size: 0.825rem; font-weight: 600; color: var(--fg); flex: 1;">⚙️ Settings</span>
+                <select class="vf-perm-select" data-key="settings" style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); font-weight: 600; cursor: pointer;">
+                  <option value="none">🚫 No Access</option>
+                  <option value="view">👁️ View Only</option>
+                  <option value="edit" selected>✏️ Edit Access</option>
+                </select>
+              </div>
+
               <!-- CALCULATORS & TOOLS -->
               <div style="grid-column: 1 / -1; font-size: 0.75rem; font-weight: 700; color: #f59e0b; border-bottom: 1px solid var(--border); padding-bottom: 2px; margin-top: 8px;">CALCULATORS &amp; TOOLS</div>
               <div class="vf-perm-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 4px 6px; border-radius: 6px; background: rgba(255,255,255,0.02);">
@@ -1794,6 +1808,16 @@
             <div class="vf-perm-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 4px 6px 4px 1.5rem; border-radius: 6px; background: rgba(255,255,255,0.02);">
               <span style="font-size: 0.8rem; font-weight: 500; color: var(--fg); flex: 1;">└─ Manage RM Suppliers</span>
               <select class="vf-perm-select" data-key="manage-rm-suppliers" style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); font-weight: 600; cursor: pointer;">
+                <option value="none">🚫 No Access</option>
+                <option value="view">👁️ View Only</option>
+                <option value="edit" selected>✏️ Edit Access</option>
+              </select>
+            </div>
+
+            <!-- SETTINGS -->
+            <div class="vf-perm-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 4px 6px; border-radius: 6px; background: rgba(255,255,255,0.02); margin-top: 4px;">
+              <span style="font-size: 0.825rem; font-weight: 600; color: var(--fg); flex: 1;">⚙️ Settings</span>
+              <select class="vf-perm-select" data-key="settings" style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); font-weight: 600; cursor: pointer;">
                 <option value="none">🚫 No Access</option>
                 <option value="view">👁️ View Only</option>
                 <option value="edit" selected>✏️ Edit Access</option>

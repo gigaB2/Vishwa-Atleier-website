@@ -32,12 +32,22 @@
       }
     }
 
-    // Strict Admin Guard for Settings page
+    // Permission Guard for Settings page
     if (pageName === 'settings.html' || pageName === 'settings' || rawPath.endsWith('/settings')) {
-      if (!session || session.role !== 'admin') {
+      if (!session) {
         try { document.documentElement.style.display = 'none'; } catch (e) { }
         const loginUrl = rootPath ? (rootPath + 'index.html') : 'index.html';
         window.location.replace(loginUrl);
+        return;
+      }
+      if (session.role !== 'admin') {
+        const perms = session.permissions || {};
+        if (perms.settings === 'none' || perms.settings === false) {
+          try { document.documentElement.style.display = 'none'; } catch (e) { }
+          const loginUrl = rootPath ? (rootPath + 'index.html') : 'index.html';
+          window.location.replace(loginUrl);
+          return;
+        }
       }
     }
   })();
@@ -1838,6 +1848,7 @@
 
     // Standalone Pages
     'design-library': 'design-library.html',
+    'settings': 'settings.html',
 
     // Manage Masters
     'manage': 'manage.html',
@@ -1864,6 +1875,9 @@
 
   // Structured rules matching each sidebar link to its specific permission key and optional parent folder
   const linkPermRules = [
+    // Settings
+    { pattern: /settings\.html/i, key: 'settings', parent: null },
+
     // RM Order Book
     { pattern: /order-book\.html\?view=orders/i, key: 'order-book-entry', parent: 'order-book' },
     { pattern: /order-book\.html\?view=analytics/i, key: 'order-book-analytics', parent: 'order-book' },
