@@ -104,4 +104,133 @@ test('Multi-User Concurrency & Merge Validation', async (t) => {
     assert.strictEqual(filtered.length, 2);
     assert.ok(!filtered.some(i => i.id === 'p_2'));
   });
+
+  await t.test('Yarn RM Stock Book: User A issues 20/1 BRT POLY box to Doubler, concurrent User B available snapshot does not overwrite', () => {
+    const userALocalIssued = [
+      {
+        id: 'LOT-20-1-POLY',
+        lotNumber: 'L-201',
+        challanNo: 'CH-889',
+        quality: '20/1 BRT POLY',
+        supplier: 'ABC Mills',
+        updated_at: new Date('2026-09-02T10:00:00Z').toISOString(),
+        boxes: [
+          {
+            id: 'B1',
+            boxNumber: 'B1',
+            weight: 25.5,
+            status: 'issued',
+            issueDate: '2026-09-02',
+            issuedTo: 'Doubler',
+            updated_at: new Date('2026-09-02T10:00:00Z').toISOString()
+          },
+          {
+            id: 'B2',
+            boxNumber: 'B2',
+            weight: 24.8,
+            status: 'available',
+            issueDate: null,
+            issuedTo: null
+          }
+        ]
+      }
+    ];
+
+    // User B was online and had old snapshot where B1 was available
+    const userBRemoteStale = [
+      {
+        id: 'LOT-20-1-POLY',
+        lotNumber: 'L-201',
+        challanNo: 'CH-889',
+        quality: '20/1 BRT POLY',
+        supplier: 'ABC Mills',
+        boxes: [
+          {
+            id: 'B1',
+            boxNumber: 'B1',
+            weight: 25.5,
+            status: 'available',
+            issueDate: null,
+            issuedTo: null
+          },
+          {
+            id: 'B2',
+            boxNumber: 'B2',
+            weight: 24.8,
+            status: 'available',
+            issueDate: null,
+            issuedTo: null
+          }
+        ]
+      }
+    ];
+
+    const testMerge = vSupabase.mergeDatasets('vishwa_yarn_rm_stock_data', userALocalIssued, userBRemoteStale);
+    assert.ok(Array.isArray(testMerge), 'Merged result is array');
+    assert.strictEqual(testMerge.length, 1);
+    
+    const lot = testMerge[0];
+    assert.strictEqual(lot.quality, '20/1 BRT POLY');
+    const boxB1 = lot.boxes.find(b => b.id === 'B1' || b.boxNumber === 'B1');
+    assert.ok(boxB1, 'Box B1 exists');
+    assert.strictEqual(boxB1.status, 'issued', 'Box B1 MUST remain issued');
+    assert.strictEqual(boxB1.issuedTo, 'Doubler', 'Box B1 MUST remain issued to Doubler');
+    assert.strictEqual(boxB1.issueDate, '2026-09-02');
+
+    // Also test reverse order (Remote issued, Local stale available)
+    const testMergeReverse = vSupabase.mergeDatasets('vishwa_yarn_rm_stock_data', userBRemoteStale, userALocalIssued);
+    const revLot = testMergeReverse[0];
+    const revBoxB1 = revLot.boxes.find(b => b.id === 'B1' || b.boxNumber === 'B1');
+    assert.strictEqual(revBoxB1.status, 'issued', 'Reverse merge also preserves issued status');
+    assert.strictEqual(revBoxB1.issuedTo, 'Doubler');
+  });
+
+  await t.test('Yarn RM Orders: Box issue statuses in batches are preserved across merges', () => {
+    const ordersLocal = [
+      {
+        id: 'ORD-101',
+        orderNumber: 'ORD-101',
+        supplier: 'ABC Mills',
+        quality: '20/1 BRT POLY',
+        batches: [
+          {
+            id: 'BATCH-1',
+            challanNumber: 'CH-889',
+            lotNumber: 'L-201',
+            boxes: [
+              { boxNumber: 'B1', weight: 25.5, status: 'issued', issueDate: '2026-09-02', issuedTo: 'Doubler' },
+              { boxNumber: 'B2', weight: 24.8, status: 'available' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const ordersRemoteStale = [
+      {
+        id: 'ORD-101',
+        orderNumber: 'ORD-101',
+        supplier: 'ABC Mills',
+        quality: '20/1 BRT POLY',
+        batches: [
+          {
+            id: 'BATCH-1',
+            challanNumber: 'CH-889',
+            lotNumber: 'L-201',
+            boxes: [
+              { boxNumber: 'B1', weight: 25.5, status: 'available' },
+              { boxNumber: 'B2', weight: 24.8, status: 'available' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const mergedOrders = vSupabase.mergeDatasets('yarn-rm-orders', ordersLocal, ordersRemoteStale);
+    assert.strictEqual(mergedOrders.length, 1);
+    const ord = mergedOrders[0];
+    const b1 = ord.batches[0].boxes.find(b => b.boxNumber === 'B1');
+    assert.strictEqual(b1.status, 'issued');
+    assert.strictEqual(b1.issuedTo, 'Doubler');
+  });
 });

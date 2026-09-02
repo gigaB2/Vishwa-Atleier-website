@@ -1507,9 +1507,10 @@
                              (batchLot ? existingBoxMap.get(`${batchLot}__${bId}`) : null) ||
                              (existingLot && Array.isArray(existingLot.boxes) ? existingLot.boxes.find(x => String(x.id || x.boxNumber).trim() === bId) : null);
 
-                const isIssued = oldB ? (oldB.status === 'issued') : (bx.status === 'issued');
+                const isIssued = (oldB && oldB.status === 'issued') || (bx.status === 'issued');
                 const issueDate = isIssued ? (oldB?.issueDate || bx.issueDate || null) : null;
                 const issuedTo = isIssued ? (oldB?.issuedTo || bx.issuedTo || null) : null;
+                const updatedAt = isIssued ? (oldB?.updated_at || bx.updated_at || null) : (oldB?.updated_at || null);
 
                 return {
                   id: bId,
@@ -1521,6 +1522,7 @@
                   status: isFullyGr ? 'gr' : (isIssued ? 'issued' : 'available'),
                   issueDate: isFullyGr ? null : (isIssued ? issueDate : null),
                   issuedTo: isFullyGr ? null : (isIssued ? issuedTo : null),
+                  updated_at: updatedAt,
                   grWeight: retWt,
                   grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
                   grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(1)} kg)` : null)
@@ -1542,7 +1544,8 @@
                 color: order.color || (existingLot?.color || ''),
                 rate: order.price || (existingLot?.rate || ''),
                 orderRef: order.orderNumber || order.id,
-                boxes: boxes
+                boxes: boxes,
+                updated_at: existingLot?.updated_at || batch.updated_at || order.updated_at || new Date().toISOString()
               };
 
               if (existingIdx >= 0) {

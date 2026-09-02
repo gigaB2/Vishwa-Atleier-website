@@ -271,6 +271,240 @@
     });
   }
 
+  // --- Dedicated High-Integrity Merge Engine for Yarn RM Stock Book ---
+  function mergeYarnStockDatasets(localArr, remoteArr) {
+    if (!Array.isArray(localArr)) return Array.isArray(remoteArr) ? filterDeletedEntities(remoteArr) : [];
+    if (!Array.isArray(remoteArr)) return Array.isArray(localArr) ? filterDeletedEntities(localArr) : [];
+
+    const cleanLocal = filterDeletedEntities(localArr);
+    const cleanRemote = filterDeletedEntities(remoteArr);
+
+    const getLotKeys = (lot) => {
+      if (!lot) return [];
+      const keys = [];
+      if (lot.id) keys.push(String(lot.id).trim());
+      if (lot.batchId) keys.push(String(lot.batchId).trim());
+      const lNum = String(lot.lotNumber || '').trim();
+      const lChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+      if (lNum && lChallan) keys.push(`${lNum}__${lChallan}`);
+      if (lNum) keys.push(`lot_${lNum}`);
+      return keys;
+    };
+
+    const mergedLotMap = new Map();
+
+    const mergeLotPair = (baseLot, incomingLot) => {
+      if (!baseLot) return { ...incomingLot };
+      if (!incomingLot) return { ...baseLot };
+
+      const baseTime = baseLot.updated_at ? new Date(baseLot.updated_at).getTime() : 0;
+      const incomingTime = incomingLot.updated_at ? new Date(incomingLot.updated_at).getTime() : 0;
+      const primaryLot = (incomingTime >= baseTime) ? incomingLot : baseLot;
+      const secondaryLot = (incomingTime >= baseTime) ? baseLot : incomingLot;
+
+      const boxMap = new Map();
+      const baseBoxes = Array.isArray(baseLot.boxes) ? baseLot.boxes : [];
+      const incomingBoxes = Array.isArray(incomingLot.boxes) ? incomingLot.boxes : [];
+
+      baseBoxes.forEach(b => {
+        if (!b) return;
+        const bId = String(b.id || b.boxNumber || '').trim();
+        if (bId) boxMap.set(bId, { ...b });
+      });
+
+      incomingBoxes.forEach(incBox => {
+        if (!incBox) return;
+        const bId = String(incBox.id || incBox.boxNumber || '').trim();
+        if (!bId) return;
+
+        if (!boxMap.has(bId)) {
+          boxMap.set(bId, { ...incBox });
+        } else {
+          const curBox = boxMap.get(bId);
+
+          // 1. Goods Return (GR) takes precedence
+          if (incBox.status === 'gr' || (incBox.grWeight > 0 && incBox.grWeight >= (incBox.grossWeight || incBox.weight || 1))) {
+            boxMap.set(bId, { ...curBox, ...incBox });
+            return;
+          }
+          if (curBox.status === 'gr' || (curBox.grWeight > 0 && curBox.grWeight >= (curBox.grossWeight || curBox.weight || 1))) {
+            return;
+          }
+
+          const curTime = curBox.updated_at ? new Date(curBox.updated_at).getTime() : 0;
+          const incTime = incBox.updated_at ? new Date(incBox.updated_at).getTime() : 0;
+
+          // If one is issued and the other is available:
+          if (curBox.status === 'issued' && incBox.status !== 'issued') {
+            if (incBox.unissued_at && new Date(incBox.unissued_at).getTime() > curTime) {
+              boxMap.set(bId, { ...curBox, ...incBox });
+            } else {
+              boxMap.set(bId, {
+                ...incBox,
+                status: 'issued',
+                issueDate: curBox.issueDate || incBox.issueDate || null,
+                issuedTo: curBox.issuedTo || incBox.issuedTo || null,
+                updated_at: curBox.updated_at || incBox.updated_at
+              });
+            }
+          } else if (incBox.status === 'issued' && curBox.status !== 'issued') {
+            if (curBox.unissued_at && new Date(curBox.unissued_at).getTime() > incTime) {
+              // Keep unissued
+            } else {
+              boxMap.set(bId, {
+                ...curBox,
+                ...incBox,
+                status: 'issued',
+                issueDate: incBox.issueDate || curBox.issueDate || null,
+                issuedTo: incBox.issuedTo || curBox.issuedTo || null,
+                updated_at: incBox.updated_at || curBox.updated_at
+              });
+            }
+          } else if (curBox.status === 'issued' && incBox.status === 'issued') {
+            const winner = (incTime >= curTime) ? incBox : curBox;
+            boxMap.set(bId, {
+              ...curBox,
+              ...incBox,
+              status: 'issued',
+              issueDate: winner.issueDate || curBox.issueDate || incBox.issueDate,
+              issuedTo: winner.issuedTo || curBox.issuedTo || incBox.issuedTo,
+              updated_at: winner.updated_at || incBox.updated_at || curBox.updated_at
+            });
+          } else {
+            boxMap.set(bId, { ...curBox, ...incBox });
+          }
+        }
+      });
+
+      return {
+        ...secondaryLot,
+        ...primaryLot,
+        boxes: Array.from(boxMap.values())
+      };
+    };
+
+    const lotIndexMap = new Map();
+    cleanLocal.forEach(lot => {
+      if (!lot) return;
+      const primaryKey = String(lot.id || lot.batchId || `${lot.lotNumber}__${lot.challanNo}`);
+      mergedLotMap.set(primaryKey, { ...lot });
+      getLotKeys(lot).forEach(k => lotIndexMap.set(k, primaryKey));
+    });
+
+    cleanRemote.forEach(remLot => {
+      if (!remLot) return;
+      let matchedPrimaryKey = null;
+      for (const k of getLotKeys(remLot)) {
+        if (lotIndexMap.has(k)) {
+          matchedPrimaryKey = lotIndexMap.get(k);
+          break;
+        }
+      }
+
+      if (matchedPrimaryKey && mergedLotMap.has(matchedPrimaryKey)) {
+        const existingLot = mergedLotMap.get(matchedPrimaryKey);
+        const mergedLot = mergeLotPair(existingLot, remLot);
+        mergedLotMap.set(matchedPrimaryKey, mergedLot);
+      } else {
+        const newPrimaryKey = String(remLot.id || remLot.batchId || `${remLot.lotNumber}__${remLot.challanNo}`);
+        mergedLotMap.set(newPrimaryKey, { ...remLot });
+        getLotKeys(remLot).forEach(k => lotIndexMap.set(k, newPrimaryKey));
+      }
+    });
+
+    return Array.from(mergedLotMap.values());
+  }
+
+  // --- Dedicated High-Integrity Merge Engine for Yarn RM Orders ---
+  function mergeYarnOrdersDatasets(localArr, remoteArr) {
+    if (!Array.isArray(localArr)) return Array.isArray(remoteArr) ? filterDeletedEntities(remoteArr) : [];
+    if (!Array.isArray(remoteArr)) return Array.isArray(localArr) ? filterDeletedEntities(localArr) : [];
+
+    const cleanLocal = filterDeletedEntities(localArr);
+    const cleanRemote = filterDeletedEntities(remoteArr);
+
+    const orderMap = new Map();
+    const getOrderKey = (ord) => ord ? String(ord.id || ord.orderNumber || '').trim() : '';
+
+    cleanLocal.forEach(ord => {
+      const k = getOrderKey(ord);
+      if (k) orderMap.set(k, { ...ord });
+    });
+
+    cleanRemote.forEach(remOrd => {
+      const k = getOrderKey(remOrd);
+      if (!k) return;
+
+      if (!orderMap.has(k)) {
+        orderMap.set(k, { ...remOrd });
+      } else {
+        const locOrd = orderMap.get(k);
+        const locTime = locOrd.updated_at ? new Date(locOrd.updated_at).getTime() : 0;
+        const remTime = remOrd.updated_at ? new Date(remOrd.updated_at).getTime() : 0;
+        const baseOrd = (remTime >= locTime) ? remOrd : locOrd;
+
+        const batchMap = new Map();
+        const getBatchKey = (b) => b ? String(b.id || `${b.lotNumber}__${b.challanNumber}`).trim() : '';
+
+        (locOrd.batches || []).forEach(b => {
+          const bk = getBatchKey(b);
+          if (bk) batchMap.set(bk, { ...b });
+        });
+
+        (remOrd.batches || []).forEach(remB => {
+          const bk = getBatchKey(remB);
+          if (!bk) return;
+          if (!batchMap.has(bk)) {
+            batchMap.set(bk, { ...remB });
+          } else {
+            const locB = batchMap.get(bk);
+            const bBoxMap = new Map();
+            (locB.boxes || []).forEach(bx => {
+              const bxId = String(bx.boxNumber || bx.id || '').trim();
+              if (bxId) bBoxMap.set(bxId, { ...bx });
+            });
+
+            (remB.boxes || []).forEach(remBx => {
+              const bxId = String(remBx.boxNumber || remBx.id || '').trim();
+              if (!bxId) return;
+              if (!bBoxMap.has(bxId)) {
+                bBoxMap.set(bxId, { ...remBx });
+              } else {
+                const locBx = bBoxMap.get(bxId);
+                const isIssued = locBx.status === 'issued' || remBx.status === 'issued';
+                const issueDate = (remBx.status === 'issued' ? remBx.issueDate : null) || (locBx.status === 'issued' ? locBx.issueDate : null) || remBx.issueDate || locBx.issueDate || null;
+                const issuedTo = (remBx.status === 'issued' ? remBx.issuedTo : null) || (locBx.status === 'issued' ? locBx.issuedTo : null) || remBx.issuedTo || locBx.issuedTo || null;
+                const isGr = (Number(locBx.returnedWeight) > 0) || (Number(remBx.returnedWeight) > 0);
+
+                bBoxMap.set(bxId, {
+                  ...locBx,
+                  ...remBx,
+                  status: isGr && (Number(remBx.returnedWeight) >= (Number(remBx.weight) || 1)) ? 'gr' : (isIssued ? 'issued' : (remBx.status || locBx.status || 'available')),
+                  issueDate: isIssued ? issueDate : null,
+                  issuedTo: isIssued ? issuedTo : null
+                });
+              }
+            });
+
+            batchMap.set(bk, {
+              ...locB,
+              ...remB,
+              boxes: Array.from(bBoxMap.values())
+            });
+          }
+        });
+
+        orderMap.set(k, {
+          ...locOrd,
+          ...baseOrd,
+          batches: Array.from(batchMap.values())
+        });
+      }
+    });
+
+    return Array.from(orderMap.values());
+  }
+
   function mergeDatasets(key, localVal, remoteVal) {
     if (localVal === undefined || localVal === null) {
       if (typeof remoteVal === 'string' && (remoteVal.startsWith('[') || remoteVal.startsWith('{'))) {
@@ -307,18 +541,12 @@
 
     // Special Case: Yarn RM Stock Book Array Merge (Sync Box Statuses Across Devices)
     if (key === 'vishwa_yarn_rm_stock_data' && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
-      const cleanLocal = filterDeletedEntities(parsedLocal);
-      const cleanRemote = filterDeletedEntities(parsedRemote);
-      const lastWrite = lastLocalWrites[key] || 0;
-      return (Date.now() - lastWrite < 3000) ? cleanLocal : cleanRemote;
+      return mergeYarnStockDatasets(parsedLocal, parsedRemote);
     }
 
     // Special Case: Yarn RM Orders Array Merge (Sync Box Statuses inside batches)
     if (key === 'yarn-rm-orders' && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
-      const cleanLocal = filterDeletedEntities(parsedLocal);
-      const cleanRemote = filterDeletedEntities(parsedRemote);
-      const lastWrite = lastLocalWrites[key] || 0;
-      return (Date.now() - lastWrite < 3000) ? cleanLocal : cleanRemote;
+      return mergeYarnOrdersDatasets(parsedLocal, parsedRemote);
     }
 
     // Case 1: Both are Arrays -> Intelligent Item-Level Union Merge for multi-user safety
@@ -3472,7 +3700,14 @@
                   boxes: boxesByLot.get(l.id) || []
                 }));
 
-                const yStr = JSON.stringify(reconstructedStock);
+                let localStock = [];
+                try {
+                  const locRaw = cache[yKey] || nativeLocalStorage.getItem(yKey);
+                  if (locRaw) localStock = JSON.parse(locRaw);
+                } catch(e) {}
+                const finalStock = mergeYarnStockDatasets(localStock, reconstructedStock);
+
+                const yStr = JSON.stringify(finalStock);
                 const lastYarnWrite = lastLocalWrites[yKey] || 0;
                 if (Date.now() - lastYarnWrite >= 3000) {
                   cache[yKey] = yStr;
@@ -3552,7 +3787,14 @@
                   };
                 });
 
-                const oStr = JSON.stringify(reconstructedOrders);
+                let localOrders = [];
+                try {
+                  const locOrdRaw = cache[oKey] || nativeLocalStorage.getItem(oKey);
+                  if (locOrdRaw) localOrders = JSON.parse(locOrdRaw);
+                } catch(e) {}
+                const finalOrders = mergeYarnOrdersDatasets(localOrders, reconstructedOrders);
+
+                const oStr = JSON.stringify(finalOrders);
                 const lastOrderWrite = lastLocalWrites[oKey] || 0;
                 if (Date.now() - lastOrderWrite >= 3000) {
                   cache[oKey] = oStr;
@@ -4892,6 +5134,7 @@
         window.__vf_broadcastActiveFormSnapshot(container);
       }
     },
+    mergeDatasets: (key, localVal, remoteVal) => mergeDatasets(key, localVal, remoteVal),
     getAvatarColors: () => AVATAR_COLORS
   };
 
