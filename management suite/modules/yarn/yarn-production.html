@@ -2133,8 +2133,74 @@
       }
     }
 
+    // Undo / Redo History Management
+    let _undoStack = [];
+    let _redoStack = [];
+    const MAX_HISTORY = 40;
+    let _isHistoryAction = false;
+
+    function getFullDataStoreSnapshot() {
+      return JSON.parse(JSON.stringify(dataStore));
+    }
+
+    function recordStateSnapshot() {
+      if (_isHistoryAction) return;
+      _undoStack.push(getFullDataStoreSnapshot());
+      if (_undoStack.length > MAX_HISTORY) {
+        _undoStack.shift();
+      }
+      _redoStack = [];
+    }
+
+    window.triggerUndo = function() {
+      if (_undoStack.length === 0) {
+        showToast('Nothing to undo', 'info');
+        return;
+      }
+      _isHistoryAction = true;
+      try {
+        const currentSnapshot = getFullDataStoreSnapshot();
+        const previousSnapshot = _undoStack.pop();
+        _redoStack.push(currentSnapshot);
+
+        dataStore = previousSnapshot;
+        ['covering', 'tfo', 'doubler'].forEach(div => {
+          localStorage.setItem(`yarn_${div}_production_logs`, JSON.stringify(dataStore[div]?.production || []));
+          localStorage.setItem(`yarn_${div}_sales_logs`, JSON.stringify(dataStore[div]?.sales || []));
+        });
+        refreshAllViews();
+        showToast('Action undone (Ctrl+Z)', 'info');
+      } finally {
+        _isHistoryAction = false;
+      }
+    };
+
+    window.triggerRedo = function() {
+      if (_redoStack.length === 0) {
+        showToast('Nothing to redo', 'info');
+        return;
+      }
+      _isHistoryAction = true;
+      try {
+        const currentSnapshot = getFullDataStoreSnapshot();
+        const nextSnapshot = _redoStack.pop();
+        _undoStack.push(currentSnapshot);
+
+        dataStore = nextSnapshot;
+        ['covering', 'tfo', 'doubler'].forEach(div => {
+          localStorage.setItem(`yarn_${div}_production_logs`, JSON.stringify(dataStore[div]?.production || []));
+          localStorage.setItem(`yarn_${div}_sales_logs`, JSON.stringify(dataStore[div]?.sales || []));
+        });
+        refreshAllViews();
+        showToast('Action redone (Ctrl+Y)', 'info');
+      } finally {
+        _isHistoryAction = false;
+      }
+    };
+
     // Save logs to localStorage for current active division
     function saveLogs(target = 'both') {
+      recordStateSnapshot();
       if (target === 'production' || target === 'both') {
         let prod = dataStore[activeDivision].production;
         if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
@@ -5392,10 +5458,30 @@
     window.addEventListener('scroll', closeAllActionMenus, true);
     window.addEventListener('resize', closeAllActionMenus);
 
-    // Close action dropdowns on Escape key
+    // Keyboard shortcuts: Escape to close menus, Ctrl+Z / Ctrl+Y for Undo/Redo
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
         closeAllActionMenus();
+      }
+
+      const isZ = e.key && e.key.toLowerCase() === 'z';
+      const isY = e.key && e.key.toLowerCase() === 'y';
+      if ((e.ctrlKey || e.metaKey) && (isZ || isY)) {
+        // If user is typing in an active text input or textarea, let default native text undo happen
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        if (isZ) {
+          if (e.shiftKey) {
+            if (typeof window.triggerRedo === 'function') window.triggerRedo();
+          } else {
+            if (typeof window.triggerUndo === 'function') window.triggerUndo();
+          }
+        } else if (isY) {
+          if (typeof window.triggerRedo === 'function') window.triggerRedo();
+        }
       }
     });
 
