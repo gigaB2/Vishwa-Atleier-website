@@ -3455,17 +3455,48 @@
       const companyGst = company.sellerGstin || "24AAAFV1234A1Z5";
       const customerAddress = sale.customerAddress || "Industrial Area, Surat, Gujarat, India";
 
-      const itemsHtml = items.map(item => {
+      // Aggregate invoice items by composition, twist, color, rate
+      const aggregatedMap = new Map();
+      items.forEach(item => {
+        const comp = item.composition || '-';
+        const twist = item.twist || '-';
+        const color = item.color || '-';
+        const rate = parseFloat(item.rate) || 0;
+        const rolls = parseInt(item.rollsQty) || 0;
+        const weight = parseFloat(item.saleQty) || 0;
+        const amt = parseFloat(item.amount) || (weight * rate);
+
+        const groupKey = `${comp}___${twist}___${color}___${rate.toFixed(4)}`;
+        if (!aggregatedMap.has(groupKey)) {
+          aggregatedMap.set(groupKey, {
+            composition: comp,
+            twist: twist,
+            color: color,
+            totalRolls: 0,
+            totalWeight: 0,
+            rate: rate,
+            totalAmount: 0
+          });
+        }
+
+        const group = aggregatedMap.get(groupKey);
+        group.totalRolls += rolls;
+        group.totalWeight += weight;
+        group.totalAmount += amt;
+      });
+
+      const aggregatedItems = Array.from(aggregatedMap.values());
+
+      const itemsHtml = aggregatedItems.map(item => {
         return `
           <tr>
-            <td><strong>${item.boriNo}</strong></td>
-            <td>${item.composition}</td>
+            <td><strong>${item.composition}</strong></td>
             <td>${item.twist || '-'}</td>
             <td>${item.color || '-'}</td>
-            <td style="text-align: center;">${item.rollsQty || 0}</td>
-            <td style="text-align: right;">${(item.saleQty || 0).toFixed(2)} Kg</td>
+            <td style="text-align: center;">${item.totalRolls || 0}</td>
+            <td style="text-align: right;">${(item.totalWeight || 0).toFixed(2)} Kg</td>
             <td style="text-align: right;">₹${(item.rate || 0).toFixed(2)}</td>
-            <td style="text-align: right; font-weight: 600;">₹${(item.amount || 0).toFixed(2)}</td>
+            <td style="text-align: right; font-weight: 600;">₹${(item.totalAmount || 0).toFixed(2)}</td>
           </tr>
         `;
       }).join('');
@@ -3736,14 +3767,13 @@
             <table class="items-table">
               <thead>
                 <tr>
-                  <th style="width: 14%;">Bori/Box No</th>
-                  <th style="width: 24%;">Composition</th>
+                  <th style="width: 30%;">Composition</th>
                   <th style="width: 12%;">Twist</th>
                   <th style="width: 14%;">Color</th>
-                  <th style="width: 8%; text-align: center;">Rolls</th>
+                  <th style="width: 10%; text-align: center;">Rolls</th>
                   <th style="width: 14%; text-align: right;">Weight</th>
-                  <th style="width: 14%; text-align: right;">Rate/Kg</th>
-                  <th style="width: 14%; text-align: right;">Amount</th>
+                  <th style="width: 10%; text-align: right;">Rate/Kg</th>
+                  <th style="width: 10%; text-align: right;">Amount</th>
                 </tr>
               </thead>
               <tbody>
