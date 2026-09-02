@@ -682,6 +682,116 @@
       background: rgba(139, 92, 246, 0.02);
     }
 
+    /* Excel-Style Cell Range Selection Highlight */
+    td.excel-selected {
+      background-color: rgba(139, 92, 246, 0.22) !important;
+      box-shadow: inset 0 0 0 2px var(--accent) !important;
+      transition: background-color 0.1s ease;
+      position: relative;
+    }
+
+    body.dark-mode td.excel-selected, .dark-mode td.excel-selected {
+      background-color: rgba(139, 92, 246, 0.28) !important;
+      box-shadow: inset 0 0 0 2px #a78bfa !important;
+    }
+
+    /* Floating Bottom Right Summary Box Widget */
+    .scroll-sum-box {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(17, 24, 39, 0.94);
+      color: #ffffff;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 16px;
+      padding: 0.85rem 1.15rem;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4), 0 0 20px rgba(139, 92, 246, 0.2);
+      z-index: 100010;
+      font-family: var(--font-body);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: excelWidgetSlideUp 0.3s ease;
+      max-width: 520px;
+      min-width: 280px;
+    }
+
+    body.dark-mode .scroll-sum-box, .dark-mode .scroll-sum-box {
+      background: rgba(10, 10, 15, 0.95);
+      border-color: rgba(139, 92, 246, 0.35);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(124, 58, 237, 0.25);
+    }
+
+    @keyframes excelWidgetSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .scroll-sum-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 0.5rem;
+      gap: 1.5rem;
+    }
+
+    .scroll-sum-close {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 0.1rem 0.4rem;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .scroll-sum-close:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .scroll-sum-body {
+      display: flex;
+      gap: 1.2rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .scroll-sum-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+      color: rgba(255, 255, 255, 0.55);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .stat-val {
+      font-size: 1rem;
+      font-weight: 800;
+      font-family: var(--font-display);
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+
     .dropdown-list {
       position: absolute;
       top: 100%;
@@ -6960,10 +7070,502 @@
       }
     }
 
+    // --- Excel-Style Click and Drag Cell Selection & Dynamic Calculation Engine ---
+    let selectedCells = new Set();
+    let currentDragCells = new Set();
+    let isCellSelecting = false;
+    let startCell = null;
+    let anchorCell = null;
+    let isWidgetDismissed = false;
+
+    function clearExcelSelection() {
+      document.querySelectorAll('td.excel-selected').forEach(cell => cell.classList.remove('excel-selected'));
+      selectedCells.clear();
+      currentDragCells.clear();
+    }
+
+    function updateVisualSelection() {
+      document.querySelectorAll('td.excel-selected').forEach(cell => cell.classList.remove('excel-selected'));
+      selectedCells.forEach(cell => cell.classList.add('excel-selected'));
+      currentDragCells.forEach(cell => cell.classList.add('excel-selected'));
+
+      const totalSize = selectedCells.size + currentDragCells.size;
+      if (totalSize > 0) {
+        calculateExcelSum();
+      } else {
+        updateScrollSumWidget();
+      }
+    }
+
+    function getRangeCells(cellA, cellB) {
+      const table = cellA.closest('table');
+      const range = [];
+      if (!table) return range;
+
+      const rows = Array.from(table.querySelectorAll('tr'));
+      const rowA = cellA.closest('tr');
+      const rowB = cellB.closest('tr');
+
+      const rowIndexA = rows.indexOf(rowA);
+      const rowIndexB = rows.indexOf(rowB);
+
+      if (rowIndexA === -1 || rowIndexB === -1) return range;
+
+      const minRow = Math.min(rowIndexA, rowIndexB);
+      const maxRow = Math.max(rowIndexA, rowIndexB);
+
+      const colIndexA = cellA.cellIndex;
+      let colIndexB = cellB.cellIndex;
+
+      if (rowB.classList.contains('summary-row') || rowB.classList.contains('total-row')) {
+        colIndexB = colIndexA;
+      }
+
+      const minCol = Math.min(colIndexA, colIndexB);
+      const maxCol = Math.max(colIndexA, colIndexB);
+
+      for (let r = minRow; r <= maxRow; r++) {
+        const row = rows[r];
+        if (!row || row.style.display === 'none' || row.classList.contains('summary-row') || row.classList.contains('total-row')) continue;
+        const cells = Array.from(row.children);
+        for (let c = minCol; c <= maxCol; c++) {
+          const cell = cells[c];
+          if (cell && cell.tagName === 'TD') {
+            range.push(cell);
+          }
+        }
+      }
+      return range;
+    }
+
+    function selectCellRange(cellA, cellB) {
+      currentDragCells.clear();
+      const range = getRangeCells(cellA, cellB);
+      range.forEach(cell => currentDragCells.add(cell));
+      updateVisualSelection();
+    }
+
+    function dismissScrollWidget() {
+      isWidgetDismissed = true;
+      clearExcelSelection();
+      const widget = document.getElementById('scroll-sum-widget');
+      if (widget) widget.style.display = 'none';
+    }
+
+    function updateScrollSumWidget() {
+      const widget = document.getElementById('scroll-sum-widget');
+      if (widget && selectedCells.size === 0 && currentDragCells.size === 0) {
+        widget.style.display = 'none';
+      }
+    }
+
+    function calculateExcelSum() {
+      const widget = document.getElementById('scroll-sum-widget');
+      if (!widget) return;
+
+      const allCells = new Set([...selectedCells, ...currentDragCells]);
+      if (allCells.size === 0) {
+        updateScrollSumWidget();
+        return;
+      }
+
+      const colMap = {};
+
+      allCells.forEach(cell => {
+        const table = cell.closest('table');
+        if (!table) return;
+
+        const colIdx = cell.cellIndex;
+        // Don't calculate checkbox selection columns or action button columns
+        if (cell.querySelector('input[type="checkbox"]') || cell.querySelector('.action-btn') || cell.querySelector('.btn') || cell.querySelector('.floating-batch-actions')) return;
+
+        const txt = cell.innerText.trim();
+        if (!txt || txt === '-' || txt === '—') return;
+
+        let headerText = 'Column ' + (colIdx + 1);
+        const thead = table.querySelector('thead');
+        if (thead) {
+          const headerRows = Array.from(thead.querySelectorAll('tr'));
+          const lastHeaderRow = headerRows[headerRows.length - 1];
+          if (lastHeaderRow && lastHeaderRow.children[colIdx]) {
+            headerText = lastHeaderRow.children[colIdx].innerText.replace(/[\r\n]+/g, ' ').replace(/[▲▼↕]/g, '').trim();
+          }
+        }
+
+        if (!colMap[colIdx]) {
+          colMap[colIdx] = {
+            header: headerText || ('Column ' + (colIdx + 1)),
+            cellCount: 0,
+            numbers: [],
+            isCurrency: false,
+            isKg: false,
+            isCops: false,
+            isBoxes: false
+          };
+        }
+
+        colMap[colIdx].cellCount++;
+
+        if (txt.includes('₹')) colMap[colIdx].isCurrency = true;
+        if (/\bkg\b/i.test(txt) || /weight/i.test(headerText) || /wt/i.test(headerText) || /gross/i.test(headerText) || /net/i.test(headerText) || /tare/i.test(headerText)) colMap[colIdx].isKg = true;
+        if (/cops/i.test(txt) || /cops/i.test(headerText)) colMap[colIdx].isCops = true;
+        if (/bori/i.test(txt) || /box/i.test(txt) || /bori/i.test(headerText) || /box/i.test(headerText)) colMap[colIdx].isBoxes = true;
+
+        // Extract currency
+        const salMatches = txt.match(/₹\s*([\d,]+\.?\d*)/g);
+        if (salMatches) {
+          salMatches.forEach(m => {
+            const val = parseFloat(m.replace(/[₹\s,]/g, ''));
+            if (!isNaN(val)) colMap[colIdx].numbers.push(val);
+          });
+          return;
+        }
+
+        // Extract kg
+        const kgMatch = txt.match(/^([\d,]+\.?\d*)\s*kg$/i);
+        if (kgMatch) {
+          const val = parseFloat(kgMatch[1].replace(/,/g, ''));
+          if (!isNaN(val)) colMap[colIdx].numbers.push(val);
+          return;
+        }
+
+        // Extract general numbers
+        const rawNums = txt.match(/-?[\d,]+\.?\d*/g);
+        if (rawNums) {
+          rawNums.forEach(n => {
+            // Ignore pure dates (e.g. 2026-09-02 or 02-09-2026)
+            if (/^\d{4}-\d{2}-\d{2}$/.test(txt) || /^\d{2}\/\d{2}\/\d{4}$/.test(txt)) return;
+            const val = parseFloat(n.replace(/,/g, ''));
+            if (!isNaN(val)) colMap[colIdx].numbers.push(val);
+          });
+        }
+      });
+
+      const colIndices = Object.keys(colMap);
+      if (colIndices.length === 0) {
+        updateScrollSumWidget();
+        return;
+      }
+
+      // Single column selection
+      if (colIndices.length === 1) {
+        const colData = colMap[colIndices[0]];
+        const numbers = colData.numbers;
+        const cellCount = colData.cellCount;
+
+        if (numbers.length > 0) {
+          const numCount = numbers.length;
+          const sum = numbers.reduce((acc, c) => acc + c, 0);
+          const avg = sum / numCount;
+          const min = Math.min(...numbers);
+          const max = Math.max(...numbers);
+
+          let prefix = colData.isCurrency ? '₹ ' : '';
+          let suffix = colData.isKg ? ' Kg' : (colData.isCops ? ' Cops' : (colData.isBoxes ? ' Boris' : ''));
+          const decimals = (colData.isCurrency || colData.isKg) ? 2 : (Number.isInteger(sum) ? 0 : 2);
+
+          widget.style.display = 'block';
+          const titleEl = document.getElementById('widget-box-title');
+          if (titleEl) titleEl.innerHTML = `📊 <strong>${colData.header}</strong> (${cellCount} ${cellCount === 1 ? 'cell' : 'cells'})`;
+
+          const mWrap = document.getElementById('stat-meters-wrap');
+          const hWrap = document.getElementById('stat-hours-wrap');
+          const cWrap = document.getElementById('stat-count-wrap');
+          const sWrap = document.getElementById('stat-salary-wrap');
+
+          if (mWrap) mWrap.style.display = 'flex';
+          if (hWrap) hWrap.style.display = numCount > 1 ? 'flex' : 'none';
+          if (cWrap) cWrap.style.display = 'flex';
+          if (sWrap) sWrap.style.display = numCount > 1 ? 'flex' : 'none';
+
+          const lbl1 = document.getElementById('stat-label-1');
+          if (lbl1) lbl1.innerText = 'TOTAL SUM';
+          const val1 = document.getElementById('scroll-sum-meters');
+          if (val1) {
+            val1.innerText = `${prefix}${sum.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: 2 })}${suffix}`;
+            val1.style.color = '#10b981';
+          }
+
+          const lbl2 = document.getElementById('stat-label-2');
+          if (lbl2) lbl2.innerText = 'AVERAGE';
+          const val2 = document.getElementById('scroll-sum-hours');
+          if (val2) {
+            val2.innerText = `${prefix}${avg.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: 2 })}${suffix}`;
+            val2.style.color = '#60a5fa';
+          }
+
+          const val3 = document.getElementById('scroll-sum-count');
+          if (val3) {
+            val3.innerText = `${cellCount} (${numCount} nums)`;
+          }
+
+          const val4 = document.getElementById('scroll-sum-salary');
+          if (val4) {
+            val4.innerText = `${min.toFixed(decimals)} / ${max.toFixed(decimals)}${suffix}`;
+            val4.style.color = '#a78bfa';
+          }
+          return;
+        } else {
+          // Only text cells in single column
+          widget.style.display = 'block';
+          const titleEl = document.getElementById('widget-box-title');
+          if (titleEl) titleEl.innerHTML = `📊 <strong>${colData.header}</strong> (${cellCount} ${cellCount === 1 ? 'cell' : 'cells'})`;
+
+          const mWrap = document.getElementById('stat-meters-wrap');
+          const hWrap = document.getElementById('stat-hours-wrap');
+          const cWrap = document.getElementById('stat-count-wrap');
+          const sWrap = document.getElementById('stat-salary-wrap');
+
+          if (mWrap) mWrap.style.display = 'none';
+          if (hWrap) hWrap.style.display = 'none';
+          if (sWrap) sWrap.style.display = 'none';
+          if (cWrap) cWrap.style.display = 'flex';
+
+          const val3 = document.getElementById('scroll-sum-count');
+          if (val3) val3.innerText = `${cellCount} cells`;
+          return;
+        }
+      }
+
+      // Multi column selection
+      let allNumbers = [];
+      let totalCellCount = 0;
+      let isCurrency = false, isKg = false, isCops = false, isBoxes = false;
+
+      colIndices.forEach(idx => {
+        const col = colMap[idx];
+        totalCellCount += col.cellCount;
+        allNumbers = allNumbers.concat(col.numbers);
+        if (col.isCurrency) isCurrency = true;
+        if (col.isKg) isKg = true;
+        if (col.isCops) isCops = true;
+        if (col.isBoxes) isBoxes = true;
+      });
+
+      if (allNumbers.length > 0) {
+        const numCount = allNumbers.length;
+        const sum = allNumbers.reduce((acc, c) => acc + c, 0);
+        const avg = sum / numCount;
+        const min = Math.min(...allNumbers);
+        const max = Math.max(...allNumbers);
+
+        let prefix = isCurrency ? '₹ ' : '';
+        let suffix = (isKg && !isCops && !isBoxes) ? ' Kg' : ((isCops && !isKg && !isBoxes) ? ' Cops' : ((isBoxes && !isKg && !isCops) ? ' Boris' : ''));
+        const decimals = (isCurrency || isKg) ? 2 : (Number.isInteger(sum) ? 0 : 2);
+
+        widget.style.display = 'block';
+        const titleEl = document.getElementById('widget-box-title');
+        if (titleEl) titleEl.innerHTML = `📊 <strong>Selected ${colIndices.length} Columns</strong> (${totalCellCount} cells)`;
+
+        const mWrap = document.getElementById('stat-meters-wrap');
+        const hWrap = document.getElementById('stat-hours-wrap');
+        const cWrap = document.getElementById('stat-count-wrap');
+        const sWrap = document.getElementById('stat-salary-wrap');
+
+        if (mWrap) mWrap.style.display = 'flex';
+        if (hWrap) hWrap.style.display = numCount > 1 ? 'flex' : 'none';
+        if (cWrap) cWrap.style.display = 'flex';
+        if (sWrap) sWrap.style.display = numCount > 1 ? 'flex' : 'none';
+
+        const lbl1 = document.getElementById('stat-label-1');
+        if (lbl1) lbl1.innerText = 'TOTAL SUM';
+        const val1 = document.getElementById('scroll-sum-meters');
+        if (val1) {
+          val1.innerText = `${prefix}${sum.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: 2 })}${suffix}`;
+          val1.style.color = '#10b981';
+        }
+
+        const lbl2 = document.getElementById('stat-label-2');
+        if (lbl2) lbl2.innerText = 'AVERAGE';
+        const val2 = document.getElementById('scroll-sum-hours');
+        if (val2) {
+          val2.innerText = `${prefix}${avg.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: 2 })}${suffix}`;
+          val2.style.color = '#60a5fa';
+        }
+
+        const val3 = document.getElementById('scroll-sum-count');
+        if (val3) {
+          val3.innerText = `${totalCellCount} (${numCount} nums)`;
+        }
+
+        const val4 = document.getElementById('scroll-sum-salary');
+        if (val4) {
+          val4.innerText = `${min.toFixed(decimals)} / ${max.toFixed(decimals)}${suffix}`;
+          val4.style.color = '#a78bfa';
+        }
+      } else {
+        // Multi-column text cells
+        widget.style.display = 'block';
+        const titleEl = document.getElementById('widget-box-title');
+        if (titleEl) titleEl.innerHTML = `📊 <strong>Selected ${colIndices.length} Columns</strong> (${totalCellCount} cells)`;
+
+        const mWrap = document.getElementById('stat-meters-wrap');
+        const hWrap = document.getElementById('stat-hours-wrap');
+        const cWrap = document.getElementById('stat-count-wrap');
+        const sWrap = document.getElementById('stat-salary-wrap');
+
+        if (mWrap) mWrap.style.display = 'none';
+        if (hWrap) hWrap.style.display = 'none';
+        if (sWrap) sWrap.style.display = 'none';
+        if (cWrap) cWrap.style.display = 'flex';
+
+        const val3 = document.getElementById('scroll-sum-count');
+        if (val3) val3.innerText = `${totalCellCount} cells`;
+      }
+    }
+
+    function initExcelCellSelection() {
+      document.addEventListener('mousedown', (e) => {
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth <= 1024) return;
+        if (e.target.closest('#scroll-sum-widget') || e.target.closest('#floating-batch-bar')) return;
+
+        const td = e.target.closest('td');
+        if (!td || e.target.closest('button') || e.target.closest('input') || e.target.closest('a') || e.target.closest('select') || e.target.closest('.yp-custom-select') || e.target.closest('.action-btn')) {
+          clearExcelSelection();
+          updateVisualSelection();
+          return;
+        }
+
+        // Skip if clicking an element with custom click handler, excluding table wrappers
+        const closestOnclick = e.target.closest('[onclick]');
+        if (closestOnclick) {
+          const isWrapper = closestOnclick.classList.contains('modal') || closestOnclick.classList.contains('modal-overlay');
+          if (!isWrapper) {
+            clearExcelSelection();
+            updateVisualSelection();
+            return;
+          }
+        }
+
+        // Skip layout/expanded detail cells
+        if (td.hasAttribute('colspan')) {
+          clearExcelSelection();
+          updateVisualSelection();
+          return;
+        }
+
+        // Skip header and summary rows
+        const tr = td.closest('tr');
+        if (tr && (tr.classList.contains('summary-row') || tr.classList.contains('total-row'))) {
+          clearExcelSelection();
+          updateVisualSelection();
+          return;
+        }
+
+        if (window.getSelection) {
+          window.getSelection().removeAllRanges();
+        }
+
+        isCellSelecting = true;
+        isWidgetDismissed = false;
+        startCell = td;
+        currentDragCells.clear();
+
+        if (e.shiftKey && anchorCell && anchorCell.closest('table') === td.closest('table')) {
+          // Shift + Click: select bounding box from anchor to clicked cell
+          clearExcelSelection();
+          const range = getRangeCells(anchorCell, td);
+          range.forEach(cell => currentDragCells.add(cell));
+        } else if (e.ctrlKey || e.metaKey) {
+          // Ctrl + Click start: do not clear previous selection, set new anchor
+          anchorCell = td;
+          currentDragCells.add(td);
+        } else {
+          // Normal click: clear previous selection, set new anchor
+          clearExcelSelection();
+          anchorCell = td;
+          currentDragCells.add(td);
+        }
+
+        updateVisualSelection();
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mouseover', (e) => {
+        if (!isCellSelecting || !startCell) return;
+        const td = e.target.closest('td');
+        if (td && td.closest('table') === startCell.closest('table')) {
+          if (td.hasAttribute('colspan')) return;
+          const tr = td.closest('tr');
+          if (tr && (tr.classList.contains('summary-row') || tr.classList.contains('total-row'))) return;
+
+          if (window.getSelection) {
+            window.getSelection().removeAllRanges();
+          }
+
+          if (e.shiftKey && anchorCell) {
+            selectCellRange(anchorCell, td);
+          } else {
+            selectCellRange(startCell, td);
+          }
+        }
+
+        // Auto-scroll window when dragging near viewport top/bottom edges
+        const threshold = 60;
+        const speed = 12;
+        if (e.clientY > window.innerHeight - threshold) {
+          window.scrollBy(0, speed);
+        } else if (e.clientY < threshold) {
+          window.scrollBy(0, -speed);
+        }
+      });
+
+      document.addEventListener('mouseup', (e) => {
+        if (isCellSelecting) {
+          isCellSelecting = false;
+          document.body.style.userSelect = '';
+
+          const td = e.target.closest('td');
+
+          // If it is a simple click (no dragging, same cell) and Ctrl is active, toggle selection
+          if (e && (e.ctrlKey || e.metaKey) && startCell && (!td || td === startCell)) {
+            if (selectedCells.has(startCell)) {
+              selectedCells.delete(startCell);
+            } else {
+              selectedCells.add(startCell);
+            }
+            currentDragCells.clear();
+          } else {
+            // Commit currentDragCells to selectedCells
+            currentDragCells.forEach(cell => selectedCells.add(cell));
+            currentDragCells.clear();
+          }
+
+          updateVisualSelection();
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          clearExcelSelection();
+          document.body.style.userSelect = '';
+          const widget = document.getElementById('scroll-sum-widget');
+          if (widget) widget.style.display = 'none';
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+          if (selectedCells.size > 0) {
+            const firstCell = [...selectedCells][0];
+            const table = firstCell.closest('table');
+            const rows = [];
+            if (table) {
+              Array.from(table.querySelectorAll('tr')).forEach(tr => {
+                const cells = Array.from(tr.querySelectorAll('td')).filter(td => selectedCells.has(td));
+                if (cells.length > 0) rows.push(cells.map(td => td.innerText.trim()).join('\t'));
+              });
+            }
+            if (rows.length > 0) {
+              navigator.clipboard.writeText(rows.join('\n')).catch(() => {});
+            }
+          }
+        }
+      });
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       loadLogs();
       initProdTwistCustomSelect();
       initFromUrl();
+      initExcelCellSelection();
       broadcastYarnPresence();
       setInterval(updateClock, 1000);
       updateClock();
@@ -7220,6 +7822,29 @@
         </svg>
         <span>Batch Sell (<span id="floating-batch-count">0</span> <span id="floating-batch-label">Boxes</span> | <span id="floating-batch-weight">0.00</span> Kg)</span>
       </button>
+  <!-- Floating Bottom Right Summary Box Widget (Excel-style calculation bar) -->
+  <div id="scroll-sum-widget" class="scroll-sum-box" style="display: none;">
+    <div class="scroll-sum-header">
+      <span id="widget-box-title">📊 Calculated Total (<span id="scroll-row-count">0</span> cells)</span>
+      <button type="button" class="scroll-sum-close" onclick="dismissScrollWidget()" title="Dismiss widget">&times;</button>
+    </div>
+    <div class="scroll-sum-body">
+      <div class="scroll-sum-stat" id="stat-meters-wrap">
+        <span class="stat-label" id="stat-label-1">TOTAL SUM</span>
+        <span class="stat-val" id="scroll-sum-meters" style="color: #10b981;">0.00 Kg</span>
+      </div>
+      <div class="scroll-sum-stat" id="stat-hours-wrap">
+        <span class="stat-label" id="stat-label-2">AVERAGE</span>
+        <span class="stat-val" id="scroll-sum-hours" style="color: #60a5fa;">0.00 Kg</span>
+      </div>
+      <div class="scroll-sum-stat" id="stat-count-wrap">
+        <span class="stat-label" id="stat-label-3">COUNT</span>
+        <span class="stat-val" id="scroll-sum-count" style="color: #f59e0b;">0</span>
+      </div>
+      <div class="scroll-sum-stat" id="stat-salary-wrap" style="display: none;">
+        <span class="stat-label" id="stat-label-4">MIN / MAX</span>
+        <span class="stat-val" id="scroll-sum-salary" style="color: #a78bfa;">0.00 / 0.00</span>
+      </div>
     </div>
   </div>
 </body>
