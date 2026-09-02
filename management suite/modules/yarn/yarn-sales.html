@@ -642,27 +642,167 @@
       color: var(--accent);
     }
 
+    /* Table Action Dropdown Menu */
     .actions-cell {
-      text-align: right;
+      text-align: center;
       white-space: nowrap;
       vertical-align: middle;
-      min-width: 180px;
-      padding: 0.75rem 1rem !important;
-    }
-
-    .actions-wrapper {
-      display: inline-flex;
-      gap: 0.4rem;
-      align-items: center;
-      justify-content: flex-end;
-      width: 100%;
+      width: 70px;
+      min-width: 70px;
+      padding: 0.5rem 0.6rem !important;
+      position: relative;
     }
 
     th.actions-col {
-      text-align: right !important;
-      min-width: 180px;
-      padding-right: 1.25rem !important;
+      text-align: center !important;
+      width: 70px;
+      min-width: 70px;
+      padding: 0.75rem 0.6rem !important;
       white-space: nowrap;
+    }
+
+    .action-menu-container {
+      position: relative;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .action-menu-btn {
+      display: inline-flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 3.5px;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      outline: none;
+      user-select: none;
+    }
+
+    .action-menu-btn:hover {
+      border-color: var(--accent);
+      background: rgba(139, 92, 246, 0.08);
+      box-shadow: 0 2px 10px rgba(124, 58, 237, 0.16);
+      transform: translateY(-1px);
+    }
+
+    .action-menu-btn:active {
+      transform: translateY(0);
+    }
+
+    .action-menu-btn[aria-expanded="true"],
+    .action-menu-btn.active {
+      border-color: var(--accent);
+      background: rgba(139, 92, 246, 0.12);
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.22);
+    }
+
+    .action-menu-btn span {
+      display: block;
+      width: 14px;
+      height: 2px;
+      background: var(--fg);
+      border-radius: 2px;
+      transition: all 0.2s ease;
+      opacity: 0.85;
+    }
+
+    .action-menu-btn:hover span,
+    .action-menu-btn.active span,
+    .action-menu-btn[aria-expanded="true"] span {
+      background: var(--accent);
+      opacity: 1;
+    }
+
+    .action-menu-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      min-width: 135px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 1050;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      text-align: left;
+      animation: actionDropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes actionDropdownFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .action-menu-dropdown.show {
+      display: flex;
+    }
+
+    .action-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .action-dropdown-item svg {
+      flex-shrink: 0;
+      opacity: 0.75;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .action-dropdown-item:hover {
+      background: rgba(139, 92, 246, 0.08);
+      color: var(--accent);
+    }
+
+    .action-dropdown-item:hover svg {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+
+    .action-dropdown-item.delete {
+      color: var(--error, #ef4444);
+    }
+
+    .action-dropdown-item.delete:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+
+    .action-dropdown-item.delete svg {
+      stroke: var(--error, #ef4444);
     }
 
     /* Mesh Background */
@@ -1117,7 +1257,7 @@
       }
 
       .actions-cell {
-        min-width: 195px;
+        min-width: 70px;
       }
 
       .modal-content {
@@ -2452,9 +2592,9 @@
           triggerFieldSync(tpmEl);
         }
 
-        // Auto fill rolls per box/bori if configured in costing
-        if (rollsEl && prod.rollsPerBox) {
-          rollsEl.value = parseInt(prod.rollsPerBox);
+        // Rolls field is left empty for user to enter data manually
+        if (rollsEl) {
+          rollsEl.value = '';
           triggerFieldSync(rollsEl);
         }
       }
@@ -4267,18 +4407,21 @@
         const stock = getBoriStock(l);
         const isSold = stock.remainingRolls <= 0 || stock.remainingQty <= 0.001;
 
+        const numQty = parseFloat(l.qty) || 0;
+        const remainingQtyNum = parseFloat(stock.remainingQty) || 0;
+
         let rollsDisplay = l.rolls;
-        let qtyDisplay = `${l.qty.toFixed(2)} Kg`;
+        let qtyDisplay = `${numQty.toFixed(2)} Kg`;
 
         if (isSold) {
           rollsDisplay = `${l.rolls} <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>`;
-          qtyDisplay = `${l.qty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>`;
+          qtyDisplay = `${numQty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>`;
         } else if (stock.remainingRolls < l.rolls) {
           rollsDisplay = `${l.rolls} <span style="font-size:0.72rem; background:rgba(249,115,22,0.12); color:var(--accent3); padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">${stock.remainingRolls} left</span>`;
-          qtyDisplay = `${l.qty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(249,115,22,0.12); color:var(--accent3); padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">${stock.remainingQty.toFixed(2)} Kg left</span>`;
+          qtyDisplay = `${numQty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(249,115,22,0.12); color:var(--accent3); padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">${remainingQtyNum.toFixed(2)} Kg left</span>`;
         } else {
           rollsDisplay = `${l.rolls} <span style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">In Stock</span>`;
-          qtyDisplay = `${l.qty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">In Stock</span>`;
+          qtyDisplay = `${numQty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">In Stock</span>`;
         }
 
         const tr = document.createElement('tr');
@@ -4316,10 +4459,26 @@
           <td>${rollsDisplay}</td>
           <td>${qtyDisplay}</td>
           <td class="actions-cell">
-            <div class="actions-wrapper">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); editProductionLog('${l.id}')">Edit</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); repeatProductionLog('${l.id}')">Repeat</button>
-              <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteProductionLog('${l.id}')">Delete</button>
+            <div class="action-menu-container">
+              <button type="button" class="action-menu-btn" onclick="event.stopPropagation(); toggleActionMenu(this, 'prod-${l.id}')" title="Actions" aria-label="Actions" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+              </button>
+              <div class="action-menu-dropdown" id="action-dropdown-prod-${l.id}">
+                <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); editProductionLog('${l.id}')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  <span>Edit</span>
+                </button>
+                <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); repeatProductionLog('${l.id}')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                  <span>Repeat</span>
+                </button>
+                <button type="button" class="action-dropdown-item delete" onclick="event.stopPropagation(); closeAllActionMenus(); deleteProductionLog('${l.id}')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                  <span>Delete</span>
+                </button>
+              </div>
             </div>
           </td>
         `;
@@ -4863,16 +5022,84 @@
           <td>${s.gstRate}%</td>
           <td><strong>₹${grandTotalVal.toFixed(2)}</strong></td>
           <td class="actions-cell">
-            <div class="actions-wrapper">
-              <button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation(); printSaleBill('${s.id}')" title="Print Bill">Bill</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); editSalesLog('${s.id}')">Edit</button>
-              <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteSalesLog('${s.id}')">Delete</button>
+            <div class="action-menu-container">
+              <button type="button" class="action-menu-btn" onclick="event.stopPropagation(); toggleActionMenu(this, 'sale-${s.id}')" title="Actions" aria-label="Actions" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+              </button>
+              <div class="action-menu-dropdown" id="action-dropdown-sale-${s.id}">
+                <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); printSaleBill('${s.id}')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                  <span>Print Bill</span>
+                </button>
+                <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); editSalesLog('${s.id}')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  <span>Edit</span>
+                </button>
+                <button type="button" class="action-dropdown-item delete" onclick="event.stopPropagation(); closeAllActionMenus(); deleteSalesLog('${s.id}')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                  <span>Delete</span>
+                </button>
+              </div>
             </div>
           </td>
         `;
         body.appendChild(tr);
       });
     }
+
+    // Action Menu Dropdown Controllers
+    window.toggleActionMenu = function(btn, menuId) {
+      const dropdown = document.getElementById(`action-dropdown-${menuId}`);
+      if (!dropdown) return;
+      
+      const isAlreadyOpen = dropdown.classList.contains('show');
+      
+      // Close any other open dropdowns first
+      closeAllActionMenus();
+      
+      if (!isAlreadyOpen) {
+        dropdown.classList.add('show');
+        btn.setAttribute('aria-expanded', 'true');
+        btn.classList.add('active');
+        
+        // Smart flip upwards if close to bottom of table/window
+        const rect = btn.getBoundingClientRect();
+        const estimatedHeight = 125;
+        if (rect.bottom + estimatedHeight > window.innerHeight && rect.top > estimatedHeight) {
+          dropdown.style.top = 'auto';
+          dropdown.style.bottom = 'calc(100% + 4px)';
+        } else {
+          dropdown.style.top = 'calc(100% + 4px)';
+          dropdown.style.bottom = 'auto';
+        }
+      }
+    };
+
+    window.closeAllActionMenus = function() {
+      document.querySelectorAll('.action-menu-dropdown.show').forEach(el => {
+        el.classList.remove('show');
+      });
+      document.querySelectorAll('.action-menu-btn.active').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-expanded', 'false');
+      });
+    };
+
+    // Close action dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.action-menu-container')) {
+        closeAllActionMenus();
+      }
+    });
+
+    // Close action dropdowns on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeAllActionMenus();
+      }
+    });
 
     // Edit actions
     window.editProductionLog = function(id) {

@@ -1525,7 +1525,7 @@
                   updated_at: updatedAt,
                   grWeight: retWt,
                   grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
-                  grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(1)} kg)` : null)
+                  grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(2)} kg)` : null)
                 };
               });
 
@@ -1742,7 +1742,7 @@
                 const weight = Number(box.weight) || 0;
                 const retWeight = Number(box.returnedWeight) || 0;
                 const netWeight = weight - retWeight;
-                searchParts.push(box.boxNumber, box.cones, box.weight, box.returnedWeight, netWeight.toFixed(1));
+                searchParts.push(box.boxNumber, box.cones, box.weight, box.returnedWeight, netWeight.toFixed(2));
                 if (box.returnedDate) searchParts.push(new Date(box.returnedDate).toLocaleDateString('en-GB'));
                 if (retWeight > 0) hasActualGR = true;
               });
@@ -2311,8 +2311,8 @@
                               <td>
                                 <div className="progress-mini-container">
                                   <div className="progress-mini-text" style={{fontWeight: '600', flexDirection: 'column', gap: '0'}}>
-                                    <div>{netReceived.toFixed(1)} kg</div>
-                                    {totalReturned > 0 && <div style={{color: 'var(--accent3)'}}>{totalReturned.toFixed(1)} Kg(GR)</div>}
+                                    <div>{netReceived.toFixed(2)} kg</div>
+                                    {totalReturned > 0 && <div style={{color: 'var(--accent3)'}}>{totalReturned.toFixed(2)} Kg(GR)</div>}
                                   </div>
                                   <div className="progress-mini-bar-bg">
                                     <div style={{ width: `${netProgress}%`, height: '100%', background: 'var(--accent)', transition: 'width 0.5s ease' }}></div>
@@ -2965,21 +2965,21 @@
               </div>
               <div className="card" style={{padding: '1.25rem'}}>
                 <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Gross Received</h3>
-                <div className="value" style={{fontSize: '1.5rem', fontWeight: '700'}}>{grossReceived.toFixed(1)}</div>
+                <div className="value" style={{fontSize: '1.5rem', fontWeight: '700'}}>{grossReceived.toFixed(2)}</div>
               </div>
               <div className="card" style={{padding: '1.25rem'}}>
                 <h3 style={{fontSize: '0.8rem', color: 'var(--accent3)', textTransform: 'uppercase'}}>GR</h3>
-                <div className="value" style={{fontSize: '1.5rem', color: 'var(--accent3)', fontWeight: '700'}}>{gr.toFixed(1)}</div>
+                <div className="value" style={{fontSize: '1.5rem', color: 'var(--accent3)', fontWeight: '700'}}>{gr.toFixed(2)}</div>
               </div>
               <div className="card" style={{padding: '1.25rem'}}>
                 <h3 style={{fontSize: '0.8rem', color: 'var(--success)', textTransform: 'uppercase'}}>Net Received</h3>
-                <div className="value" style={{fontSize: '1.5rem', color: 'var(--success)', fontWeight: '700'}}>{received.toFixed(1)}</div>
+                <div className="value" style={{fontSize: '1.5rem', color: 'var(--success)', fontWeight: '700'}}>{received.toFixed(2)}</div>
               </div>
               {isCompleted && (
                 <div className="card" style={{ padding: '1.25rem', borderColor: netDiff >= 0 ? '#3b82f6' : 'var(--error)', background: netDiff >= 0 ? 'rgba(59, 130, 246, 0.05)' : 'rgba(239, 68, 68, 0.02)' }}>
                   <h3 style={{ color: netDiff >= 0 ? '#3b82f6' : 'var(--error)', fontSize: '0.8rem', textTransform: 'uppercase' }}>{netDiff >= 0 ? 'Surplus' : 'Shortfall'}</h3>
                   <div className="value" style={{ fontSize: '1.5rem', color: netDiff >= 0 ? '#3b82f6' : 'var(--error)', fontWeight: '700' }}>
-                    {Math.abs(netDiff).toFixed(1)} kg
+                    {Math.abs(netDiff).toFixed(2)} kg
                   </div>
                 </div>
               )}
@@ -3143,11 +3143,11 @@
                                 )}
                                 <td style={{fontWeight: '600'}}>{box.boxNumber}</td>
                                 <td>{box.cones || '-'}</td>
-                                <td>{Number(box.weight || 0).toFixed(1)}</td>
+                                <td>{Number(box.weight || 0).toFixed(2)}</td>
                                 <td style={{color: 'var(--error)', fontWeight: '600'}}>{calcGRCones(box) || '-'}</td>
-                                <td style={{color: Number(box.returnedWeight) > 0 ? 'var(--error)' : 'inherit'}}>{box.returnedWeight || '0.0'}</td>
+                                <td style={{color: Number(box.returnedWeight) > 0 ? 'var(--error)' : 'inherit'}}>{box.returnedWeight || '0.00'}</td>
                                 <td style={{color: 'var(--error)'}}>{box.returnedDate ? new Date(box.returnedDate).toLocaleDateString('en-GB') : '-'}</td>
-                                <td>{(Number(box.weight || 0) - (Number(box.returnedWeight) || 0)).toFixed(1)}</td>
+                                <td>{(Number(box.weight || 0) - (Number(box.returnedWeight) || 0)).toFixed(2)}</td>
                                 {idx === 0 && (
                                   <td rowSpan={b.boxes.length + 1}>
                                     <div style={{display: 'flex', gap: '0.4rem', justifyContent: 'center'}}>
@@ -3161,11 +3161,11 @@
                             <tr key={`${b.id}-total`} style={{background: 'var(--bg)', fontWeight: '700', fontSize: '0.85rem', borderTop: '2px solid var(--border)'}}>
                               <td style={{color: 'var(--muted)', textAlign: 'right', paddingRight: '1rem'}}>BATCH TOTAL</td>
                               <td>{conesTotal || '-'}</td>
-                              <td style={{color: 'var(--accent)'}}>{grossTotal.toFixed(1)}</td>
+                              <td style={{color: 'var(--accent)'}}>{grossTotal.toFixed(2)}</td>
                               <td style={{color: 'var(--error)'}}>{grConesTotal || '-'}</td>
-                              <td style={{color: 'var(--error)'}}>{grTotal.toFixed(1)}</td>
+                              <td style={{color: 'var(--error)'}}>{grTotal.toFixed(2)}</td>
                               <td style={{color: 'var(--muted)'}}>-</td>
-                              <td style={{color: 'var(--success)', fontSize: '0.95rem'}}>{Number(b.totalWeight || (grossTotal - grTotal)).toFixed(1)} kg</td>
+                              <td style={{color: 'var(--success)', fontSize: '0.95rem'}}>{Number(b.totalWeight || (grossTotal - grTotal)).toFixed(2)} kg</td>
                             </tr>
                             {bIdx < bArr.length - 1 && (
                               <tr key={`${b.id}-sep`}><td colSpan="11" style={{padding: 0, border: 'none', height: '5px', background: '#000000', lineHeight: '0'}}></td></tr>
@@ -5326,7 +5326,7 @@
                               <td><span className={`badge badge-${itemCat.toLowerCase()}`}>{itemCat}</span></td>
                               <td>{b.challanNumber}</td>
                               <td>{b.lotNumber}</td>
-                              <td style={{ fontWeight: '700', color: 'var(--success)' }}>{(Number(b.totalWeight) || 0).toFixed(1)} kg</td>
+                              <td style={{ fontWeight: '700', color: 'var(--success)' }}>{(Number(b.totalWeight) || 0).toFixed(2)} kg</td>
                               <td><button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => onNavigate(b.orderId, { ...b, type: itemCat })}>📈 View Tree</button></td>
                             </tr>
                           );
@@ -5375,7 +5375,7 @@
                               <td><span className={`badge badge-${itemCat.toLowerCase()}`}>{itemCat}</span></td>
                               <td>{g.challanNumber}</td>
                               <td>{g.lotNumber}</td>
-                              <td style={{ fontWeight: '700', color: 'var(--error)' }}>{(Number(g.returnedWeight) || 0).toFixed(1)} kg</td>
+                              <td style={{ fontWeight: '700', color: 'var(--error)' }}>{(Number(g.returnedWeight) || 0).toFixed(2)} kg</td>
                               <td><button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => onNavigate(g.orderId, { ...g, type: itemCat })}>📈 View Tree</button></td>
                             </tr>
                           );
