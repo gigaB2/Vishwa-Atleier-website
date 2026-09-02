@@ -2494,18 +2494,45 @@
       const products = JSON.parse(localStorage.getItem(key) || '[]');
       const fpQualities = JSON.parse(localStorage.getItem('yarn-fp-qualities') || '[]');
 
-      // 1. Fetch FP Qualities for the active division
-      const fpDivisionNames = fpQualities
+      // 1. Fetch FP Qualities for the active division formatted as Name [Composition]
+      const fpDivisionItems = fpQualities
         .filter(q => (q.division || '').toLowerCase() === activeDivision.toLowerCase())
-        .map(q => (q && q.name ? q.name.trim() : ''))
+        .map(q => {
+          const name = (q && q.name) ? q.name.trim() : '';
+          if (!name) return null;
+          const comp = (q.composition || '').trim();
+          return {
+            label: comp ? `${name} [${comp}]` : name,
+            value: comp ? `${name} [${comp}]` : name,
+            rawName: name,
+            quality: q
+          };
+        })
         .filter(Boolean);
 
       // 2. Fetch Costing sheet qualities for the active division
-      const costingNames = products.map(p => (p && p.name ? p.name.trim() : '')).filter(Boolean);
+      const costingItems = products
+        .map(p => {
+          const name = (p && p.name) ? p.name.trim() : '';
+          if (!name) return null;
+          return {
+            label: name,
+            value: name,
+            rawName: name,
+            product: p
+          };
+        })
+        .filter(Boolean);
 
       // Combined unique list with FP qualities prioritised
-      const combined = [...fpDivisionNames, ...costingNames];
-      prodNameOptions = combined.filter((val, id, self) => val && self.indexOf(val) === id);
+      const seen = new Set();
+      prodNameOptions = [];
+      [...fpDivisionItems, ...costingItems].forEach(item => {
+        if (item && item.value && !seen.has(item.value.toLowerCase())) {
+          seen.add(item.value.toLowerCase());
+          prodNameOptions.push(item);
+        }
+      });
 
       const hiddenName = document.getElementById('prod-name');
       const searchName = document.getElementById('prod-name-search');
@@ -2523,19 +2550,19 @@
       const dropdown = document.getElementById('prod-name-dropdown');
       if (!dropdown) return;
       dropdown.innerHTML = '';
-      if (optionsList.length === 0) {
+      if (!optionsList || optionsList.length === 0) {
         const divLabel = activeDivision === 'covering' ? 'Covering' : (activeDivision === 'tfo' ? 'TFO' : 'Doubler/MX');
         dropdown.innerHTML = `<div class="dropdown-item muted" style="text-align: center;">No ${divLabel} qualities found in Manage FP Qualities</div>`;
         return;
       }
 
-      optionsList.forEach(name => {
+      optionsList.forEach(item => {
         const div = document.createElement('div');
         div.className = 'dropdown-item';
-        div.textContent = name;
-        div.dataset.value = name;
+        div.textContent = item.label || item.value || item;
+        div.dataset.value = item.value || item;
         div.onmousedown = function(e) {
-          selectProdNameOption(name);
+          selectProdNameOption(item.value || item, item.quality || item.product || null);
         };
         dropdown.appendChild(div);
       });
@@ -2549,7 +2576,10 @@
 
     window.filterProdNameDropdown = function() {
       const search = document.getElementById('prod-name-search').value.toLowerCase();
-      const filtered = prodNameOptions.filter(name => name.toLowerCase().includes(search));
+      const filtered = prodNameOptions.filter(item => {
+        const str = (item.label || item.value || item).toLowerCase();
+        return str.includes(search);
+      });
       renderProdNameDropdown(filtered);
     }
 
@@ -2624,7 +2654,7 @@
       el.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    function selectProdNameOption(val) {
+    function selectProdNameOption(val, directObj = null) {
       const hiddenName = document.getElementById('prod-name');
       const searchInput = document.getElementById('prod-name-search');
       if (hiddenName) hiddenName.value = val;
@@ -2635,10 +2665,20 @@
       const dropdown = document.getElementById('prod-name-dropdown');
       if (dropdown) dropdown.style.display = 'none';
 
-      // 1. Check FP Qualities first
+      // 1. Check FP Qualities first (match by full value 'Name [Composition]', or base Name)
       const fpQualities = JSON.parse(localStorage.getItem('yarn-fp-qualities') || '[]');
-      const fpProd = fpQualities.find(p => (p.division || '').toLowerCase() === activeDivision.toLowerCase() && (p.name || '').trim().toLowerCase() === (val || '').trim().toLowerCase()) ||
-                     fpQualities.find(p => (p.name || '').trim().toLowerCase() === (val || '').trim().toLowerCase());
+      let fpProd = directObj && directObj.id && String(directObj.id).startsWith('FPQ_') ? directObj : null;
+      if (!fpProd) {
+        const rawBase = val.replace(/\s*\[.*?\]\s*$/, '').trim().toLowerCase();
+        fpProd = fpQualities.find(p => {
+          const fullLabel = p.composition ? `${(p.name || '').trim()} [${p.composition.trim()}]` : (p.name || '').trim();
+          return (p.division || '').toLowerCase() === activeDivision.toLowerCase() &&
+                 (fullLabel.toLowerCase() === val.toLowerCase() || (p.name || '').trim().toLowerCase() === rawBase);
+        }) || fpQualities.find(p => {
+          const fullLabel = p.composition ? `${(p.name || '').trim()} [${p.composition.trim()}]` : (p.name || '').trim();
+          return fullLabel.toLowerCase() === val.toLowerCase() || (p.name || '').trim().toLowerCase() === rawBase;
+        });
+      }
 
       // 2. Check Costing Sheet products
       const storageKeys = {
@@ -2648,7 +2688,7 @@
       };
       const key = storageKeys[activeDivision];
       const products = JSON.parse(localStorage.getItem(key) || '[]');
-      const prod = products.find(p => (p.name || '').trim().toLowerCase() === (val || '').trim().toLowerCase()) || products.find(p => p.name === val);
+      const prod = directObj && !directObj.id?.startsWith('FPQ_') ? directObj : (products.find(p => (p.name || '').trim().toLowerCase() === (val || '').trim().toLowerCase()) || products.find(p => p.name === val));
       
       const productLogs = dataStore[activeDivision].production.filter(l => (l.productName || '').trim().toLowerCase() === (val || '').trim().toLowerCase());
       productLogs.sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
