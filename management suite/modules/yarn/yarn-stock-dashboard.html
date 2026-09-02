@@ -3375,6 +3375,7 @@
           <tr>
             <td><strong>${item.boriNo}</strong></td>
             <td>${item.composition}</td>
+            <td>${item.twist || '-'}</td>
             <td>${item.color || '-'}</td>
             <td style="text-align: center;">${item.rollsQty || 0}</td>
             <td style="text-align: right;">${(item.saleQty || 0).toFixed(2)} Kg</td>
@@ -3650,13 +3651,14 @@
             <table class="items-table">
               <thead>
                 <tr>
-                  <th style="width: 16%;">Bori/Box No</th>
-                  <th style="width: 28%;">Composition</th>
-                  <th style="width: 16%;">Color</th>
-                  <th style="width: 10%; text-align: center;">Rolls</th>
+                  <th style="width: 14%;">Bori/Box No</th>
+                  <th style="width: 24%;">Composition</th>
+                  <th style="width: 12%;">Twist</th>
+                  <th style="width: 14%;">Color</th>
+                  <th style="width: 8%; text-align: center;">Rolls</th>
                   <th style="width: 14%; text-align: right;">Weight</th>
                   <th style="width: 14%; text-align: right;">Rate/Kg</th>
-                  <th style="width: 16%; text-align: right;">Amount</th>
+                  <th style="width: 14%; text-align: right;">Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -3776,6 +3778,7 @@
             <td style="text-align: center;">${index + 1}</td>
             <td><strong>${item.boriNo}</strong></td>
             <td>${item.composition}</td>
+            <td>${item.twist || '-'}</td>
             <td>${item.color || '-'}</td>
             <td style="text-align: center;">${item.rollsQty || 0}</td>
             <td style="text-align: right; font-weight: 600;">${(parseFloat(item.saleQty) || 0).toFixed(2)} Kg</td>
@@ -4031,12 +4034,13 @@
             <table class="items-table">
               <thead>
                 <tr>
-                  <th style="width: 8%; text-align: center;">Sr. No.</th>
-                  <th style="width: 20%;">Bori/Box No</th>
-                  <th style="width: 36%;">Composition / Item</th>
-                  <th style="width: 16%;">Color</th>
-                  <th style="width: 8%; text-align: center;">Rolls</th>
-                  <th style="width: 18%; text-align: right;">Weight (Kg)</th>
+                  <th style="width: 7%; text-align: center;">Sr. No.</th>
+                  <th style="width: 18%;">Bori/Box No</th>
+                  <th style="width: 30%;">Composition / Item</th>
+                  <th style="width: 15%;">Twist</th>
+                  <th style="width: 14%;">Color</th>
+                  <th style="width: 6%; text-align: center;">Rolls</th>
+                  <th style="width: 16%; text-align: right;">Weight (Kg)</th>
                 </tr>
               </thead>
               <tbody>
@@ -4158,7 +4162,6 @@
                 </div>
                 <div class="slip-header-right">
                   <div class="slip-badge">PACKING SLIP</div>
-                  <div class="slip-copy-tag">BOX ${itemIdx + 1} OF ${totalBoris}</div>
                 </div>
               </div>
 
@@ -4188,20 +4191,14 @@
               <div class="slip-body">
                 <table class="slip-table">
                   <tr>
-                    <td class="lbl-col">Buyer / Customer:</td>
-                    <td class="val-col strong-val" colspan="3">${sale.customerName}</td>
-                  </tr>
-                  <tr>
                     <td class="lbl-col">Yarn Quality:</td>
                     <td class="val-col strong-val">${item.composition || '-'}</td>
                     <td class="lbl-col">Shade / Color:</td>
                     <td class="val-col">${item.color || '-'}</td>
                   </tr>
                   <tr>
-                    <td class="lbl-col">Specifications:</td>
-                    <td class="val-col">${specs}</td>
-                    <td class="lbl-col">Box Count:</td>
-                    <td class="val-col font-bold">Box ${itemIdx + 1} of ${totalBoris}</td>
+                    <td class="lbl-col">Twist:</td>
+                    <td class="val-col strong-val" colspan="3">${item.twist || '-'}</td>
                   </tr>
                 </table>
 
