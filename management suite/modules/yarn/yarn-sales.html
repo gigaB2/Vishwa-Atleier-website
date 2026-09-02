@@ -5972,14 +5972,16 @@
           discAmount = subtotalVal - s.taxableAmount;
         }
 
-        let discountDisplay = '<span class="muted">-</span>';
+        let discountDisplay = '<span class="muted">0% (₹0.00)</span>';
         if (discAmount > 0) {
-          const discVal = s.discountValue !== undefined && s.discountValue !== null ? s.discountValue : (s.discountType === 'percent' ? Math.round((discAmount / subtotalVal) * 100) : discAmount);
+          const discVal = (s.discountValue !== undefined && s.discountValue !== null && s.discountValue > 0)
+            ? s.discountValue
+            : (subtotalVal > 0 ? Math.round((discAmount / subtotalVal) * 100) : discAmount);
           const discType = s.discountType || 'percent';
           if (discType === 'percent') {
             discountDisplay = `<span style="color: #ef4444; font-weight: 600;">${discVal}%</span> <span class="muted" style="font-size:0.75rem;">(-₹${discAmount.toFixed(2)})</span>`;
           } else {
-            discountDisplay = `<span style="color: #ef4444; font-weight: 600;">-₹${discAmount.toFixed(2)}</span>`;
+            discountDisplay = `<span style="color: #ef4444; font-weight: 600;">Flat</span> <span class="muted" style="font-size:0.75rem;">(-₹${discAmount.toFixed(2)})</span>`;
           }
         }
 
@@ -5987,6 +5989,7 @@
         const taxableVal = s.taxableAmount !== undefined ? parseFloat(s.taxableAmount) : Math.max(0, subtotalVal - discAmount);
         const gstVal = s.gstAmount !== undefined ? parseFloat(s.gstAmount) : (taxableVal * (gstRateVal / 100));
         const grandTotalVal = s.totalAmount || (taxableVal + gstVal);
+        const gstDisplay = `<span>${gstRateVal}%</span> <span class="muted" style="font-size:0.75rem;">(₹${gstVal.toFixed(2)})</span>`;
 
         tr.innerHTML = `
           <td><strong>${s.challanNo}</strong></td>
@@ -6001,7 +6004,7 @@
           <td>${rateDisplay}</td>
           <td>₹${subtotalVal.toFixed(2)}</td>
           <td>${discountDisplay}</td>
-          <td>${gstRateVal}%</td>
+          <td>${gstDisplay}</td>
           <td><strong>₹${grandTotalVal.toFixed(2)}</strong></td>
           <td class="actions-cell">
             <div class="action-menu-container">
