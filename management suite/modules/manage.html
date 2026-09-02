@@ -1558,6 +1558,16 @@
     min-height: 32px;
   }
 
+  #tab-raw-material-qualities .rmq-form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.35rem;
+  }
+
   @media (max-width: 1024px) {
     #tab-raw-material-qualities {
       max-width: 100% !important;
@@ -1675,6 +1685,42 @@
     margin-left: auto;
     margin-right: auto;
     box-sizing: border-box;
+  }
+
+  #tab-fp-qualities .form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    align-items: flex-end;
+  }
+
+  #tab-fp-qualities .fpq-field-division {
+    grid-column: span 1;
+  }
+
+  #tab-fp-qualities .fpq-field-name {
+    grid-column: span 3;
+  }
+
+  #tab-fp-qualities .fpq-field-comp {
+    grid-column: 1 / -1;
+  }
+
+  #tab-fp-qualities .fpq-form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.35rem;
+  }
+
+  #tab-fp-qualities .fpq-form-actions .btn {
+    min-height: 40px;
+    padding: 0 1.25rem;
   }
 
   .custom-dropdown-container {
@@ -1909,6 +1955,27 @@
     #tab-fp-qualities .form-grid {
       grid-template-columns: minmax(0, 1fr) !important;
       gap: 0.85rem !important;
+    }
+
+    #tab-fp-qualities .fpq-field-division,
+    #tab-fp-qualities .fpq-field-name,
+    #tab-fp-qualities .fpq-field-comp,
+    #tab-fp-qualities .fpq-form-actions {
+      grid-column: 1 / -1 !important;
+    }
+
+    #tab-fp-qualities .fpq-form-actions {
+      flex-direction: row;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+
+    #tab-fp-qualities .fpq-form-actions .btn {
+      flex: 1 1 0;
+      min-height: 44px;
+      justify-content: center;
+      display: inline-flex;
+      align-items: center;
     }
 
     #tab-fp-qualities input,
@@ -2979,8 +3046,8 @@
     <!-- Add / Edit Form Card -->
     <div class="card">
       <h3 id="fp-quality-form-title">Add New FP Quality</h3>
-      <div class="form-grid" style="margin-top: 1.5rem;">
-        <div class="form-group">
+      <div class="form-grid fpq-form-grid" style="margin-top: 1.5rem;">
+        <div class="form-group fpq-field-division">
           <label>Division *</label>
           <select id="new-fp-division" onchange="handleFpDivisionChange(this.value)">
             <option value="covering">Covering</option>
@@ -2988,11 +3055,11 @@
             <option value="doubler">Doubler/MX</option>
           </select>
         </div>
-        <div class="form-group" style="grid-column: 1 / -1;">
+        <div class="form-group fpq-field-name">
           <label>FP Quality Name *</label>
           <input type="text" id="new-fp-name" placeholder="e.g. 20/1 BRT POLY + 70D SPANDEX" autocomplete="off" onblur="this.value = this.value.trim().toUpperCase()" oninput="this.value = this.value.toUpperCase();" style="text-transform: uppercase; width: 100%;">
         </div>
-        <div class="form-group" style="grid-column: 1 / -1;">
+        <div class="form-group fpq-field-comp">
           <label style="display: flex; justify-content: space-between; align-items: center;">
             <span>Composition (Pick RM Qualities) *</span>
             <span style="font-size: 0.72rem; color: var(--muted); font-weight: normal;">Select RM yarns to build multi-yarn blend</span>
@@ -3037,8 +3104,8 @@
             <option value="Z">Z Twist</option>
           </select>
         </div>
-        <div class="form-group" style="display: flex; flex-direction: row; gap: 0.5rem; align-items: flex-end;">
-          <button id="btn-cancel-fp-edit" class="btn" style="display: none; background: var(--border);" onclick="cancelFpQualityEdit()">Cancel</button>
+        <div class="form-group fpq-form-actions">
+          <button id="btn-cancel-fp-edit" class="btn" style="display: none; background: var(--border); color: var(--fg);" onclick="cancelFpQualityEdit()">Cancel</button>
           <button id="btn-add-fp-quality" class="btn btn-primary" onclick="addOrUpdateFpQuality()">Add FP Quality</button>
         </div>
       </div>
