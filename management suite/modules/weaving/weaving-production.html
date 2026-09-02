@@ -3167,7 +3167,7 @@
                 const itemDiv = document.createElement('div');
                 itemDiv.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.6rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem;";
                 
-                const formattedMeters = (log.totalMeters || 0).toFixed(1);
+                const formattedMeters = (log.totalMeters || 0).toFixed(2);
                 const dateStr = formatDate(log.productionDate);
 
                 itemDiv.innerHTML = `
@@ -3197,7 +3197,7 @@
             const countEl = document.getElementById('modal-selected-count');
             const totalEl = document.getElementById('modal-total-meters');
             if (countEl) countEl.innerText = selectedLogObjs.length;
-            if (totalEl) totalEl.innerText = total.toFixed(1);
+            if (totalEl) totalEl.innerText = total.toFixed(2);
         }
 
         function cancelTakaAssignment() {
@@ -3326,7 +3326,7 @@
             document.getElementById('modal-serial').value = '';
             document.getElementById('modal-folding-date').value = getTodayDate();
             document.getElementById('modal-weight').value = '';
-            document.getElementById('modal-total-meters').innerText = total.toFixed(1);
+            document.getElementById('modal-total-meters').innerText = total.toFixed(2);
             validateModalSerial();
             document.getElementById('taka-modal').style.display = 'flex';
         }
@@ -3606,7 +3606,7 @@
             document.getElementById('modal-serial').value = serial;
             document.getElementById('modal-folding-date').value = foldDate;
             document.getElementById('modal-weight').value = weight;
-            document.getElementById('modal-total-meters').innerText = total.toFixed(1);
+            document.getElementById('modal-total-meters').innerText = total.toFixed(2);
             validateModalSerial();
             document.getElementById('taka-modal').style.display = 'flex';
         }
@@ -4384,8 +4384,8 @@
                 document.getElementById('rb-primary-quality').innerText = primaryBeam.quality;
                 document.getElementById('rb-primary-code-color').innerText = `${primaryBeam.code} / ${primaryBeam.color}`;
                 document.getElementById('rb-primary-ends').innerText = primaryBeam.ends || '-';
-                document.getElementById('rb-primary-remaining').innerText = `${remainingMeters.toFixed(1)}m`;
-                document.getElementById('rb-primary-initial').innerText = `${initialMeters.toFixed(1)}m`;
+                document.getElementById('rb-primary-remaining').innerText = `${remainingMeters.toFixed(2)}m`;
+                document.getElementById('rb-primary-initial').innerText = `${initialMeters.toFixed(2)}m`;
 
                 if (pWrapper) pWrapper.style.display = 'none';
                 if (pCutBtn) pCutBtn.style.display = 'inline-flex';
@@ -4429,8 +4429,8 @@
                 document.getElementById('rb-secondary-quality').innerText = secondaryBeam.quality;
                 document.getElementById('rb-secondary-code-color').innerText = `${secondaryBeam.code} / ${secondaryBeam.color}`;
                 document.getElementById('rb-secondary-ends').innerText = secondaryBeam.ends || '-';
-                document.getElementById('rb-secondary-remaining').innerText = `${remainingMeters.toFixed(1)}m`;
-                document.getElementById('rb-secondary-initial').innerText = `${initialMeters.toFixed(1)}m`;
+                document.getElementById('rb-secondary-remaining').innerText = `${remainingMeters.toFixed(2)}m`;
+                document.getElementById('rb-secondary-initial').innerText = `${initialMeters.toFixed(2)}m`;
 
                 if (sWrapper) sWrapper.style.display = 'none';
                 if (sCutBtn) sCutBtn.style.display = 'inline-flex';
@@ -5280,7 +5280,7 @@
                         <td style="white-space: nowrap;">${getDesignType(item.product)}</td>
                         <td style="white-space: nowrap;">${item.product ? `<span class="design-link" onclick="event.stopPropagation(); viewDesignDetail('${item.product}')">${displayCode}</span>` : '-'}</td>
                         <td style="white-space: nowrap;">${item.picks || '-'}</td>
-                        <td style="white-space: nowrap;"><strong>${item.totalMeters.toFixed(1)}m</strong></td>
+                        <td style="white-space: nowrap;"><strong>${item.totalMeters.toFixed(2)}m</strong></td>
                         <td style="white-space: nowrap;"><strong>${item.takaWeight.toFixed(2)}kg</strong></td>
                         ${extraCells}
                         <td style="text-align: center; white-space: nowrap;">${tpCell}</td>
@@ -5487,8 +5487,8 @@
 
             document.getElementById('tpm-parent-serial').innerText = takaSerial;
             document.getElementById('tpm-parent-design').innerText = parentLog.product;
-            document.getElementById('tpm-parent-meters').innerText = parentLog.totalMeters.toFixed(1);
-            document.getElementById('tpm-orig-meters').innerText = parentLog.totalMeters.toFixed(1);
+            document.getElementById('tpm-parent-meters').innerText = parentLog.totalMeters.toFixed(2);
+            document.getElementById('tpm-orig-meters').innerText = parentLog.totalMeters.toFixed(2);
             
             document.getElementById('tpm-target-serial').value = `T-TP-${takaSerial.replace('T-', '')}`;
 
@@ -5499,7 +5499,7 @@
             renderManualTPChecklist(takaSerial, parentLog.product, parentLog.picks);
             
             // Default target meters input to parent roll's total meters
-            document.getElementById('tpm-target-meters').value = parentLog.totalMeters.toFixed(1);
+            document.getElementById('tpm-target-meters').value = parentLog.totalMeters.toFixed(2);
 
             updateTPMSums();
             openModal('tp-manual-modal');
@@ -5595,7 +5595,7 @@
                     div.innerHTML = `
                         <input type="checkbox" value="${item.takaSerial}" onchange="toggleManualTPSelection('${item.takaSerial}', this)" style="cursor: pointer; width: 16px; height: 16px;">
                         <strong>${item.takaSerial}</strong>
-                        <span style="color: var(--muted);">(${item.totalMeters.toFixed(1)}m, ${item.takaWeight.toFixed(2)}kg)</span>
+                        <span style="color: var(--muted);">(${item.totalMeters.toFixed(2)}m, ${item.takaWeight.toFixed(2)}kg)</span>
                     `;
                     container.appendChild(div);
                 }
@@ -5635,9 +5635,9 @@
             const totalAvailableMeters = parentMeters + addedMeters;
             const totalAvailableWeight = parentWeight + addedWeight;
 
-            document.getElementById('tpm-added-meters').innerText = addedMeters.toFixed(1);
-            document.getElementById('tpm-total-meters').innerText = totalAvailableMeters.toFixed(1);
-            document.getElementById('tpm-target-meters').value = totalAvailableMeters.toFixed(1);
+            document.getElementById('tpm-added-meters').innerText = addedMeters.toFixed(2);
+            document.getElementById('tpm-total-meters').innerText = totalAvailableMeters.toFixed(2);
+            document.getElementById('tpm-target-meters').value = totalAvailableMeters.toFixed(2);
             document.getElementById('tpm-target-weight').value = totalAvailableWeight.toFixed(2);
         }
 
@@ -5758,8 +5758,8 @@
             });
 
             document.getElementById('tpd-target-serial').innerText = serial;
-            document.getElementById('tpd-target-meters').innerText = totalSourceMeters.toFixed(1);
-            document.getElementById('tpd-target-weight').innerText = totalSourceWeight.toFixed(1);
+            document.getElementById('tpd-target-meters').innerText = totalSourceMeters.toFixed(2);
+            document.getElementById('tpd-target-weight').innerText = totalSourceWeight.toFixed(2);
 
             const tbody = document.getElementById('tpd-sources-body');
             tbody.innerHTML = '';
@@ -5779,7 +5779,7 @@
                         <td style="padding: 0.75rem 1rem;">${type}</td>
                         <td style="padding: 0.75rem 1rem;">${displayCode}</td>
                         <td style="padding: 0.75rem 1rem; text-align: center;">${srcLog.picks || '-'}</td>
-                        <td style="padding: 0.75rem 1rem; text-align: right; font-weight: 600;">${srcLog.totalMeters.toFixed(1)}m</td>
+                        <td style="padding: 0.75rem 1rem; text-align: right; font-weight: 600;">${srcLog.totalMeters.toFixed(2)}m</td>
                         <td style="padding: 0.75rem 1rem; text-align: right; font-weight: 600;">${(srcLog.takaWeight || 0).toFixed(2)}kg</td>
                     `;
                     tbody.appendChild(tr);
@@ -6883,11 +6883,11 @@
                         <td>${log.picks || 0}</td>
                         <td style="${dHighlight}">${log.dayWorker || ''}</td>
                         <td style="${dHighlight}">${log.dayWorker ? (log.dayShiftHours || 0) + 'h' : ''}</td>
-                        <td style="${dHighlight}">${log.dayWorker ? (typeof log.dayMeters === 'number' ? log.dayMeters.toFixed(1) : parseFloat(log.dayMeters || 0).toFixed(1)) + 'm' : ''}</td>
+                        <td style="${dHighlight}">${log.dayWorker ? (typeof log.dayMeters === 'number' ? log.dayMeters.toFixed(2) : parseFloat(log.dayMeters || 0).toFixed(2)) + 'm' : ''}</td>
                         <td style="${nHighlight}">${log.nightWorker || ''}</td>
                         <td style="${nHighlight}">${log.nightWorker ? (log.nightShiftHours || 0) + 'h' : ''}</td>
-                        <td style="${nHighlight}">${log.nightWorker ? (typeof log.nightMeters === 'number' ? log.nightMeters.toFixed(1) : parseFloat(log.nightMeters || 0).toFixed(1)) + 'm' : ''}</td>
-                        <td><strong>${(typeof log.totalMeters === 'number' ? log.totalMeters : parseFloat(log.totalMeters || 0)).toFixed(1)}m</strong></td>
+                        <td style="${nHighlight}">${log.nightWorker ? (typeof log.nightMeters === 'number' ? log.nightMeters.toFixed(2) : parseFloat(log.nightMeters || 0).toFixed(2)) + 'm' : ''}</td>
+                        <td><strong>${(typeof log.totalMeters === 'number' ? log.totalMeters : parseFloat(log.totalMeters || 0)).toFixed(2)}m</strong></td>
                         ${(rowspan > 0) ? `
                         <td rowspan="${rowspan}" class="${rowspan > 1 ? 'merged-cell' : ''}" style="vertical-align: middle; text-align: center; background: ${log.takaSerial ? 'rgba(139, 92, 246, 0.03)' : 'transparent'};">${log.takaSerial ? formatDate(log.foldingDate) : '-'}</td>
                         <td rowspan="${rowspan}" class="${rowspan > 1 ? 'merged-cell' : ''}" style="vertical-align: middle; text-align: center; background: ${log.takaSerial ? 'rgba(139, 92, 246, 0.03)' : 'transparent'};">
@@ -6896,7 +6896,7 @@
                         <td rowspan="${rowspan}" class="${rowspan > 1 ? 'merged-cell' : ''}" style="vertical-align: middle; text-align: center; background: ${log.takaSerial ? 'rgba(139, 92, 246, 0.03)' : 'transparent'};">
                             ${getDesignType(log.product)}
                         </td>
-                        <td rowspan="${rowspan}" class="${rowspan > 1 ? 'merged-cell' : ''}" style="vertical-align: middle; text-align: center; background: ${log.takaSerial ? 'rgba(139, 92, 246, 0.03)' : 'transparent'};">${log.takaSerial ? `<strong>${groupMtr.toFixed(1)}m</strong>` : '-'}</td>
+                        <td rowspan="${rowspan}" class="${rowspan > 1 ? 'merged-cell' : ''}" style="vertical-align: middle; text-align: center; background: ${log.takaSerial ? 'rgba(139, 92, 246, 0.03)' : 'transparent'};">${log.takaSerial ? `<strong>${groupMtr.toFixed(2)}m</strong>` : '-'}</td>
                         <td rowspan="${rowspan}" class="${rowspan > 1 ? 'merged-cell' : ''}" style="vertical-align: middle; text-align: center; background: ${log.takaSerial ? 'rgba(139, 92, 246, 0.03)' : 'transparent'};">${log.takaSerial ? `<strong>${groupWt.toFixed(2)}kg</strong>` : '-'}</td>
                         <td rowspan="${rowspan}" class="${rowspan > 1 ? 'merged-cell' : ''}" style="vertical-align: middle; text-align: center; background: ${log.takaSerial ? 'rgba(139, 92, 246, 0.03)' : 'transparent'};">${log.takaSerial ? `<span style="color: var(--accent); font-weight:600;">${avgWt.toFixed(2)}kg</span>` : '-'}</td>
                         <td rowspan="${rowspan}" class="${rowspan > 1 ? 'merged-cell' : ''}" style="vertical-align: middle; text-align: center;">
@@ -7390,15 +7390,15 @@
             const avgDaily = totalMeters / uniqueDays;
 
             // Update KPI DOM
-            document.getElementById('stat-total-meters').innerText = totalMeters.toFixed(1) + ' m';
-            document.getElementById('stat-avg-meters').innerText = avgDaily.toFixed(1) + ' m';
+            document.getElementById('stat-total-meters').innerText = totalMeters.toFixed(2) + ' m';
+            document.getElementById('stat-avg-meters').innerText = avgDaily.toFixed(2) + ' m';
             document.getElementById('stat-active-machines').innerText = activeMachinesSet.size;
 
             // Update shift KPI cards inside container
             const dayShiftValEl = document.getElementById('val-day-shift');
             const nightShiftValEl = document.getElementById('val-night-shift');
-            if (dayShiftValEl) dayShiftValEl.innerText = dayMetersTotal.toFixed(1) + ' m';
-            if (nightShiftValEl) nightShiftValEl.innerText = nightMetersTotal.toFixed(1) + ' m';
+            if (dayShiftValEl) dayShiftValEl.innerText = dayMetersTotal.toFixed(2) + ' m';
+            if (nightShiftValEl) nightShiftValEl.innerText = nightMetersTotal.toFixed(2) + ' m';
 
             // Designs List (Right Side Panel)
             const sortedDesigns = Object.entries(designMeters).sort((a,b) => b[1] - a[1]);
@@ -7418,7 +7418,7 @@
                                 <span style="font-weight: 700; color: var(--accent); min-width: 15px;">#${index+1}</span>
                                 <span class="design-link" style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Click to inspect design details" onclick="viewDesignDetail('${escapeHtml(name)}')">${name}</span>
                             </div>
-                            <div style="font-weight: 700; color: var(--fg); flex-shrink: 0;">${meters.toFixed(1)}m <span style="font-size: 0.75rem; color: var(--muted); font-weight: normal;">(${percent}%)</span></div>
+                            <div style="font-weight: 700; color: var(--fg); flex-shrink: 0;">${meters.toFixed(2)}m <span style="font-size: 0.75rem; color: var(--muted); font-weight: normal;">(${percent}%)</span></div>
                         </div>
                     `;
                 });
@@ -7426,7 +7426,7 @@
 
             const totalSumEl = document.getElementById('analytics-designs-total-val');
             if (totalSumEl) {
-                totalSumEl.innerText = designsSumMeters.toFixed(1) + ' m';
+                totalSumEl.innerText = designsSumMeters.toFixed(2) + ' m';
             }
 
             // Populate Design Selector Dropdown (custom contained picker)
