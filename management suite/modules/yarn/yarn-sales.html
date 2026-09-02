@@ -3507,6 +3507,7 @@
         tr.innerHTML = `
           <td><strong>${item.boriNo}</strong></td>
           <td><span style="font-size:0.8rem; color:var(--muted);">${item.composition || '-'}</span></td>
+          <td>${formatItemSpecs(item)}</td>
           <td>${item.color || '-'}</td>
           <td style="text-align: center;">${item.rollsQty || 0}</td>
           <td style="text-align: right;">${(item.saleQty || 0).toFixed(2)} Kg</td>
@@ -6837,6 +6838,7 @@
               <tr>
                 <th>Bori/Box No</th>
                 <th>Composition</th>
+                <th>Specs</th>
                 <th>Color</th>
                 <th style="text-align: center;">Rolls Qty</th>
                 <th style="text-align: right;">Weight (Kg)</th>
