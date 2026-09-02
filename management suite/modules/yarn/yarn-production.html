@@ -2564,6 +2564,7 @@
         color: document.getElementById('prod-color').value.trim(),
         denier: parseFloat(document.getElementById('prod-denier').value),
         tpm: parseInt(document.getElementById('prod-tpm').value),
+        twist: document.getElementById('prod-twist').value,
         rolls: parseInt(document.getElementById('prod-rolls').value, 10) || 0,
         qty: !isNaN(parseFloat(document.getElementById('prod-qty').value)) ? parseFloat(parseFloat(document.getElementById('prod-qty').value).toFixed(2)) : 0,
         configType: costingProd ? costingProd.configType : '',
