@@ -3352,25 +3352,79 @@
       return '-';
     }
 
+    function getSaleDiscountInfo(sale) {
+      if (!sale) return { amount: 0, percent: 0, type: 'percent', value: 0 };
+      const subtotalVal = sale.subtotalAmount || sale.amount || 0;
+      
+      let discAmount = 0;
+      if (sale.discountAmount !== undefined && sale.discountAmount !== null && !isNaN(parseFloat(sale.discountAmount)) && parseFloat(sale.discountAmount) > 0) {
+        discAmount = parseFloat(sale.discountAmount);
+      } else if (sale.discount_amount !== undefined && sale.discount_amount !== null && !isNaN(parseFloat(sale.discount_amount)) && parseFloat(sale.discount_amount) > 0) {
+        discAmount = parseFloat(sale.discount_amount);
+      } else if (sale.discountVal !== undefined && !isNaN(parseFloat(sale.discountVal)) && parseFloat(sale.discountVal) > 0) {
+        discAmount = parseFloat(sale.discountVal);
+      }
+
+      let discType = sale.discountType || sale.discount_type || 'percent';
+      let discValue = (sale.discountValue !== undefined && sale.discountValue !== null) ? parseFloat(sale.discountValue) : ((sale.discount !== undefined && sale.discount !== null) ? parseFloat(sale.discount) : 0);
+
+      if (!discAmount && discValue > 0) {
+        if (discType === 'percent') {
+          discAmount = subtotalVal * (discValue / 100);
+        } else {
+          discAmount = discValue;
+        }
+      }
+
+      if (!discAmount && sale.taxableAmount !== undefined && subtotalVal > parseFloat(sale.taxableAmount)) {
+        discAmount = subtotalVal - parseFloat(sale.taxableAmount);
+      }
+
+      if (!discAmount && sale.totalAmount > 0 && sale.gstAmount !== undefined && subtotalVal > 0) {
+        const calcTaxable = parseFloat(sale.totalAmount) - parseFloat(sale.gstAmount);
+        if (subtotalVal > calcTaxable + 0.01) {
+          discAmount = subtotalVal - calcTaxable;
+        }
+      }
+
+      let discPercent = 0;
+      if (discType === 'percent' && discValue > 0) {
+        discPercent = discValue;
+      } else if (subtotalVal > 0 && discAmount > 0) {
+        discPercent = Math.round((discAmount / subtotalVal) * 100);
+      }
+
+      return {
+        amount: discAmount,
+        percent: discPercent,
+        type: discType,
+        value: discValue
+      };
+    }
+
     function getSaleGstRate(sale) {
       if (!sale) return 0;
-      if (sale.gstRate !== undefined && sale.gstRate !== null && !isNaN(parseFloat(sale.gstRate))) {
-        return parseFloat(sale.gstRate);
-      }
-      if (sale.gst_rate !== undefined && sale.gst_rate !== null && !isNaN(parseFloat(sale.gst_rate))) {
-        return parseFloat(sale.gst_rate);
-      }
+
       const subtotal = sale.subtotalAmount || sale.amount || 0;
-      let discount = sale.discountAmount || 0;
-      if (!discount && sale.discountValue > 0) {
-        discount = sale.discountType === 'percent' ? subtotal * (parseFloat(sale.discountValue) / 100) : parseFloat(sale.discountValue);
+      const discInfo = getSaleDiscountInfo(sale);
+      const taxable = sale.taxableAmount !== undefined ? parseFloat(sale.taxableAmount) : Math.max(0, subtotal - discInfo.amount);
+
+      const rawGst = (sale.gstRate !== undefined && sale.gstRate !== null) ? sale.gstRate : sale.gst_rate;
+      if (rawGst !== undefined && rawGst !== null && !isNaN(parseFloat(rawGst))) {
+        let r = Math.round(parseFloat(rawGst));
+        if (r === 11) r = 12; // Auto-correct legacy 11% rounding bug to 12%
+        if (r > 0) return r;
       }
-      const taxable = sale.taxableAmount !== undefined ? sale.taxableAmount : Math.max(0, subtotal - discount);
+
       if (taxable > 0 && sale.gstAmount > 0) {
-        return Math.round((parseFloat(sale.gstAmount) / taxable) * 100);
+        let r = Math.round((parseFloat(sale.gstAmount) / taxable) * 100);
+        if (r === 11) r = 12;
+        return r;
       }
       if (subtotal > 0 && sale.gstAmount > 0) {
-        return Math.round((parseFloat(sale.gstAmount) / subtotal) * 100);
+        let r = Math.round((parseFloat(sale.gstAmount) / subtotal) * 100);
+        if (r === 11) r = 12;
+        return r;
       }
       return 0;
     }
@@ -3445,20 +3499,9 @@
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const subtotalVal = sale.subtotalAmount || sale.amount || items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
-      let discountAmount = sale.discountAmount || 0;
-      if (!discountAmount && sale.discountValue > 0) {
-        if (sale.discountType === 'percent') {
-          discountAmount = subtotalVal * (parseFloat(sale.discountValue) / 100);
-        } else {
-          discountAmount = parseFloat(sale.discountValue);
-        }
-      }
-      if (!discountAmount && sale.taxableAmount !== undefined && subtotalVal > sale.taxableAmount) {
-        discountAmount = subtotalVal - sale.taxableAmount;
-      }
-
-      const taxableVal = sale.taxableAmount !== undefined ? sale.taxableAmount : (subtotalVal - discountAmount);
-      const gstVal = sale.gstAmount !== undefined ? sale.gstAmount : (taxableVal * (gstRateVal / 100));
+      const discInfo = getSaleDiscountInfo(sale);
+      const taxableVal = sale.taxableAmount !== undefined ? parseFloat(sale.taxableAmount) : (subtotalVal - discInfo.amount);
+      const gstVal = sale.gstAmount !== undefined ? parseFloat(sale.gstAmount) : (taxableVal * (gstRateVal / 100));
       const grandTotalVal = sale.totalAmount || (taxableVal + gstVal);
 
       document.getElementById('details-summary-total-boris').innerText = totalBoris;
@@ -3469,11 +3512,9 @@
       const discWrapper = document.getElementById('details-summary-discount-row');
       if (discWrapper) {
         discWrapper.style.display = 'inline-block';
-        if (discountAmount > 0) {
-          const discVal = sale.discountValue !== undefined && sale.discountValue !== null ? sale.discountValue : (sale.discountType === 'percent' ? Math.round((discountAmount / subtotalVal) * 100) : discountAmount);
-          const discType = sale.discountType || 'percent';
-          const discLabel = discType === 'percent' ? `${discVal}%` : `Flat`;
-          discWrapper.innerHTML = `Discount (${discLabel}): <strong style="color:#ef4444;">-₹${discountAmount.toFixed(2)}</strong>`;
+        if (discInfo.amount > 0) {
+          const discLabel = discInfo.percent > 0 ? `${discInfo.percent}%` : `Flat`;
+          discWrapper.innerHTML = `Discount (${discLabel}): <strong style="color:#ef4444;">-₹${discInfo.amount.toFixed(2)}</strong>`;
         } else {
           discWrapper.innerHTML = `Discount: <strong style="color:var(--muted);">₹0.00</strong>`;
         }
@@ -5964,29 +6005,15 @@
           : ((s.items && s.items.length > 0 && s.items[0] && s.items[0].rate && !isNaN(parseFloat(s.items[0].rate))) ? parseFloat(s.items[0].rate) : 0);
         const rateDisplay = rateVal > 0 ? `₹${rateVal.toFixed(2)}` : '-';
 
-        let discAmount = s.discountAmount || 0;
-        if (!discAmount && s.discountValue > 0) {
-          discAmount = s.discountType === 'percent' ? subtotalVal * (parseFloat(s.discountValue) / 100) : parseFloat(s.discountValue);
-        }
-        if (!discAmount && s.taxableAmount !== undefined && subtotalVal > s.taxableAmount) {
-          discAmount = subtotalVal - s.taxableAmount;
-        }
-
+        const discInfo = getSaleDiscountInfo(s);
         let discountDisplay = '<span class="muted">0% (₹0.00)</span>';
-        if (discAmount > 0) {
-          const discVal = (s.discountValue !== undefined && s.discountValue !== null && s.discountValue > 0)
-            ? s.discountValue
-            : (subtotalVal > 0 ? Math.round((discAmount / subtotalVal) * 100) : discAmount);
-          const discType = s.discountType || 'percent';
-          if (discType === 'percent') {
-            discountDisplay = `<span style="color: #ef4444; font-weight: 600;">${discVal}%</span> <span class="muted" style="font-size:0.75rem;">(-₹${discAmount.toFixed(2)})</span>`;
-          } else {
-            discountDisplay = `<span style="color: #ef4444; font-weight: 600;">Flat</span> <span class="muted" style="font-size:0.75rem;">(-₹${discAmount.toFixed(2)})</span>`;
-          }
+        if (discInfo.amount > 0) {
+          const discLabel = discInfo.percent > 0 ? `${discInfo.percent}%` : (discInfo.type === 'amount' ? 'Flat' : '0%');
+          discountDisplay = `<span style="color: #ef4444; font-weight: 600;">${discLabel}</span> <span class="muted" style="font-size:0.75rem;">(-₹${discInfo.amount.toFixed(2)})</span>`;
         }
 
         const gstRateVal = getSaleGstRate(s);
-        const taxableVal = s.taxableAmount !== undefined ? parseFloat(s.taxableAmount) : Math.max(0, subtotalVal - discAmount);
+        const taxableVal = s.taxableAmount !== undefined ? parseFloat(s.taxableAmount) : Math.max(0, subtotalVal - discInfo.amount);
         const gstVal = s.gstAmount !== undefined ? parseFloat(s.gstAmount) : (taxableVal * (gstRateVal / 100));
         const grandTotalVal = s.totalAmount || (taxableVal + gstVal);
         const gstDisplay = `<span>${gstRateVal}%</span> <span class="muted" style="font-size:0.75rem;">(₹${gstVal.toFixed(2)})</span>`;
