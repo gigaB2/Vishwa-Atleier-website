@@ -3352,6 +3352,29 @@
       return '-';
     }
 
+    function getSaleGstRate(sale) {
+      if (!sale) return 0;
+      if (sale.gstRate !== undefined && sale.gstRate !== null && !isNaN(parseFloat(sale.gstRate))) {
+        return parseFloat(sale.gstRate);
+      }
+      if (sale.gst_rate !== undefined && sale.gst_rate !== null && !isNaN(parseFloat(sale.gst_rate))) {
+        return parseFloat(sale.gst_rate);
+      }
+      const subtotal = sale.subtotalAmount || sale.amount || 0;
+      let discount = sale.discountAmount || 0;
+      if (!discount && sale.discountValue > 0) {
+        discount = sale.discountType === 'percent' ? subtotal * (parseFloat(sale.discountValue) / 100) : parseFloat(sale.discountValue);
+      }
+      const taxable = sale.taxableAmount !== undefined ? sale.taxableAmount : Math.max(0, subtotal - discount);
+      if (taxable > 0 && sale.gstAmount > 0) {
+        return Math.round((parseFloat(sale.gstAmount) / taxable) * 100);
+      }
+      if (subtotal > 0 && sale.gstAmount > 0) {
+        return Math.round((parseFloat(sale.gstAmount) / subtotal) * 100);
+      }
+      return 0;
+    }
+
     window.openSaleDetailsModal = function(id) {
       const sale = dataStore[activeDivision].sales.find(s => s.id === id);
       if (!sale) return;
@@ -3362,6 +3385,8 @@
       const sellerCompEl = document.getElementById('details-sales-company');
       if (sellerCompEl) sellerCompEl.innerText = companyInfo.sellerName;
 
+      const gstRateVal = getSaleGstRate(sale);
+
       document.getElementById('details-modal-title').innerText = `Sale Details - ${activeDivision.toUpperCase()}`;
       document.getElementById('details-sales-challan').innerText = sale.challanNo;
       document.getElementById('details-sales-lot').innerText = resolveSaleLotNo(sale);
@@ -3371,7 +3396,7 @@
       const addrEl = document.getElementById('details-sales-address');
       if (addrEl) addrEl.innerText = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
 
-      document.getElementById('details-sales-gst').innerText = `${sale.gstRate || 0}%`;
+      document.getElementById('details-sales-gst').innerText = `${gstRateVal}%`;
 
       let items = [];
       if (sale.items && sale.items.length > 0) {
@@ -3395,15 +3420,22 @@
       tbody.innerHTML = '';
 
       items.forEach(item => {
+        const itemRate = (item.rate !== undefined && item.rate !== null && !isNaN(parseFloat(item.rate)) && parseFloat(item.rate) > 0)
+          ? parseFloat(item.rate)
+          : ((sale.rate !== undefined && sale.rate !== null && !isNaN(parseFloat(sale.rate))) ? parseFloat(sale.rate) : 0);
+        const itemAmt = (item.amount !== undefined && item.amount !== null && !isNaN(parseFloat(item.amount)))
+          ? parseFloat(item.amount)
+          : ((item.saleQty || 0) * itemRate);
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${item.boriNo}</strong></td>
-          <td><span style="font-size:0.8rem; color:var(--muted);">${item.composition}</span></td>
+          <td><span style="font-size:0.8rem; color:var(--muted);">${item.composition || '-'}</span></td>
           <td>${item.color || '-'}</td>
           <td style="text-align: center;">${item.rollsQty || 0}</td>
           <td style="text-align: right;">${(item.saleQty || 0).toFixed(2)} Kg</td>
-          <td style="text-align: right;">₹${(item.rate || 0).toFixed(2)}</td>
-          <td style="text-align: right;"><strong>₹${(item.amount || 0).toFixed(2)}</strong></td>
+          <td style="text-align: right;">₹${itemRate.toFixed(2)}</td>
+          <td style="text-align: right;"><strong>₹${itemAmt.toFixed(2)}</strong></td>
         `;
         tbody.appendChild(tr);
       });
@@ -3411,10 +3443,22 @@
       const totalBoris = items.length;
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
-      const subtotalVal = sale.subtotalAmount || sale.amount || 0;
-      const discountAmount = sale.discountAmount || 0;
+      const subtotalVal = sale.subtotalAmount || sale.amount || items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+      let discountAmount = sale.discountAmount || 0;
+      if (!discountAmount && sale.discountValue > 0) {
+        if (sale.discountType === 'percent') {
+          discountAmount = subtotalVal * (parseFloat(sale.discountValue) / 100);
+        } else {
+          discountAmount = parseFloat(sale.discountValue);
+        }
+      }
+      if (!discountAmount && sale.taxableAmount !== undefined && subtotalVal > sale.taxableAmount) {
+        discountAmount = subtotalVal - sale.taxableAmount;
+      }
+
       const taxableVal = sale.taxableAmount !== undefined ? sale.taxableAmount : (subtotalVal - discountAmount);
-      const gstVal = sale.gstAmount !== undefined ? sale.gstAmount : (taxableVal * ((sale.gstRate || 0) / 100));
+      const gstVal = sale.gstAmount !== undefined ? sale.gstAmount : (taxableVal * (gstRateVal / 100));
       const grandTotalVal = sale.totalAmount || (taxableVal + gstVal);
 
       document.getElementById('details-summary-total-boris').innerText = totalBoris;
@@ -3424,12 +3468,14 @@
 
       const discWrapper = document.getElementById('details-summary-discount-row');
       if (discWrapper) {
+        discWrapper.style.display = 'inline-block';
         if (discountAmount > 0) {
-          discWrapper.style.display = 'inline-block';
-          const discLabel = sale.discountType === 'percent' ? `${sale.discountValue}%` : `₹${sale.discountValue}`;
+          const discVal = sale.discountValue !== undefined && sale.discountValue !== null ? sale.discountValue : (sale.discountType === 'percent' ? Math.round((discountAmount / subtotalVal) * 100) : discountAmount);
+          const discType = sale.discountType || 'percent';
+          const discLabel = discType === 'percent' ? `${discVal}%` : `Flat`;
           discWrapper.innerHTML = `Discount (${discLabel}): <strong style="color:#ef4444;">-₹${discountAmount.toFixed(2)}</strong>`;
         } else {
-          discWrapper.style.display = 'none';
+          discWrapper.innerHTML = `Discount: <strong style="color:var(--muted);">₹0.00</strong>`;
         }
       }
 
@@ -5913,21 +5959,34 @@
         const qtyTotal = s.items && s.items.length > 0 ? s.items.reduce((a,b)=>a+ (parseFloat(b.saleQty) || 0), 0) : (s.saleQty || 0);
         const subtotalVal = s.subtotalAmount || s.amount || 0;
 
-        const discAmount = s.discountAmount || 0;
+        const rateVal = (s.rate !== undefined && s.rate !== null && !isNaN(parseFloat(s.rate)) && parseFloat(s.rate) > 0)
+          ? parseFloat(s.rate)
+          : ((s.items && s.items.length > 0 && s.items[0] && s.items[0].rate && !isNaN(parseFloat(s.items[0].rate))) ? parseFloat(s.items[0].rate) : 0);
+        const rateDisplay = rateVal > 0 ? `₹${rateVal.toFixed(2)}` : '-';
+
+        let discAmount = s.discountAmount || 0;
+        if (!discAmount && s.discountValue > 0) {
+          discAmount = s.discountType === 'percent' ? subtotalVal * (parseFloat(s.discountValue) / 100) : parseFloat(s.discountValue);
+        }
+        if (!discAmount && s.taxableAmount !== undefined && subtotalVal > s.taxableAmount) {
+          discAmount = subtotalVal - s.taxableAmount;
+        }
+
         let discountDisplay = '<span class="muted">-</span>';
         if (discAmount > 0) {
-          if (s.discountType === 'percent') {
-            discountDisplay = `<span style="color: #ef4444; font-weight: 600;">${s.discountValue}%</span> <span class="muted" style="font-size:0.75rem;">(-₹${discAmount.toFixed(2)})</span>`;
+          const discVal = s.discountValue !== undefined && s.discountValue !== null ? s.discountValue : (s.discountType === 'percent' ? Math.round((discAmount / subtotalVal) * 100) : discAmount);
+          const discType = s.discountType || 'percent';
+          if (discType === 'percent') {
+            discountDisplay = `<span style="color: #ef4444; font-weight: 600;">${discVal}%</span> <span class="muted" style="font-size:0.75rem;">(-₹${discAmount.toFixed(2)})</span>`;
           } else {
             discountDisplay = `<span style="color: #ef4444; font-weight: 600;">-₹${discAmount.toFixed(2)}</span>`;
           }
         }
 
-        const gstRateVal = (s.gstRate !== undefined && s.gstRate !== null && !isNaN(parseFloat(s.gstRate)))
-          ? parseFloat(s.gstRate)
-          : (s.gst_rate !== undefined && !isNaN(parseFloat(s.gst_rate)) ? parseFloat(s.gst_rate) : (subtotalVal > 0 && s.gstAmount ? Math.round((parseFloat(s.gstAmount) / subtotalVal) * 100) : 0));
-        const gstVal = s.gstAmount !== undefined ? parseFloat(s.gstAmount) : (subtotalVal * (gstRateVal / 100));
-        const grandTotalVal = s.totalAmount || (subtotalVal - discAmount + gstVal);
+        const gstRateVal = getSaleGstRate(s);
+        const taxableVal = s.taxableAmount !== undefined ? parseFloat(s.taxableAmount) : Math.max(0, subtotalVal - discAmount);
+        const gstVal = s.gstAmount !== undefined ? parseFloat(s.gstAmount) : (taxableVal * (gstRateVal / 100));
+        const grandTotalVal = s.totalAmount || (taxableVal + gstVal);
 
         tr.innerHTML = `
           <td><strong>${s.challanNo}</strong></td>
@@ -5939,7 +5998,7 @@
           <td>${twistDisplay}</td>
           <td>${rollsTotal}</td>
           <td>${qtyTotal.toFixed(2)} Kg</td>
-          <td>₹${s.rate ? s.rate.toFixed(2) : '-'}</td>
+          <td>${rateDisplay}</td>
           <td>₹${subtotalVal.toFixed(2)}</td>
           <td>${discountDisplay}</td>
           <td>${gstRateVal}%</td>
@@ -6181,7 +6240,8 @@
       if (document.getElementById('modal-sales-discount-value')) {
         document.getElementById('modal-sales-discount-value').value = sale.discountValue !== undefined ? sale.discountValue : 0;
       }
-      document.getElementById('modal-sales-gst').value = sale.gstRate;
+      const editGstRate = getSaleGstRate(sale);
+      document.getElementById('modal-sales-gst').value = editGstRate > 0 ? editGstRate : 12;
 
       document.getElementById('modal-title').innerText = `Edit Sale (Challan ${sale.challanNo}) - ${activeDivision.toUpperCase()}`;
       document.getElementById('modal-sales-submit-btn').innerText = 'Update Sale';
@@ -6273,7 +6333,8 @@
       if (document.getElementById('modal-sales-discount-value')) {
         document.getElementById('modal-sales-discount-value').value = sale.discountValue !== undefined ? sale.discountValue : 0;
       }
-      document.getElementById('modal-sales-gst').value = sale.gstRate !== undefined ? sale.gstRate : 12;
+      const repGstRate = getSaleGstRate(sale);
+      document.getElementById('modal-sales-gst').value = repGstRate > 0 ? repGstRate : 12;
 
       let loadedItems = [];
       if (sale.items && sale.items.length > 0) {
