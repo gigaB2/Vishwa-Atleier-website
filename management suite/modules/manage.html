@@ -6416,16 +6416,28 @@ function showToast(message, type = 'info') {
     const selector = document.getElementById('fp-yarn-selector');
     if (!selector) return;
 
-    // Build unique RM qualities list (e.g. "20/1 Brt poly", "70D Spandex", etc.)
-    const availableQualities = Array.from(new Set(rawMaterialQualities.map(q => q.quality).filter(Boolean))).sort();
+    // Build unique RM qualities with color formatted in brackets
+    // e.g. "20/1 Brt poly (Raw White)" or "70D Spandex" if color is missing
+    const items = [];
+    (rawMaterialQualities || []).forEach(q => {
+      const qName = (q.quality || '').trim();
+      if (!qName) return;
+      const qColor = (q.color || '').trim();
+      const label = qColor ? `${qName} (${qColor})` : qName;
+      if (!items.includes(label)) {
+        items.push(label);
+      }
+    });
 
-    if (availableQualities.length === 0) {
+    items.sort();
+
+    if (items.length === 0) {
       selector.innerHTML = '<option value="" disabled selected>No RM qualities found. Add RM Qualities first!</option>';
       return;
     }
 
-    selector.innerHTML = '<option value="" disabled selected>Select RM Quality to add...</option>' + 
-      availableQualities.map(name => `<option value="${name}">${name}</option>`).join('');
+    selector.innerHTML = '<option value="" disabled selected>Select RM Quality (with Color) to add...</option>' + 
+      items.map(name => `<option value="${name}">${name}</option>`).join('');
   }
 
   window.handleFpDivisionChange = function(div, selectedValue = '') {
