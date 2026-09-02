@@ -568,10 +568,14 @@
         'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
         'manage-jalas', 'manage-fanis', 'machines', 'warp-beams', 'warp-issues',
         'yarn-issues', 'costing-products-v4', 'costing-tfo-products-v1',
-        'costing-doubler-products-v1', 'costing-covering-products-v1'
+        'costing-doubler-products-v1', 'costing-covering-products-v1',
+        'yarn_covering_sales_logs', 'yarn_tfo_sales_logs', 'yarn_doubler_sales_logs',
+        'yarn_covering_production_logs', 'yarn_tfo_production_logs', 'yarn_doubler_production_logs'
       ];
 
-      if (MASTER_ENTITY_KEYS.includes(key) && !isLocallyActive) {
+      const isMasterKey = MASTER_ENTITY_KEYS.includes(key) || (typeof key === 'string' && key.startsWith('yarn_') && (key.includes('_sales_logs') || key.includes('_production_logs')));
+
+      if (isMasterKey && !isLocallyActive) {
         return cleanRemote;
       }
 

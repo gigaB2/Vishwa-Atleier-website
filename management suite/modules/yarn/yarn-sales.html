@@ -4962,6 +4962,8 @@
 
       const data = {
         id: editId || 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        updated_at: new Date().toISOString(),
+        timestamp: Date.now(),
         challanNo: challanNo,
         date: date,
         customerName: customerName,
@@ -6521,6 +6523,9 @@
           dataStore[activeDivision].sales = dataStore[activeDivision].sales.filter(s => s.id !== id);
           if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
             window.VishwaSupabase.recordDeletion(`yarn_${activeDivision}_sales_logs`, id);
+            if (sale && sale.challanNo) {
+              window.VishwaSupabase.recordDeletion(`yarn_${activeDivision}_sales_logs`, sale.challanNo);
+            }
           }
           saveLogs('sales');
           showToast('Sale record deleted and stock restored', 'info');
