@@ -604,11 +604,19 @@ CREATE TABLE IF NOT EXISTS public.vf_employees (
     salary_style TEXT NOT NULL DEFAULT 'Per Day Fixed',
     salary_rate NUMERIC(10, 2) DEFAULT 0,
     base_salary NUMERIC(10, 2) DEFAULT 0,
+    salary_amount NUMERIC(10, 2) DEFAULT 0,
     phone TEXT,
     email TEXT,
     joining_date DATE,
+    join_date TIMESTAMPTZ,
+    termination_date DATE,
+    rejoin_date DATE,
     assigned_machines JSONB DEFAULT '[]'::jsonb,
     avatar_gradient TEXT,
+    avatar_color TEXT,
+    id_front TEXT,
+    id_back TEXT,
+    status TEXT DEFAULT 'Active',
     active BOOLEAN DEFAULT true,
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -616,7 +624,18 @@ CREATE TABLE IF NOT EXISTS public.vf_employees (
 );
 CREATE INDEX IF NOT EXISTS idx_vf_emp_name ON public.vf_employees(name);
 CREATE INDEX IF NOT EXISTS idx_vf_emp_role ON public.vf_employees(role);
+CREATE INDEX IF NOT EXISTS idx_vf_emp_status ON public.vf_employees(status);
 CREATE INDEX IF NOT EXISTS idx_vf_emp_active ON public.vf_employees(active);
+
+-- Safe column additions if vf_employees table was already created in older migrations
+ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS id_front TEXT;
+ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS id_back TEXT;
+ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS salary_amount NUMERIC(10, 2) DEFAULT 0;
+ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS join_date TIMESTAMPTZ;
+ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS termination_date DATE;
+ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS rejoin_date DATE;
+ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS avatar_color TEXT;
+ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Active';
 
 -- 24. Dedicated Relational Table: Attendance Records
 CREATE TABLE IF NOT EXISTS public.vf_attendance_records (

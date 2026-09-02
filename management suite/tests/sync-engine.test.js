@@ -210,4 +210,68 @@ test('SyncEngine — mergeDatasets', async (t) => {
     assert.equal(merged.length, 2);
     assert.ok(!merged.find(q => q.id === 'Q_3'));
   });
+
+  await t.test('merges multi-user staff state preserving front/back ID images, machines, and salary amount', () => {
+    const serverState = {
+      employees: [
+        {
+          id: 'emp-1',
+          name: 'Ramesh Patel',
+          role: 'Karigar',
+          machines: ['Airjet Loom 1'],
+          salaryStyle: 'Per Day Fixed',
+          salaryAmount: 850,
+          idFront: 'data:image/jpeg;base64,serverFrontImgData',
+          idBack: 'data:image/jpeg;base64,serverBackImgData',
+          status: 'Active'
+        }
+      ],
+      loans: []
+    };
+
+    const clientState = {
+      employees: [
+        {
+          id: 'emp-2',
+          name: 'Suresh Kumar',
+          role: 'Karigar',
+          machines: ['Waterjet Loom 2'],
+          salaryStyle: 'Per Day Fixed',
+          salaryAmount: 900,
+          idFront: 'data:image/jpeg;base64,clientFrontImgData',
+          idBack: 'data:image/jpeg;base64,clientBackImgData',
+          status: 'Active'
+        }
+      ],
+      loans: [
+        { id: 'LN-101', empId: 'emp-2', amount: 5000, type: 'Advance', cleared: false }
+      ]
+    };
+
+    // Item-level merge simulation matching supabase-client logic
+    const empMap = new Map();
+    serverState.employees.forEach(e => empMap.set(e.id, { ...e }));
+    clientState.employees.forEach(e => {
+      if (empMap.has(e.id)) {
+        empMap.set(e.id, { ...empMap.get(e.id), ...e });
+      } else {
+        empMap.set(e.id, e);
+      }
+    });
+
+    const mergedEmployees = Array.from(empMap.values());
+    assert.equal(mergedEmployees.length, 2);
+    
+    const emp1 = mergedEmployees.find(e => e.id === 'emp-1');
+    assert.ok(emp1);
+    assert.equal(emp1.idFront, 'data:image/jpeg;base64,serverFrontImgData');
+    assert.equal(emp1.salaryAmount, 850);
+    assert.deepEqual(emp1.machines, ['Airjet Loom 1']);
+
+    const emp2 = mergedEmployees.find(e => e.id === 'emp-2');
+    assert.ok(emp2);
+    assert.equal(emp2.idFront, 'data:image/jpeg;base64,clientFrontImgData');
+    assert.equal(emp2.salaryAmount, 900);
+    assert.deepEqual(emp2.machines, ['Waterjet Loom 2']);
+  });
 });

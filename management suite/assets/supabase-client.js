@@ -623,7 +623,78 @@
     if (parsedLocal && typeof parsedLocal === 'object' && !Array.isArray(parsedLocal) &&
         parsedRemote && typeof parsedRemote === 'object' && !Array.isArray(parsedRemote)) {
       const lastWrite = lastLocalWrites[key] || 0;
-      const targetObj = (Date.now() - lastWrite < 3000) ? parsedLocal : parsedRemote;
+      const isLocallyActive = (Date.now() - lastWrite < 3000);
+
+      // Special handling for Staff & Salary state objects (e.g. aethertasks_db_state_v7)
+      if (Array.isArray(parsedLocal.employees) || Array.isArray(parsedRemote.employees) ||
+          Array.isArray(parsedLocal.loans) || Array.isArray(parsedRemote.loans) ||
+          (parsedLocal.attendance && typeof parsedLocal.attendance === 'object') || (parsedRemote.attendance && typeof parsedRemote.attendance === 'object')) {
+        
+        // Intelligent item-level merge for employees
+        const localEmps = Array.isArray(parsedLocal.employees) ? filterDeletedEntities(parsedLocal.employees) : [];
+        const remoteEmps = Array.isArray(parsedRemote.employees) ? filterDeletedEntities(parsedRemote.employees) : [];
+        
+        const empMap = new Map();
+        remoteEmps.forEach(emp => {
+          if (emp && (emp.id || emp.name)) {
+            const eKey = String(emp.id || emp.name);
+            empMap.set(eKey, { ...emp });
+          }
+        });
+
+        localEmps.forEach(lEmp => {
+          if (!lEmp || (!lEmp.id && !lEmp.name)) return;
+          const eKey = String(lEmp.id || lEmp.name);
+          if (empMap.has(eKey)) {
+            const rEmp = empMap.get(eKey);
+            // Merge fields: preserve images if local has them and remote doesn't, or vice-versa
+            const mergedEmp = {
+              ...rEmp,
+              ...lEmp,
+              idFront: lEmp.idFront || rEmp.idFront || '',
+              idBack: lEmp.idBack || rEmp.idBack || '',
+              machines: (Array.isArray(lEmp.machines) && lEmp.machines.length > 0) ? lEmp.machines : (rEmp.machines || []),
+              salaryAmount: (lEmp.salaryAmount !== undefined && lEmp.salaryAmount !== null && lEmp.salaryAmount !== '') ? lEmp.salaryAmount : rEmp.salaryAmount
+            };
+            empMap.set(eKey, mergedEmp);
+          } else {
+            empMap.set(eKey, lEmp);
+          }
+        });
+
+        const mergedEmployees = filterDeletedEntities(Array.from(empMap.values()));
+
+        // Merge loans
+        const localLoans = Array.isArray(parsedLocal.loans) ? filterDeletedEntities(parsedLocal.loans) : [];
+        const remoteLoans = Array.isArray(parsedRemote.loans) ? filterDeletedEntities(parsedRemote.loans) : [];
+        const loanMap = new Map();
+        remoteLoans.forEach(ln => { if (ln && ln.id) loanMap.set(String(ln.id), ln); });
+        localLoans.forEach(ln => { if (ln && ln.id) loanMap.set(String(ln.id), ln); });
+        const mergedLoans = filterDeletedEntities(Array.from(loanMap.values()));
+
+        // Merge attendance
+        const mergedAttendance = {
+          ...(parsedRemote.attendance || {}),
+          ...(parsedLocal.attendance || {})
+        };
+
+        // Merge salary settlements
+        const mergedSalaryPayments = {
+          ...(parsedRemote.salaryPayments || {}),
+          ...(parsedLocal.salaryPayments || {})
+        };
+
+        return {
+          ...(isLocallyActive ? parsedRemote : parsedLocal),
+          ...(isLocallyActive ? parsedLocal : parsedRemote),
+          employees: mergedEmployees,
+          loans: mergedLoans,
+          attendance: mergedAttendance,
+          salaryPayments: mergedSalaryPayments
+        };
+      }
+
+      const targetObj = isLocallyActive ? parsedLocal : parsedRemote;
       // If object has employees/machines/loans arrays (like STATE_KEY aethertasks_db_state_v7)
       if (targetObj && (Array.isArray(targetObj.employees) || Array.isArray(targetObj.machines) || Array.isArray(targetObj.loans))) {
         const cloned = { ...targetObj };
@@ -2845,21 +2916,50 @@
                 if (Array.isArray(value.employees) && value.employees.length > 0) {
                   const empRows = value.employees.map(emp => {
                     if (!emp || !emp.id) return null;
+                    const salAmount = parseFloat(emp.salaryAmount !== undefined ? emp.salaryAmount : (emp.baseSalary !== undefined ? emp.baseSalary : emp.salaryRate)) || 0;
+                    const rawJoinDate = emp.joinDate || emp.joiningDate || '';
+                    const cleanJoinDate = rawJoinDate ? String(rawJoinDate).split('T')[0] : null;
+                    const machines = Array.isArray(emp.machines) ? emp.machines : (Array.isArray(emp.assignedMachines) ? emp.assignedMachines : (emp.machine ? [emp.machine] : []));
+                    const avatarCol = emp.avatarColor || emp.avatarGradient || null;
+                    const empStatus = emp.status || (emp.active === false ? 'Terminated' : 'Active');
+                    const isActive = empStatus !== 'Terminated';
+                    const idFrontVal = emp.idFront || (emp.metadata && emp.metadata.idFront) || null;
+                    const idBackVal = emp.idBack || (emp.metadata && emp.metadata.idBack) || null;
+
                     return {
                       id: String(emp.id).trim(),
                       name: String(emp.name || 'Unnamed Employee').trim(),
                       role: String(emp.role || 'Staff').trim(),
                       department: emp.department ? String(emp.department).trim() : null,
                       salary_style: String(emp.salaryStyle || 'Per Day Fixed').trim(),
-                      salary_rate: parseFloat(emp.salaryRate) || 0,
-                      base_salary: parseFloat(emp.baseSalary) || 0,
+                      salary_rate: parseFloat(emp.salaryRate) || salAmount,
+                      base_salary: parseFloat(emp.baseSalary) || salAmount,
+                      salary_amount: salAmount,
                       phone: emp.phone ? String(emp.phone).trim() : null,
                       email: emp.email ? String(emp.email).trim() : null,
-                      joining_date: emp.joiningDate ? String(emp.joiningDate).split('T')[0] : null,
-                      assigned_machines: Array.isArray(emp.assignedMachines) ? emp.assignedMachines : [],
-                      avatar_gradient: emp.avatarGradient || null,
-                      active: emp.active !== false,
-                      metadata: typeof emp.metadata === 'object' && emp.metadata !== null ? emp.metadata : {},
+                      joining_date: cleanJoinDate,
+                      join_date: rawJoinDate ? rawJoinDate : null,
+                      termination_date: emp.terminationDate ? String(emp.terminationDate).split('T')[0] : null,
+                      rejoin_date: emp.rejoinDate ? String(emp.rejoinDate).split('T')[0] : null,
+                      assigned_machines: machines,
+                      avatar_gradient: avatarCol,
+                      avatar_color: avatarCol,
+                      id_front: idFrontVal,
+                      id_back: idBackVal,
+                      status: empStatus,
+                      active: isActive,
+                      metadata: {
+                        ...(typeof emp.metadata === 'object' && emp.metadata !== null ? emp.metadata : {}),
+                        machines: machines,
+                        salaryAmount: salAmount,
+                        avatarColor: avatarCol,
+                        idFront: idFrontVal || '',
+                        idBack: idBackVal || '',
+                        joinDate: rawJoinDate,
+                        terminationDate: emp.terminationDate || null,
+                        rejoinDate: emp.rejoinDate || null,
+                        status: empStatus
+                      },
                       updated_at: nowIso
                     };
                   }).filter(Boolean);
@@ -4361,22 +4461,46 @@
                   if (rawStaff) existingStaffState = JSON.parse(rawStaff);
                 } catch(e) {}
 
-                const reconstructedEmployees = dbEmployees.map(emp => ({
-                  id: emp.id,
-                  name: emp.name,
-                  role: emp.role,
-                  department: emp.department || '',
-                  salaryStyle: emp.salary_style || 'Per Day Fixed',
-                  salaryRate: Number(emp.salary_rate) || 0,
-                  baseSalary: Number(emp.base_salary) || 0,
-                  phone: emp.phone || '',
-                  email: emp.email || '',
-                  joiningDate: emp.joining_date || '',
-                  assignedMachines: Array.isArray(emp.assigned_machines) ? emp.assigned_machines : [],
-                  avatarGradient: emp.avatar_gradient || '',
-                  active: emp.active !== false,
-                  ...(emp.metadata && typeof emp.metadata === 'object' ? emp.metadata : {})
-                }));
+                const reconstructedEmployees = dbEmployees.map(emp => {
+                  const meta = (emp.metadata && typeof emp.metadata === 'object') ? emp.metadata : {};
+                  const machines = Array.isArray(emp.assigned_machines) && emp.assigned_machines.length > 0
+                    ? emp.assigned_machines
+                    : (Array.isArray(meta.machines) ? meta.machines : []);
+                  const salAmount = Number(emp.salary_amount ?? emp.base_salary ?? emp.salary_rate ?? meta.salaryAmount ?? 0);
+                  const avatar = emp.avatar_color || emp.avatar_gradient || meta.avatarColor || meta.avatarGradient || 'from-purple-500 to-indigo-500';
+                  const jDate = emp.join_date || emp.joining_date || meta.joinDate || meta.joiningDate || '';
+                  const empStatus = emp.status || meta.status || (emp.active !== false ? 'Active' : 'Terminated');
+                  const idFrontImg = emp.id_front || meta.idFront || '';
+                  const idBackImg = emp.id_back || meta.idBack || '';
+                  const termDate = emp.termination_date || meta.terminationDate || null;
+                  const rejDate = emp.rejoin_date || meta.rejoinDate || null;
+
+                  return {
+                    id: emp.id,
+                    name: emp.name,
+                    role: emp.role,
+                    department: emp.department || '',
+                    salaryStyle: emp.salary_style || 'Per Day Fixed',
+                    salaryAmount: salAmount,
+                    salaryRate: Number(emp.salary_rate) || salAmount,
+                    baseSalary: Number(emp.base_salary) || salAmount,
+                    phone: emp.phone || '',
+                    email: emp.email || '',
+                    joinDate: jDate,
+                    joiningDate: jDate ? String(jDate).split('T')[0] : '',
+                    machines: machines,
+                    assignedMachines: machines,
+                    avatarColor: avatar,
+                    avatarGradient: avatar,
+                    status: empStatus,
+                    active: empStatus !== 'Terminated',
+                    idFront: idFrontImg,
+                    idBack: idBackImg,
+                    terminationDate: termDate,
+                    rejoinDate: rejDate,
+                    ...meta
+                  };
+                });
 
                 const reconstructedAttendance = {};
                 if (Array.isArray(dbAttendance)) {
@@ -4946,22 +5070,46 @@
       try {
         const rows = await fetchAllRowsPaginated('vf_employees', '*', 'order=name.asc');
         if (!Array.isArray(rows) || rows.length === 0) return null;
-        return rows.map(emp => ({
-          id: emp.id,
-          name: emp.name,
-          role: emp.role,
-          department: emp.department || '',
-          salaryStyle: emp.salary_style || 'Per Day Fixed',
-          salaryRate: Number(emp.salary_rate) || 0,
-          baseSalary: Number(emp.base_salary) || 0,
-          phone: emp.phone || '',
-          email: emp.email || '',
-          joiningDate: emp.joining_date || '',
-          assignedMachines: Array.isArray(emp.assigned_machines) ? emp.assigned_machines : [],
-          avatarGradient: emp.avatar_gradient || '',
-          active: emp.active !== false,
-          ...(emp.metadata && typeof emp.metadata === 'object' ? emp.metadata : {})
-        }));
+        return rows.map(emp => {
+          const meta = (emp.metadata && typeof emp.metadata === 'object') ? emp.metadata : {};
+          const machines = Array.isArray(emp.assigned_machines) && emp.assigned_machines.length > 0
+            ? emp.assigned_machines
+            : (Array.isArray(meta.machines) ? meta.machines : []);
+          const salAmount = Number(emp.salary_amount ?? emp.base_salary ?? emp.salary_rate ?? meta.salaryAmount ?? 0);
+          const avatar = emp.avatar_color || emp.avatar_gradient || meta.avatarColor || meta.avatarGradient || 'from-purple-500 to-indigo-500';
+          const jDate = emp.join_date || emp.joining_date || meta.joinDate || meta.joiningDate || '';
+          const empStatus = emp.status || meta.status || (emp.active !== false ? 'Active' : 'Terminated');
+          const idFrontImg = emp.id_front || meta.idFront || '';
+          const idBackImg = emp.id_back || meta.idBack || '';
+          const termDate = emp.termination_date || meta.terminationDate || null;
+          const rejDate = emp.rejoin_date || meta.rejoinDate || null;
+
+          return {
+            id: emp.id,
+            name: emp.name,
+            role: emp.role,
+            department: emp.department || '',
+            salaryStyle: emp.salary_style || 'Per Day Fixed',
+            salaryAmount: salAmount,
+            salaryRate: Number(emp.salary_rate) || salAmount,
+            baseSalary: Number(emp.base_salary) || salAmount,
+            phone: emp.phone || '',
+            email: emp.email || '',
+            joinDate: jDate,
+            joiningDate: jDate ? String(jDate).split('T')[0] : '',
+            machines: machines,
+            assignedMachines: machines,
+            avatarColor: avatar,
+            avatarGradient: avatar,
+            status: empStatus,
+            active: empStatus !== 'Terminated',
+            idFront: idFrontImg,
+            idBack: idBackImg,
+            terminationDate: termDate,
+            rejoinDate: rejDate,
+            ...meta
+          };
+        });
       } catch(e) {
         console.error('fetchEmployeesRelational error:', e);
         return null;

@@ -3361,7 +3361,27 @@
     if (!stored) return isCleared ? [] : [];
     try {
       const parsed = JSON.parse(stored);
-      return (parsed && Array.isArray(parsed.employees)) ? parsed.employees : [];
+      if (!parsed || !Array.isArray(parsed.employees)) return [];
+      return parsed.employees.map(emp => {
+        if (!emp || typeof emp !== 'object') return null;
+        const machines = Array.isArray(emp.machines) ? emp.machines : (Array.isArray(emp.assignedMachines) ? emp.assignedMachines : (emp.machine ? [emp.machine] : []));
+        const salaryAmt = (emp.salaryAmount !== undefined && emp.salaryAmount !== null && emp.salaryAmount !== '') ? emp.salaryAmount : (emp.baseSalary !== undefined ? emp.baseSalary : (emp.salaryRate || 0));
+        const jDate = emp.joinDate || emp.joiningDate || '';
+        const avColor = emp.avatarColor || emp.avatarGradient || 'from-purple-500 to-indigo-500';
+        const empStatus = emp.status || (emp.active === false ? 'Terminated' : 'Active');
+        const idF = emp.idFront || (emp.metadata && emp.metadata.idFront) || '';
+        const idB = emp.idBack || (emp.metadata && emp.metadata.idBack) || '';
+        return {
+          ...emp,
+          machines: machines,
+          salaryAmount: salaryAmt,
+          joinDate: jDate,
+          avatarColor: avColor,
+          status: empStatus,
+          idFront: idF,
+          idBack: idB
+        };
+      }).filter(Boolean);
     } catch(e) {
       return [];
     }
@@ -4187,8 +4207,8 @@ function handleAddEmployee(e) {
                 machines: machinesAssigned,
                 salaryStyle: salaryStyle,
                 salaryAmount: salaryAmount,
-                idFront: idFrontSrc.startsWith('data:') ? idFrontSrc : '',
-                idBack: idBackSrc.startsWith('data:') ? idBackSrc : '',
+                idFront: (idFrontSrc && (idFrontSrc.startsWith('data:') || idFrontSrc.startsWith('http') || idFrontSrc.startsWith('blob:'))) ? idFrontSrc : '',
+                idBack: (idBackSrc && (idBackSrc.startsWith('data:') || idBackSrc.startsWith('http') || idBackSrc.startsWith('blob:'))) ? idBackSrc : '',
                 joinDate: joinDateInput ? addTimestampToDate(joinDateInput) : new Date().toISOString(),
                 status: 'Active'
             };
