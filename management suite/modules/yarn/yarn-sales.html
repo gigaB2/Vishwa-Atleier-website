@@ -1579,7 +1579,7 @@
             </div>
             <div class="form-group">
               <label for="prod-qty">Production Qty (Kg)</label>
-              <input type="number" step="0.001" id="prod-qty" placeholder="Qty (Kg)" required min="0.001">
+              <input type="number" step="any" id="prod-qty" placeholder="Qty (Kg)" required min="0.01">
             </div>
             <div class="form-actions">
               <button type="submit" class="btn btn-primary" id="prod-submit-btn">Save</button>
@@ -2259,8 +2259,8 @@
         denier: parseFloat(document.getElementById('prod-denier').value),
         tpm: parseInt(document.getElementById('prod-tpm').value),
         twist: document.getElementById('prod-twist').value,
-        rolls: parseInt(document.getElementById('prod-rolls').value),
-        qty: parseFloat(document.getElementById('prod-qty').value),
+        rolls: parseInt(document.getElementById('prod-rolls').value, 10) || 0,
+        qty: !isNaN(parseFloat(document.getElementById('prod-qty').value)) ? parseFloat(parseFloat(document.getElementById('prod-qty').value).toFixed(2)) : 0,
         configType: costingProd ? costingProd.configType : '',
         ply: costingProd ? costingProd.ply : '',
         yarns: costingProd && costingProd.yarns ? costingProd.yarns : []
@@ -4410,18 +4410,21 @@
         const numQty = parseFloat(l.qty) || 0;
         const remainingQtyNum = parseFloat(stock.remainingQty) || 0;
 
+        const formattedQtyStr = Number(numQty).toFixed(2);
+        const formattedRemStr = Number(remainingQtyNum).toFixed(2);
+
         let rollsDisplay = l.rolls;
-        let qtyDisplay = `${numQty.toFixed(2)} Kg`;
+        let qtyDisplay = `${formattedQtyStr} Kg`;
 
         if (isSold) {
           rollsDisplay = `${l.rolls} <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>`;
-          qtyDisplay = `${numQty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>`;
+          qtyDisplay = `${formattedQtyStr} Kg <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>`;
         } else if (stock.remainingRolls < l.rolls) {
           rollsDisplay = `${l.rolls} <span style="font-size:0.72rem; background:rgba(249,115,22,0.12); color:var(--accent3); padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">${stock.remainingRolls} left</span>`;
-          qtyDisplay = `${numQty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(249,115,22,0.12); color:var(--accent3); padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">${remainingQtyNum.toFixed(2)} Kg left</span>`;
+          qtyDisplay = `${formattedQtyStr} Kg <span style="font-size:0.72rem; background:rgba(249,115,22,0.12); color:var(--accent3); padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">${formattedRemStr} Kg left</span>`;
         } else {
           rollsDisplay = `${l.rolls} <span style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">In Stock</span>`;
-          qtyDisplay = `${numQty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">In Stock</span>`;
+          qtyDisplay = `${formattedQtyStr} Kg <span style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">In Stock</span>`;
         }
 
         const tr = document.createElement('tr');
@@ -5131,7 +5134,7 @@
       document.getElementById('prod-tpm').value = log.tpm;
       document.getElementById('prod-twist').value = log.twist;
       document.getElementById('prod-rolls').value = log.rolls;
-      document.getElementById('prod-qty').value = log.qty;
+      document.getElementById('prod-qty').value = !isNaN(parseFloat(log.qty)) ? parseFloat(log.qty).toFixed(2) : log.qty;
 
       document.getElementById('prod-form-title').innerText = `Edit ${activeDivision.toUpperCase()} Production Log`;
       document.getElementById('prod-submit-btn').innerText = 'Update';
@@ -5185,7 +5188,7 @@
       document.getElementById('prod-tpm').value = log.tpm;
       document.getElementById('prod-twist').value = log.twist;
       document.getElementById('prod-rolls').value = log.rolls;
-      document.getElementById('prod-qty').value = log.qty;
+      document.getElementById('prod-qty').value = !isNaN(parseFloat(log.qty)) ? parseFloat(log.qty).toFixed(2) : log.qty;
 
       document.getElementById('prod-form-title').innerText = `Add ${activeDivision.toUpperCase()} Production Log (Repeat Entry)`;
       document.getElementById('prod-submit-btn').innerText = 'Save New Entry';

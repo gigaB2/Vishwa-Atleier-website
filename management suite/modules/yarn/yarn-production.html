@@ -4747,18 +4747,21 @@
         const numQty = parseFloat(l.qty) || 0;
         const remainingQtyNum = parseFloat(stock.remainingQty) || 0;
 
+        const formattedQtyStr = Number(numQty).toFixed(2);
+        const formattedRemStr = Number(remainingQtyNum).toFixed(2);
+
         let rollsDisplay = l.rolls;
-        let qtyDisplay = `${numQty.toFixed(2)} Kg`;
+        let qtyDisplay = `${formattedQtyStr} Kg`;
 
         if (isSold) {
           rollsDisplay = `${l.rolls} <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>`;
-          qtyDisplay = `${numQty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>`;
+          qtyDisplay = `${formattedQtyStr} Kg <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>`;
         } else if (stock.remainingRolls < l.rolls) {
           rollsDisplay = `${l.rolls} <span style="font-size:0.72rem; background:rgba(249,115,22,0.12); color:var(--accent3); padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">${stock.remainingRolls} left</span>`;
-          qtyDisplay = `${numQty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(249,115,22,0.12); color:var(--accent3); padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">${remainingQtyNum.toFixed(2)} Kg left</span>`;
+          qtyDisplay = `${formattedQtyStr} Kg <span style="font-size:0.72rem; background:rgba(249,115,22,0.12); color:var(--accent3); padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">${formattedRemStr} Kg left</span>`;
         } else {
           rollsDisplay = `${l.rolls} <span style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">In Stock</span>`;
-          qtyDisplay = `${numQty.toFixed(2)} Kg <span style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">In Stock</span>`;
+          qtyDisplay = `${formattedQtyStr} Kg <span style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">In Stock</span>`;
         }
 
         const tr = document.createElement('tr');
