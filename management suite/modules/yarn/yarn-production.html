@@ -1966,7 +1966,7 @@
           <h3>Production Logs</h3>
           <div style="display: flex; gap: 10px; align-items: center;">
             <button type="button" id="btn-batch-sell" class="btn btn-primary" onclick="openBatchSellModal()" disabled style="height: 38px; display: inline-flex; align-items: center; white-space: nowrap;">
-              Batch Sell (<span id="batch-sell-count">0</span>)
+              Batch Sell (<span id="batch-sell-count">0</span> <span id="batch-sell-label">Boxes</span> | <span id="batch-sell-weight">0.00</span> Kg)
             </button>
           </div>
         </div>
@@ -5490,10 +5490,24 @@
 
     window.updateBatchSellButtonState = function() {
       const count = selectedProdIds.size;
+      let totalWeight = 0;
+      selectedProdIds.forEach(id => {
+        const prod = dataStore[activeDivision].production.find(p => p.id === id);
+        if (prod) {
+          const stock = getBoriStock(prod);
+          totalWeight += (stock.remainingQty || 0);
+        }
+      });
+      const weightStr = totalWeight.toFixed(2);
+      const boxLabel = count === 1 ? 'Box' : 'Boxes';
       
       // Top button count & state
       const countEl = document.getElementById('batch-sell-count');
       if (countEl) countEl.innerText = count;
+      const weightEl = document.getElementById('batch-sell-weight');
+      if (weightEl) weightEl.innerText = weightStr;
+      const labelEl = document.getElementById('batch-sell-label');
+      if (labelEl) labelEl.innerText = boxLabel;
       const btn = document.getElementById('btn-batch-sell');
       if (btn) btn.disabled = (count === 0);
 
@@ -5501,9 +5515,15 @@
       const floatBar = document.getElementById('floating-batch-bar');
       const floatBadge = document.getElementById('floating-batch-badge');
       const floatCount = document.getElementById('floating-batch-count');
+      const floatWeight = document.getElementById('floating-batch-weight');
+      const floatLabel = document.getElementById('floating-batch-label');
+      const floatInfoWeight = document.getElementById('floating-batch-info-weight');
 
       if (floatBadge) floatBadge.innerText = count;
       if (floatCount) floatCount.innerText = count;
+      if (floatWeight) floatWeight.innerText = weightStr;
+      if (floatLabel) floatLabel.innerText = boxLabel;
+      if (floatInfoWeight) floatInfoWeight.innerText = weightStr;
 
       if (floatBar) {
         if (count > 0) {
@@ -7086,7 +7106,7 @@
   <div id="floating-batch-bar" class="floating-batch-bar">
     <div class="floating-batch-info">
       <span id="floating-batch-badge" class="floating-batch-badge">0</span>
-      <span>Selected</span>
+      <span>Selected (<span id="floating-batch-info-weight">0.00</span> Kg)</span>
     </div>
     <div class="floating-batch-actions">
       <button type="button" class="floating-batch-btn-clear" onclick="clearAllSelectedProdBoris()">
@@ -7098,7 +7118,7 @@
           <circle cx="20" cy="21" r="1"></circle>
           <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
         </svg>
-        <span>Batch Sell (<span id="floating-batch-count">0</span>)</span>
+        <span>Batch Sell (<span id="floating-batch-count">0</span> <span id="floating-batch-label">Boxes</span> | <span id="floating-batch-weight">0.00</span> Kg)</span>
       </button>
     </div>
   </div>

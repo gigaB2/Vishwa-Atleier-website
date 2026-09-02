@@ -1623,7 +1623,7 @@
           <h3>Production Logs</h3>
           <div style="display: flex; gap: 10px; align-items: center;">
             <button type="button" id="btn-batch-sell" class="btn btn-primary" onclick="openBatchSellModal()" disabled style="height: 38px; display: inline-flex; align-items: center; white-space: nowrap;">
-              Batch Sell (<span id="batch-sell-count">0</span>)
+              Batch Sell (<span id="batch-sell-count">0</span> <span id="batch-sell-label">Boxes</span> | <span id="batch-sell-weight">0.00</span> Kg)
             </button>
           </div>
         </div>
@@ -5047,8 +5047,23 @@
     window.updateBatchSellButtonState = function() {
       const checkedBoxes = document.querySelectorAll('.prod-select-checkbox:checked');
       const count = checkedBoxes.length;
+      let totalWeight = 0;
+      checkedBoxes.forEach(cb => {
+        const prod = dataStore[activeDivision].production.find(p => p.id === cb.value);
+        if (prod) {
+          const stock = getBoriStock(prod);
+          totalWeight += (stock.remainingQty || 0);
+        }
+      });
+      const weightStr = totalWeight.toFixed(2);
+      const boxLabel = count === 1 ? 'Box' : 'Boxes';
+
       const countEl = document.getElementById('batch-sell-count');
       if (countEl) countEl.innerText = count;
+      const weightEl = document.getElementById('batch-sell-weight');
+      if (weightEl) weightEl.innerText = weightStr;
+      const labelEl = document.getElementById('batch-sell-label');
+      if (labelEl) labelEl.innerText = boxLabel;
       const btn = document.getElementById('btn-batch-sell');
       if (btn) btn.disabled = (count === 0);
       
@@ -5057,7 +5072,7 @@
       if (master) {
         master.checked = allSelectable.length > 0 && Array.from(allSelectable).every(cb => cb.checked);
       }
-    }
+    };
 
     let prodSortKey = 'date';
     let prodSortOrder = 'desc'; // 'asc' or 'desc'
