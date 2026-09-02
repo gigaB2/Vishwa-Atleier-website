@@ -3422,33 +3422,35 @@
     }
 
     function getSaleGstRate(sale) {
-      if (!sale) return 0;
+      if (!sale) return 12;
+
+      const rawGst = (sale.gstRate !== undefined && sale.gstRate !== null) ? sale.gstRate : sale.gst_rate;
+      if (rawGst !== undefined && rawGst !== null && !isNaN(parseFloat(rawGst))) {
+        let r = Math.round(parseFloat(rawGst));
+        if (r === 11 || r === 13) r = 12; // Auto-correct rounding artifacts (11%, 13%) to 12%
+        return Math.max(0, r);
+      }
 
       const subtotal = (sale.items && sale.items.length > 0)
         ? sale.items.reduce((sum, item) => sum + (parseFloat(item.amount) || ((parseFloat(item.saleQty) || 0) * (parseFloat(item.rate) || 0))), 0)
         : (sale.subtotalAmount || sale.amount || 0);
 
-      const rawGst = (sale.gstRate !== undefined && sale.gstRate !== null) ? sale.gstRate : sale.gst_rate;
-      if (rawGst !== undefined && rawGst !== null && !isNaN(parseFloat(rawGst))) {
-        let r = Math.round(parseFloat(rawGst));
-        if (r === 11) r = 12; // Auto-correct legacy 11% rounding bug to 12%
-        if (r >= 0) return r;
+      if (subtotal > 0 && sale.gstAmount > 0) {
+        let rSub = Math.round((parseFloat(sale.gstAmount) / subtotal) * 100);
+        if (rSub === 11 || rSub === 13) rSub = 12;
+        if (rSub === 0 || rSub === 5 || rSub === 12 || rSub === 18) return rSub;
       }
 
       const discInfo = getSaleDiscountInfo(sale);
       const taxable = sale.taxableAmount !== undefined ? parseFloat(sale.taxableAmount) : Math.max(0, subtotal - discInfo.amount);
 
       if (taxable > 0 && sale.gstAmount > 0) {
-        let r = Math.round((parseFloat(sale.gstAmount) / taxable) * 100);
-        if (r === 11) r = 12;
-        return r;
+        let rTax = Math.round((parseFloat(sale.gstAmount) / taxable) * 100);
+        if (rTax === 11 || rTax === 13) rTax = 12;
+        return rTax;
       }
-      if (subtotal > 0 && sale.gstAmount > 0) {
-        let r = Math.round((parseFloat(sale.gstAmount) / subtotal) * 100);
-        if (r === 11) r = 12;
-        return r;
-      }
-      return 0;
+
+      return 12;
     }
 
     window.openSaleDetailsModal = function(id) {
