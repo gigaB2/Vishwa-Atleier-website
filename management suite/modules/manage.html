@@ -6056,8 +6056,12 @@ function showToast(message, type = 'info') {
   function deleteQuality(id) {
     if (confirm('Are you sure you want to delete this quality?')) {
       pushToUndo();
+      const targetQuality = rawMaterialQualities.find(q => q.id === id);
       if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
         window.VishwaSupabase.recordDeletion('yarn-qualities', id);
+        if (targetQuality && targetQuality.quality) {
+          window.VishwaSupabase.recordDeletion('yarn-qualities', targetQuality.quality);
+        }
       }
       if (editingQualityId === id) {
         cancelQualityEdit();
@@ -6246,6 +6250,9 @@ function showToast(message, type = 'info') {
     pushToUndo();
     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
       window.VishwaSupabase.recordDeletion('yarn-suppliers', id);
+      if (s && s.name) {
+        window.VishwaSupabase.recordDeletion('yarn-suppliers', s.name);
+      }
     }
     if (editingSupplierId === id) {
       cancelSupplierEdit();

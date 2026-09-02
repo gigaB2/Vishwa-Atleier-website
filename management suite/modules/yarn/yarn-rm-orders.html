@@ -1183,8 +1183,11 @@
         try {
           const item = window.localStorage.getItem(key);
           if (!item) return initialValue;
-          const parsed = JSON.parse(item);
+          let parsed = JSON.parse(item);
           if (Array.isArray(initialValue) && !Array.isArray(parsed)) return initialValue;
+          if (Array.isArray(parsed) && window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+            parsed = window.VishwaSupabase.filterDeletedEntities(parsed);
+          }
           return parsed;
         } catch (e) {
           return initialValue;
@@ -1201,10 +1204,13 @@
                   setStoredValue(initialValue);
                 }
               } else {
-                const parsed = JSON.parse(item);
+                let parsed = JSON.parse(item);
                 if (Array.isArray(initialValue) && !Array.isArray(parsed)) {
                   setStoredValue(initialValue);
                 } else {
+                  if (Array.isArray(parsed) && window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+                    parsed = window.VishwaSupabase.filterDeletedEntities(parsed);
+                  }
                   setStoredValue(parsed);
                 }
               }
@@ -1224,14 +1230,20 @@
           handleStorageChange({ key });
         };
 
+        const handleItemDeleted = (e) => {
+          handleStorageChange({ key });
+        };
+
         window.addEventListener('storage', handleStorageChange);
         window.addEventListener('supabase-sync', handleSupabaseSync);
         window.addEventListener('supabase-ready', handleSupabaseReady);
+        window.addEventListener('supabase-item-deleted', handleItemDeleted);
 
         return () => {
           window.removeEventListener('storage', handleStorageChange);
           window.removeEventListener('supabase-sync', handleSupabaseSync);
           window.removeEventListener('supabase-ready', handleSupabaseReady);
+          window.removeEventListener('supabase-item-deleted', handleItemDeleted);
         };
       }, [key, initialValue]);
 
@@ -1983,6 +1995,10 @@
           recordSnapshot(`Delete Order ${targetOrder.quality || ''}`);
           setOrders(prev => prev.filter(o => o.id !== id));
           
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+            window.VishwaSupabase.recordDeletion('yarn-rm-orders', id);
+          }
+
           if (window.VishwaSupabase && typeof window.VishwaSupabase.deleteYarnOrderRelational === 'function') {
             window.VishwaSupabase.deleteYarnOrderRelational(id);
           }

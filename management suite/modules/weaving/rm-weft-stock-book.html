@@ -3789,7 +3789,7 @@
 
             // LocalStorage Data
             const [orders, setOrders] = useLocalStorage('yarn-orders', []);
-            const [qualities, setQualities] = useLocalStorage('yarn-qualities', DEMO_QUALITIES);
+            const [qualities, setQualities] = useLocalStorage('yarn-qualities', []);
             const [issues, setIssues] = useLocalStorage('yarn-issues', []);
             const currentFYVal = getFinancialYearForDate(new Date().toISOString().slice(0, 10));
             const [selectedFY, setSelectedFY] = useLocalStorage('vishwa_fashions_selected_fy', currentFYVal || 'All');

@@ -192,4 +192,22 @@ test('SyncEngine — mergeDatasets', async (t) => {
     assert.equal(merged[0].batches.length, 1);
     assert.equal(merged[0].batches[0].challanNumber, '1204');
   });
+
+  await t.test('deleting a quality on server immediately evicts it on peer client without resurrection', () => {
+    const serverQualities = [
+      { id: 'Q_1', quality: '20/1 BRT NYLON' },
+      { id: 'Q_2', quality: '20/1 BRT POLY' }
+      // Q_3 was deleted by employee
+    ];
+    const peerClientQualities = [
+      { id: 'Q_1', quality: '20/1 BRT NYLON' },
+      { id: 'Q_2', quality: '20/1 BRT POLY' },
+      { id: 'Q_3', quality: '70/30 VISCOSE (Stale in Peer Cache)' }
+    ];
+    const tombstones = ['Q_3'];
+
+    const merged = mergeDatasets(peerClientQualities, serverQualities, tombstones);
+    assert.equal(merged.length, 2);
+    assert.ok(!merged.find(q => q.id === 'Q_3'));
+  });
 });

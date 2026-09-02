@@ -255,17 +255,23 @@
     if (!Array.isArray(arr)) return arr;
     const tombstones = getDeletedTombstones();
     if (tombstones.length === 0) return arr;
-    const tombstoneSet = new Set(tombstones);
+    const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()).filter(Boolean));
     return arr.filter(item => {
       if (!item) return false;
       try {
         const id = getItemIdentifier(item);
-        if (id && tombstoneSet.has(String(id))) return false;
-        if (item.id && tombstoneSet.has(String(item.id))) return false;
-        if (item._id && tombstoneSet.has(String(item._id))) return false;
-        if (item.name && tombstoneSet.has(String(item.name))) return false;
-        if (item.loanId && tombstoneSet.has(String(item.loanId))) return false;
-        if (item.empId && tombstoneSet.has(String(item.empId))) return false;
+        if (id && tombstoneSet.has(String(id).trim().toLowerCase())) return false;
+        if (item.id && tombstoneSet.has(String(item.id).trim().toLowerCase())) return false;
+        if (item._id && tombstoneSet.has(String(item._id).trim().toLowerCase())) return false;
+        if (item.uuid && tombstoneSet.has(String(item.uuid).trim().toLowerCase())) return false;
+        if (item.name && tombstoneSet.has(String(item.name).trim().toLowerCase())) return false;
+        if (item.quality && tombstoneSet.has(String(item.quality).trim().toLowerCase())) return false;
+        if (item.code && tombstoneSet.has(String(item.code).trim().toLowerCase())) return false;
+        if (item.loanId && tombstoneSet.has(String(item.loanId).trim().toLowerCase())) return false;
+        if (item.empId && tombstoneSet.has(String(item.empId).trim().toLowerCase())) return false;
+        if (item.boriNo && tombstoneSet.has(String(item.boriNo).trim().toLowerCase())) return false;
+        if (item.beamNumber && tombstoneSet.has(String(item.beamNumber).trim().toLowerCase())) return false;
+        if (item.takaSerial && tombstoneSet.has(String(item.takaSerial).trim().toLowerCase())) return false;
       } catch(e) {}
       return true;
     });
@@ -549,34 +555,46 @@
       return mergeYarnOrdersDatasets(parsedLocal, parsedRemote);
     }
 
-    // Case 1: Both are Arrays -> Intelligent Item-Level Union Merge for multi-user safety
+    // Case 1: Both are Arrays -> Intelligent Item-Level Merge for multi-user safety
     if (Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
       const cleanLocal = filterDeletedEntities(parsedLocal);
       const cleanRemote = filterDeletedEntities(parsedRemote);
       const lastWrite = lastLocalWrites[key] || 0;
+      const isLocallyActive = (Date.now() - lastWrite < 3000);
 
-      // Build Map combining local and remote items by unique identifier
+      // Master entity registries: when remote arrives and local user is not actively typing,
+      // the remote server snapshot is the single source of truth. Deleted items must NOT be resurrected!
+      const MASTER_ENTITY_KEYS = [
+        'yarn-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
+        'manage-jalas', 'manage-fanis', 'machines', 'warp-beams', 'warp-issues',
+        'yarn-issues'
+      ];
+
+      if (MASTER_ENTITY_KEYS.includes(key) && !isLocallyActive) {
+        return cleanRemote;
+      }
+
+      // Build Map with remote items as baseline
       const itemMap = new Map();
-
-      // 1. Put local items in map first
-      cleanLocal.forEach(item => {
+      cleanRemote.forEach(item => {
         const id = getItemIdentifier(item);
         if (id) itemMap.set(String(id), item);
       });
 
-      // 2. Merge remote items (remote takes precedence on conflicts unless local item is explicitly newer)
-      cleanRemote.forEach(item => {
-        const id = getItemIdentifier(item);
+      // Merge local items: keep local edits if newer or if locally active
+      cleanLocal.forEach(localItem => {
+        const id = getItemIdentifier(localItem);
         if (id) {
-          if (!itemMap.has(String(id))) {
-            itemMap.set(String(id), item);
-          } else {
-            const localItem = itemMap.get(String(id));
-            const remoteTime = item.updated_at ? new Date(item.updated_at).getTime() : (item.timestamp || 0);
+          if (itemMap.has(String(id))) {
+            const remoteItem = itemMap.get(String(id));
+            const remoteTime = remoteItem.updated_at ? new Date(remoteItem.updated_at).getTime() : (remoteItem.timestamp || 0);
             const localTime = localItem.updated_at ? new Date(localItem.updated_at).getTime() : (localItem.timestamp || 0);
-            if (remoteTime >= localTime) {
-              itemMap.set(String(id), item);
+            if (localTime >= remoteTime) {
+              itemMap.set(String(id), localItem);
             }
+          } else if (isLocallyActive) {
+            // Only preserve un-synced additions if user is actively writing
+            itemMap.set(String(id), localItem);
           }
         }
       });
@@ -584,7 +602,7 @@
       const mergedList = filterDeletedEntities(Array.from(itemMap.values()));
       // If neither had identifiable items, fallback to latest authority
       if (mergedList.length === 0 && (cleanLocal.length > 0 || cleanRemote.length > 0)) {
-        return (Date.now() - lastWrite < 3000) ? cleanLocal : cleanRemote;
+        return isLocallyActive ? cleanLocal : cleanRemote;
       }
       return mergedList;
     }
@@ -1678,7 +1696,8 @@
         const entityKeys = [
           'yarn-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines',
           'yarn_covering_production_logs', 'yarn_tfo_production_logs', 'yarn_doubler_production_logs',
-          'yarn_covering_sales_logs', 'yarn_tfo_sales_logs', 'yarn_doubler_sales_logs'
+          'yarn_covering_sales_logs', 'yarn_tfo_sales_logs', 'yarn_doubler_sales_logs',
+          'warp-beams', 'warp-issues', 'yarn-issues', 'yarn-rm-orders'
         ];
         if (key && !entityKeys.includes(key)) entityKeys.push(key);
 
@@ -1689,8 +1708,11 @@
               if (Array.isArray(parsed)) {
                 const filtered = filterDeletedEntities(parsed);
                 const newStr = JSON.stringify(filtered);
-                cache[k] = newStr;
-                safeLocalStorageSet(k, newStr);
+                if (cache[k] !== newStr) {
+                  cache[k] = newStr;
+                  safeLocalStorageSet(k, newStr);
+                  window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: k, value: newStr, isRemote: true } }));
+                }
               }
             } catch(e) {}
           }
@@ -3033,6 +3055,56 @@
           } catch(e) {}
         }
 
+        // Clean from all known entity keys in cache and localStorage immediately
+        const entityKeys = [
+          'yarn-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines',
+          'yarn_covering_production_logs', 'yarn_tfo_production_logs', 'yarn_doubler_production_logs',
+          'yarn_covering_sales_logs', 'yarn_tfo_sales_logs', 'yarn_doubler_sales_logs',
+          'warp-beams', 'warp-issues', 'yarn-issues', 'yarn-rm-orders'
+        ];
+        if (key && !entityKeys.includes(key)) entityKeys.push(key);
+
+        entityKeys.forEach(k => {
+          if (cache[k]) {
+            try {
+              const parsed = JSON.parse(cache[k]);
+              if (Array.isArray(parsed)) {
+                const filtered = filterDeletedEntities(parsed);
+                const newStr = JSON.stringify(filtered);
+                if (cache[k] !== newStr) {
+                  cache[k] = newStr;
+                  safeLocalStorageSet(k, newStr);
+                  this.set(k, filtered, true);
+                  window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: k, value: newStr, isRemote: false } }));
+                }
+              }
+            } catch(e) {}
+          }
+        });
+
+        // Clean from state object (e.g. aethertasks_db_state_v7)
+        if (cache['aethertasks_db_state_v7']) {
+          try {
+            const parsed = JSON.parse(cache['aethertasks_db_state_v7']);
+            if (parsed && typeof parsed === 'object') {
+              if (Array.isArray(parsed.employees)) parsed.employees = filterDeletedEntities(parsed.employees);
+              if (Array.isArray(parsed.machines)) parsed.machines = filterDeletedEntities(parsed.machines);
+              if (Array.isArray(parsed.loans)) parsed.loans = filterDeletedEntities(parsed.loans);
+              const newStr = JSON.stringify(parsed);
+              if (cache['aethertasks_db_state_v7'] !== newStr) {
+                cache['aethertasks_db_state_v7'] = newStr;
+                safeLocalStorageSet('aethertasks_db_state_v7', newStr);
+                this.set('aethertasks_db_state_v7', parsed, true);
+              }
+            }
+          } catch(e) {}
+        }
+
+        try {
+          window.dispatchEvent(new CustomEvent('supabase-item-deleted', { detail: deletePayload }));
+          window.dispatchEvent(new Event('storage'));
+        } catch(e) {}
+
         // Delete from dedicated table if costing or yarn key
         let table = null;
         if (key === 'costing-products-v4') table = 'vf_costing_products';
@@ -3532,6 +3604,25 @@
           const rows = await fetchAllRowsPaginated('vf_kv_store', 'key,value,updated_at');
           if (Array.isArray(rows)) {
             const kvMap = {};
+
+            // PRIORITY STEP 1: Pre-populate and cache all deleted entity tombstones FIRST
+            const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids'];
+            tombstoneKeys.forEach(tKey => {
+              const tRow = rows.find(r => r && r.key === tKey);
+              if (tRow && tRow.value) {
+                try {
+                  const remoteTombstones = typeof tRow.value === 'string' ? JSON.parse(tRow.value) : tRow.value;
+                  if (Array.isArray(remoteTombstones)) {
+                    let localTombstones = getDeletedTombstones();
+                    const combined = Array.from(new Set([...localTombstones, ...remoteTombstones.map(String)]));
+                    const valStr = JSON.stringify(combined);
+                    cache[tKey] = valStr;
+                    safeLocalStorageSet(tKey, valStr);
+                    if (tRow.updated_at) lastKnownTimestamps[tKey] = tRow.updated_at;
+                  }
+                } catch(e) {}
+              }
+            });
 
             rows.forEach(row => {
               if (!row || !row.key || isLocalOnlyKey(row.key)) return;

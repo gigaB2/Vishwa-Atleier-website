@@ -2108,7 +2108,7 @@
         const App = () => {
             console.log('App Rendering...');
             const [orders, setOrders] = useLocalStorage('yarn-orders', DEMO_ORDERS);
-            const [qualities] = useLocalStorage('yarn-qualities', DEMO_QUALITIES);
+            const [qualities] = useLocalStorage('yarn-qualities', []);
             const [issues, setIssues] = useLocalStorage('warp-issues', sampleIssues);
             const [beams, setBeams] = useLocalStorage('warp-beams', sampleBeams);
             const [selectedFY, setSelectedFY] = useLocalStorage('vishwa_fashions_selected_fy', 'All');
