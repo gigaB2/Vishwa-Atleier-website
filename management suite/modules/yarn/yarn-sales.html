@@ -1777,11 +1777,20 @@
                 <th onclick="toggleSalesSort('date')" style="cursor: pointer; user-select: none;">
                   Sale Date <span id="sales-sort-icon-date">▼</span>
                 </th>
+                <th onclick="toggleSalesSort('customerName')" style="cursor: pointer; user-select: none;">
+                  Customer Name <span id="sales-sort-icon-customerName">↕</span>
+                </th>
                 <th onclick="toggleSalesSort('boriNo')" style="cursor: pointer; user-select: none;">
                   Bori/Box No <span id="sales-sort-icon-boriNo">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('customerName')" style="cursor: pointer; user-select: none;">
-                  Customer Name <span id="sales-sort-icon-customerName">↕</span>
+                <th onclick="toggleSalesSort('composition')" style="cursor: pointer; user-select: none;">
+                  Composition <span id="sales-sort-icon-composition">↕</span>
+                </th>
+                <th onclick="toggleSalesSort('color')" style="cursor: pointer; user-select: none;">
+                  Color <span id="sales-sort-icon-color">↕</span>
+                </th>
+                <th onclick="toggleSalesSort('twist')" style="cursor: pointer; user-select: none;">
+                  Twist <span id="sales-sort-icon-twist">↕</span>
                 </th>
                 <th onclick="toggleSalesSort('totalRolls')" style="cursor: pointer; user-select: none;">
                   Rolls <span id="sales-sort-icon-totalRolls">↕</span>
@@ -1794,6 +1803,9 @@
                 </th>
                 <th onclick="toggleSalesSort('subtotal')" style="cursor: pointer; user-select: none;">
                   Amount <span id="sales-sort-icon-subtotal">↕</span>
+                </th>
+                <th onclick="toggleSalesSort('discountAmount')" style="cursor: pointer; user-select: none;">
+                  Discount <span id="sales-sort-icon-discountAmount">↕</span>
                 </th>
                 <th onclick="toggleSalesSort('gstAmount')" style="cursor: pointer; user-select: none;">
                   GST <span id="sales-sort-icon-gstAmount">↕</span>
@@ -5741,7 +5753,7 @@
     };
 
     function updateSalesSortIcons() {
-      ['challanNo', 'date', 'boriNo', 'customerName', 'composition', 'totalRolls', 'totalQty', 'rate', 'subtotal', 'gstAmount', 'grandTotal'].forEach(key => {
+      ['challanNo', 'date', 'customerName', 'boriNo', 'composition', 'color', 'twist', 'totalRolls', 'totalQty', 'rate', 'subtotal', 'discountAmount', 'gstAmount', 'grandTotal'].forEach(key => {
         const iconEl = document.getElementById(`sales-sort-icon-${key}`);
         if (iconEl) {
           if (salesSortKey === key) {
@@ -5762,12 +5774,15 @@
 
       updateSalesSortIcons();
 
-      const filtered = dataStore[activeDivision].sales.filter(s => 
-        (s.challanNo && s.challanNo.toLowerCase().includes(search)) ||
-        (s.customerName && s.customerName.toLowerCase().includes(search)) ||
-        (s.boriNo && s.boriNo.toLowerCase().includes(search)) ||
-        (s.composition && s.composition.toLowerCase().includes(search))
-      );
+      const filtered = dataStore[activeDivision].sales.filter(s => {
+        if (!search) return true;
+        const itemsComp = s.items ? s.items.map(i => i.composition).join(' ') : '';
+        const itemsColor = s.items ? s.items.map(i => i.color).join(' ') : '';
+        const itemsTwist = s.items ? s.items.map(i => i.twist).join(' ') : '';
+        const itemsBori = s.items ? s.items.map(i => i.boriNo).join(' ') : '';
+        const searchable = `${s.challanNo || ''} ${s.customerName || ''} ${s.boriNo || ''} ${s.composition || ''} ${s.color || ''} ${s.twist || ''} ${itemsComp} ${itemsColor} ${itemsTwist} ${itemsBori}`.toLowerCase();
+        return searchable.includes(search);
+      });
 
       filtered.sort((a, b) => {
         let valA = a[salesSortKey];
@@ -5780,11 +5795,46 @@
           valB = b.items.map(i => i.boriNo).join(', ');
         }
 
+        if (salesSortKey === 'composition') {
+          valA = (a.items && a.items.length > 0) ? a.items.map(i => i.composition).filter(Boolean).join(' / ') : (a.composition || '');
+          valB = (b.items && b.items.length > 0) ? b.items.map(i => i.composition).filter(Boolean).join(' / ') : (b.composition || '');
+        }
+
+        if (salesSortKey === 'color') {
+          valA = (a.items && a.items.length > 0) ? a.items.map(i => i.color).filter(Boolean).join(' / ') : (a.color || '');
+          valB = (b.items && b.items.length > 0) ? b.items.map(i => i.color).filter(Boolean).join(' / ') : (b.color || '');
+        }
+
+        if (salesSortKey === 'twist') {
+          valA = (a.items && a.items.length > 0) ? a.items.map(i => i.twist).filter(Boolean).join(' / ') : (a.twist || '');
+          valB = (b.items && b.items.length > 0) ? b.items.map(i => i.twist).filter(Boolean).join(' / ') : (b.twist || '');
+        }
+
+        if (salesSortKey === 'discountAmount' || salesSortKey === 'discount') {
+          valA = a.discountAmount || 0;
+          valB = b.discountAmount || 0;
+        }
+
+        if (salesSortKey === 'totalRolls') {
+          valA = (a.items && a.items.length > 0) ? a.items.reduce((sum, i) => sum + (parseInt(i.rollsQty) || 0), 0) : (a.rollsQty || 0);
+          valB = (b.items && b.items.length > 0) ? b.items.reduce((sum, i) => sum + (parseInt(i.rollsQty) || 0), 0) : (b.rollsQty || 0);
+        }
+
+        if (salesSortKey === 'totalQty') {
+          valA = (a.items && a.items.length > 0) ? a.items.reduce((sum, i) => sum + (parseFloat(i.saleQty) || 0), 0) : (a.saleQty || 0);
+          valB = (b.items && b.items.length > 0) ? b.items.reduce((sum, i) => sum + (parseFloat(i.saleQty) || 0), 0) : (b.saleQty || 0);
+        }
+
         if (salesSortKey === 'rate' && a.items && a.items.length > 0) {
           valA = a.items[0].rate || a.rate || 0;
         }
         if (salesSortKey === 'rate' && b.items && b.items.length > 0) {
           valB = b.items[0].rate || b.rate || 0;
+        }
+
+        if (salesSortKey === 'subtotal') {
+          valA = a.subtotalAmount || a.amount || 0;
+          valB = b.subtotalAmount || b.amount || 0;
         }
 
         if (salesSortKey === 'gstAmount') {
@@ -5795,6 +5845,20 @@
           const subB = b.subtotalAmount || b.amount || 0;
           const gstRateB = (b.gstRate !== undefined && b.gstRate !== null && !isNaN(parseFloat(b.gstRate))) ? parseFloat(b.gstRate) : (b.gst_rate !== undefined ? parseFloat(b.gst_rate) : 0);
           valB = b.gstAmount !== undefined ? parseFloat(b.gstAmount) : (subB * (gstRateB / 100));
+        }
+
+        if (salesSortKey === 'grandTotal') {
+          const subA = a.subtotalAmount || a.amount || 0;
+          const discA = a.discountAmount || 0;
+          const gstRateA = (a.gstRate !== undefined && a.gstRate !== null && !isNaN(parseFloat(a.gstRate))) ? parseFloat(a.gstRate) : 0;
+          const gstA = a.gstAmount !== undefined ? parseFloat(a.gstAmount) : ((subA - discA) * (gstRateA / 100));
+          valA = a.totalAmount || (subA - discA + gstA);
+
+          const subB = b.subtotalAmount || b.amount || 0;
+          const discB = b.discountAmount || 0;
+          const gstRateB = (b.gstRate !== undefined && b.gstRate !== null && !isNaN(parseFloat(b.gstRate))) ? parseFloat(b.gstRate) : 0;
+          const gstB = b.gstAmount !== undefined ? parseFloat(b.gstAmount) : ((subB - discB) * (gstRateB / 100));
+          valB = b.totalAmount || (subB - discB + gstB);
         }
 
         if (valA === undefined || valA === null) valA = '';
@@ -5815,7 +5879,7 @@
       });
 
       if (filtered.length === 0) {
-        body.innerHTML = '<tr><td colspan="11" class="muted" style="text-align: center;">No sales records found</td></tr>';
+        body.innerHTML = '<tr><td colspan="15" class="muted" style="text-align: center;">No sales records found</td></tr>';
         return;
       }
 
@@ -5831,25 +5895,53 @@
         };
         const boriDisplay = s.items && s.items.length > 0 ? 
           `${s.items.map(i => i.boriNo).join(', ')} <span class="badge" style="font-size:0.7rem;">(${s.items.length} Boris/Boxes)</span>` : 
-          s.boriNo;
-        const rollsTotal = s.items && s.items.length > 0 ? s.items.reduce((a,b)=>a+b.rollsQty,0) : s.rollsQty;
-        const qtyTotal = s.items && s.items.length > 0 ? s.items.reduce((a,b)=>a+b.saleQty,0) : s.saleQty;
+          (s.boriNo || '-');
+
+        const compositionDisplay = (s.items && s.items.length > 0)
+          ? Array.from(new Set(s.items.map(i => i.composition).filter(Boolean))).join(' / ') || (s.composition || '-')
+          : (s.composition || '-');
+
+        const colorDisplay = (s.items && s.items.length > 0)
+          ? Array.from(new Set(s.items.map(i => i.color).filter(Boolean))).join(' / ') || (s.color || '-')
+          : (s.color || '-');
+
+        const twistDisplay = (s.items && s.items.length > 0)
+          ? Array.from(new Set(s.items.map(i => i.twist).filter(Boolean))).join(' / ') || (s.twist || '-')
+          : (s.twist || '-');
+
+        const rollsTotal = s.items && s.items.length > 0 ? s.items.reduce((a,b)=>a+ (parseInt(b.rollsQty) || 0), 0) : (s.rollsQty || 0);
+        const qtyTotal = s.items && s.items.length > 0 ? s.items.reduce((a,b)=>a+ (parseFloat(b.saleQty) || 0), 0) : (s.saleQty || 0);
         const subtotalVal = s.subtotalAmount || s.amount || 0;
+
+        const discAmount = s.discountAmount || 0;
+        let discountDisplay = '<span class="muted">-</span>';
+        if (discAmount > 0) {
+          if (s.discountType === 'percent') {
+            discountDisplay = `<span style="color: #ef4444; font-weight: 600;">${s.discountValue}%</span> <span class="muted" style="font-size:0.75rem;">(-₹${discAmount.toFixed(2)})</span>`;
+          } else {
+            discountDisplay = `<span style="color: #ef4444; font-weight: 600;">-₹${discAmount.toFixed(2)}</span>`;
+          }
+        }
+
         const gstRateVal = (s.gstRate !== undefined && s.gstRate !== null && !isNaN(parseFloat(s.gstRate)))
           ? parseFloat(s.gstRate)
           : (s.gst_rate !== undefined && !isNaN(parseFloat(s.gst_rate)) ? parseFloat(s.gst_rate) : (subtotalVal > 0 && s.gstAmount ? Math.round((parseFloat(s.gstAmount) / subtotalVal) * 100) : 0));
         const gstVal = s.gstAmount !== undefined ? parseFloat(s.gstAmount) : (subtotalVal * (gstRateVal / 100));
-        const grandTotalVal = s.totalAmount || (subtotalVal + gstVal);
+        const grandTotalVal = s.totalAmount || (subtotalVal - discAmount + gstVal);
 
         tr.innerHTML = `
           <td><strong>${s.challanNo}</strong></td>
           <td>${formatDate(s.date)}</td>
+          <td>${s.customerName || '-'}</td>
           <td>${boriDisplay}</td>
-          <td>${s.customerName}</td>
+          <td><span style="font-size:0.85rem; font-weight: 500;">${compositionDisplay}</span></td>
+          <td>${colorDisplay}</td>
+          <td>${twistDisplay}</td>
           <td>${rollsTotal}</td>
           <td>${qtyTotal.toFixed(2)} Kg</td>
           <td>₹${s.rate ? s.rate.toFixed(2) : '-'}</td>
           <td>₹${subtotalVal.toFixed(2)}</td>
+          <td>${discountDisplay}</td>
           <td>${gstRateVal}%</td>
           <td><strong>₹${grandTotalVal.toFixed(2)}</strong></td>
           <td class="actions-cell">
@@ -5865,7 +5957,7 @@
                   <span>Print Bill</span>
                 </button>
                 <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); printSaleChallan('${s.id}')">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 2-2 2v16a2 2 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                   <span>Print Challan</span>
                 </button>
                 <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); printSalePackingSlip('${s.id}')">
@@ -5873,7 +5965,7 @@
                   <span>Packing Slip</span>
                 </button>
                 <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); editSalesLog('${s.id}')">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 1-2 2v14a2 2 0 0 1 2 2h14a2 2 0 0 1 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   <span>Edit</span>
                 </button>
                 <button type="button" class="action-dropdown-item delete" onclick="event.stopPropagation(); closeAllActionMenus(); deleteSalesLog('${s.id}')">
