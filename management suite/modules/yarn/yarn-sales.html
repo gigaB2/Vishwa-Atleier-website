@@ -723,18 +723,16 @@
     }
 
     .action-menu-dropdown {
-      position: absolute;
-      top: calc(100% + 4px);
-      right: 0;
+      position: fixed;
       min-width: 135px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 4px;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.1);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      z-index: 1050;
+      z-index: 999999;
       display: none;
       flex-direction: column;
       gap: 2px;
@@ -5067,16 +5065,27 @@
         btn.setAttribute('aria-expanded', 'true');
         btn.classList.add('active');
         
-        // Smart flip upwards if close to bottom of table/window
+        // Position relative to viewport (fixed positioning escapes table containers and overflow clipping)
         const rect = btn.getBoundingClientRect();
         const estimatedHeight = 125;
+        const dropdownWidth = 135;
+        
+        // Vertical positioning
         if (rect.bottom + estimatedHeight > window.innerHeight && rect.top > estimatedHeight) {
-          dropdown.style.top = 'auto';
-          dropdown.style.bottom = 'calc(100% + 4px)';
+          dropdown.style.top = `${Math.max(8, rect.top - estimatedHeight - 4)}px`;
         } else {
-          dropdown.style.top = 'calc(100% + 4px)';
-          dropdown.style.bottom = 'auto';
+          dropdown.style.top = `${rect.bottom + 4}px`;
         }
+        
+        // Horizontal positioning: align right edge with button right edge
+        let leftPos = rect.right - dropdownWidth;
+        if (leftPos < 8) leftPos = 8;
+        if (leftPos + dropdownWidth > window.innerWidth - 8) {
+          leftPos = window.innerWidth - dropdownWidth - 8;
+        }
+        dropdown.style.left = `${leftPos}px`;
+        dropdown.style.right = 'auto';
+        dropdown.style.bottom = 'auto';
       }
     };
 
@@ -5092,10 +5101,14 @@
 
     // Close action dropdowns when clicking outside
     document.addEventListener('click', function(e) {
-      if (!e.target.closest('.action-menu-container')) {
+      if (!e.target.closest('.action-menu-container') && !e.target.closest('.action-menu-dropdown')) {
         closeAllActionMenus();
       }
     });
+
+    // Close action dropdowns on window scroll or resize
+    window.addEventListener('scroll', closeAllActionMenus, true);
+    window.addEventListener('resize', closeAllActionMenus);
 
     // Close action dropdowns on Escape key
     document.addEventListener('keydown', function(e) {
