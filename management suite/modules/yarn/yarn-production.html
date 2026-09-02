@@ -2165,13 +2165,11 @@
       renderProductionTable();
       renderSalesTable();
       renderStockDashboard();
-      if (typeof updateBatchSellButtonState === 'function') updateBatchSellButtonState();
-
-      // If production form is in new/unsubmitted state (not editing), keep next Bori No updated
+      // If production form is in new/unsubmitted state (not editing), keep next Bori No updated if previously empty
       const editId = document.getElementById('prod-edit-id')?.value;
       const boriInput = document.getElementById('prod-bori');
-      if (!editId && boriInput && !boriInput.dataset.userEdited) {
-        boriInput.value = generateNextBoriNumber(activeDivision);
+      if (!editId && boriInput && !boriInput.dataset.userEdited && boriInput.value) {
+        // Keep user typed value intact
       }
     }
 
@@ -2616,7 +2614,8 @@
       return maxNum + 1;
     }
 
-    function resetProductionForm() {
+    function resetProductionForm(preserveLot = false) {
+      const currentLot = preserveLot ? (document.getElementById('prod-lot')?.value || '') : '';
       document.getElementById('production-form').reset();
       document.getElementById('prod-edit-id').value = '';
       document.getElementById('prod-name').value = '';
@@ -2630,11 +2629,18 @@
       
       updateBoriPrefix();
       updateLotPrefix();
-      // Auto-assign sequential numeric part and clear manual edit state
+      
+      // Let user enter bori number freely (no hardcoded/forced value)
       const boriInput = document.getElementById('prod-bori');
       if (boriInput) {
         delete boriInput.dataset.userEdited;
-        boriInput.value = generateNextBoriNumber(activeDivision);
+        boriInput.value = '';
+      }
+
+      // Preserve lot number across successive entries until manually changed
+      const lotInput = document.getElementById('prod-lot');
+      if (lotInput && currentLot) {
+        lotInput.value = currentLot;
       }
     }
 
@@ -2694,7 +2700,7 @@
       }
 
       saveLogs('production');
-      resetProductionForm();
+      resetProductionForm(true);
       renderProductionTable();
     });
 
@@ -3101,14 +3107,12 @@
         triggerFieldSync(twistEl);
       }
 
-      // Auto fill lot: try latest production log first, then costing sheet, then generate sequential LOT-xxx
-      if (lotEl) {
+      // Auto fill lot: keep existing user-entered lot if present; otherwise check past logs or costing sheet
+      if (lotEl && !lotEl.value.trim()) {
         if (productLogs.length > 0) {
           lotEl.value = cleanLotNumber(productLogs[0].lotNo);
         } else if (prod && (prod.lotNo || prod.lot)) {
           lotEl.value = cleanLotNumber(prod.lotNo || prod.lot);
-        } else {
-          lotEl.value = cleanLotNumber(generateNextLotNumber(val));
         }
         triggerFieldSync(lotEl);
       }
@@ -3188,9 +3192,9 @@
           document.getElementById('prod-name').value = '';
           return;
         }
-        const match = prodNameOptions.find(name => name.toLowerCase() === currentVal.toLowerCase());
+        const match = prodNameOptions.find(name => (name.label || name.value || name).toLowerCase() === currentVal.toLowerCase());
         if (match) {
-          selectProdNameOption(match);
+          selectProdNameOption(match.value || match, match.quality || match.product || null);
         } else {
           selectProdNameOption(currentVal);
         }
@@ -3202,14 +3206,6 @@
     function populateProdLotDropdown() {
       const productName = (document.getElementById('prod-name').value || document.getElementById('prod-name-search').value).trim();
       prodLotOptions = [];
-
-      // Always include option to create a new sequential lot at the top
-      const autoNewLot = generateNextLotNumber(productName);
-      prodLotOptions.push({
-        value: autoNewLot,
-        text: `+ Create New Lot (${autoNewLot})`,
-        isNew: true
-      });
 
       if (productName) {
         const productLogs = dataStore[activeDivision].production.filter(l => l.productName.toLowerCase() === productName.toLowerCase());
