@@ -1725,12 +1725,10 @@
         return;
       }
       const itemMode = item.getAttribute('data-mode');
-      if (itemMode === 'common') {
-        item.style.display = '';
-      } else if (itemMode === mode) {
-        item.style.display = '';
+      if (itemMode === 'common' || itemMode === mode) {
+        item.style.removeProperty('display');
       } else {
-        item.style.display = 'none';
+        item.style.setProperty('display', 'none', 'important');
       }
     });
     updateSidebarIdentity();
