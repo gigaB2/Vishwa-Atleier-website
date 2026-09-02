@@ -3644,6 +3644,37 @@
       }
     }
 
+    function resolveSaleLotNo(sale) {
+      if (!sale) return '-';
+      if (sale.lotNo && String(sale.lotNo).trim() && String(sale.lotNo).trim() !== '-') {
+        return String(sale.lotNo).trim();
+      }
+      if (sale.items && sale.items.length > 0) {
+        const itemWithLot = sale.items.find(i => i.lotNo && String(i.lotNo).trim() && String(i.lotNo).trim() !== '-');
+        if (itemWithLot) return String(itemWithLot.lotNo).trim();
+      }
+      // Match with production logs by boriNo
+      const boris = [];
+      if (sale.items && sale.items.length > 0) {
+        sale.items.forEach(i => { if (i.boriNo) boris.push(String(i.boriNo).trim()); });
+      } else if (sale.boriNo) {
+        String(sale.boriNo).split(',').forEach(b => { if (b.trim()) boris.push(b.trim()); });
+      }
+
+      const divs = [activeDivision, 'covering', 'tfo', 'doubler'].filter(Boolean);
+      for (const b of boris) {
+        for (const d of divs) {
+          if (dataStore[d] && Array.isArray(dataStore[d].production)) {
+            const p = dataStore[d].production.find(prod => (prod.boriNo || '').trim().toLowerCase() === b.toLowerCase());
+            if (p && p.lotNo && String(p.lotNo).trim() && String(p.lotNo).trim() !== '-') {
+              return String(p.lotNo).trim();
+            }
+          }
+        }
+      }
+      return '-';
+    }
+
     window.openSaleDetailsModal = function(id) {
       const sale = dataStore[activeDivision].sales.find(s => s.id === id);
       if (!sale) return;
@@ -3656,7 +3687,7 @@
 
       document.getElementById('details-modal-title').innerText = `Sale Details - ${activeDivision.toUpperCase()}`;
       document.getElementById('details-sales-challan').innerText = sale.challanNo;
-      document.getElementById('details-sales-lot').innerText = sale.lotNo || '-';
+      document.getElementById('details-sales-lot').innerText = resolveSaleLotNo(sale);
       document.getElementById('details-sales-date').innerText = formatDate(sale.date);
       document.getElementById('details-sales-customer').innerText = sale.customerName;
       
@@ -3787,6 +3818,7 @@
       const gstRate = sale.gstRate || 0;
       const gstVal = sale.gstAmount !== undefined ? sale.gstAmount : (taxableVal * (gstRate / 100));
       const grandTotalVal = sale.totalAmount || (taxableVal + gstVal);
+      const lotNo = resolveSaleLotNo(sale);
 
       // Create new window
       const printWindow = window.open('', '_blank', 'width=900,height=700');
@@ -4074,7 +4106,7 @@
                 <td>
                   <div class="section-title">Challan / Invoice Details</div>
                   <div class="info-item"><span>Challan No:</span> <strong>${sale.challanNo}</strong></div>
-                  <div class="info-item"><span>Lot No:</span> <strong>${sale.lotNo || '-'}</strong></div>
+                  <div class="info-item"><span>Lot No:</span> <strong>${lotNo}</strong></div>
                   <div class="info-item"><span>Date:</span> <strong>${formatDate(sale.date)}</strong></div>
                 </td>
               </tr>
@@ -4154,9 +4186,6 @@
                 setTimeout(triggerPrint, 300);
               });
             }
-            window.addEventListener('afterprint', function() {
-              setTimeout(function() { window.close(); }, 500);
-            });
           </scr` + `ipt>
         </body>
         </html>
@@ -4189,6 +4218,7 @@
       const totalBoris = items.length;
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
+      const lotNo = resolveSaleLotNo(sale);
 
       // Create new window
       const printWindow = window.open('', '_blank', 'width=900,height=700');
@@ -4457,7 +4487,7 @@
                 <td>
                   <div class="section-title">Challan Details</div>
                   <div class="info-item"><span>Challan No:</span> <strong>${sale.challanNo}</strong></div>
-                  <div class="info-item"><span>Lot No:</span> <strong>${sale.lotNo || '-'}</strong></div>
+                  <div class="info-item"><span>Lot No:</span> <strong>${lotNo}</strong></div>
                   <div class="info-item"><span>Date:</span> <strong>${formatDate(sale.date)}</strong></div>
                 </td>
               </tr>
@@ -4523,9 +4553,6 @@
                 setTimeout(triggerPrint, 300);
               });
             }
-            window.addEventListener('afterprint', function() {
-              setTimeout(function() { window.close(); }, 500);
-            });
           </scr` + `ipt>
         </body>
         </html>
@@ -4556,6 +4583,7 @@
       }
 
       const totalBoris = items.length;
+      const saleLotNo = resolveSaleLotNo(sale);
 
       // Create new window
       const printWindow = window.open('', '_blank', 'width=950,height=750');
@@ -4571,12 +4599,21 @@
       const companyEmail = company.sellerEmail || "sales@vishwafashions.com";
       const companyGst = company.sellerGstin || "24AAAFV1234A1Z5";
 
-      // Build pages HTML: each box gets 1 A4 page containing 3 identical packing slips
-      const pagesHtml = items.map((item, boxIdx) => {
-        const copyLabels = ['BOX ATTACHMENT / OUTER COPY', 'INSIDE BOX / INTERNAL COPY', 'OFFICE / FILE COPY'];
-        
-        const slipsHtml = [0, 1, 2].map((copyIdx) => {
+      // Group items into chunks of 3 for 3 slips per A4 page
+      const chunkSize = 3;
+      const pageChunks = [];
+      for (let i = 0; i < items.length; i += chunkSize) {
+        pageChunks.push(items.slice(i, i + chunkSize));
+      }
+
+      const pagesHtml = pageChunks.map(chunk => {
+        const slipsHtml = chunk.map((item) => {
+          const itemIdx = items.indexOf(item);
+          const itemLot = item.lotNo && String(item.lotNo).trim() && String(item.lotNo).trim() !== '-' 
+            ? String(item.lotNo).trim() 
+            : saleLotNo;
           const specs = `${item.denier ? item.denier + 'D' : ''}${item.tpm ? ' | ' + item.tpm + ' TPM' : ''}${item.twist ? ' | ' + item.twist : ''}`.trim() || '-';
+          
           return `
             <div class="slip-card">
               <div class="slip-header">
@@ -4586,7 +4623,7 @@
                 </div>
                 <div class="slip-header-right">
                   <div class="slip-badge">PACKING SLIP</div>
-                  <div class="slip-copy-tag">${copyLabels[copyIdx]}</div>
+                  <div class="slip-copy-tag">BOX ${itemIdx + 1} OF ${totalBoris}</div>
                 </div>
               </div>
 
@@ -4605,11 +4642,11 @@
                 </div>
                 <div class="meta-cell">
                   <span class="meta-label">LOT NO</span>
-                  <span class="meta-val">${sale.lotNo || item.lotNo || '-'}</span>
+                  <span class="meta-val">${itemLot}</span>
                 </div>
                 <div class="meta-cell">
-                  <span class="meta-label">BOX COUNT</span>
-                  <span class="meta-val">Box ${boxIdx + 1} of ${totalBoris}</span>
+                  <span class="meta-label">DIVISION</span>
+                  <span class="meta-val">${activeDivision.toUpperCase()}</span>
                 </div>
               </div>
 
@@ -4628,8 +4665,8 @@
                   <tr>
                     <td class="lbl-col">Specifications:</td>
                     <td class="val-col">${specs}</td>
-                    <td class="lbl-col">Division:</td>
-                    <td class="val-col">${activeDivision.toUpperCase()}</td>
+                    <td class="lbl-col">Box Count:</td>
+                    <td class="val-col font-bold">Box ${itemIdx + 1} of ${totalBoris}</td>
                   </tr>
                 </table>
 
@@ -4644,7 +4681,7 @@
                   </div>
                   <div class="metric-box">
                     <span class="metric-lbl">GROSS WEIGHT</span>
-                    <span class="metric-num">${(parseFloat(item.saleQty) || 0) > 0 ? ((parseFloat(item.saleQty) || 0) + (parseInt(item.rollsQty) || 0) * 0.04 + 0.8).toFixed(2) : '-'} <small>Kg</small></span>
+                    <span class="metric-num" style="color: #64748b; font-weight: 400; letter-spacing: 2px;">_______ <small style="font-weight: 700; color: #0f172a; letter-spacing: normal;">Kg</small></span>
                   </div>
                 </div>
               </div>
@@ -4886,6 +4923,9 @@
               font-weight: 700;
               font-size: 10.5px;
             }
+            .font-bold {
+              font-weight: 700;
+            }
             .slip-metrics-row {
               display: flex;
               gap: 6px;
@@ -4982,9 +5022,6 @@
                 setTimeout(triggerPrint, 300);
               });
             }
-            window.addEventListener('afterprint', function() {
-              setTimeout(function() { window.close(); }, 500);
-            });
           </scr` + `ipt>
         </body>
         </html>
