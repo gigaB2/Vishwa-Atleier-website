@@ -3356,6 +3356,14 @@
       if (!sale) return { amount: 0, percent: 0, type: 'percent', value: 0 };
       const subtotalVal = sale.subtotalAmount || sale.amount || 0;
       
+      let discType = sale.discountType || sale.discount_type || 'percent';
+      let discValue = 0;
+      if (sale.discountValue !== undefined && sale.discountValue !== null && !isNaN(parseFloat(sale.discountValue))) {
+        discValue = parseFloat(sale.discountValue);
+      } else if (sale.discount !== undefined && sale.discount !== null && !isNaN(parseFloat(sale.discount))) {
+        discValue = parseFloat(sale.discount);
+      }
+
       let discAmount = 0;
       if (sale.discountAmount !== undefined && sale.discountAmount !== null && !isNaN(parseFloat(sale.discountAmount)) && parseFloat(sale.discountAmount) > 0) {
         discAmount = parseFloat(sale.discountAmount);
@@ -3365,22 +3373,15 @@
         discAmount = parseFloat(sale.discountVal);
       }
 
-      let discType = sale.discountType || sale.discount_type || 'percent';
-      let discValue = (sale.discountValue !== undefined && sale.discountValue !== null) ? parseFloat(sale.discountValue) : ((sale.discount !== undefined && sale.discount !== null) ? parseFloat(sale.discount) : 0);
-
-      if (!discAmount && discValue > 0) {
+      if (discValue > 0) {
         if (discType === 'percent') {
           discAmount = subtotalVal * (discValue / 100);
         } else {
           discAmount = discValue;
         }
-      }
-
-      if (!discAmount && sale.taxableAmount !== undefined && subtotalVal > parseFloat(sale.taxableAmount)) {
+      } else if (!discAmount && sale.taxableAmount !== undefined && subtotalVal > parseFloat(sale.taxableAmount)) {
         discAmount = subtotalVal - parseFloat(sale.taxableAmount);
-      }
-
-      if (!discAmount && sale.totalAmount > 0 && sale.gstAmount !== undefined && subtotalVal > 0) {
+      } else if (!discAmount && sale.totalAmount > 0 && sale.gstAmount !== undefined && subtotalVal > 0) {
         const calcTaxable = parseFloat(sale.totalAmount) - parseFloat(sale.gstAmount);
         if (subtotalVal > calcTaxable + 0.01) {
           discAmount = subtotalVal - calcTaxable;
@@ -3391,7 +3392,7 @@
       if (discType === 'percent' && discValue > 0) {
         discPercent = discValue;
       } else if (subtotalVal > 0 && discAmount > 0) {
-        discPercent = Math.round((discAmount / subtotalVal) * 100);
+        discPercent = parseFloat(((discAmount / subtotalVal) * 100).toFixed(2));
       }
 
       return {
@@ -6264,11 +6265,12 @@
         document.getElementById('modal-sales-address').value = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
       }
       populateCompanyDropdown(sale.sellerCompanyId || sale.sellerName);
+      const discInfo = getSaleDiscountInfo(sale);
       if (document.getElementById('modal-sales-discount-type')) {
-        document.getElementById('modal-sales-discount-type').value = sale.discountType || 'percent';
+        document.getElementById('modal-sales-discount-type').value = discInfo.type || 'percent';
       }
       if (document.getElementById('modal-sales-discount-value')) {
-        document.getElementById('modal-sales-discount-value').value = sale.discountValue !== undefined ? sale.discountValue : 0;
+        document.getElementById('modal-sales-discount-value').value = discInfo.value > 0 ? discInfo.value : (discInfo.percent > 0 ? discInfo.percent : 0);
       }
       const editGstRate = getSaleGstRate(sale);
       document.getElementById('modal-sales-gst').value = editGstRate > 0 ? editGstRate : 12;
@@ -6357,11 +6359,12 @@
       if (document.getElementById('modal-sales-address')) {
         document.getElementById('modal-sales-address').value = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
       }
+      const repDiscInfo = getSaleDiscountInfo(sale);
       if (document.getElementById('modal-sales-discount-type')) {
-        document.getElementById('modal-sales-discount-type').value = sale.discountType || 'percent';
+        document.getElementById('modal-sales-discount-type').value = repDiscInfo.type || 'percent';
       }
       if (document.getElementById('modal-sales-discount-value')) {
-        document.getElementById('modal-sales-discount-value').value = sale.discountValue !== undefined ? sale.discountValue : 0;
+        document.getElementById('modal-sales-discount-value').value = repDiscInfo.value > 0 ? repDiscInfo.value : (repDiscInfo.percent > 0 ? repDiscInfo.percent : 0);
       }
       const repGstRate = getSaleGstRate(sale);
       document.getElementById('modal-sales-gst').value = repGstRate > 0 ? repGstRate : 12;
