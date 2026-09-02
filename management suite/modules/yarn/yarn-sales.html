@@ -3107,6 +3107,91 @@
       });
     }
 
+    function getProductDetailsMismatch(prodA, prodB) {
+      if (!prodA || !prodB) return null;
+      const dynA = typeof getDynamicProductInfo === 'function' ? getDynamicProductInfo(prodA) : {};
+      const dynB = typeof getDynamicProductInfo === 'function' ? getDynamicProductInfo(prodB) : {};
+
+      const lotA = (prodA.lotNo || '').trim();
+      const lotB = (prodB.lotNo || '').trim();
+      if (lotA.toLowerCase() !== lotB.toLowerCase()) {
+        return `Different Lot Numbers (${lotA || '-'} vs ${lotB || '-'})`;
+      }
+
+      const compA = (dynA.productName || prodA.productName || prodA.composition || '').trim();
+      const compB = (dynB.productName || prodB.productName || prodB.composition || '').trim();
+      if (compA.toLowerCase() !== compB.toLowerCase()) {
+        return `Different Quality / Composition (${compA || '-'} vs ${compB || '-'})`;
+      }
+
+      const colorA = (prodA.color || '').trim();
+      const colorB = (prodB.color || '').trim();
+      if (colorA.toLowerCase() !== colorB.toLowerCase()) {
+        return `Different Colors (${colorA || '-'} vs ${colorB || '-'})`;
+      }
+
+      const denierA = (prodA.denier !== undefined && prodA.denier !== null && String(prodA.denier).trim() !== '') ? String(prodA.denier).trim() : '';
+      const denierB = (prodB.denier !== undefined && prodB.denier !== null && String(prodB.denier).trim() !== '') ? String(prodB.denier).trim() : '';
+      if (denierA.toLowerCase() !== denierB.toLowerCase()) {
+        return `Different Deniers (${denierA || '-'}D vs ${denierB || '-'}D)`;
+      }
+
+      const tpmA = (prodA.tpm !== undefined && prodA.tpm !== null && String(prodA.tpm).trim() !== '') ? String(prodA.tpm).trim() : '';
+      const tpmB = (prodB.tpm !== undefined && prodB.tpm !== null && String(prodB.tpm).trim() !== '') ? String(prodB.tpm).trim() : '';
+      if (tpmA.toLowerCase() !== tpmB.toLowerCase()) {
+        return `Different TPM (${tpmA || '-'} vs ${tpmB || '-'})`;
+      }
+
+      const twistA = (prodA.twist || '').trim();
+      const twistB = (prodB.twist || '').trim();
+      if (twistA.toLowerCase() !== twistB.toLowerCase()) {
+        return `Different Twist (${twistA || '-'} vs ${twistB || '-'})`;
+      }
+
+      return null;
+    }
+
+    function getModalItemDetailsMismatch(itemA, itemB) {
+      if (!itemA || !itemB) return null;
+      const lotA = (itemA.lotNo || '').trim();
+      const lotB = (itemB.lotNo || '').trim();
+      if (lotA.toLowerCase() !== lotB.toLowerCase()) {
+        return `Different Lot Numbers (${lotA || '-'} vs ${lotB || '-'})`;
+      }
+
+      const compA = (itemA.composition || '').trim();
+      const compB = (itemB.composition || '').trim();
+      if (compA.toLowerCase() !== compB.toLowerCase()) {
+        return `Different Quality / Composition (${compA || '-'} vs ${compB || '-'})`;
+      }
+
+      const colorA = (itemA.color || '').trim();
+      const colorB = (itemB.color || '').trim();
+      if (colorA.toLowerCase() !== colorB.toLowerCase()) {
+        return `Different Colors (${colorA || '-'} vs ${colorB || '-'})`;
+      }
+
+      const denierA = (itemA.denier !== undefined && itemA.denier !== null && String(itemA.denier).trim() !== '') ? String(itemA.denier).trim() : '';
+      const denierB = (itemB.denier !== undefined && itemB.denier !== null && String(itemB.denier).trim() !== '') ? String(itemB.denier).trim() : '';
+      if (denierA.toLowerCase() !== denierB.toLowerCase()) {
+        return `Different Deniers (${denierA || '-'}D vs ${denierB || '-'}D)`;
+      }
+
+      const tpmA = (itemA.tpm !== undefined && itemA.tpm !== null && String(itemA.tpm).trim() !== '') ? String(itemA.tpm).trim() : '';
+      const tpmB = (itemB.tpm !== undefined && itemB.tpm !== null && String(itemB.tpm).trim() !== '') ? String(itemB.tpm).trim() : '';
+      if (tpmA.toLowerCase() !== tpmB.toLowerCase()) {
+        return `Different TPM (${tpmA || '-'} vs ${tpmB || '-'})`;
+      }
+
+      const twistA = (itemA.twist || '').trim();
+      const twistB = (itemB.twist || '').trim();
+      if (twistA.toLowerCase() !== twistB.toLowerCase()) {
+        return `Different Twist (${twistA || '-'} vs ${twistB || '-'})`;
+      }
+
+      return null;
+    }
+
     // Modal control functions
     window.openBatchSellModal = function() {
       const checkedBoxes = document.querySelectorAll('.prod-select-checkbox:checked');
@@ -3115,19 +3200,19 @@
         return;
       }
 
-      // Check if all selected Boris/Boxes belong to the same Lot Number
-      const uniqueLots = new Set();
-      checkedBoxes.forEach(cb => {
-        const prodId = cb.value;
-        const prod = dataStore[activeDivision].production.find(p => p.id === prodId);
-        if (prod) {
-          uniqueLots.add((prod.lotNo || '').trim().toLowerCase());
+      // Check if all selected Boris/Boxes have identical details
+      if (checkedBoxes.length > 1) {
+        const firstProd = dataStore[activeDivision].production.find(p => p.id === checkedBoxes[0].value);
+        for (let i = 1; i < checkedBoxes.length; i++) {
+          const currentProd = dataStore[activeDivision].production.find(p => p.id === checkedBoxes[i].value);
+          if (firstProd && currentProd) {
+            const mismatch = getProductDetailsMismatch(firstProd, currentProd);
+            if (mismatch) {
+              showToast(`Cannot sell: ${mismatch}. All items in a single Challan must have identical details.`, 'error');
+              return;
+            }
+          }
         }
-      });
-
-      if (uniqueLots.size > 1) {
-        showToast('Cannot sell: Selected Boris/Boxes have different Lot Numbers. All items in a single Challan must belong to the same Lot.', 'error');
-        return;
       }
 
       document.getElementById('modal-sales-edit-id').value = '';
@@ -4714,10 +4799,16 @@
         return;
       }
 
-      const uniqueLots = new Set(modalChallanItems.map(item => (item.lotNo || '').trim().toLowerCase()));
-      if (uniqueLots.size > 1) {
-        showToast('Cannot record sale: Selected items have different Lot Numbers. All items in a single Challan must belong to the same Lot.', 'error');
-        return;
+      if (modalChallanItems.length > 1) {
+        const first = modalChallanItems[0];
+        for (let i = 1; i < modalChallanItems.length; i++) {
+          const item = modalChallanItems[i];
+          const mismatch = getModalItemDetailsMismatch(first, item);
+          if (mismatch) {
+            showToast(`Cannot record sale: ${mismatch}. All items in a single Challan must have identical details.`, 'error');
+            return;
+          }
+        }
       }
 
       const commonRate = parseFloat(document.getElementById('modal-sales-rate') ? document.getElementById('modal-sales-rate').value : 0) || 0;
@@ -4896,13 +4987,62 @@
 
     window.toggleSelectAllProd = function(master) {
       const checkboxes = document.querySelectorAll('.prod-select-checkbox');
+      if (!master.checked) {
+        checkboxes.forEach(cb => { cb.checked = false; });
+        updateBatchSellButtonState();
+        return;
+      }
+
+      let baseProd = null;
+      const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
+      if (checkedBoxes.length > 0) {
+        baseProd = dataStore[activeDivision].production.find(p => p.id === checkedBoxes[0].value);
+      }
+
+      let anySkipped = false;
       checkboxes.forEach(cb => {
         if (!cb.disabled) {
-          cb.checked = master.checked;
+          const prod = dataStore[activeDivision].production.find(p => p.id === cb.value);
+          if (!prod) return;
+          if (!baseProd) {
+            baseProd = prod;
+            cb.checked = true;
+          } else {
+            const mismatch = getProductDetailsMismatch(baseProd, prod);
+            if (!mismatch) {
+              cb.checked = true;
+            } else {
+              cb.checked = false;
+              anySkipped = true;
+            }
+          }
         }
       });
+
+      if (anySkipped) {
+        showToast('Only items with identical details were selected. Different items cannot be sold in 1 Challan.', 'info');
+      }
       updateBatchSellButtonState();
-    }
+    };
+
+    window.onProdCheckboxChange = function(cb) {
+      if (cb.checked) {
+        const otherChecked = Array.from(document.querySelectorAll('.prod-select-checkbox:checked')).filter(c => c !== cb);
+        if (otherChecked.length > 0) {
+          const firstProd = dataStore[activeDivision].production.find(p => p.id === otherChecked[0].value);
+          const currentProd = dataStore[activeDivision].production.find(p => p.id === cb.value);
+          if (firstProd && currentProd) {
+            const mismatch = getProductDetailsMismatch(firstProd, currentProd);
+            if (mismatch) {
+              cb.checked = false;
+              showToast(`Cannot select: ${mismatch}. All Boris/Boxes in a single Challan must have identical details.`, 'error');
+              return;
+            }
+          }
+        }
+      }
+      updateBatchSellButtonState();
+    };
 
     window.updateBatchSellButtonState = function() {
       const checkedBoxes = document.querySelectorAll('.prod-select-checkbox:checked');
@@ -5100,7 +5240,7 @@
 
         tr.innerHTML = `
           <td style="text-align: center; vertical-align: middle; ${borderStyle}">
-            <input type="checkbox" class="prod-select-checkbox" value="${l.id}" ${isSold ? 'disabled title="Fully sold"' : ''} onchange="updateBatchSellButtonState()" style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;">
+            <input type="checkbox" class="prod-select-checkbox" value="${l.id}" ${isSold ? 'disabled title="Fully sold"' : ''} onchange="onProdCheckboxChange(this)" style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;">
           </td>
           <td>${formatDate(l.date)}</td>
           <td>${isSold ? `<strong style="text-decoration: line-through; color: var(--muted);">${l.boriNo}</strong> <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>` : `<strong>${l.boriNo}</strong>`}</td>
