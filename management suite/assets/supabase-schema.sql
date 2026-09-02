@@ -622,11 +622,6 @@ CREATE TABLE IF NOT EXISTS public.vf_employees (
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_vf_emp_name ON public.vf_employees(name);
-CREATE INDEX IF NOT EXISTS idx_vf_emp_role ON public.vf_employees(role);
-CREATE INDEX IF NOT EXISTS idx_vf_emp_status ON public.vf_employees(status);
-CREATE INDEX IF NOT EXISTS idx_vf_emp_active ON public.vf_employees(active);
-
 -- Safe column additions if vf_employees table was already created in older migrations
 ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS id_front TEXT;
 ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS id_back TEXT;
@@ -636,6 +631,11 @@ ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS termination_date DATE;
 ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS rejoin_date DATE;
 ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS avatar_color TEXT;
 ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Active';
+
+CREATE INDEX IF NOT EXISTS idx_vf_emp_name ON public.vf_employees(name);
+CREATE INDEX IF NOT EXISTS idx_vf_emp_role ON public.vf_employees(role);
+CREATE INDEX IF NOT EXISTS idx_vf_emp_status ON public.vf_employees(status);
+CREATE INDEX IF NOT EXISTS idx_vf_emp_active ON public.vf_employees(active);
 
 -- 24. Dedicated Relational Table: Attendance Records
 CREATE TABLE IF NOT EXISTS public.vf_attendance_records (
