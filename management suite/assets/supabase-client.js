@@ -2714,7 +2714,7 @@
                 if (yarnSaleRows.length > 0) {
                   for (let i = 0; i < yarnSaleRows.length; i += 300) {
                     const chunk = yarnSaleRows.slice(i, i + 300);
-                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_sales_logs?on_conflict=id`, {
+                    const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_sales_logs?on_conflict=id`, {
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
@@ -2723,7 +2723,33 @@
                         'Prefer': 'resolution=merge-duplicates'
                       },
                       body: JSON.stringify(chunk)
-                    }).catch(() => {});
+                    }).catch(() => null);
+
+                    // If database schema on Supabase doesn't have the new columns yet, fall back gracefully
+                    if (res && !res.ok) {
+                      const minimalChunk = chunk.map(r => ({
+                        id: r.id,
+                        division: r.division,
+                        sale_date: r.sale_date,
+                        challan_no: r.challan_no,
+                        customer_name: r.customer_name,
+                        items: r.items,
+                        total_qty: r.total_qty,
+                        total_amount: r.total_amount,
+                        gst_amount: r.gst_amount,
+                        updated_at: r.updated_at
+                      }));
+                      await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_sales_logs?on_conflict=id`, {
+                        method: 'POST',
+                        headers: {
+                          'apikey': SUPABASE_ANON_KEY,
+                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Content-Type': 'application/json',
+                          'Prefer': 'resolution=merge-duplicates'
+                        },
+                        body: JSON.stringify(minimalChunk)
+                      }).catch(() => {});
+                    }
                   }
                 }
               } catch(e) {

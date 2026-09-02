@@ -525,13 +525,36 @@ CREATE TABLE IF NOT EXISTS public.vf_yarn_sales_logs (
     sale_date DATE NOT NULL,
     challan_no TEXT,
     customer_name TEXT NOT NULL,
+    customer_address TEXT,
+    seller_company_id TEXT,
+    seller_name TEXT,
+    discount_type TEXT DEFAULT 'percent',
+    discount_value NUMERIC(12, 2) DEFAULT 0,
+    discount_amount NUMERIC(12, 2) DEFAULT 0,
+    taxable_amount NUMERIC(12, 2),
+    gst_rate NUMERIC(6, 2) DEFAULT 12,
+    subtotal_amount NUMERIC(12, 2),
     items JSONB DEFAULT '[]'::jsonb,
     total_qty NUMERIC(10, 3) DEFAULT 0,
     total_amount NUMERIC(12, 2) DEFAULT 0,
     gst_amount NUMERIC(12, 2) DEFAULT 0,
+    raw_data JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Migration safety for existing vf_yarn_sales_logs tables:
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS customer_address TEXT;
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS seller_company_id TEXT;
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS seller_name TEXT;
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS discount_type TEXT DEFAULT 'percent';
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS discount_value NUMERIC(12, 2) DEFAULT 0;
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(12, 2) DEFAULT 0;
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS taxable_amount NUMERIC(12, 2);
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS gst_rate NUMERIC(6, 2) DEFAULT 12;
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS subtotal_amount NUMERIC(12, 2);
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS raw_data JSONB DEFAULT '{}'::jsonb;
+
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_sales_div ON public.vf_yarn_sales_logs(division);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_sales_date ON public.vf_yarn_sales_logs(sale_date DESC);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_sales_cust ON public.vf_yarn_sales_logs(customer_name);
