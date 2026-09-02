@@ -565,9 +565,10 @@
       // Master entity registries: when remote arrives and local user is not actively typing,
       // the remote server snapshot is the single source of truth. Deleted items must NOT be resurrected!
       const MASTER_ENTITY_KEYS = [
-        'yarn-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
+        'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
         'manage-jalas', 'manage-fanis', 'machines', 'warp-beams', 'warp-issues',
-        'yarn-issues'
+        'yarn-issues', 'costing-products-v4', 'costing-tfo-products-v1',
+        'costing-doubler-products-v1', 'costing-covering-products-v1'
       ];
 
       if (MASTER_ENTITY_KEYS.includes(key) && !isLocallyActive) {

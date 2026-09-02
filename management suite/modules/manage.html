@@ -6910,8 +6910,9 @@ function showToast(message, type = 'info') {
       const targetQuality = rawMaterialFpQualities.find(q => q.id === id);
       if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
         window.VishwaSupabase.recordDeletion('yarn-fp-qualities', id);
-        if (targetQuality && targetQuality.name) {
-          window.VishwaSupabase.recordDeletion('yarn-fp-qualities', targetQuality.name);
+        if (targetQuality) {
+          if (targetQuality.name) window.VishwaSupabase.recordDeletion('yarn-fp-qualities', targetQuality.name);
+          if (targetQuality.code) window.VishwaSupabase.recordDeletion('yarn-fp-qualities', targetQuality.code);
         }
       }
       if (editingFpQualityId === id) {
@@ -9497,6 +9498,7 @@ function showToast(message, type = 'info') {
     const idStr = String(itemId);
     
     if (editingQualityId === idStr) cancelQualityEdit();
+    if (editingFpQualityId === idStr) cancelFpQualityEdit();
     if (editingSupplierId === idStr) cancelSupplierEdit();
     if (editingLoomId === idStr) cancelLoomEdit();
     if (editingJacquardId === idStr) cancelJacquardEdit();
@@ -9508,6 +9510,9 @@ function showToast(message, type = 'info') {
     if (key === 'yarn-qualities') {
       rawMaterialQualities = loadInitialState('yarn-qualities', []);
       renderQualities();
+    } else if (key === 'yarn-fp-qualities') {
+      rawMaterialFpQualities = loadInitialState('yarn-fp-qualities', []);
+      renderFpQualities();
     } else if (key === 'yarn-suppliers') {
       rawMaterialSuppliers = loadInitialState('yarn-suppliers', []);
       renderSuppliers();
