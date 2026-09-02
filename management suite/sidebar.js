@@ -3210,11 +3210,20 @@
 
   // Dynamic formatter for Rs and kg
   (function () {
-    const isYarnRMStock = window.location.href.includes('yarn-rm-stock') || 
-                          window.location.href.includes('yarn-stock-dashboard') ||
-                          (document.title && (document.title.toLowerCase().includes('stock book') || document.title.toLowerCase().includes('stock dashboard')));
+    const isTwoDecimalKg = window.location.href.includes('yarn') || 
+                          window.location.href.includes('production') ||
+                          window.location.href.includes('stock') ||
+                          window.location.href.includes('weaving') ||
+                          (document.title && (
+                            document.title.toLowerCase().includes('yarn') || 
+                            document.title.toLowerCase().includes('production') || 
+                            document.title.toLowerCase().includes('stock') ||
+                            document.title.toLowerCase().includes('weaving') ||
+                            document.title.toLowerCase().includes('stock book') || 
+                            document.title.toLowerCase().includes('stock dashboard')
+                          ));
 
-    function formatNumber(numStr, decimals = 1) {
+    function formatNumber(numStr, decimals = 2) {
       const cleanNumStr = numStr.replace(/,/g, '');
       const num = parseFloat(cleanNumStr);
       if (isNaN(num)) return numStr;
@@ -3235,8 +3244,8 @@
         return cleanPrefix + ' ' + formatNumber(num, 1);
       });
 
-      // Pattern 2: number followed by weight unit (including commas)
-      const kgDecimals = isYarnRMStock ? 2 : 1;
+      // Pattern 2: number followed by weight unit (including commas) - 2 decimal places for yarn production & weights
+      const kgDecimals = 2;
       const newText2 = newText1.replace(/((?:\d{1,3}(?:,\d{2,3})+|\d+)(?:\.\d+)?)\s*(kg|Kg|KG|kgs|Kgs)\b/gi, (match, num, suffix) => {
         changed = true;
         return formatNumber(num, kgDecimals) + ' ' + suffix;
