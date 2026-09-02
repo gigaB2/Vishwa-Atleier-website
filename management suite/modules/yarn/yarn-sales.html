@@ -3525,9 +3525,9 @@
       const subtotalVal = sale.subtotalAmount || sale.amount || items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
       const discInfo = getSaleDiscountInfo(sale);
-      const taxableVal = sale.taxableAmount !== undefined ? parseFloat(sale.taxableAmount) : (subtotalVal - discInfo.amount);
-      const gstVal = sale.gstAmount !== undefined ? parseFloat(sale.gstAmount) : (taxableVal * (gstRateVal / 100));
-      const grandTotalVal = sale.totalAmount || (taxableVal + gstVal);
+      const taxableVal = Math.max(0, subtotalVal - discInfo.amount);
+      const gstVal = (sale.gstAmount !== undefined && sale.discountAmount === discInfo.amount && sale.subtotalAmount === subtotalVal) ? parseFloat(sale.gstAmount) : (taxableVal * (gstRateVal / 100));
+      const grandTotalVal = (sale.totalAmount && sale.discountAmount === discInfo.amount && sale.subtotalAmount === subtotalVal) ? parseFloat(sale.totalAmount) : (taxableVal + gstVal);
 
       document.getElementById('details-summary-total-boris').innerText = totalBoris;
       document.getElementById('details-summary-total-rolls').innerText = totalRolls;
@@ -6062,9 +6062,9 @@
         }
 
         const gstRateVal = getSaleGstRate(s);
-        const taxableVal = s.taxableAmount !== undefined ? parseFloat(s.taxableAmount) : Math.max(0, subtotalVal - discInfo.amount);
-        const gstVal = s.gstAmount !== undefined ? parseFloat(s.gstAmount) : (taxableVal * (gstRateVal / 100));
-        const grandTotalVal = s.totalAmount || (taxableVal + gstVal);
+        const taxableVal = Math.max(0, subtotalVal - discInfo.amount);
+        const gstVal = s.gstAmount !== undefined && s.discountAmount === discInfo.amount && s.subtotalAmount === subtotalVal ? parseFloat(s.gstAmount) : (taxableVal * (gstRateVal / 100));
+        const grandTotalVal = (s.totalAmount && s.discountAmount === discInfo.amount && s.subtotalAmount === subtotalVal) ? parseFloat(s.totalAmount) : (taxableVal + gstVal);
         const gstDisplay = `<span>${gstRateVal}%</span> <span class="muted" style="font-size:0.75rem;">(₹${gstVal.toFixed(2)})</span>`;
 
         tr.innerHTML = `

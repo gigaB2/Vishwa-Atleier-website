@@ -2693,10 +2693,20 @@
                     sale_date: ysDate,
                     challan_no: ys.challanNo ? String(ys.challanNo).trim() : null,
                     customer_name: String(ys.customerName || ys.customer || 'Unknown').trim(),
+                    customer_address: ys.customerAddress || null,
+                    seller_company_id: ys.sellerCompanyId || null,
+                    seller_name: ys.sellerName || null,
+                    discount_type: ys.discountType || 'percent',
+                    discount_value: (ys.discountValue !== undefined && ys.discountValue !== null) ? parseFloat(ys.discountValue) : 0,
+                    discount_amount: (ys.discountAmount !== undefined && ys.discountAmount !== null) ? parseFloat(ys.discountAmount) : 0,
+                    taxable_amount: (ys.taxableAmount !== undefined && ys.taxableAmount !== null) ? parseFloat(ys.taxableAmount) : null,
+                    gst_rate: (ys.gstRate !== undefined && ys.gstRate !== null) ? parseFloat(ys.gstRate) : null,
+                    subtotal_amount: (ys.subtotalAmount !== undefined && ys.subtotalAmount !== null) ? parseFloat(ys.subtotalAmount) : null,
                     items: Array.isArray(ys.items) ? ys.items : [],
                     total_qty: parseFloat(ys.totalQty || ys.saleQty || ys.qty) || 0,
                     total_amount: parseFloat(ys.totalAmount || ys.amount) || 0,
                     gst_amount: parseFloat(ys.gstAmount || ys.gst) || 0,
+                    raw_data: ys,
                     updated_at: nowIso
                   };
                 }).filter(Boolean);
@@ -4178,22 +4188,35 @@
                     });
                   }
 
-                  const reconstructed = divRows.map(ys => ({
-                    id: ys.id,
-                    saleDate: ys.sale_date,
-                    date: ys.sale_date,
-                    challanNo: ys.challan_no || '',
-                    customerName: ys.customer_name,
-                    customer: ys.customer_name,
-                    items: Array.isArray(ys.items) ? ys.items : [],
-                    totalQty: Number(ys.total_qty) || 0,
-                    saleQty: Number(ys.total_qty) || 0,
-                    qty: Number(ys.total_qty) || 0,
-                    totalAmount: Number(ys.total_amount) || 0,
-                    amount: Number(ys.total_amount) || 0,
-                    gstAmount: Number(ys.gst_amount) || 0,
-                    gst: Number(ys.gst_amount) || 0
-                  }));
+                  const reconstructed = divRows.map(ys => {
+                    const raw = (ys.raw_data && typeof ys.raw_data === 'object') ? ys.raw_data : {};
+                    return {
+                      id: ys.id,
+                      saleDate: ys.sale_date,
+                      date: ys.sale_date,
+                      challanNo: ys.challan_no || raw.challanNo || '',
+                      customerName: ys.customer_name || raw.customerName || '',
+                      customer: ys.customer_name || raw.customerName || '',
+                      customerAddress: ys.customer_address || raw.customerAddress || 'Industrial Area, Surat, Gujarat, India',
+                      sellerCompanyId: ys.seller_company_id || raw.sellerCompanyId || '',
+                      sellerName: ys.seller_name || raw.sellerName || 'Vishwa Fashions',
+                      discountType: ys.discount_type || raw.discountType || 'percent',
+                      discountValue: (ys.discount_value !== undefined && ys.discount_value !== null) ? Number(ys.discount_value) : ((raw.discountValue !== undefined && raw.discountValue !== null) ? Number(raw.discountValue) : 0),
+                      discountAmount: (ys.discount_amount !== undefined && ys.discount_amount !== null) ? Number(ys.discount_amount) : ((raw.discountAmount !== undefined && raw.discountAmount !== null) ? Number(raw.discountAmount) : 0),
+                      taxableAmount: (ys.taxable_amount !== undefined && ys.taxable_amount !== null) ? Number(ys.taxable_amount) : (raw.taxableAmount !== undefined ? Number(raw.taxableAmount) : null),
+                      gstRate: (ys.gst_rate !== undefined && ys.gst_rate !== null) ? Number(ys.gst_rate) : (raw.gstRate !== undefined ? Number(raw.gstRate) : null),
+                      subtotalAmount: (ys.subtotal_amount !== undefined && ys.subtotal_amount !== null) ? Number(ys.subtotal_amount) : (raw.subtotalAmount !== undefined ? Number(raw.subtotalAmount) : null),
+                      items: Array.isArray(ys.items) && ys.items.length > 0 ? ys.items : (Array.isArray(raw.items) ? raw.items : []),
+                      totalQty: Number(ys.total_qty || raw.totalQty || raw.saleQty) || 0,
+                      saleQty: Number(ys.total_qty || raw.totalQty || raw.saleQty) || 0,
+                      qty: Number(ys.total_qty || raw.totalQty || raw.saleQty) || 0,
+                      totalAmount: Number(ys.total_amount || raw.totalAmount || raw.amount) || 0,
+                      amount: Number(ys.total_amount || raw.totalAmount || raw.amount) || 0,
+                      gstAmount: Number(ys.gst_amount || raw.gstAmount || raw.gst) || 0,
+                      gst: Number(ys.gst_amount || raw.gstAmount || raw.gst) || 0,
+                      ...raw
+                    };
+                  });
 
                   const ysKey = `yarn_${div}_sales_logs`;
 
