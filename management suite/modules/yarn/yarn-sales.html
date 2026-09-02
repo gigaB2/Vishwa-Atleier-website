@@ -3358,10 +3358,14 @@
       
       let discType = sale.discountType || sale.discount_type || 'percent';
       let discValue = 0;
+      let hasExplicitValue = false;
+
       if (sale.discountValue !== undefined && sale.discountValue !== null && !isNaN(parseFloat(sale.discountValue))) {
         discValue = parseFloat(sale.discountValue);
+        hasExplicitValue = true;
       } else if (sale.discount !== undefined && sale.discount !== null && !isNaN(parseFloat(sale.discount))) {
         discValue = parseFloat(sale.discount);
+        hasExplicitValue = true;
       }
 
       let discAmount = 0;
@@ -3373,7 +3377,7 @@
         discAmount = parseFloat(sale.discountVal);
       }
 
-      if (discValue > 0) {
+      if (hasExplicitValue && discValue > 0) {
         if (discType === 'percent') {
           discAmount = subtotalVal * (discValue / 100);
         } else {
@@ -3389,10 +3393,16 @@
       }
 
       let discPercent = 0;
-      if (discType === 'percent' && discValue > 0) {
-        discPercent = discValue;
-      } else if (subtotalVal > 0 && discAmount > 0) {
-        discPercent = parseFloat(((discAmount / subtotalVal) * 100).toFixed(2));
+      if (discType === 'percent') {
+        if (hasExplicitValue && discValue > 0) {
+          discPercent = discValue;
+        } else if (subtotalVal > 0 && discAmount > 0) {
+          let calcPct = (discAmount / subtotalVal) * 100;
+          if (Math.abs(calcPct - Math.round(calcPct)) <= 0.3) {
+            calcPct = Math.round(calcPct);
+          }
+          discPercent = parseFloat(calcPct.toFixed(2));
+        }
       }
 
       return {
@@ -6011,7 +6021,9 @@
         const discInfo = getSaleDiscountInfo(s);
         let discountDisplay = '<span class="muted">0% (₹0.00)</span>';
         if (discInfo.amount > 0) {
-          const discLabel = discInfo.percent > 0 ? `${discInfo.percent}%` : (discInfo.type === 'amount' ? 'Flat' : '0%');
+          const discLabel = discInfo.type === 'percent'
+            ? `${discInfo.percent}%`
+            : (discInfo.value > 0 ? `Flat ₹${discInfo.value.toFixed(2)}` : 'Flat');
           discountDisplay = `<span style="color: #ef4444; font-weight: 600;">${discLabel}</span> <span class="muted" style="font-size:0.75rem;">(-₹${discInfo.amount.toFixed(2)})</span>`;
         }
 
