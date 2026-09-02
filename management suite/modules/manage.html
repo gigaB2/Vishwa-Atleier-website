@@ -1677,6 +1677,40 @@
     box-sizing: border-box;
   }
 
+  .custom-dropdown-container {
+    position: relative;
+    width: 100%;
+  }
+
+  .custom-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    z-index: 1050;
+    padding: 4px 0;
+  }
+
+  .custom-dropdown-item {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.85rem;
+    color: var(--fg);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .custom-dropdown-item:hover,
+  .custom-dropdown-item.active {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+
   .fpq-comp-builder {
     display: flex;
     flex-direction: column;
@@ -2965,15 +2999,17 @@
           </label>
           <div class="fpq-comp-builder">
             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-              <select id="fp-yarn-selector" style="flex: 1; min-width: 200px;">
-                <!-- Dynamically populated from rawMaterialQualities -->
-              </select>
-              <button type="button" class="btn btn-sm btn-primary" onclick="addFpYarnFromSelect()" style="white-space: nowrap; padding: 0.45rem 0.85rem; font-weight: 600;">
+              <div class="custom-dropdown-container" style="flex: 1; min-width: 240px;">
+                <input type="text" id="fp-yarn-search-input" placeholder="Search & select RM Quality (e.g. 20/1 Brt poly)..." autocomplete="off" onfocus="showFpYarnDropdown()" oninput="filterFpYarnDropdown(this.value)" style="width: 100%; height: 38px; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.85rem; border: 1.5px solid var(--border); background: var(--surface); color: var(--fg);">
+                <input type="hidden" id="fp-yarn-selected-val">
+                <div id="fp-yarn-dropdown-menu" class="custom-dropdown-menu" style="display: none;"></div>
+              </div>
+              <button type="button" class="btn btn-sm btn-primary" onclick="addFpYarnFromSearchable()" style="white-space: nowrap; padding: 0.45rem 0.95rem; font-weight: 600; height: 38px;">
                 <span>+ Add Yarn</span>
               </button>
             </div>
             <div id="fp-selected-yarns-list" class="fpq-yarns-list">
-              <span style="font-size: 0.8rem; color: var(--muted); font-style: italic;">No yarns added yet. Pick from dropdown above.</span>
+              <span style="font-size: 0.8rem; color: var(--muted); font-style: italic;">No yarns added yet. Search & pick from dropdown above.</span>
             </div>
             <div style="margin-top: 0.25rem;">
               <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 0.2rem;">Generated Composition</label>
@@ -6412,10 +6448,10 @@ function showToast(message, type = 'info') {
   let activeFpDivisionFilter = 'all';
   let fpSelectedYarns = []; // Array of yarn strings/objects selected for current FP quality composition
 
-  function populateFpYarnSelector() {
-    const selector = document.getElementById('fp-yarn-selector');
-    if (!selector) return;
+  let availableFpYarnOptions = [];
+  let activeFpYarnDropdownIndex = -1;
 
+  function populateFpYarnSelector() {
     // Build unique RM qualities with color formatted in brackets
     // e.g. "20/1 Brt poly (Raw White)" or "70D Spandex" if color is missing
     const items = [];
@@ -6430,15 +6466,91 @@ function showToast(message, type = 'info') {
     });
 
     items.sort();
+    availableFpYarnOptions = items;
 
-    if (items.length === 0) {
-      selector.innerHTML = '<option value="" disabled selected>No RM qualities found. Add RM Qualities first!</option>';
+    const searchInput = document.getElementById('fp-yarn-search-input');
+    const selectedVal = document.getElementById('fp-yarn-selected-val');
+    if (selectedVal && !selectedVal.value && searchInput && !searchInput.value) {
+      // Keep clear
+    }
+  }
+
+  window.showFpYarnDropdown = function() {
+    const dropdown = document.getElementById('fp-yarn-dropdown-menu');
+    const input = document.getElementById('fp-yarn-search-input');
+    if (!dropdown || !input) return;
+
+    populateFpYarnSelector();
+    renderFpYarnDropdownItems(input.value || '');
+  };
+
+  window.filterFpYarnDropdown = function(query) {
+    const selectedVal = document.getElementById('fp-yarn-selected-val');
+    if (selectedVal) selectedVal.value = query; // allow direct matching
+    renderFpYarnDropdownItems(query || '');
+  };
+
+  function renderFpYarnDropdownItems(query = '') {
+    const dropdown = document.getElementById('fp-yarn-dropdown-menu');
+    if (!dropdown) return;
+
+    const search = query.toLowerCase().trim();
+    const filtered = availableFpYarnOptions.filter(item => item.toLowerCase().includes(search));
+
+    if (filtered.length === 0) {
+      dropdown.innerHTML = '<div class="custom-dropdown-item" style="color: var(--muted); font-style: italic; text-align: center;">No matching RM qualities found</div>';
+      dropdown.style.display = 'block';
+      activeFpYarnDropdownIndex = -1;
       return;
     }
 
-    selector.innerHTML = '<option value="" disabled selected>Select RM Quality (with Color) to add...</option>' + 
-      items.map(name => `<option value="${name}">${name}</option>`).join('');
+    dropdown.innerHTML = filtered.map((item, index) => 
+      `<div class="custom-dropdown-item" data-value="${item}" data-index="${index}" onclick="selectFpYarnDropdownItem('${item.replace(/'/g, "\\'")}')">${item}</div>`
+    ).join('');
+    dropdown.style.display = 'block';
+    activeFpYarnDropdownIndex = -1;
   }
+
+  window.selectFpYarnDropdownItem = function(val) {
+    const input = document.getElementById('fp-yarn-search-input');
+    const selectedVal = document.getElementById('fp-yarn-selected-val');
+    const dropdown = document.getElementById('fp-yarn-dropdown-menu');
+    if (input) input.value = val;
+    if (selectedVal) selectedVal.value = val;
+    if (dropdown) dropdown.style.display = 'none';
+  };
+
+  window.addFpYarnFromSearchable = function() {
+    const input = document.getElementById('fp-yarn-search-input');
+    const selectedVal = document.getElementById('fp-yarn-selected-val');
+    const val = (selectedVal && selectedVal.value ? selectedVal.value : (input ? input.value : '')).trim();
+
+    if (!val) {
+      alert('Please search and select or type an RM quality first!');
+      return;
+    }
+
+    fpSelectedYarns.push(val);
+    renderFpSelectedYarns();
+    updateCompositionFromYarns();
+
+    // Clear search input for next pick
+    if (input) input.value = '';
+    if (selectedVal) selectedVal.value = '';
+    const dropdown = document.getElementById('fp-yarn-dropdown-menu');
+    if (dropdown) dropdown.style.display = 'none';
+  };
+
+  // Backwards compatibility alias
+  window.addFpYarnFromSelect = window.addFpYarnFromSearchable;
+
+  document.addEventListener('click', (e) => {
+    const input = document.getElementById('fp-yarn-search-input');
+    const dropdown = document.getElementById('fp-yarn-dropdown-menu');
+    if (input && dropdown && !input.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
 
   window.handleFpDivisionChange = function(div, selectedValue = '') {
     const twistSelect = document.getElementById('new-fp-twist');
@@ -6779,6 +6891,10 @@ function showToast(message, type = 'info') {
     document.getElementById('new-fp-color').value = '';
     document.getElementById('new-fp-denier').value = '';
     document.getElementById('new-fp-tpm').value = '';
+    const yarnSearchInput = document.getElementById('fp-yarn-search-input');
+    if (yarnSearchInput) yarnSearchInput.value = '';
+    const yarnSelectedVal = document.getElementById('fp-yarn-selected-val');
+    if (yarnSelectedVal) yarnSelectedVal.value = '';
     fpSelectedYarns = [];
     renderFpSelectedYarns();
 
