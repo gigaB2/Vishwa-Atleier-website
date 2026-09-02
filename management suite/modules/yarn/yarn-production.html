@@ -1630,6 +1630,101 @@
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       }
     }
+
+    /* Floating Batch Action Toolbar (When rows are selected) */
+    .floating-batch-bar {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: var(--surface-card, rgba(18, 24, 38, 0.95));
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+      box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      border-radius: 50px;
+      padding: 8px 14px 8px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 1000;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+      opacity: 0;
+      pointer-events: none;
+      max-width: calc(100vw - 32px);
+    }
+
+    .floating-batch-bar.active {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .floating-batch-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--fg);
+      white-space: nowrap;
+    }
+
+    .floating-batch-badge {
+      background: var(--accent, #6366f1);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      min-width: 24px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+    }
+
+    .floating-batch-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .floating-batch-btn-clear {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--muted, #94a3b8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 30px;
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .floating-batch-btn-clear:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--fg, #ffffff);
+    }
+
+    .floating-batch-btn-sell {
+      background: linear-gradient(135deg, var(--accent, #6366f1), var(--accent2, #8b5cf6));
+      color: #ffffff;
+      border: none;
+      border-radius: 30px;
+      padding: 8px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+      transition: all 0.2s;
+    }
+
+    .floating-batch-btn-sell:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+    }
   </style>
   <link rel="stylesheet" href="../../sidebar.css">
   <script src="../../sidebar.js" defer></script>
@@ -2293,6 +2388,7 @@
       if (titleEl) titleEl.innerText = titles[divisionId] || 'Yarn Management';
 
       // Reset forms and refresh UI
+      if (typeof selectedProdIds !== 'undefined') selectedProdIds.clear();
       resetProductionForm();
       calculateSummaryMetrics();
       populateBoriDropdown();
@@ -3452,16 +3548,15 @@
 
     // Modal control functions
     window.openBatchSellModal = function() {
-      const checkedBoxes = document.querySelectorAll('.prod-select-checkbox:checked');
-      if (checkedBoxes.length === 0) {
+      const selectedIds = Array.from(selectedProdIds);
+      if (selectedIds.length === 0) {
         showToast('Please select at least one Bori/Box to sell.', 'error');
         return;
       }
 
       // Check if all selected Boris/Boxes belong to the same Lot Number
       const uniqueLots = new Set();
-      checkedBoxes.forEach(cb => {
-        const prodId = cb.value;
+      selectedIds.forEach(prodId => {
         const prod = dataStore[activeDivision].production.find(p => p.id === prodId);
         if (prod) {
           uniqueLots.add((prod.lotNo || '').trim().toLowerCase());
@@ -3499,8 +3594,7 @@
 
       // Build items list
       modalChallanItems = [];
-      checkedBoxes.forEach(cb => {
-        const prodId = cb.value;
+      selectedIds.forEach(prodId => {
         const prod = dataStore[activeDivision].production.find(p => p.id === prodId);
         if (prod) {
           const stock = getBoriStock(prod);
@@ -3548,13 +3642,6 @@
           modal.style.display = 'none';
         }, 250);
       }
-
-      // Uncheck checkboxes
-      const checkboxes = document.querySelectorAll('.prod-select-checkbox');
-      checkboxes.forEach(cb => cb.checked = false);
-      const master = document.getElementById('prod-select-all');
-      if (master) master.checked = false;
-      updateBatchSellButtonState();
     }
 
     window.openSaleDetailsModal = function(id) {
@@ -4657,6 +4744,7 @@
       }
 
       saveLogs('sales');
+      selectedProdIds.clear();
       closeBatchSellModal();
       
       renderProductionTable();
@@ -4723,30 +4811,73 @@
       return `CH-${nextSeq}/${prefix}/${fy}`;
     }
 
+    // Set of selected production log IDs for batch selling (persists across search / filter)
+    const selectedProdIds = new Set();
+
     window.toggleSelectAllProd = function(master) {
       const checkboxes = document.querySelectorAll('.prod-select-checkbox');
       checkboxes.forEach(cb => {
         if (!cb.disabled) {
           cb.checked = master.checked;
+          if (master.checked) {
+            selectedProdIds.add(cb.value);
+          } else {
+            selectedProdIds.delete(cb.value);
+          }
         }
       });
       updateBatchSellButtonState();
-    }
+    };
+
+    window.onProdCheckboxChange = function(cb) {
+      if (cb.checked) {
+        selectedProdIds.add(cb.value);
+      } else {
+        selectedProdIds.delete(cb.value);
+      }
+      updateBatchSellButtonState();
+    };
+
+    window.clearAllSelectedProdBoris = function() {
+      selectedProdIds.clear();
+      document.querySelectorAll('.prod-select-checkbox').forEach(cb => cb.checked = false);
+      const master = document.getElementById('prod-select-all');
+      if (master) master.checked = false;
+      updateBatchSellButtonState();
+    };
 
     window.updateBatchSellButtonState = function() {
-      const checkedBoxes = document.querySelectorAll('.prod-select-checkbox:checked');
-      const count = checkedBoxes.length;
+      const count = selectedProdIds.size;
+      
+      // Top button count & state
       const countEl = document.getElementById('batch-sell-count');
       if (countEl) countEl.innerText = count;
       const btn = document.getElementById('btn-batch-sell');
       if (btn) btn.disabled = (count === 0);
+
+      // Floating batch bar count & visibility
+      const floatBar = document.getElementById('floating-batch-bar');
+      const floatBadge = document.getElementById('floating-batch-badge');
+      const floatCount = document.getElementById('floating-batch-count');
+
+      if (floatBadge) floatBadge.innerText = count;
+      if (floatCount) floatCount.innerText = count;
+
+      if (floatBar) {
+        if (count > 0) {
+          floatBar.classList.add('active');
+        } else {
+          floatBar.classList.remove('active');
+        }
+      }
       
-      const allSelectable = document.querySelectorAll('.prod-select-checkbox:not(:disabled)');
+      // Master checkbox state in current visible table
+      const visibleCheckboxes = document.querySelectorAll('.prod-select-checkbox:not(:disabled)');
       const master = document.getElementById('prod-select-all');
       if (master) {
-        master.checked = allSelectable.length > 0 && Array.from(allSelectable).every(cb => cb.checked);
+        master.checked = visibleCheckboxes.length > 0 && Array.from(visibleCheckboxes).every(cb => selectedProdIds.has(cb.value));
       }
-    }
+    };
 
     let prodSortKey = 'date';
     let prodSortOrder = 'desc'; // 'asc' or 'desc'
@@ -4960,9 +5091,11 @@
         const dyn = getDynamicProductInfo(l);
         const displayProdName = dyn.productName || l.productName;
 
+        const isChecked = selectedProdIds.has(l.id);
+
         tr.innerHTML = `
           <td style="text-align: center; vertical-align: middle; ${borderStyle}">
-            <input type="checkbox" class="prod-select-checkbox" value="${l.id}" ${isSold ? 'disabled title="Fully sold"' : ''} onchange="updateBatchSellButtonState()" style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;">
+            <input type="checkbox" class="prod-select-checkbox" value="${l.id}" ${isChecked ? 'checked' : ''} ${isSold ? 'disabled title="Fully sold"' : ''} onchange="onProdCheckboxChange(this)" style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;">
           </td>
           <td>${formatDate(l.date)}</td>
           <td>${isSold ? `<strong style="text-decoration: line-through; color: var(--muted);">${l.boriNo}</strong> <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>` : `<strong>${l.boriNo}</strong>`}</td>
@@ -5000,6 +5133,8 @@
         `;
         body.appendChild(tr);
       });
+
+      updateBatchSellButtonState();
     }
 
     let stockDashSortKey = 'remainingQty';
@@ -6268,6 +6403,27 @@
         <button type="button" class="btn btn-secondary" onclick="closeDeleteConfirmModal()" style="flex: 1; min-height: 42px; font-weight: 600;">Cancel</button>
         <button type="button" class="btn btn-danger" onclick="executeDeleteConfirmAction()" style="flex: 1; min-height: 42px; font-weight: 600;">Delete</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Floating Batch Action Toolbar (Visible when at least 1 production row is checked) -->
+  <div id="floating-batch-bar" class="floating-batch-bar">
+    <div class="floating-batch-info">
+      <span id="floating-batch-badge" class="floating-batch-badge">0</span>
+      <span>Selected</span>
+    </div>
+    <div class="floating-batch-actions">
+      <button type="button" class="floating-batch-btn-clear" onclick="clearAllSelectedProdBoris()">
+        Deselect All
+      </button>
+      <button type="button" class="floating-batch-btn-sell" onclick="openBatchSellModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+        <span>Batch Sell (<span id="floating-batch-count">0</span>)</span>
+      </button>
     </div>
   </div>
 </body>
