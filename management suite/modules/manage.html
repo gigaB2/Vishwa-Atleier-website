@@ -1668,6 +1668,232 @@
     }
   }
 
+  /* —— Manage FP Qualities —— */
+  #tab-fp-qualities {
+    width: 100%;
+    max-width: 860px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+  }
+
+  .fpq-comp-builder {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.85rem;
+    background: var(--bg);
+    border: 1.5px dashed var(--border);
+    border-radius: 10px;
+  }
+
+  .fpq-yarns-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    min-height: 32px;
+  }
+
+  .fpq-yarn-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.65rem;
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    color: var(--accent);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .fpq-yarn-tag .fpq-tag-remove {
+    background: none;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+    padding: 0;
+    margin-left: 2px;
+    font-size: 0.85rem;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+  .fpq-yarn-tag .fpq-tag-remove:hover {
+    opacity: 1;
+    color: var(--error);
+  }
+
+  .fpq-division-filter {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+
+  .fpq-filter-btn {
+    padding: 0.5rem 1.1rem;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--fg);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .fpq-filter-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .fpq-filter-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  }
+
+  .fpq-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .fpq-card:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    box-shadow: var(--shadow-md);
+  }
+
+  .fpq-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    border-bottom: 1px dashed var(--border);
+    padding-bottom: 0.65rem;
+  }
+
+  .fpq-division-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .fpq-division-badge.covering {
+    background: rgba(168, 85, 247, 0.15);
+    color: #a855f7;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+  }
+  .fpq-division-badge.tfo {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+  .fpq-division-badge.doubler {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  .fpq-specs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.6rem;
+    background: var(--bg);
+    padding: 0.65rem 0.85rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .fpq-spec-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .fpq-spec-item label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .fpq-spec-item span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--fg);
+  }
+
+  .fpq-composition-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .fpq-composition-box label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .fpq-composition-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(139, 92, 246, 0.08);
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    border: 1px solid rgba(139, 92, 246, 0.18);
+    word-break: break-word;
+  }
+
+  .fpq-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: auto;
+    padding-top: 0.5rem;
+  }
+
+  @media (max-width: 1024px) {
+    #tab-fp-qualities {
+      max-width: 100% !important;
+      width: 100% !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      padding: 0 !important;
+      overflow-x: clip;
+      box-sizing: border-box;
+    }
+
+    #tab-fp-qualities .form-grid {
+      grid-template-columns: minmax(0, 1fr) !important;
+      gap: 0.85rem !important;
+    }
+
+    #tab-fp-qualities input,
+    #tab-fp-qualities select {
+      font-size: 16px !important;
+      min-height: 44px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .fpq-card-actions .btn {
+      flex: 1 1 0;
+      min-height: 40px;
+      justify-content: center;
+      display: inline-flex;
+      align-items: center;
+    }
+  }
+
 </style>
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -2701,6 +2927,106 @@
  
     <div id="qualities-segregated-container" style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;">
       <!-- Dynamically generated containers for each Yarn Type -->
+    </div>
+  </div>
+
+  <!-- TAB: FINISHED PRODUCT (FP) QUALITIES -->
+  <div id="tab-fp-qualities" class="tab-content">
+    <!-- Tab Header -->
+    <div class="placeholder-header">
+      <div class="placeholder-header-inner">
+        <div class="placeholder-header-title-wrap">
+          <h1>Manage FP Qualities</h1>
+        </div>
+      </div>
+      <p>Finished product yarn specifications, multi-yarn composition &amp; division catalog</p>
+    </div>
+
+    <!-- Add / Edit Form Card -->
+    <div class="card">
+      <h3 id="fp-quality-form-title">Add New FP Quality</h3>
+      <div class="form-grid" style="margin-top: 1.5rem;">
+        <div class="form-group">
+          <label>Division *</label>
+          <select id="new-fp-division" onchange="handleFpDivisionChange(this.value)">
+            <option value="covering">Covering</option>
+            <option value="tfo">TFO</option>
+            <option value="doubler">Doubler/MX</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>FP Quality Name *</label>
+          <input type="text" id="new-fp-name" placeholder="e.g. 20/1 BRT POLY + 70D SPANDEX" autocomplete="off" onblur="this.value = this.value.trim().toUpperCase()" oninput="this.value = this.value.toUpperCase();" style="text-transform: uppercase;">
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Composition (Pick RM Qualities) *</span>
+            <span style="font-size: 0.72rem; color: var(--muted); font-weight: normal;">Select RM yarns to build multi-yarn blend</span>
+          </label>
+          <div class="fpq-comp-builder">
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+              <select id="fp-yarn-selector" style="flex: 1; min-width: 200px;">
+                <!-- Dynamically populated from rawMaterialQualities -->
+              </select>
+              <button type="button" class="btn btn-sm btn-primary" onclick="addFpYarnFromSelect()" style="white-space: nowrap; padding: 0.45rem 0.85rem; font-weight: 600;">
+                <span>+ Add Yarn</span>
+              </button>
+            </div>
+            <div id="fp-selected-yarns-list" class="fpq-yarns-list">
+              <span style="font-size: 0.8rem; color: var(--muted); font-style: italic;">No yarns added yet. Pick from dropdown above.</span>
+            </div>
+            <div style="margin-top: 0.25rem;">
+              <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 0.2rem;">Generated Composition</label>
+              <input type="text" id="new-fp-composition" placeholder="e.g. 20/1 Brt poly - 20/1 Brt poly" style="font-weight: 600; color: var(--accent);">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Color</label>
+          <input type="text" id="new-fp-color" placeholder="e.g. Raw White, Black, Red..." autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Resultant Denier (D)</label>
+          <input type="number" id="new-fp-denier" placeholder="e.g. 150" step="any" min="0">
+        </div>
+        <div class="form-group">
+          <label>TPM</label>
+          <input type="number" id="new-fp-tpm" placeholder="e.g. 800" min="0">
+        </div>
+        <div class="form-group">
+          <label>Twist</label>
+          <select id="new-fp-twist">
+            <option value="">None / Default</option>
+            <option value="S">S Twist</option>
+            <option value="Z">Z Twist</option>
+          </select>
+        </div>
+        <div class="form-group" style="display: flex; flex-direction: row; gap: 0.5rem; align-items: flex-end;">
+          <button id="btn-cancel-fp-edit" class="btn" style="display: none; background: var(--border);" onclick="cancelFpQualityEdit()">Cancel</button>
+          <button id="btn-add-fp-quality" class="btn btn-primary" onclick="addOrUpdateFpQuality()">Add FP Quality</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Division Filter Pills & Universal Search -->
+    <div class="card" style="margin-bottom: 1.5rem; background: var(--surface); border: 1.5px solid var(--border);">
+      <div class="fpq-division-filter">
+        <button type="button" class="fpq-filter-btn active" data-div="all" onclick="filterFpDivision('all')">All Divisions</button>
+        <button type="button" class="fpq-filter-btn" data-div="covering" onclick="filterFpDivision('covering')">Covering</button>
+        <button type="button" class="fpq-filter-btn" data-div="tfo" onclick="filterFpDivision('tfo')">TFO</button>
+        <button type="button" class="fpq-filter-btn" data-div="doubler" onclick="filterFpDivision('doubler')">Doubler/MX</button>
+      </div>
+      <div class="form-group" style="margin-bottom: 0;">
+        <label style="font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🔍</span> Universal Search FP Qualities
+        </label>
+        <input type="text" id="fp-quality-search-bar" placeholder="Search quality name, composition, division, TPM, denier…" oninput="handleFpQualitySearch(this.value)" style="width: 100%; height: 40px; padding: 0.6rem 0.75rem; border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; background-color: var(--surface); color: var(--fg); border: 1.5px solid var(--border);">
+      </div>
+    </div>
+
+    <!-- Segregated FP Qualities Container -->
+    <div id="fp-qualities-container" style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;">
+      <!-- Dynamically rendered per division -->
     </div>
   </div>
 
@@ -5571,6 +5897,7 @@ function showToast(message, type = 'info') {
   const defaultSuppliers = [];
 
   let rawMaterialQualities = loadInitialState('yarn-qualities', defaultQualities);
+  let rawMaterialFpQualities = loadInitialState('yarn-fp-qualities', []);
   let rawMaterialSuppliers = loadInitialState('yarn-suppliers', defaultSuppliers);
 
   function getStoredBeams() {
@@ -5594,6 +5921,7 @@ function showToast(message, type = 'info') {
       jacquards: JSON.parse(JSON.stringify(jacquards)),
       jalas: JSON.parse(JSON.stringify(jalas)),
       rawMaterialQualities: JSON.parse(JSON.stringify(rawMaterialQualities)),
+      rawMaterialFpQualities: JSON.parse(JSON.stringify(rawMaterialFpQualities)),
       rawMaterialSuppliers: JSON.parse(JSON.stringify(rawMaterialSuppliers)),
       beams: getStoredBeams()
     };
@@ -5614,6 +5942,7 @@ function showToast(message, type = 'info') {
     jacquards = snapshot.jacquards;
     jalas = snapshot.jalas;
     rawMaterialQualities = snapshot.rawMaterialQualities || [];
+    rawMaterialFpQualities = snapshot.rawMaterialFpQualities || [];
     rawMaterialSuppliers = snapshot.rawMaterialSuppliers || [];
 
     localStorage.setItem('warp-beams', JSON.stringify(snapshot.beams));
@@ -5623,6 +5952,7 @@ function showToast(message, type = 'info') {
     localStorage.setItem('manage-jacquards', JSON.stringify(jacquards));
     localStorage.setItem('manage-jalas', JSON.stringify(jalas));
     localStorage.setItem('yarn-qualities', JSON.stringify(rawMaterialQualities));
+    localStorage.setItem('yarn-fp-qualities', JSON.stringify(rawMaterialFpQualities));
     localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
 
     window.dispatchEvent(new Event('storage'));
@@ -5649,6 +5979,7 @@ function showToast(message, type = 'info') {
     localStorage.setItem('manage-fanis', JSON.stringify(fanis));
     localStorage.setItem('fanis', JSON.stringify(fanis));
     localStorage.setItem('yarn-qualities', JSON.stringify(rawMaterialQualities));
+    localStorage.setItem('yarn-fp-qualities', JSON.stringify(rawMaterialFpQualities));
     localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
     
     // Save employees to its custom key
@@ -6069,6 +6400,399 @@ function showToast(message, type = 'info') {
       rawMaterialQualities = rawMaterialQualities.filter(q => q.id !== id);
       saveState();
       renderQualities();
+      populateFpYarnSelector();
+    }
+  }
+
+  // ——————————————————————————————————————————————————————————
+  // --- MANAGE FP QUALITIES (Finished Product Qualities) ---
+  // ——————————————————————————————————————————————————————————
+  let editingFpQualityId = null;
+  let fpQualitySearchQuery = '';
+  let activeFpDivisionFilter = 'all';
+  let fpSelectedYarns = []; // Array of yarn strings/objects selected for current FP quality composition
+
+  function populateFpYarnSelector() {
+    const selector = document.getElementById('fp-yarn-selector');
+    if (!selector) return;
+
+    // Build unique RM qualities list (e.g. "20/1 Brt poly", "70D Spandex", etc.)
+    const availableQualities = Array.from(new Set(rawMaterialQualities.map(q => q.quality).filter(Boolean))).sort();
+
+    if (availableQualities.length === 0) {
+      selector.innerHTML = '<option value="" disabled selected>No RM qualities found. Add RM Qualities first!</option>';
+      return;
+    }
+
+    selector.innerHTML = '<option value="" disabled selected>Select RM Quality to add...</option>' + 
+      availableQualities.map(name => `<option value="${name}">${name}</option>`).join('');
+  }
+
+  window.handleFpDivisionChange = function(div, selectedValue = '') {
+    const twistSelect = document.getElementById('new-fp-twist');
+    if (!twistSelect) return;
+
+    const division = (div || document.getElementById('new-fp-division')?.value || 'covering').toLowerCase();
+    const currentVal = selectedValue !== undefined && selectedValue !== '' ? selectedValue : twistSelect.value;
+
+    if (division === 'covering' || division === 'tfo') {
+      // Covering & TFO: S and Z twist only
+      twistSelect.innerHTML = `
+        <option value="">None / Default</option>
+        <option value="S">S Twist</option>
+        <option value="Z">Z Twist</option>
+      `;
+    } else if (division === 'doubler') {
+      // Doubler/MX: Multi-core / composite twists
+      twistSelect.innerHTML = `
+        <option value="">None / Default</option>
+        <option value="S/Z">S/Z Twist</option>
+        <option value="Z/S">Z/S Twist</option>
+        <option value="S/S">S/S Twist</option>
+        <option value="Z/Z">Z/Z Twist</option>
+        <option value="2Core">2Core</option>
+        <option value="2Core/S">2Core/S</option>
+        <option value="2Core/Z">2Core/Z</option>
+      `;
+    } else {
+      twistSelect.innerHTML = `
+        <option value="">None / Default</option>
+        <option value="S">S Twist</option>
+        <option value="Z">Z Twist</option>
+        <option value="S/Z">S/Z Twist</option>
+        <option value="Z/S">Z/S Twist</option>
+        <option value="S/S">S/S Twist</option>
+        <option value="Z/Z">Z/Z Twist</option>
+        <option value="2Core">2Core</option>
+        <option value="2Core/S">2Core/S</option>
+        <option value="2Core/Z">2Core/Z</option>
+      `;
+    }
+
+    if (currentVal && Array.from(twistSelect.options).some(o => o.value === currentVal)) {
+      twistSelect.value = currentVal;
+    } else if (currentVal) {
+      // If previous value doesn't match available options, default or keep matching
+      twistSelect.value = '';
+    }
+  };
+
+  window.addFpYarnFromSelect = function() {
+    const selector = document.getElementById('fp-yarn-selector');
+    if (!selector || !selector.value) {
+      alert('Please select an RM quality first!');
+      return;
+    }
+    const val = selector.value;
+    fpSelectedYarns.push(val);
+    renderFpSelectedYarns();
+    updateCompositionFromYarns();
+  };
+
+  window.removeFpYarn = function(index) {
+    if (index >= 0 && index < fpSelectedYarns.length) {
+      fpSelectedYarns.splice(index, 1);
+      renderFpSelectedYarns();
+      updateCompositionFromYarns();
+    }
+  };
+
+  function renderFpSelectedYarns() {
+    const container = document.getElementById('fp-selected-yarns-list');
+    if (!container) return;
+
+    if (fpSelectedYarns.length === 0) {
+      container.innerHTML = '<span style="font-size: 0.8rem; color: var(--muted); font-style: italic;">No yarns added yet. Pick from dropdown above.</span>';
+      return;
+    }
+
+    container.innerHTML = fpSelectedYarns.map((yarn, idx) => `
+      <span class="fpq-yarn-tag">
+        <span>🧵 ${yarn}</span>
+        <button type="button" class="fpq-tag-remove" onclick="removeFpYarn(${idx})" title="Remove">✕</button>
+      </span>
+    `).join('');
+  }
+
+  function updateCompositionFromYarns() {
+    const compInput = document.getElementById('new-fp-composition');
+    if (!compInput) return;
+    if (fpSelectedYarns.length === 0) {
+      compInput.value = '';
+    } else {
+      compInput.value = fpSelectedYarns.join(' - ');
+    }
+  }
+
+  window.filterFpDivision = function(div) {
+    activeFpDivisionFilter = div || 'all';
+    document.querySelectorAll('.fpq-filter-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-div') === activeFpDivisionFilter);
+    });
+    renderFpQualities();
+  };
+
+  window.handleFpQualitySearch = function(val) {
+    fpQualitySearchQuery = val || '';
+    renderFpQualities();
+  };
+
+  function renderFpQualities() {
+    const container = document.getElementById('fp-qualities-container');
+    if (!container) return;
+
+    populateFpYarnSelector();
+
+    let list = rawMaterialFpQualities || [];
+
+    // Filter by division
+    if (activeFpDivisionFilter && activeFpDivisionFilter !== 'all') {
+      list = list.filter(q => (q.division || '').toLowerCase() === activeFpDivisionFilter.toLowerCase());
+    }
+
+    // Filter by search query
+    if (fpQualitySearchQuery.trim()) {
+      const terms = fpQualitySearchQuery.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      list = list.filter(q => {
+        return terms.every(term => {
+          return (q.name || '').toLowerCase().includes(term) ||
+                 (q.composition || '').toLowerCase().includes(term) ||
+                 (q.division || '').toLowerCase().includes(term) ||
+                 (String(q.denier || '')).toLowerCase().includes(term) ||
+                 (String(q.tpm || '')).toLowerCase().includes(term) ||
+                 (q.twist || '').toLowerCase().includes(term) ||
+                 (q.color || '').toLowerCase().includes(term);
+        });
+      });
+    }
+
+    if (list.length === 0) {
+      container.innerHTML = `
+        <div class="card" style="text-align: center; padding: 2.5rem; color: var(--muted);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🧶</div>
+          <div style="font-size: 1.05rem; font-weight: 600; color: var(--fg); margin-bottom: 0.25rem;">No FP Qualities Found</div>
+          <div>Create one above or adjust your search / division filter.</div>
+        </div>
+      `;
+      return;
+    }
+
+    // Group by division: Covering, TFO, Doubler/MX
+    const divisions = [
+      { key: 'covering', label: 'Covering Division', icon: '🌀' },
+      { key: 'tfo', label: 'TFO Division', icon: '🔄' },
+      { key: 'doubler', label: 'Doubler/MX Division', icon: '⚡' }
+    ];
+
+    let html = '';
+    divisions.forEach(divObj => {
+      const divItems = list.filter(q => (q.division || '').toLowerCase() === divObj.key);
+      if (divItems.length === 0) return;
+
+      html += `
+        <div class="card" style="margin-bottom: 1.5rem; padding: 1.5rem; border: 1.5px solid var(--border);">
+          <h3 style="display: flex; align-items: center; justify-content: space-between; font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: var(--fg); border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.25rem;">
+            <span style="display: flex; align-items: center; gap: 0.5rem;">
+              <span>${divObj.icon}</span> ${divObj.label}
+            </span>
+            <span class="tag" style="margin: 0; font-size: 0.75rem; padding: 0.2rem 0.6rem; background: var(--accent-light); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 8px;">
+              ${divItems.length} Qualities
+            </span>
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+            ${divItems.map(q => {
+              const divKey = (q.division || 'covering').toLowerCase();
+              const divLabel = divKey === 'doubler' ? 'Doubler/MX' : (divKey === 'tfo' ? 'TFO' : 'Covering');
+              return `
+                <div class="fpq-card">
+                  <div class="fpq-card-header">
+                    <strong style="font-size: 1.05rem; color: var(--fg); word-break: break-word;">${q.name}</strong>
+                    <span class="fpq-division-badge ${divKey}">${divLabel}</span>
+                  </div>
+
+                  <div class="fpq-composition-box">
+                    <label>Composition</label>
+                    <div class="fpq-composition-text">${q.composition || '—'}</div>
+                  </div>
+
+                  <div class="fpq-specs-grid">
+                    <div class="fpq-spec-item">
+                      <label>Color</label>
+                      <span>${q.color || '—'}</span>
+                    </div>
+                    <div class="fpq-spec-item">
+                      <label>Denier</label>
+                      <span>${q.denier ? `${q.denier} D` : '—'}</span>
+                    </div>
+                    <div class="fpq-spec-item">
+                      <label>TPM</label>
+                      <span>${q.tpm || '—'}</span>
+                    </div>
+                    <div class="fpq-spec-item">
+                      <label>Twist</label>
+                      <span>${q.twist || '—'}</span>
+                    </div>
+                  </div>
+
+                  <div class="fpq-card-actions">
+                    <button type="button" class="btn btn-sm" style="background: rgba(139, 92, 246, 0.12); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.25); padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="editFpQuality('${q.id}')">Edit</button>
+                    <button type="button" class="btn btn-sm badge-error" style="color: white; padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="deleteFpQuality('${q.id}')">Remove</button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+  }
+
+  function addOrUpdateFpQuality() {
+    const divSelect = document.getElementById('new-fp-division');
+    const nameInput = document.getElementById('new-fp-name');
+    const compInput = document.getElementById('new-fp-composition');
+    const denierInput = document.getElementById('new-fp-denier');
+    const tpmInput = document.getElementById('new-fp-tpm');
+    const twistSelect = document.getElementById('new-fp-twist');
+    const colorInput = document.getElementById('new-fp-color');
+
+    const division = (divSelect.value || 'covering').toLowerCase();
+    const name = (nameInput.value || '').trim().toUpperCase();
+    const composition = (compInput.value || '').trim();
+    const denier = parseFloat(denierInput.value) || null;
+    const tpm = parseInt(tpmInput.value, 10) || null;
+    const twist = (twistSelect.value || '').trim();
+    const color = (colorInput.value || '').trim();
+
+    if (!name || !composition) {
+      alert('Please fill out FP Quality Name and Composition!');
+      return;
+    }
+
+    pushToUndo();
+
+    if (editingFpQualityId !== null) {
+      const q = rawMaterialFpQualities.find(item => item.id === editingFpQualityId);
+      if (q) {
+        q.division = division;
+        q.name = name;
+        q.composition = composition;
+        q.yarns = [...fpSelectedYarns];
+        q.denier = denier;
+        q.tpm = tpm;
+        q.twist = twist;
+        q.color = color;
+        q.updatedAt = new Date().toISOString();
+      }
+      cancelFpQualityEdit();
+    } else {
+      // Check duplicate combination in same division
+      const duplicate = rawMaterialFpQualities.some(q => 
+        (q.division || '').toLowerCase() === division.toLowerCase() &&
+        (q.name || '').toLowerCase() === name.toLowerCase()
+      );
+      if (duplicate) {
+        alert(`An FP Quality with name "${name}" already exists under ${division.toUpperCase()}!`);
+        return;
+      }
+
+      const newId = 'FPQ_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+      rawMaterialFpQualities.push({
+        id: newId,
+        division,
+        name,
+        composition,
+        yarns: [...fpSelectedYarns],
+        denier,
+        tpm,
+        twist,
+        color,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      cancelFpQualityEdit();
+    }
+
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
+      window.VishwaSupabase.broadcastFormClear(['new-fp-name', 'new-fp-composition', 'new-fp-denier', 'new-fp-tpm', 'new-fp-color']);
+    }
+
+    saveState();
+    renderFpQualities();
+    showToast('FP Quality saved successfully!', 'success');
+  }
+
+  function editFpQuality(id) {
+    const q = rawMaterialFpQualities.find(item => item.id === id);
+    if (!q) return;
+    editingFpQualityId = id;
+
+    const div = q.division || 'covering';
+    document.getElementById('new-fp-division').value = div;
+    handleFpDivisionChange(div, q.twist || '');
+
+    document.getElementById('new-fp-name').value = q.name || '';
+    document.getElementById('new-fp-composition').value = q.composition || '';
+    document.getElementById('new-fp-color').value = q.color || '';
+    document.getElementById('new-fp-denier').value = q.denier || '';
+    document.getElementById('new-fp-tpm').value = q.tpm || '';
+
+    // Reconstitute selected yarns
+    if (Array.isArray(q.yarns) && q.yarns.length > 0) {
+      fpSelectedYarns = [...q.yarns];
+    } else if (q.composition) {
+      fpSelectedYarns = q.composition.split(' - ').map(s => s.trim()).filter(Boolean);
+    } else {
+      fpSelectedYarns = [];
+    }
+    renderFpSelectedYarns();
+
+    const submitBtn = document.getElementById('btn-add-fp-quality');
+    submitBtn.innerText = 'Update FP Quality';
+    submitBtn.style.background = 'var(--accent3)';
+    document.getElementById('btn-cancel-fp-edit').style.display = 'inline-block';
+
+    document.getElementById('fp-quality-form-title').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function cancelFpQualityEdit() {
+    editingFpQualityId = null;
+    document.getElementById('new-fp-division').value = 'covering';
+    handleFpDivisionChange('covering', '');
+    document.getElementById('new-fp-name').value = '';
+    document.getElementById('new-fp-composition').value = '';
+    document.getElementById('new-fp-color').value = '';
+    document.getElementById('new-fp-denier').value = '';
+    document.getElementById('new-fp-tpm').value = '';
+    fpSelectedYarns = [];
+    renderFpSelectedYarns();
+
+    const submitBtn = document.getElementById('btn-add-fp-quality');
+    submitBtn.innerText = 'Add FP Quality';
+    submitBtn.style.background = '';
+    document.getElementById('btn-cancel-fp-edit').style.display = 'none';
+  }
+
+  function deleteFpQuality(id) {
+    if (confirm('Are you sure you want to delete this FP Quality?')) {
+      pushToUndo();
+      const targetQuality = rawMaterialFpQualities.find(q => q.id === id);
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+        window.VishwaSupabase.recordDeletion('yarn-fp-qualities', id);
+        if (targetQuality && targetQuality.name) {
+          window.VishwaSupabase.recordDeletion('yarn-fp-qualities', targetQuality.name);
+        }
+      }
+      if (editingFpQualityId === id) {
+        cancelFpQualityEdit();
+      }
+      rawMaterialFpQualities = rawMaterialFpQualities.filter(q => q.id !== id);
+      saveState();
+      renderFpQualities();
+      showToast('FP Quality removed.', 'success');
     }
   }
 
@@ -6314,6 +7038,7 @@ function showToast(message, type = 'info') {
       'staff': 'Manage Staff',
       'loans': 'Loans for Staff',
       'raw-material-qualities': 'Manage RM Qualities',
+      'fp-qualities': 'Manage FP Qualities',
       'raw-material-suppliers': 'Manage RM Suppliers'
     };
     document.title = tabNames[tabId] || 'Manage';
@@ -6331,6 +7056,9 @@ function showToast(message, type = 'info') {
     }
     if (tabId === 'raw-material-qualities') {
       if (typeof renderQualities === 'function') renderQualities();
+    }
+    if (tabId === 'fp-qualities') {
+      if (typeof renderFpQualities === 'function') renderFpQualities();
     }
     if (tabId === 'raw-material-suppliers') {
       if (typeof renderSuppliers === 'function') renderSuppliers();
@@ -8513,6 +9241,7 @@ function showToast(message, type = 'info') {
     renderFanis();
     populateSupplierDropdown();
     renderQualities();
+    renderFpQualities();
     renderSuppliers();
     refreshData();
   }
@@ -8527,6 +9256,7 @@ function showToast(message, type = 'info') {
       jalas = loadInitialState('manage-jalas', []);
       fanis = loadInitialState('manage-fanis', []);
       rawMaterialQualities = loadInitialState('yarn-qualities', []);
+      rawMaterialFpQualities = loadInitialState('yarn-fp-qualities', []);
       rawMaterialSuppliers = loadInitialState('yarn-suppliers', []);
       populateMachineDropdowns();
       renderAll();
@@ -8562,6 +9292,11 @@ function showToast(message, type = 'info') {
     if (e.key === 'yarn-qualities') {
       rawMaterialQualities = loadInitialState('yarn-qualities', []);
       renderQualities();
+      populateFpYarnSelector();
+    }
+    if (e.key === 'yarn-fp-qualities') {
+      rawMaterialFpQualities = loadInitialState('yarn-fp-qualities', []);
+      renderFpQualities();
     }
     if (e.key === 'yarn-suppliers') {
       rawMaterialSuppliers = loadInitialState('yarn-suppliers', []);
@@ -8583,6 +9318,7 @@ function showToast(message, type = 'info') {
     jalas = loadInitialState('manage-jalas', []);
     fanis = loadInitialState('manage-fanis', []);
     rawMaterialQualities = loadInitialState('yarn-qualities', []);
+    rawMaterialFpQualities = loadInitialState('yarn-fp-qualities', []);
     rawMaterialSuppliers = loadInitialState('yarn-suppliers', []);
     populateMachineDropdowns();
     renderAll();
@@ -8615,6 +9351,10 @@ function showToast(message, type = 'info') {
     } else if (key === 'yarn-qualities') {
       rawMaterialQualities = loadInitialState('yarn-qualities', []);
       renderQualities();
+      populateFpYarnSelector();
+    } else if (key === 'yarn-fp-qualities') {
+      rawMaterialFpQualities = loadInitialState('yarn-fp-qualities', []);
+      renderFpQualities();
     } else if (key === 'yarn-suppliers') {
       rawMaterialSuppliers = loadInitialState('yarn-suppliers', []);
       renderSuppliers();
@@ -8673,6 +9413,7 @@ function showToast(message, type = 'info') {
     if (!localStorage.getItem('manage-jalas')) localStorage.setItem('manage-jalas', JSON.stringify(jalas));
     if (!localStorage.getItem('manage-fanis')) localStorage.setItem('manage-fanis', JSON.stringify(fanis));
     if (!localStorage.getItem('yarn-qualities')) localStorage.setItem('yarn-qualities', JSON.stringify(rawMaterialQualities));
+    if (!localStorage.getItem('yarn-fp-qualities')) localStorage.setItem('yarn-fp-qualities', JSON.stringify(rawMaterialFpQualities));
     if (!localStorage.getItem('yarn-suppliers')) localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
 
     // Auto-migrate: migrate sub-roles to standard "Beam Loading"

@@ -534,8 +534,12 @@
           Manage Staff
         </a>
         <a class="vf-sb-link child" href="modules/manage.html?tab=raw-material-qualities">
-          <span class="vf-sb-icon vf-sb-icon-purple vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l-7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></span>
+          <span class="vf-sb-icon vf-sb-icon-purple vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></span>
           Manage RM Qualities
+        </a>
+        <a class="vf-sb-link child" href="modules/manage.html?tab=fp-qualities">
+          <span class="vf-sb-icon vf-sb-icon-purple vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></span>
+          Manage FP Qualities
         </a>
         <a class="vf-sb-link child" href="modules/manage.html?tab=raw-material-suppliers">
           <span class="vf-sb-icon vf-sb-icon-purple vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 010 7.75"/></svg></span>
@@ -930,6 +934,7 @@
     'staff': ['staff', 'manage staff', 'tab-staff'],
     'loans': ['loans', 'loans for staff', 'staff loans', 'tab-loans'],
     'raw-material-qualities': ['raw-material-qualities', 'manage rm qualities', 'rm qualities', 'tab-raw-material-qualities'],
+    'fp-qualities': ['fp-qualities', 'manage fp qualities', 'fp qualities', 'finished product qualities', 'tab-fp-qualities'],
     'raw-material-suppliers': ['raw-material-suppliers', 'manage rm suppliers', 'rm suppliers', 'tab-raw-material-suppliers'],
     'tab-manifest': ['tab-manifest', 'manifest'],
     'tab-visualizer': ['tab-visualizer', 'visualizer'],
@@ -981,6 +986,7 @@
       'fanis': 'Fani Details',
       'staff': 'Manage Staff',
       'raw-material-qualities': 'Manage RM Qualities',
+      'fp-qualities': 'Manage FP Qualities',
       'raw-material-suppliers': 'Manage RM Suppliers'
     };
     return map[tab.toLowerCase()] || tab.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());

@@ -2077,27 +2077,20 @@
       const currentSalesVal = salesSelect.value;
 
       let optionsHtml = '';
-      if (activeDivision === 'tfo') {
+      if (activeDivision === 'covering' || activeDivision === 'tfo') {
         optionsHtml = `
           <option value="S">S Twist</option>
           <option value="Z">Z Twist</option>
         `;
-      } else if (activeDivision === 'covering') {
-        optionsHtml = `
-          <option value="S">1 Core + 1 Covering (S)</option>
-          <option value="Z">1 Core + 1 Covering (Z)</option>
-        `;
       } else {
         optionsHtml = `
-          <option value="S">1 Core + 1 Twisted (S)</option>
-          <option value="Z">1 Core + 1 Twisted (Z)</option>
-          <option value="2Core">2 Parallel Core Yarns</option>
-          <option value="2Core/S">2 Core + 1 Twisted (S)</option>
-          <option value="2Core/Z">2 Core + 1 Twisted (Z)</option>
-          <option value="S/Z">1 Core + 1 Twisted S + 1 Twisted Z</option>
-          <option value="Z/S">1 Core + 1 Twisted Z + 1 Twisted S</option>
-          <option value="S/S">1 Core + 1 Twisted S + 1 Twisted S</option>
-          <option value="Z/Z">1 Core + 1 Twisted Z + 1 Twisted Z</option>
+          <option value="S/Z">S/Z Twist</option>
+          <option value="Z/S">Z/S Twist</option>
+          <option value="S/S">S/S Twist</option>
+          <option value="Z/Z">Z/Z Twist</option>
+          <option value="2Core">2Core</option>
+          <option value="2Core/S">2Core/S</option>
+          <option value="2Core/Z">2Core/Z</option>
         `;
       }
 
@@ -2412,6 +2405,7 @@
       };
       const key = storageKeys[div];
       const products = JSON.parse(localStorage.getItem(key) || '[]');
+      const fpQualities = JSON.parse(localStorage.getItem('yarn-fp-qualities') || '[]');
 
       // If the log item is fully sold, preserve its historical name at time of sale
       if (!ignoreSold && typeof getBoriStock === 'function') {
@@ -2423,6 +2417,17 @@
             costingProd: null
           };
         }
+      }
+
+      // 1. Check FP Qualities first
+      let fpProd = null;
+      if (log.productId) {
+        fpProd = fpQualities.find(p => String(p.id) === String(log.productId));
+      }
+      if (!fpProd && log.productName) {
+        const targetName = log.productName.trim().toLowerCase();
+        fpProd = fpQualities.find(p => (p.division || '').toLowerCase() === div.toLowerCase() && (p.name || '').trim().toLowerCase() === targetName) ||
+                 fpQualities.find(p => (p.name || '').trim().toLowerCase() === targetName);
       }
 
       let costingProd = null;
@@ -2451,18 +2456,18 @@
         }
       }
 
-      const currentName = log.productName || (costingProd ? costingProd.name : '-');
+      const currentName = log.productName || (fpProd ? fpProd.name : (costingProd ? costingProd.name : '-'));
       const currentRate = (log.rate !== undefined && log.rate !== null && !isNaN(log.rate) && log.rate > 0)
         ? parseFloat(log.rate)
         : (costingProd ? parseFloat(costingProd.mySalePrice || costingProd.targetPrice || costingProd.price || costingProd.rate || 0) : 0);
       let rawDenier = (log.denier !== undefined && log.denier !== null && !isNaN(log.denier) && log.denier > 0)
         ? parseFloat(log.denier)
-        : ((costingProd && (costingProd.resultantDenier || costingProd.denier)) ? parseFloat(costingProd.resultantDenier || costingProd.denier) : 0);
+        : (fpProd && fpProd.denier ? parseFloat(fpProd.denier) : ((costingProd && (costingProd.resultantDenier || costingProd.denier)) ? parseFloat(costingProd.resultantDenier || costingProd.denier) : 0));
       const currentDenier = (isNaN(rawDenier) || rawDenier <= 0) ? (log.denier || '-') : (Number.isInteger(rawDenier) ? rawDenier : parseFloat(rawDenier.toFixed(2)));
       const currentTpm = (log.tpm !== undefined && log.tpm !== null && !isNaN(log.tpm) && log.tpm > 0)
         ? parseInt(log.tpm)
-        : ((costingProd && (costingProd.tpm || costingProd.tpmTpiVal || costingProd.tpi)) ? parseInt(costingProd.tpm || costingProd.tpmTpiVal || costingProd.tpi) : (log.tpm || 0));
-      const currentTwist = log.twist || ((costingProd && typeof getTwistConfig === 'function' && getTwistConfig(costingProd)) ? getTwistConfig(costingProd) : '-');
+        : (fpProd && fpProd.tpm ? parseInt(fpProd.tpm) : ((costingProd && (costingProd.tpm || costingProd.tpmTpiVal || costingProd.tpi)) ? parseInt(costingProd.tpm || costingProd.tpmTpiVal || costingProd.tpi) : (log.tpm || 0)));
+      const currentTwist = log.twist || (fpProd && fpProd.twist ? fpProd.twist : ((costingProd && typeof getTwistConfig === 'function' && getTwistConfig(costingProd)) ? getTwistConfig(costingProd) : '-'));
       const currentColor = log.color || ((costingProd && typeof getSecondaryColor === 'function' && getSecondaryColor(costingProd)) ? getSecondaryColor(costingProd) : '-');
 
       return {
@@ -2472,7 +2477,7 @@
         tpm: currentTpm,
         twist: currentTwist,
         color: currentColor,
-        costingProd: costingProd
+        costingProd: costingProd || fpProd
       };
     }
 
@@ -2487,10 +2492,20 @@
 
       const key = storageKeys[activeDivision];
       const products = JSON.parse(localStorage.getItem(key) || '[]');
+      const fpQualities = JSON.parse(localStorage.getItem('yarn-fp-qualities') || '[]');
 
-      // Only show the costing sheet qualities for the active division
+      // 1. Fetch FP Qualities for the active division
+      const fpDivisionNames = fpQualities
+        .filter(q => (q.division || '').toLowerCase() === activeDivision.toLowerCase())
+        .map(q => (q && q.name ? q.name.trim() : ''))
+        .filter(Boolean);
+
+      // 2. Fetch Costing sheet qualities for the active division
       const costingNames = products.map(p => (p && p.name ? p.name.trim() : '')).filter(Boolean);
-      prodNameOptions = costingNames.filter((val, id, self) => val && self.indexOf(val) === id);
+
+      // Combined unique list with FP qualities prioritised
+      const combined = [...fpDivisionNames, ...costingNames];
+      prodNameOptions = combined.filter((val, id, self) => val && self.indexOf(val) === id);
 
       const hiddenName = document.getElementById('prod-name');
       const searchName = document.getElementById('prod-name-search');
@@ -2510,7 +2525,7 @@
       dropdown.innerHTML = '';
       if (optionsList.length === 0) {
         const divLabel = activeDivision === 'covering' ? 'Covering' : (activeDivision === 'tfo' ? 'TFO' : 'Doubler/MX');
-        dropdown.innerHTML = `<div class="dropdown-item muted" style="text-align: center;">No ${divLabel} products in Costing Calculator</div>`;
+        dropdown.innerHTML = `<div class="dropdown-item muted" style="text-align: center;">No ${divLabel} qualities found in Manage FP Qualities</div>`;
         return;
       }
 
@@ -2620,7 +2635,12 @@
       const dropdown = document.getElementById('prod-name-dropdown');
       if (dropdown) dropdown.style.display = 'none';
 
-      // Autofill details from costing calculator if found
+      // 1. Check FP Qualities first
+      const fpQualities = JSON.parse(localStorage.getItem('yarn-fp-qualities') || '[]');
+      const fpProd = fpQualities.find(p => (p.division || '').toLowerCase() === activeDivision.toLowerCase() && (p.name || '').trim().toLowerCase() === (val || '').trim().toLowerCase()) ||
+                     fpQualities.find(p => (p.name || '').trim().toLowerCase() === (val || '').trim().toLowerCase());
+
+      // 2. Check Costing Sheet products
       const storageKeys = {
         covering: 'costing-covering-products-v1',
         tfo: 'costing-tfo-products-v1',
@@ -2628,12 +2648,12 @@
       };
       const key = storageKeys[activeDivision];
       const products = JSON.parse(localStorage.getItem(key) || '[]');
-      const prod = products.find(p => p.name === val);
+      const prod = products.find(p => (p.name || '').trim().toLowerCase() === (val || '').trim().toLowerCase()) || products.find(p => p.name === val);
       
-      const productLogs = dataStore[activeDivision].production.filter(l => l.productName.toLowerCase() === val.toLowerCase());
+      const productLogs = dataStore[activeDivision].production.filter(l => (l.productName || '').trim().toLowerCase() === (val || '').trim().toLowerCase());
       productLogs.sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
 
-      window._currentSelectedCostingProduct = prod || null;
+      window._currentSelectedCostingProduct = fpProd || prod || null;
 
       const denierEl = document.getElementById('prod-denier');
       const tpmEl = document.getElementById('prod-tpm');
@@ -2642,7 +2662,23 @@
       const twistEl = document.getElementById('prod-twist');
       const lotEl = document.getElementById('prod-lot');
 
-      if (prod) {
+      if (fpProd) {
+        if (denierEl && fpProd.denier) {
+          denierEl.value = parseFloat(parseFloat(fpProd.denier).toFixed(2));
+          triggerFieldSync(denierEl);
+        }
+        if (tpmEl && fpProd.tpm) {
+          tpmEl.value = parseInt(fpProd.tpm);
+          triggerFieldSync(tpmEl);
+        }
+        if (twistEl && fpProd.twist) {
+          twistEl.value = fpProd.twist;
+          if (typeof refreshProdTwistCustomSelect === 'function') {
+            refreshProdTwistCustomSelect();
+          }
+          triggerFieldSync(twistEl);
+        }
+      } else if (prod) {
         const denierVal = prod.resultantDenier || (prod.calcs && prod.calcs.resultantDenier) || '';
         if (denierEl) {
           denierEl.value = denierVal ? parseFloat(parseFloat(denierVal).toFixed(2)) : '';
@@ -2663,13 +2699,17 @@
         }
       }
 
-      // Auto fill color (secondary yarn color for 2-ply / 3-ply)
-      const extractedColor = getSecondaryColor(prod);
+      // Auto fill color: prioritize FP Quality color, then secondary yarn color for 2-ply / 3-ply, then production log history
       if (colorEl) {
-        if (extractedColor) {
-          colorEl.value = extractedColor;
-        } else if (productLogs.length > 0 && productLogs[0].color) {
-          colorEl.value = productLogs[0].color;
+        if (fpProd && fpProd.color) {
+          colorEl.value = fpProd.color;
+        } else {
+          const extractedColor = getSecondaryColor(prod);
+          if (extractedColor) {
+            colorEl.value = extractedColor;
+          } else if (productLogs.length > 0 && productLogs[0].color) {
+            colorEl.value = productLogs[0].color;
+          }
         }
         triggerFieldSync(colorEl);
       }
