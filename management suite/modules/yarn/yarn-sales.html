@@ -1789,8 +1789,8 @@
                 <th onclick="toggleSalesSort('color')" style="cursor: pointer; user-select: none;">
                   Color <span id="sales-sort-icon-color">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('twist')" style="cursor: pointer; user-select: none;">
-                  Twist <span id="sales-sort-icon-twist">↕</span>
+                <th onclick="toggleSalesSort('specs')" style="cursor: pointer; user-select: none;">
+                  Specs <span id="sales-sort-icon-specs">↕</span>
                 </th>
                 <th onclick="toggleSalesSort('totalRolls')" style="cursor: pointer; user-select: none;">
                   Rolls <span id="sales-sort-icon-totalRolls">↕</span>
@@ -3354,12 +3354,11 @@
 
     function getSaleDiscountInfo(sale) {
       if (!sale) return { amount: 0, percent: 0, type: 'percent', value: 0 };
-      const subtotalVal = sale.subtotalAmount || sale.amount || 0;
-      
+
       let discType = sale.discountType || sale.discount_type || 'percent';
+
       let discValue = 0;
       let hasExplicitValue = false;
-
       if (sale.discountValue !== undefined && sale.discountValue !== null && !isNaN(parseFloat(sale.discountValue))) {
         discValue = parseFloat(sale.discountValue);
         hasExplicitValue = true;
@@ -3369,12 +3368,38 @@
       }
 
       let discAmount = 0;
-      if (sale.discountAmount !== undefined && sale.discountAmount !== null && !isNaN(parseFloat(sale.discountAmount)) && parseFloat(sale.discountAmount) > 0) {
-        discAmount = parseFloat(sale.discountAmount);
-      } else if (sale.discount_amount !== undefined && sale.discount_amount !== null && !isNaN(parseFloat(sale.discount_amount)) && parseFloat(sale.discount_amount) > 0) {
-        discAmount = parseFloat(sale.discount_amount);
-      } else if (sale.discountVal !== undefined && !isNaN(parseFloat(sale.discountVal)) && parseFloat(sale.discountVal) > 0) {
-        discAmount = parseFloat(sale.discountVal);
+      let hasExplicitAmount = false;
+      if (sale.discountAmount !== undefined && sale.discountAmount !== null && !isNaN(parseFloat(sale.discountAmount))) {
+        discAmount = Math.max(0, parseFloat(sale.discountAmount));
+        hasExplicitAmount = true;
+      } else if (sale.discount_amount !== undefined && sale.discount_amount !== null && !isNaN(parseFloat(sale.discount_amount))) {
+        discAmount = Math.max(0, parseFloat(sale.discount_amount));
+        hasExplicitAmount = true;
+      } else if (sale.discountVal !== undefined && !isNaN(parseFloat(sale.discountVal))) {
+        discAmount = Math.max(0, parseFloat(sale.discountVal));
+        hasExplicitAmount = true;
+      }
+
+      // Calculate exact subtotal from items if available, or sale.subtotalAmount
+      let subtotalVal = 0;
+      if (sale.items && Array.isArray(sale.items) && sale.items.length > 0) {
+        subtotalVal = sale.items.reduce((sum, item) => sum + (parseFloat(item.amount) || ((parseFloat(item.saleQty) || 0) * (parseFloat(item.rate) || 0))), 0);
+      } else {
+        subtotalVal = sale.subtotalAmount || 0;
+        if (!subtotalVal && sale.taxableAmount !== undefined && hasExplicitAmount) {
+          subtotalVal = parseFloat(sale.taxableAmount) + discAmount;
+        }
+        if (!subtotalVal) {
+          subtotalVal = sale.amount || 0;
+        }
+      }
+
+      // If explicit discount amount or value was set to 0, discount is 0
+      if (hasExplicitAmount && discAmount === 0 && (!hasExplicitValue || discValue === 0)) {
+        return { amount: 0, percent: 0, type: discType, value: 0 };
+      }
+      if (hasExplicitValue && discValue === 0 && (!hasExplicitAmount || discAmount === 0)) {
+        return { amount: 0, percent: 0, type: discType, value: 0 };
       }
 
       if (hasExplicitValue && discValue > 0) {
@@ -3383,13 +3408,10 @@
         } else {
           discAmount = discValue;
         }
-      } else if (!discAmount && sale.taxableAmount !== undefined && subtotalVal > parseFloat(sale.taxableAmount)) {
-        discAmount = subtotalVal - parseFloat(sale.taxableAmount);
-      } else if (!discAmount && sale.totalAmount > 0 && sale.gstAmount !== undefined && subtotalVal > 0) {
-        const calcTaxable = parseFloat(sale.totalAmount) - parseFloat(sale.gstAmount);
-        if (subtotalVal > calcTaxable + 0.01) {
-          discAmount = subtotalVal - calcTaxable;
-        }
+      } else if (hasExplicitAmount && discAmount > 0) {
+        // use stored discAmount
+      } else {
+        discAmount = 0;
       }
 
       let discPercent = 0;
@@ -3406,7 +3428,7 @@
       }
 
       return {
-        amount: discAmount,
+        amount: Math.max(0, discAmount),
         percent: discPercent,
         type: discType,
         value: discValue
@@ -3416,16 +3438,19 @@
     function getSaleGstRate(sale) {
       if (!sale) return 0;
 
-      const subtotal = sale.subtotalAmount || sale.amount || 0;
-      const discInfo = getSaleDiscountInfo(sale);
-      const taxable = sale.taxableAmount !== undefined ? parseFloat(sale.taxableAmount) : Math.max(0, subtotal - discInfo.amount);
+      const subtotal = (sale.items && sale.items.length > 0)
+        ? sale.items.reduce((sum, item) => sum + (parseFloat(item.amount) || ((parseFloat(item.saleQty) || 0) * (parseFloat(item.rate) || 0))), 0)
+        : (sale.subtotalAmount || sale.amount || 0);
 
       const rawGst = (sale.gstRate !== undefined && sale.gstRate !== null) ? sale.gstRate : sale.gst_rate;
       if (rawGst !== undefined && rawGst !== null && !isNaN(parseFloat(rawGst))) {
         let r = Math.round(parseFloat(rawGst));
         if (r === 11) r = 12; // Auto-correct legacy 11% rounding bug to 12%
-        if (r > 0) return r;
+        if (r >= 0) return r;
       }
+
+      const discInfo = getSaleDiscountInfo(sale);
+      const taxable = sale.taxableAmount !== undefined ? parseFloat(sale.taxableAmount) : Math.max(0, subtotal - discInfo.amount);
 
       if (taxable > 0 && sale.gstAmount > 0) {
         let r = Math.round((parseFloat(sale.gstAmount) / taxable) * 100);
@@ -3585,13 +3610,14 @@
       const totalBoris = items.length;
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
-      const subtotalVal = sale.subtotalAmount || sale.amount || 0;
-      const discountAmount = sale.discountAmount || 0;
-      const discountType = sale.discountType || 'percent';
-      const discountValue = sale.discountValue || 0;
-      const taxableVal = sale.taxableAmount !== undefined ? sale.taxableAmount : (subtotalVal - discountAmount);
-      const gstRate = sale.gstRate || 0;
-      const gstVal = sale.gstAmount !== undefined ? sale.gstAmount : (taxableVal * (gstRate / 100));
+      const subtotalVal = (sale.items && sale.items.length > 0) ? sale.items.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0) : (sale.subtotalAmount || sale.amount || 0);
+      const discInfo = getSaleDiscountInfo(sale);
+      const discountAmount = discInfo.amount;
+      const discountType = discInfo.type;
+      const discountValue = discInfo.value;
+      const taxableVal = sale.taxableAmount !== undefined ? parseFloat(sale.taxableAmount) : Math.max(0, subtotalVal - discountAmount);
+      const gstRate = getSaleGstRate(sale);
+      const gstVal = sale.gstAmount !== undefined ? parseFloat(sale.gstAmount) : (taxableVal * (gstRate / 100));
       const grandTotalVal = sale.totalAmount || (taxableVal + gstVal);
       const lotNo = resolveSaleLotNo(sale);
 
@@ -5853,7 +5879,7 @@
     };
 
     function updateSalesSortIcons() {
-      ['challanNo', 'date', 'customerName', 'boriNo', 'composition', 'color', 'twist', 'totalRolls', 'totalQty', 'rate', 'subtotal', 'discountAmount', 'gstAmount', 'grandTotal'].forEach(key => {
+      ['challanNo', 'date', 'customerName', 'boriNo', 'composition', 'color', 'specs', 'twist', 'totalRolls', 'totalQty', 'rate', 'subtotal', 'discountAmount', 'gstAmount', 'grandTotal'].forEach(key => {
         const iconEl = document.getElementById(`sales-sort-icon-${key}`);
         if (iconEl) {
           if (salesSortKey === key) {
@@ -5865,6 +5891,23 @@
           }
         }
       });
+    }
+
+    function formatItemSpecs(item) {
+      if (!item) return '-';
+      const parts = [];
+      if (item.denier !== undefined && item.denier !== null && String(item.denier).trim() !== '' && String(item.denier).trim() !== '0') {
+        const dStr = String(item.denier).trim();
+        parts.push(dStr.toLowerCase().endsWith('d') ? dStr : `${dStr}D`);
+      }
+      if (item.tpm !== undefined && item.tpm !== null && String(item.tpm).trim() !== '' && String(item.tpm).trim() !== '0') {
+        const tStr = String(item.tpm).trim();
+        parts.push(tStr.toLowerCase().includes('tpm') ? tStr : `${tStr} TPM`);
+      }
+      if (item.twist && String(item.twist).trim() !== '' && String(item.twist).trim() !== '-') {
+        parts.push(String(item.twist).trim());
+      }
+      return parts.length > 0 ? parts.join(' | ') : (item.twist || '-');
     }
 
     function renderSalesTable() {
@@ -5879,8 +5922,10 @@
         const itemsComp = s.items ? s.items.map(i => i.composition).join(' ') : '';
         const itemsColor = s.items ? s.items.map(i => i.color).join(' ') : '';
         const itemsTwist = s.items ? s.items.map(i => i.twist).join(' ') : '';
+        const itemsDenier = s.items ? s.items.map(i => i.denier).join(' ') : '';
+        const itemsTpm = s.items ? s.items.map(i => i.tpm).join(' ') : '';
         const itemsBori = s.items ? s.items.map(i => i.boriNo).join(' ') : '';
-        const searchable = `${s.challanNo || ''} ${s.customerName || ''} ${s.boriNo || ''} ${s.composition || ''} ${s.color || ''} ${s.twist || ''} ${itemsComp} ${itemsColor} ${itemsTwist} ${itemsBori}`.toLowerCase();
+        const searchable = `${s.challanNo || ''} ${s.customerName || ''} ${s.boriNo || ''} ${s.composition || ''} ${s.color || ''} ${s.twist || ''} ${s.denier || ''} ${s.tpm || ''} ${itemsComp} ${itemsColor} ${itemsTwist} ${itemsDenier} ${itemsTpm} ${itemsBori}`.toLowerCase();
         return searchable.includes(search);
       });
 
@@ -5905,9 +5950,9 @@
           valB = (b.items && b.items.length > 0) ? b.items.map(i => i.color).filter(Boolean).join(' / ') : (b.color || '');
         }
 
-        if (salesSortKey === 'twist') {
-          valA = (a.items && a.items.length > 0) ? a.items.map(i => i.twist).filter(Boolean).join(' / ') : (a.twist || '');
-          valB = (b.items && b.items.length > 0) ? b.items.map(i => i.twist).filter(Boolean).join(' / ') : (b.twist || '');
+        if (salesSortKey === 'specs' || salesSortKey === 'twist') {
+          valA = (a.items && a.items.length > 0) ? Array.from(new Set(a.items.map(i => formatItemSpecs(i)).filter(Boolean))).join(' / ') : formatItemSpecs(a);
+          valB = (b.items && b.items.length > 0) ? Array.from(new Set(b.items.map(i => formatItemSpecs(i)).filter(Boolean))).join(' / ') : formatItemSpecs(b);
         }
 
         if (salesSortKey === 'discountAmount' || salesSortKey === 'discount') {
@@ -6005,9 +6050,9 @@
           ? Array.from(new Set(s.items.map(i => i.color).filter(Boolean))).join(' / ') || (s.color || '-')
           : (s.color || '-');
 
-        const twistDisplay = (s.items && s.items.length > 0)
-          ? Array.from(new Set(s.items.map(i => i.twist).filter(Boolean))).join(' / ') || (s.twist || '-')
-          : (s.twist || '-');
+        const specsDisplay = (s.items && s.items.length > 0)
+          ? Array.from(new Set(s.items.map(i => formatItemSpecs(i)).filter(Boolean))).join(' / ') || formatItemSpecs(s)
+          : formatItemSpecs(s);
 
         const rollsTotal = s.items && s.items.length > 0 ? s.items.reduce((a,b)=>a+ (parseInt(b.rollsQty) || 0), 0) : (s.rollsQty || 0);
         const qtyTotal = s.items && s.items.length > 0 ? s.items.reduce((a,b)=>a+ (parseFloat(b.saleQty) || 0), 0) : (s.saleQty || 0);
@@ -6040,7 +6085,7 @@
           <td>${boriDisplay}</td>
           <td><span style="font-size:0.85rem; font-weight: 500;">${compositionDisplay}</span></td>
           <td>${colorDisplay}</td>
-          <td>${twistDisplay}</td>
+          <td>${specsDisplay}</td>
           <td>${rollsTotal}</td>
           <td>${qtyTotal.toFixed(2)} Kg</td>
           <td>${rateDisplay}</td>
