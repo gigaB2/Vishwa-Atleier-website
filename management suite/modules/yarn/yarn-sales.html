@@ -2430,6 +2430,95 @@
       });
     }    let modalChallanItems = [];
 
+    // Helpers for Multi-Company & Settings resolution
+    function getAvailableCompanies() {
+      let companies = [];
+      try {
+        const raw = localStorage.getItem('vf_companies');
+        if (raw) companies = JSON.parse(raw) || [];
+      } catch(e) {}
+
+      if (Array.isArray(companies) && companies.length > 0) {
+        return companies;
+      }
+
+      let legacyName = "Vishwa Fashions";
+      let legacyGst = "24AAAFV1234A1Z5";
+      let legacyPhone = "+91 98251 12345";
+      let legacyEmail = "sales@vishwafashions.com";
+      let legacyAddress = "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221";
+
+      try {
+        const stored = localStorage.getItem('vishwa_fashions_settings');
+        if (stored) {
+          const s = JSON.parse(stored);
+          if (s.sellerName) legacyName = s.sellerName;
+          if (s.sellerGstin) legacyGst = s.sellerGstin;
+          if (s.sellerPhone) legacyPhone = s.sellerPhone;
+          if (s.sellerEmail) legacyEmail = s.sellerEmail;
+          if (s.sellerAddress) legacyAddress = s.sellerAddress;
+        }
+      } catch(e) {}
+
+      const c = localStorage.getItem('vf_company_name');
+      if (c && c.trim()) legacyName = c.trim();
+
+      return [{
+        id: 'comp-1',
+        sellerName: legacyName,
+        sellerGstin: legacyGst,
+        sellerPhone: legacyPhone,
+        sellerEmail: legacyEmail,
+        sellerAddress: legacyAddress,
+        isDefault: true
+      }];
+    }
+
+    function getSellerCompanyInfo(sale) {
+      const companies = getAvailableCompanies();
+      if (sale && sale.sellerCompanyId) {
+        const found = companies.find(c => c.id === sale.sellerCompanyId);
+        if (found) return found;
+      }
+      if (sale && sale.sellerName) {
+        const foundByName = companies.find(c => (c.sellerName || '').trim().toLowerCase() === (sale.sellerName || '').trim().toLowerCase());
+        if (foundByName) return foundByName;
+        return {
+          sellerName: sale.sellerName,
+          sellerGstin: sale.sellerGstin || "24AAAFV1234A1Z5",
+          sellerPhone: sale.sellerPhone || "+91 98251 12345",
+          sellerEmail: sale.sellerEmail || "sales@vishwafashions.com",
+          sellerAddress: sale.sellerAddress || "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221"
+        };
+      }
+      const def = companies.find(c => c.isDefault) || companies[0];
+      return def || {
+        sellerName: "Vishwa Fashions",
+        sellerGstin: "24AAAFV1234A1Z5",
+        sellerPhone: "+91 98251 12345",
+        sellerEmail: "sales@vishwafashions.com",
+        sellerAddress: "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221"
+      };
+    }
+
+    function populateCompanyDropdown(selectedCompanyId) {
+      const compSelect = document.getElementById('modal-sales-company');
+      if (!compSelect) return;
+      const companies = getAvailableCompanies();
+      compSelect.innerHTML = '';
+      companies.forEach(comp => {
+        const opt = document.createElement('option');
+        opt.value = comp.id || comp.sellerName;
+        opt.textContent = comp.sellerName + (comp.isDefault ? ' (Default)' : '');
+        if (selectedCompanyId && (comp.id === selectedCompanyId || comp.sellerName === selectedCompanyId)) {
+          opt.selected = true;
+        } else if (!selectedCompanyId && comp.isDefault) {
+          opt.selected = true;
+        }
+        compSelect.appendChild(opt);
+      });
+    }
+
     // Modal control functions
     window.openBatchSellModal = function() {
       const checkedBoxes = document.querySelectorAll('.prod-select-checkbox:checked');
@@ -2457,13 +2546,24 @@
       document.getElementById('modal-title').innerText = `Batch Sell Selected Boris/Boxes (${activeDivision.toUpperCase()})`;
       document.getElementById('modal-sales-submit-btn').innerText = 'Record Sale';
 
+      populateCompanyDropdown();
+
       // Set default date
       setDefaultDate('modal-sales-date');
       const salesDate = document.getElementById('modal-sales-date').value;
       document.getElementById('modal-sales-challan').value = generateNextChallanNumber(activeDivision, salesDate);
 
-      // Reset customer
+      // Reset customer and address
       document.getElementById('modal-sales-customer').value = '';
+      if (document.getElementById('modal-sales-address')) {
+        document.getElementById('modal-sales-address').value = 'Industrial Area, Surat, Gujarat, India';
+      }
+      if (document.getElementById('modal-sales-discount-type')) {
+        document.getElementById('modal-sales-discount-type').value = 'percent';
+      }
+      if (document.getElementById('modal-sales-discount-value')) {
+        document.getElementById('modal-sales-discount-value').value = '0';
+      }
       document.getElementById('modal-sales-gst').value = '12';
 
       // Build items list
@@ -2532,11 +2632,19 @@
 
       currentDetailSaleId = id;
 
+      const companyInfo = getSellerCompanyInfo(sale);
+      const sellerCompEl = document.getElementById('details-sales-company');
+      if (sellerCompEl) sellerCompEl.innerText = companyInfo.sellerName;
+
       document.getElementById('details-modal-title').innerText = `Sale Details - ${activeDivision.toUpperCase()}`;
       document.getElementById('details-sales-challan').innerText = sale.challanNo;
       document.getElementById('details-sales-lot').innerText = sale.lotNo || '-';
       document.getElementById('details-sales-date').innerText = formatDate(sale.date);
       document.getElementById('details-sales-customer').innerText = sale.customerName;
+      
+      const addrEl = document.getElementById('details-sales-address');
+      if (addrEl) addrEl.innerText = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
+
       document.getElementById('details-sales-gst').innerText = `${sale.gstRate || 0}%`;
 
       let items = [];
@@ -2580,12 +2688,33 @@
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const subtotalVal = sale.subtotalAmount || sale.amount || 0;
-      const grandTotalVal = sale.totalAmount || (subtotalVal * (1 + (sale.gstRate || 0) / 100));
+      const discountAmount = sale.discountAmount || 0;
+      const taxableVal = sale.taxableAmount !== undefined ? sale.taxableAmount : (subtotalVal - discountAmount);
+      const gstVal = sale.gstAmount !== undefined ? sale.gstAmount : (taxableVal * ((sale.gstRate || 0) / 100));
+      const grandTotalVal = sale.totalAmount || (taxableVal + gstVal);
 
       document.getElementById('details-summary-total-boris').innerText = totalBoris;
       document.getElementById('details-summary-total-rolls').innerText = totalRolls;
       document.getElementById('details-summary-total-weight').innerText = `${totalWeight.toFixed(2)} Kg`;
       document.getElementById('details-summary-subtotal').innerText = `₹${subtotalVal.toFixed(2)}`;
+
+      const discWrapper = document.getElementById('details-summary-discount-row');
+      if (discWrapper) {
+        if (discountAmount > 0) {
+          discWrapper.style.display = 'inline-block';
+          const discLabel = sale.discountType === 'percent' ? `${sale.discountValue}%` : `₹${sale.discountValue}`;
+          discWrapper.innerHTML = `Discount (${discLabel}): <strong style="color:#ef4444;">-₹${discountAmount.toFixed(2)}</strong>`;
+        } else {
+          discWrapper.style.display = 'none';
+        }
+      }
+
+      const taxableEl = document.getElementById('details-summary-taxable');
+      if (taxableEl) taxableEl.innerText = `₹${taxableVal.toFixed(2)}`;
+
+      const gstEl = document.getElementById('details-summary-gst-amount');
+      if (gstEl) gstEl.innerText = `₹${gstVal.toFixed(2)}`;
+
       document.getElementById('details-summary-grand-total').innerText = `₹${grandTotalVal.toFixed(2)}`;
 
       const modal = document.getElementById('sale-details-modal');
@@ -2635,9 +2764,13 @@
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const subtotalVal = sale.subtotalAmount || sale.amount || 0;
+      const discountAmount = sale.discountAmount || 0;
+      const discountType = sale.discountType || 'percent';
+      const discountValue = sale.discountValue || 0;
+      const taxableVal = sale.taxableAmount !== undefined ? sale.taxableAmount : (subtotalVal - discountAmount);
       const gstRate = sale.gstRate || 0;
-      const gstVal = subtotalVal * (gstRate / 100);
-      const grandTotalVal = sale.totalAmount || (subtotalVal + gstVal);
+      const gstVal = sale.gstAmount !== undefined ? sale.gstAmount : (taxableVal * (gstRate / 100));
+      const grandTotalVal = sale.totalAmount || (taxableVal + gstVal);
 
       // Create new window
       const printWindow = window.open('', '_blank', 'width=900,height=700');
@@ -2646,17 +2779,13 @@
         return;
       }
       
-      const companyName = (function(){
-        try {
-          const stored = localStorage.getItem('vishwa_fashions_settings');
-          if (stored) {
-            const s = JSON.parse(stored);
-            if (s.sellerName && s.sellerName.trim()) return s.sellerName.trim();
-          }
-        } catch(e){}
-        const c = localStorage.getItem('vf_company_name');
-        return (c && c.trim()) ? c.trim() : "Vishwa Fashions";
-      })();
+      const company = getSellerCompanyInfo(sale);
+      const companyName = company.sellerName || "Vishwa Fashions";
+      const companyAddress = company.sellerAddress || "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221";
+      const companyPhone = company.sellerPhone || "+91 98251 12345";
+      const companyEmail = company.sellerEmail || "sales@vishwafashions.com";
+      const companyGst = company.sellerGstin || "24AAAFV1234A1Z5";
+      const customerAddress = sale.customerAddress || "Industrial Area, Surat, Gujarat, India";
 
       const itemsHtml = items.map(item => {
         const specs = `${item.denier || '-'}D | ${item.tpm || '-'} | ${item.twist || '-'}`;
@@ -2673,6 +2802,21 @@
           </tr>
         `;
       }).join('');
+
+      let discountHtml = '';
+      if (discountAmount > 0) {
+        const discLabel = discountType === 'percent' ? `${discountValue}%` : 'Flat';
+        discountHtml = `
+          <tr>
+            <td>Discount (${discLabel})</td>
+            <td style="text-align: right; font-weight: 600; color: #dc2626;">-₹${discountAmount.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td>Taxable Subtotal</td>
+            <td style="text-align: right; font-weight: 600;">₹${taxableVal.toFixed(2)}</td>
+          </tr>
+        `;
+      }
 
       printWindow.document.write(`
         <!DOCTYPE html>
@@ -2890,8 +3034,8 @@
                 <td>
                   <div class="company-name">${companyName}</div>
                   <div class="company-details">
-                    Factory: Survey No. 124, Industrial Zone, Pipodara, Surat, Gujarat<br>
-                    Email: contact@vishwafashions.com | Mobile: +91 98765 43210
+                    Factory: ${companyAddress}<br>
+                    ${companyEmail ? 'Email: ' + companyEmail : ''} ${companyPhone ? ' | Mobile: ' + companyPhone : ''} ${companyGst ? ' | GSTIN: ' + companyGst : ''}
                   </div>
                 </td>
                 <td style="text-align: right; vertical-align: top;">
@@ -2909,7 +3053,7 @@
                   <div class="section-title">Billed To (Buyer)</div>
                   <div style="font-size: 12px; font-weight: 700; margin-bottom: 5px;">${sale.customerName}</div>
                   <div style="color: #444444; font-size: 11px; line-height: 1.5;">
-                    Address: Industrial Area, Surat, Gujarat, India<br>
+                    Address: ${customerAddress}<br>
                     State Code: 24 (Gujarat)
                   </div>
                 </td>
@@ -2964,6 +3108,7 @@
                   <td>Subtotal</td>
                   <td style="text-align: right; font-weight: 600;">₹${subtotalVal.toFixed(2)}</td>
                 </tr>
+                ${discountHtml}
                 <tr>
                   <td>GST (${gstRate}%)</td>
                   <td style="text-align: right; font-weight: 600;">₹${gstVal.toFixed(2)}</td>
@@ -3039,17 +3184,13 @@
         return;
       }
       
-      const companyName = (function(){
-        try {
-          const stored = localStorage.getItem('vishwa_fashions_settings');
-          if (stored) {
-            const s = JSON.parse(stored);
-            if (s.sellerName && s.sellerName.trim()) return s.sellerName.trim();
-          }
-        } catch(e){}
-        const c = localStorage.getItem('vf_company_name');
-        return (c && c.trim()) ? c.trim() : "Vishwa Fashions";
-      })();
+      const company = getSellerCompanyInfo(sale);
+      const companyName = company.sellerName || "Vishwa Fashions";
+      const companyAddress = company.sellerAddress || "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221";
+      const companyPhone = company.sellerPhone || "+91 98251 12345";
+      const companyEmail = company.sellerEmail || "sales@vishwafashions.com";
+      const companyGst = company.sellerGstin || "24AAAFV1234A1Z5";
+      const customerAddress = sale.customerAddress || "Industrial Area, Surat, Gujarat, India";
 
       const itemsHtml = items.map((item, index) => {
         const specs = `${item.denier || '-'}D | ${item.tpm || '-'} | ${item.twist || '-'}`;
@@ -3279,8 +3420,8 @@
                 <td>
                   <div class="company-name">${companyName}</div>
                   <div class="company-details">
-                    Factory: Survey No. 124, Industrial Zone, Pipodara, Surat, Gujarat<br>
-                    Email: contact@vishwafashions.com | Mobile: +91 98765 43210
+                    Factory: ${companyAddress}<br>
+                    ${companyEmail ? 'Email: ' + companyEmail : ''} ${companyPhone ? ' | Mobile: ' + companyPhone : ''} ${companyGst ? ' | GSTIN: ' + companyGst : ''}
                   </div>
                 </td>
                 <td style="text-align: right; vertical-align: top;">
@@ -3298,7 +3439,7 @@
                   <div class="section-title">Consignee / Delivered To</div>
                   <div style="font-size: 12px; font-weight: 700; margin-bottom: 5px;">${sale.customerName}</div>
                   <div style="color: #444444; font-size: 11px; line-height: 1.5;">
-                    Address: Industrial Area, Surat, Gujarat, India<br>
+                    Address: ${customerAddress}<br>
                     State Code: 24 (Gujarat)
                   </div>
                 </td>
@@ -3431,15 +3572,45 @@
       const totalWeight = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const subtotal = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
-      const gstRate = parseFloat(document.getElementById('modal-sales-gst').value) || 0;
-      const gstAmount = subtotal * (gstRate / 100);
-      const grandTotal = subtotal + gstAmount;
+      const discType = document.getElementById('modal-sales-discount-type') ? document.getElementById('modal-sales-discount-type').value : 'percent';
+      const rawDiscVal = document.getElementById('modal-sales-discount-value') ? (parseFloat(document.getElementById('modal-sales-discount-value').value) || 0) : 0;
+      
+      let discountAmount = 0;
+      if (discType === 'percent') {
+        const pct = Math.max(0, Math.min(100, rawDiscVal));
+        discountAmount = subtotal * (pct / 100);
+      } else {
+        discountAmount = Math.max(0, Math.min(subtotal, rawDiscVal));
+      }
 
-      document.getElementById('modal-summary-total-boris').innerText = totalBoris;
-      document.getElementById('modal-summary-total-rolls').innerText = totalRolls;
-      document.getElementById('modal-summary-total-weight').innerText = `${totalWeight.toFixed(2)} Kg`;
-      document.getElementById('modal-summary-subtotal').innerText = `₹${subtotal.toFixed(2)}`;
-      document.getElementById('modal-summary-grand-total').innerText = `₹${grandTotal.toFixed(2)}`;
+      const taxableAmount = Math.max(0, subtotal - discountAmount);
+      const gstRate = parseFloat(document.getElementById('modal-sales-gst').value) || 0;
+      const gstAmount = taxableAmount * (gstRate / 100);
+      const grandTotal = taxableAmount + gstAmount;
+
+      const totalBorisEl = document.getElementById('modal-summary-total-boris');
+      const totalRollsEl = document.getElementById('modal-summary-total-rolls');
+      const totalWeightEl = document.getElementById('modal-summary-total-weight');
+      const subtotalEl = document.getElementById('modal-summary-subtotal');
+      const taxableEl = document.getElementById('modal-summary-taxable');
+      const gstEl = document.getElementById('modal-summary-gst');
+      const grandTotalEl = document.getElementById('modal-summary-grand-total');
+      const discCalcEl = document.getElementById('modal-discount-calc-display');
+
+      if (totalBorisEl) totalBorisEl.innerText = totalBoris;
+      if (totalRollsEl) totalRollsEl.innerText = totalRolls;
+      if (totalWeightEl) totalWeightEl.innerText = `${totalWeight.toFixed(2)} Kg`;
+      if (subtotalEl) subtotalEl.innerText = `₹${subtotal.toFixed(2)}`;
+      if (taxableEl) taxableEl.innerText = `₹${taxableAmount.toFixed(2)}`;
+      if (gstEl) gstEl.innerText = `₹${gstAmount.toFixed(2)}`;
+      if (grandTotalEl) grandTotalEl.innerText = `₹${grandTotal.toFixed(2)}`;
+      if (discCalcEl) {
+        if (discountAmount > 0) {
+          discCalcEl.innerText = `(-₹${discountAmount.toFixed(2)})`;
+        } else {
+          discCalcEl.innerText = '';
+        }
+      }
     }
 
     window.submitBatchSell = function(e) {
@@ -3459,15 +3630,15 @@
       for (let i = 0; i < modalChallanItems.length; i++) {
         const item = modalChallanItems[i];
         if (!item.rollsQty || item.rollsQty < 1) {
-          showToast(`Invalid rolls qty for Bori ${item.boriNo}`, 'error');
+          showToast(`Invalid rolls qty for Bori/Box ${item.boriNo}`, 'error');
           return;
         }
         if (!item.saleQty || item.saleQty < 0.001) {
-          showToast(`Invalid weight for Bori ${item.boriNo}`, 'error');
+          showToast(`Invalid weight for Bori/Box ${item.boriNo}`, 'error');
           return;
         }
         if (!item.rate || item.rate < 0.01) {
-          showToast(`Please enter rate/Kg for Bori ${item.boriNo}`, 'error');
+          showToast(`Please enter rate/Kg for Bori/Box ${item.boriNo}`, 'error');
           return;
         }
       }
@@ -3476,17 +3647,46 @@
       const challanNo = document.getElementById('modal-sales-challan').value.trim();
       const date = document.getElementById('modal-sales-date').value;
       const customerName = document.getElementById('modal-sales-customer').value.trim();
+      const customerAddress = (document.getElementById('modal-sales-address') ? document.getElementById('modal-sales-address').value.trim() : '') || 'Industrial Area, Surat, Gujarat, India';
+      
+      const selectedCompId = document.getElementById('modal-sales-company') ? document.getElementById('modal-sales-company').value : '';
+      const companies = getAvailableCompanies();
+      const selectedComp = companies.find(c => c.id === selectedCompId || c.sellerName === selectedCompId) || companies[0];
+
       const gstPercent = parseFloat(document.getElementById('modal-sales-gst').value) || 0;
 
       const subtotal = modalChallanItems.reduce((sum, item) => sum + item.amount, 0);
-      const gstAmount = subtotal * (gstPercent / 100);
-      const grandTotal = subtotal + gstAmount;
+      const discType = document.getElementById('modal-sales-discount-type') ? document.getElementById('modal-sales-discount-type').value : 'percent';
+      const rawDiscVal = document.getElementById('modal-sales-discount-value') ? (parseFloat(document.getElementById('modal-sales-discount-value').value) || 0) : 0;
+      
+      let discountAmount = 0;
+      if (discType === 'percent') {
+        const pct = Math.max(0, Math.min(100, rawDiscVal));
+        discountAmount = subtotal * (pct / 100);
+      } else {
+        discountAmount = Math.max(0, Math.min(subtotal, rawDiscVal));
+      }
+
+      const taxableAmount = Math.max(0, subtotal - discountAmount);
+      const gstAmount = taxableAmount * (gstPercent / 100);
+      const grandTotal = taxableAmount + gstAmount;
 
       const data = {
         id: editId || 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         challanNo: challanNo,
         date: date,
         customerName: customerName,
+        customerAddress: customerAddress,
+        sellerCompanyId: selectedComp ? selectedComp.id : '',
+        sellerName: selectedComp ? selectedComp.sellerName : 'Vishwa Fashions',
+        sellerGstin: selectedComp ? selectedComp.sellerGstin : '',
+        sellerPhone: selectedComp ? selectedComp.sellerPhone : '',
+        sellerEmail: selectedComp ? selectedComp.sellerEmail : '',
+        sellerAddress: selectedComp ? selectedComp.sellerAddress : '',
+        discountType: discType,
+        discountValue: rawDiscVal,
+        discountAmount: discountAmount,
+        taxableAmount: taxableAmount,
         gstRate: gstPercent,
         subtotalAmount: subtotal,
         gstAmount: gstAmount,
@@ -4471,6 +4671,16 @@
       document.getElementById('modal-sales-challan').value = sale.challanNo;
       document.getElementById('modal-sales-date').value = sale.date;
       document.getElementById('modal-sales-customer').value = sale.customerName;
+      if (document.getElementById('modal-sales-address')) {
+        document.getElementById('modal-sales-address').value = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
+      }
+      populateCompanyDropdown(sale.sellerCompanyId || sale.sellerName);
+      if (document.getElementById('modal-sales-discount-type')) {
+        document.getElementById('modal-sales-discount-type').value = sale.discountType || 'percent';
+      }
+      if (document.getElementById('modal-sales-discount-value')) {
+        document.getElementById('modal-sales-discount-value').value = sale.discountValue !== undefined ? sale.discountValue : 0;
+      }
       document.getElementById('modal-sales-gst').value = sale.gstRate;
 
       document.getElementById('modal-title').innerText = `Edit Sale (Challan ${sale.challanNo}) - ${activeDivision.toUpperCase()}`;
@@ -4535,6 +4745,8 @@
       document.getElementById('modal-title').innerText = `Record Sale (Repeat Entry) - ${activeDivision.toUpperCase()}`;
       document.getElementById('modal-sales-submit-btn').innerText = 'Record New Sale';
 
+      populateCompanyDropdown(sale.sellerCompanyId || sale.sellerName);
+
       // Set default date and increment challan
       setDefaultDate('modal-sales-date');
       const salesDate = document.getElementById('modal-sales-date').value;
@@ -4542,6 +4754,15 @@
       document.getElementById('modal-sales-challan').value = nextChallan;
 
       document.getElementById('modal-sales-customer').value = sale.customerName;
+      if (document.getElementById('modal-sales-address')) {
+        document.getElementById('modal-sales-address').value = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
+      }
+      if (document.getElementById('modal-sales-discount-type')) {
+        document.getElementById('modal-sales-discount-type').value = sale.discountType || 'percent';
+      }
+      if (document.getElementById('modal-sales-discount-value')) {
+        document.getElementById('modal-sales-discount-value').value = sale.discountValue !== undefined ? sale.discountValue : 0;
+      }
       document.getElementById('modal-sales-gst').value = sale.gstRate;
 
       let loadedItems = [];
@@ -4797,7 +5018,7 @@
   </script>
   <!-- Batch Sell Modal -->
   <div id="batch-sell-modal" class="modal-overlay">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 1200px; width: 95%;">
       <div class="modal-header">
         <h2 id="modal-title">Batch Sell Selected Boris/Boxes</h2>
         <button type="button" class="modal-close-btn" onclick="closeBatchSellModal()">&times;</button>
@@ -4806,8 +5027,14 @@
         <form id="modal-sales-form" onsubmit="submitBatchSell(event)">
           <input type="hidden" id="modal-sales-edit-id">
           
-          <!-- Top Row: Challan & Customer Info & Lot No -->
-          <div class="form-inline" style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; gap: 0.75rem;">
+          <!-- Top Row 1: Seller Company, Challan & Date & Lot No -->
+          <div class="form-inline" style="padding-bottom: 12px; margin-bottom: 12px; gap: 0.75rem; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 2 1 220px;">
+              <label for="modal-sales-company"><span style="color: var(--accent);">Seller Company</span> (From Settings)</label>
+              <select id="modal-sales-company" style="font-weight: 600; border-color: var(--accent);" required>
+                <!-- Populated dynamically -->
+              </select>
+            </div>
             <div class="form-group" style="flex: 1 1 120px;">
               <label for="modal-sales-challan">Challan No</label>
               <input type="text" id="modal-sales-challan" placeholder="Challan No" readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed;" required>
@@ -4820,11 +5047,19 @@
               <label for="modal-sales-date">Sale Date</label>
               <input type="date" id="modal-sales-date" required>
             </div>
-            <div class="form-group" style="flex: 2.5 1 250px;">
-              <label for="modal-sales-customer">Customer Name</label>
-              <input type="text" id="modal-sales-customer" placeholder="Customer Name" required>
+          </div>
+
+          <!-- Top Row 2: Customer Name, Shipment Address & GST & Discount -->
+          <div class="form-inline" style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; gap: 0.75rem; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 2 1 200px;">
+              <label for="modal-sales-customer">Customer / Buyer Name</label>
+              <input type="text" id="modal-sales-customer" placeholder="Enter Buyer Name" required>
             </div>
-            <div class="form-group" style="flex: 1 1 100px;">
+            <div class="form-group" style="flex: 2.5 1 250px;">
+              <label for="modal-sales-address">Shipment / Delivery Address</label>
+              <input type="text" id="modal-sales-address" placeholder="Delivery destination address" value="Industrial Area, Surat, Gujarat, India">
+            </div>
+            <div class="form-group" style="flex: 1 1 90px;">
               <label for="modal-sales-gst">GST (%)</label>
               <select id="modal-sales-gst" onchange="calculateModalTotals()" required>
                 <option value="12" selected>12%</option>
@@ -4832,6 +5067,16 @@
                 <option value="5">5%</option>
                 <option value="0">0%</option>
               </select>
+            </div>
+            <div class="form-group" style="flex: 1.5 1 160px;">
+              <label for="modal-sales-discount-value">Discount <span id="modal-discount-calc-display" style="font-size: 0.75rem; color: #ef4444;"></span></label>
+              <div style="display: flex; gap: 4px;">
+                <select id="modal-sales-discount-type" onchange="calculateModalTotals()" style="width: 75px; padding: 4px 6px; font-size: 0.82rem;">
+                  <option value="percent" selected>%</option>
+                  <option value="amount">₹ Flat</option>
+                </select>
+                <input type="number" id="modal-sales-discount-value" step="0.01" min="0" value="0" placeholder="0" oninput="calculateModalTotals()" style="flex: 1; padding: 4px 8px; font-size: 0.85rem;">
+              </div>
             </div>
           </div>
 
@@ -4857,15 +5102,17 @@
           </div>
 
           <!-- Summary & Action Bar -->
-          <div class="form-inline" style="justify-content: space-between; align-items: center; background: var(--bg-card-hover, rgba(255,255,255,0.03)); padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; gap: 1rem;">
-            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-              <span style="font-size: 0.88rem;">Total Boris/Boxes: <strong id="modal-summary-total-boris">0</strong></span>
-              <span style="font-size: 0.88rem;">Total Rolls: <strong id="modal-summary-total-rolls">0</strong></span>
-              <span style="font-size: 0.88rem;">Total Weight: <strong id="modal-summary-total-weight">0.00 Kg</strong></span>
-              <span style="font-size: 0.88rem;">Subtotal: <strong id="modal-summary-subtotal">₹0.00</strong></span>
+          <div class="form-inline" style="justify-content: space-between; align-items: center; background: var(--bg-card-hover, rgba(255,255,255,0.03)); padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+              <span style="font-size: 0.85rem;">Total Boris/Boxes: <strong id="modal-summary-total-boris">0</strong></span>
+              <span style="font-size: 0.85rem;">Total Rolls: <strong id="modal-summary-total-rolls">0</strong></span>
+              <span style="font-size: 0.85rem;">Total Weight: <strong id="modal-summary-total-weight">0.00 Kg</strong></span>
+              <span style="font-size: 0.85rem;">Subtotal: <strong id="modal-summary-subtotal">₹0.00</strong></span>
+              <span style="font-size: 0.85rem;">Taxable: <strong id="modal-summary-taxable" style="color: var(--accent);">₹0.00</strong></span>
+              <span style="font-size: 0.85rem;">GST: <strong id="modal-summary-gst">₹0.00</strong></span>
             </div>
             <div>
-              <span style="font-size: 1.05rem; color: var(--accent);">Grand Total: <strong id="modal-summary-grand-total">₹0.00</strong></span>
+              <span style="font-size: 1.1rem; color: var(--accent);">Grand Total: <strong id="modal-summary-grand-total">₹0.00</strong></span>
             </div>
           </div>
 
@@ -4887,26 +5134,34 @@
       </div>
       <div class="modal-body">
         <!-- Top Info Row -->
-        <div class="form-inline" style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; gap: 1.5rem; flex-wrap: wrap;">
-          <div style="flex: 1 1 120px;">
+        <div class="form-inline" style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; gap: 1.25rem; flex-wrap: wrap;">
+          <div style="flex: 1.5 1 180px;">
+            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Seller Company</span>
+            <strong id="details-sales-company" style="font-size: 1rem; color: var(--accent);"></strong>
+          </div>
+          <div style="flex: 1 1 110px;">
             <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Challan No</span>
-            <strong id="details-sales-challan" style="font-size: 1.1rem; color: var(--accent);"></strong>
+            <strong id="details-sales-challan" style="font-size: 1.05rem;"></strong>
           </div>
-          <div style="flex: 1 1 120px;">
+          <div style="flex: 1 1 100px;">
             <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Lot No</span>
-            <strong id="details-sales-lot" style="font-size: 1.1rem;"></strong>
+            <strong id="details-sales-lot" style="font-size: 1.05rem;"></strong>
           </div>
-          <div style="flex: 1 1 120px;">
+          <div style="flex: 1 1 110px;">
             <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Sale Date</span>
-            <strong id="details-sales-date" style="font-size: 1.1rem;"></strong>
+            <strong id="details-sales-date" style="font-size: 1.05rem;"></strong>
+          </div>
+          <div style="flex: 1.5 1 160px;">
+            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Customer Name</span>
+            <strong id="details-sales-customer" style="font-size: 1.05rem;"></strong>
           </div>
           <div style="flex: 2 1 200px;">
-            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Customer Name</span>
-            <strong id="details-sales-customer" style="font-size: 1.1rem;"></strong>
+            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Shipment Address</span>
+            <span id="details-sales-address" style="font-size: 0.9rem; font-weight: 500;"></span>
           </div>
-          <div style="flex: 1 1 80px;">
+          <div style="flex: 0.8 1 70px;">
             <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">GST (%)</span>
-            <strong id="details-sales-gst" style="font-size: 1.1rem;"></strong>
+            <strong id="details-sales-gst" style="font-size: 1.05rem;"></strong>
           </div>
         </div>
 
@@ -4932,15 +5187,18 @@
         </div>
 
         <!-- Summary Bar -->
-        <div class="form-inline" style="justify-content: space-between; align-items: center; background: var(--bg-card-hover, rgba(255,255,255,0.03)); padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; gap: 1rem;">
-          <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            <span style="font-size: 0.88rem;">Total Boris/Boxes: <strong id="details-summary-total-boris">0</strong></span>
-            <span style="font-size: 0.88rem;">Total Rolls: <strong id="details-summary-total-rolls">0</strong></span>
-            <span style="font-size: 0.88rem;">Total Weight: <strong id="details-summary-total-weight">0.00 Kg</strong></span>
-            <span style="font-size: 0.88rem;">Subtotal: <strong id="details-summary-subtotal">₹0.00</strong></span>
+        <div class="form-inline" style="justify-content: space-between; align-items: center; background: var(--bg-card-hover, rgba(255,255,255,0.03)); padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; gap: 1rem; flex-wrap: wrap;">
+          <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+            <span style="font-size: 0.85rem;">Total Boris/Boxes: <strong id="details-summary-total-boris">0</strong></span>
+            <span style="font-size: 0.85rem;">Total Rolls: <strong id="details-summary-total-rolls">0</strong></span>
+            <span style="font-size: 0.85rem;">Total Weight: <strong id="details-summary-total-weight">0.00 Kg</strong></span>
+            <span style="font-size: 0.85rem;">Subtotal: <strong id="details-summary-subtotal">₹0.00</strong></span>
+            <span id="details-summary-discount-row" style="font-size: 0.85rem; display: none;"></span>
+            <span style="font-size: 0.85rem;">Taxable: <strong id="details-summary-taxable" style="color: var(--accent);">₹0.00</strong></span>
+            <span style="font-size: 0.85rem;">GST: <strong id="details-summary-gst-amount">₹0.00</strong></span>
           </div>
           <div>
-            <span style="font-size: 1.05rem; color: var(--accent);">Grand Total: <strong id="details-summary-grand-total">₹0.00</strong></span>
+            <span style="font-size: 1.1rem; color: var(--accent);">Grand Total: <strong id="details-summary-grand-total">₹0.00</strong></span>
           </div>
         </div>
 
