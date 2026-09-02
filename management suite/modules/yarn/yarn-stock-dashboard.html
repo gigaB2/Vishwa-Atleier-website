@@ -1818,9 +1818,6 @@
                 <th onclick="toggleSalesSort('customerName')" style="cursor: pointer; user-select: none;">
                   Customer Name <span id="sales-sort-icon-customerName">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('composition')" style="cursor: pointer; user-select: none;">
-                  Yarn Specs <span id="sales-sort-icon-composition">↕</span>
-                </th>
                 <th onclick="toggleSalesSort('totalRolls')" style="cursor: pointer; user-select: none;">
                   Rolls <span id="sales-sort-icon-totalRolls">↕</span>
                 </th>
@@ -3139,6 +3136,16 @@
           });
         }
       });
+
+      const defaultRate = modalChallanItems.length > 0 ? (modalChallanItems[0].rate || '') : '';
+      const rateInput = document.getElementById('modal-sales-rate');
+      if (rateInput) rateInput.value = defaultRate > 0 ? defaultRate : '';
+      if (defaultRate > 0) {
+        modalChallanItems.forEach(item => {
+          item.rate = defaultRate;
+          item.amount = (parseFloat(item.saleQty) || 0) * defaultRate;
+        });
+      }
 
       renderModalItems();
       calculateModalTotals();
@@ -4568,22 +4575,32 @@
           <td><span style="font-size:0.8rem; color:var(--muted);">${item.composition}</span></td>
           <td>${item.color}</td>
           <td>${item.denier}D | ${item.tpm} | ${item.twist}</td>
-          <td>
+          <td style="text-align: center;">
             <input type="number" value="${item.rollsQty}" readonly style="height:32px; padding:2px 6px; font-size:0.85rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); cursor: not-allowed; width: 70px; text-align: center;" required>
           </td>
-          <td>
+          <td style="text-align: right;">
             <input type="number" step="0.001" value="${item.saleQty}" readonly style="height:32px; padding:2px 6px; font-size:0.85rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); cursor: not-allowed; width: 95px; text-align: center;" required>
           </td>
-          <td>
-            <input type="number" step="0.01" value="${item.rate || ''}" min="0.01" oninput="updateModalItemField(${index}, 'rate', this.value)" placeholder="Rate" style="height:32px; padding:2px 6px; font-size:0.85rem; width: 90px;" required>
-          </td>
-          <td>
-            <strong id="modal-item-amt-${index}">₹${item.amount.toFixed(2)}</strong>
+          <td style="text-align: right;">
+            <strong id="modal-item-amt-${index}">₹${(item.amount || 0).toFixed(2)}</strong>
           </td>
         `;
         tbody.appendChild(tr);
       });
     }
+
+    window.updateCommonRate = function(value) {
+      const rate = parseFloat(value) || 0;
+      modalChallanItems.forEach((item, index) => {
+        item.rate = rate;
+        const qty = parseFloat(item.saleQty) || 0;
+        const amount = qty * rate;
+        item.amount = amount;
+        const amtEl = document.getElementById(`modal-item-amt-${index}`);
+        if (amtEl) amtEl.innerText = `₹${amount.toFixed(2)}`;
+      });
+      calculateModalTotals();
+    };
 
     window.updateModalItemField = function(index, field, value) {
       const val = parseFloat(value) || 0;
@@ -4661,6 +4678,13 @@
         return;
       }
 
+      const commonRate = parseFloat(document.getElementById('modal-sales-rate') ? document.getElementById('modal-sales-rate').value : 0) || 0;
+      if (commonRate < 0.01) {
+        showToast('Please enter a valid Rate/Kg (greater than 0)', 'error');
+        if (document.getElementById('modal-sales-rate')) document.getElementById('modal-sales-rate').focus();
+        return;
+      }
+
       for (let i = 0; i < modalChallanItems.length; i++) {
         const item = modalChallanItems[i];
         if (!item.rollsQty || item.rollsQty < 1) {
@@ -4671,10 +4695,8 @@
           showToast(`Invalid weight for Bori/Box ${item.boriNo}`, 'error');
           return;
         }
-        if (!item.rate || item.rate < 0.01) {
-          showToast(`Please enter rate/Kg for Bori/Box ${item.boriNo}`, 'error');
-          return;
-        }
+        item.rate = commonRate;
+        item.amount = (parseFloat(item.saleQty) || 0) * commonRate;
       }
 
       const editId = document.getElementById('modal-sales-edit-id').value;
@@ -5552,7 +5574,7 @@
       ).sort((a,b) => b.date.localeCompare(a.date));
 
       if (filtered.length === 0) {
-        body.innerHTML = '<tr><td colspan="12" class="muted" style="text-align: center;">No sales records found</td></tr>';
+        body.innerHTML = '<tr><td colspan="11" class="muted" style="text-align: center;">No sales records found</td></tr>';
         return;
       }
 
@@ -5572,19 +5594,22 @@
         const rollsTotal = s.items && s.items.length > 0 ? s.items.reduce((a,b)=>a+b.rollsQty,0) : s.rollsQty;
         const qtyTotal = s.items && s.items.length > 0 ? s.items.reduce((a,b)=>a+b.saleQty,0) : s.saleQty;
         const subtotalVal = s.subtotalAmount || s.amount || 0;
-        const grandTotalVal = s.totalAmount || (subtotalVal * (1 + (s.gstRate||0)/100));
+        const gstRateVal = (s.gstRate !== undefined && s.gstRate !== null && !isNaN(parseFloat(s.gstRate)))
+          ? parseFloat(s.gstRate)
+          : (s.gst_rate !== undefined && !isNaN(parseFloat(s.gst_rate)) ? parseFloat(s.gst_rate) : (subtotalVal > 0 && s.gstAmount ? Math.round((parseFloat(s.gstAmount) / subtotalVal) * 100) : 0));
+        const gstVal = s.gstAmount !== undefined ? parseFloat(s.gstAmount) : (subtotalVal * (gstRateVal / 100));
+        const grandTotalVal = s.totalAmount || (subtotalVal + gstVal);
 
         tr.innerHTML = `
           <td><strong>${s.challanNo}</strong></td>
           <td>${formatDate(s.date)}</td>
           <td>${boriDisplay}</td>
           <td>${s.customerName}</td>
-          <td><span style="font-size: 0.8rem; color: var(--muted);">${s.composition}</span></td>
           <td>${rollsTotal}</td>
           <td>${qtyTotal.toFixed(2)} Kg</td>
           <td>₹${s.rate ? s.rate.toFixed(2) : '-'}</td>
           <td>₹${subtotalVal.toFixed(2)}</td>
-          <td>${s.gstRate}%</td>
+          <td>${gstRateVal}%</td>
           <td><strong>₹${grandTotalVal.toFixed(2)}</strong></td>
           <td class="actions-cell">
             <div class="action-menu-container">
@@ -5864,6 +5889,16 @@
         };
       });
 
+      const commonRate = sale.rate || (modalChallanItems.length > 0 ? modalChallanItems[0].rate : '') || '';
+      const rateInput = document.getElementById('modal-sales-rate');
+      if (rateInput) rateInput.value = commonRate > 0 ? commonRate : '';
+      if (commonRate > 0) {
+        modalChallanItems.forEach(item => {
+          item.rate = commonRate;
+          item.amount = (parseFloat(item.saleQty) || 0) * commonRate;
+        });
+      }
+
       renderModalItems();
       calculateModalTotals();
 
@@ -5905,7 +5940,7 @@
       if (document.getElementById('modal-sales-discount-value')) {
         document.getElementById('modal-sales-discount-value').value = sale.discountValue !== undefined ? sale.discountValue : 0;
       }
-      document.getElementById('modal-sales-gst').value = sale.gstRate;
+      document.getElementById('modal-sales-gst').value = sale.gstRate !== undefined ? sale.gstRate : 12;
 
       let loadedItems = [];
       if (sale.items && sale.items.length > 0) {
@@ -5947,6 +5982,16 @@
       if (modalChallanItems.length === 0) {
         showToast('Cannot repeat: Bori/Box is fully sold out!', 'error');
         return;
+      }
+
+      const repeatRate = sale.rate || (modalChallanItems.length > 0 ? modalChallanItems[0].rate : '') || '';
+      const repRateInput = document.getElementById('modal-sales-rate');
+      if (repRateInput) repRateInput.value = repeatRate > 0 ? repeatRate : '';
+      if (repeatRate > 0) {
+        modalChallanItems.forEach(item => {
+          item.rate = repeatRate;
+          item.amount = (parseFloat(item.saleQty) || 0) * repeatRate;
+        });
       }
 
       renderModalItems();
@@ -6194,17 +6239,17 @@
             </div>
           </div>
 
-          <!-- Top Row 2: Customer Name, Shipment Address & GST & Discount -->
+          <!-- Top Row 2: Customer Name, Shipment Address & Rate & GST & Discount -->
           <div class="form-inline" style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; gap: 0.75rem; flex-wrap: wrap;">
-            <div class="form-group" style="flex: 2 1 200px;">
+            <div class="form-group" style="flex: 2 1 180px;">
               <label for="modal-sales-customer">Customer / Buyer Name</label>
               <input type="text" id="modal-sales-customer" placeholder="Enter Buyer Name" required>
             </div>
-            <div class="form-group" style="flex: 2.5 1 250px;">
+            <div class="form-group" style="flex: 2 1 200px;">
               <label for="modal-sales-address">Shipment / Delivery Address</label>
               <input type="text" id="modal-sales-address" placeholder="Delivery destination address" value="Industrial Area, Surat, Gujarat, India">
             </div>
-            <div class="form-group" style="flex: 1 1 90px;">
+            <div class="form-group" style="flex: 1 1 80px;">
               <label for="modal-sales-gst">GST (%)</label>
               <select id="modal-sales-gst" onchange="calculateModalTotals()" required>
                 <option value="12" selected>12%</option>
@@ -6213,7 +6258,11 @@
                 <option value="0">0%</option>
               </select>
             </div>
-            <div class="form-group" style="flex: 1.5 1 160px;">
+            <div class="form-group" style="flex: 1 1 110px;">
+              <label for="modal-sales-rate">Rate/Kg (₹)</label>
+              <input type="number" id="modal-sales-rate" step="0.01" min="0.01" placeholder="Rate/Kg" oninput="updateCommonRate(this.value)" style="padding: 4px 8px; font-size: 0.85rem;" required>
+            </div>
+            <div class="form-group" style="flex: 1.5 1 150px;">
               <label for="modal-sales-discount-value">Discount <span id="modal-discount-calc-display" style="font-size: 0.75rem; color: #ef4444;"></span></label>
               <div style="display: flex; gap: 4px;">
                 <select id="modal-sales-discount-type" onchange="calculateModalTotals()" style="width: 75px; padding: 4px 6px; font-size: 0.82rem;">
@@ -6234,10 +6283,9 @@
                   <th>Composition</th>
                   <th>Color</th>
                   <th>Specs</th>
-                  <th style="width: 90px;">Rolls Qty</th>
-                  <th style="width: 110px;">Weight (Kg)</th>
-                  <th style="width: 100px;">Rate/Kg (₹)</th>
-                  <th>Amount (₹)</th>
+                  <th style="width: 90px; text-align: center;">Rolls Qty</th>
+                  <th style="width: 110px; text-align: right;">Weight (Kg)</th>
+                  <th style="width: 120px; text-align: right;">Amount (₹)</th>
                 </tr>
               </thead>
               <tbody id="modal-sales-items-body">
