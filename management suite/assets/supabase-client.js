@@ -699,20 +699,19 @@
             const rEntry = rEmps[empKey];
             const lEntry = lEmps[empKey];
             if (rEntry && lEntry) {
-              // If local is not actively being modified, server is single source of truth
-              if (!isLocallyActive) {
-                mergedAttendance[dateKey][empKey] = rEntry;
+              const rTime = rEntry.updatedAt ? new Date(rEntry.updatedAt).getTime() : 0;
+              const lTime = lEntry.updatedAt ? new Date(lEntry.updatedAt).getTime() : 0;
+              if (rTime > lTime) {
+                mergedAttendance[dateKey][empKey] = { ...lEntry, ...rEntry };
+              } else if (lTime > rTime) {
+                mergedAttendance[dateKey][empKey] = { ...rEntry, ...lEntry };
               } else {
-                const rTime = rEntry.updatedAt ? new Date(rEntry.updatedAt).getTime() : 0;
-                const lTime = lEntry.updatedAt ? new Date(lEntry.updatedAt).getTime() : 0;
-                mergedAttendance[dateKey][empKey] = (lTime >= rTime) ? { ...rEntry, ...lEntry } : { ...lEntry, ...rEntry };
+                mergedAttendance[dateKey][empKey] = isLocallyActive ? { ...rEntry, ...lEntry } : { ...lEntry, ...rEntry };
               }
             } else if (rEntry) {
               mergedAttendance[dateKey][empKey] = rEntry;
             } else if (lEntry) {
-              if (isLocallyActive) {
-                mergedAttendance[dateKey][empKey] = lEntry;
-              }
+              mergedAttendance[dateKey][empKey] = lEntry;
             }
           });
         });
@@ -4965,13 +4964,28 @@
                     };
                   });
                 }
+                // Deep merge reconstructed attendance with any locally existing attendance
+                const combinedAttendance = { ...(existingStaffState.attendance || {}) };
+                Object.entries(reconstructedAttendance).forEach(([dKey, dMap]) => {
+                  if (!combinedAttendance[dKey]) combinedAttendance[dKey] = {};
+                  Object.entries(dMap).forEach(([eKey, rEntry]) => {
+                    const lEntry = combinedAttendance[dKey][eKey];
+                    if (!lEntry) {
+                      combinedAttendance[dKey][eKey] = rEntry;
+                    } else {
+                      const rTime = rEntry.updatedAt ? new Date(rEntry.updatedAt).getTime() : 0;
+                      const lTime = lEntry.updatedAt ? new Date(lEntry.updatedAt).getTime() : 0;
+                      combinedAttendance[dKey][eKey] = (rTime >= lTime) ? { ...lEntry, ...rEntry } : { ...rEntry, ...lEntry };
+                    }
+                  });
+                });
 
                 const mergedStaffState = {
                   ...existingStaffState,
-                  employees: reconstructedEmployees,
-                  attendance: reconstructedAttendance,
-                  loans: reconstructedLoans,
-                  salaryPayments: reconstructedSettlements
+                  employees: reconstructedEmployees.length > 0 ? reconstructedEmployees : (existingStaffState.employees || []),
+                  attendance: combinedAttendance,
+                  loans: reconstructedLoans.length > 0 ? reconstructedLoans : (existingStaffState.loans || []),
+                  salaryPayments: Object.keys(reconstructedSettlements).length > 0 ? reconstructedSettlements : (existingStaffState.salaryPayments || {})
                 };
 
                 const staffStr = JSON.stringify(mergedStaffState);

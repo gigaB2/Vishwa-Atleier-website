@@ -17375,41 +17375,51 @@
                 let totalHours = 0;
                 let loggedDates = [];
 
+                // Find matching employee object for alternate keys (e.g. ID, lowercase)
+                const staffList = (state && Array.isArray(state.employees)) ? state.employees : [];
+                const matchedEmp = staffList.find(e => e.name === empName || e.id === empName || (e.name && e.name.toLowerCase() === String(empName).toLowerCase()));
+                const empId = matchedEmp ? String(matchedEmp.id || '') : '';
+                const cleanName = String(empName || '').trim();
+                const lowerName = cleanName.toLowerCase();
+
                 if (state && state.attendance) {
                     Object.keys(state.attendance).forEach(dateStr => {
                         if ((!fromDate || dateStr >= fromDate) && (!toDate || dateStr <= toDate)) {
                             const dayData = state.attendance[dateStr];
-                            if (dayData && dayData[empName]) {
-                                const entry = dayData[empName];
-                                const status = entry.status || 'present';
-                                const shifts = (entry.shifts !== undefined && entry.shifts !== null) ? parseFloat(entry.shifts) : (status === 'double_shift' ? 2 : (status === 'half_day' ? 0.5 : (status === 'absent' || status === 'leave' ? 0 : 1)));
-                                const hours = (entry.hours !== undefined && entry.hours !== null) ? parseFloat(entry.hours) : 0;
-                                
-                                if (status === 'present' || status === 'night_shift') {
-                                    presentDays += 1;
-                                    totalShifts += shifts;
-                                } else if (status === 'double_shift') {
-                                    presentDays += 1;
-                                    totalShifts += shifts;
-                                } else if (status === 'half_day') {
-                                    presentDays += 0.5;
-                                    halfDays += 1;
-                                    totalShifts += shifts;
-                                } else if (status === 'leave') {
-                                    leaves += 1;
-                                } else if (status === 'absent') {
-                                    absences += 1;
+                            if (dayData) {
+                                // Lookup by name, id, or case-insensitive match
+                                const entry = dayData[cleanName] || (empId ? dayData[empId] : null) || (matchedEmp && matchedEmp.name ? dayData[matchedEmp.name] : null) || (Object.keys(dayData).find(k => k.toLowerCase() === lowerName) ? dayData[Object.keys(dayData).find(k => k.toLowerCase() === lowerName)] : null);
+                                if (entry) {
+                                    const status = entry.status || 'present';
+                                    const shifts = (entry.shifts !== undefined && entry.shifts !== null) ? parseFloat(entry.shifts) : (status === 'double_shift' ? 2 : (status === 'half_day' ? 0.5 : (status === 'absent' || status === 'leave' ? 0 : 1)));
+                                    const hours = (entry.hours !== undefined && entry.hours !== null) ? parseFloat(entry.hours) : 0;
+                                    
+                                    if (status === 'present' || status === 'night_shift') {
+                                        presentDays += 1;
+                                        totalShifts += shifts;
+                                    } else if (status === 'double_shift') {
+                                        presentDays += 1;
+                                        totalShifts += shifts;
+                                    } else if (status === 'half_day') {
+                                        presentDays += 0.5;
+                                        halfDays += 1;
+                                        totalShifts += shifts;
+                                    } else if (status === 'leave') {
+                                        leaves += 1;
+                                    } else if (status === 'absent') {
+                                        absences += 1;
+                                    }
+                                    totalHours += (isNaN(hours) ? 0 : hours);
+                                    loggedDates.push({
+                                        date: dateStr,
+                                        status: status,
+                                        shifts: shifts,
+                                        inTime: entry.inTime || '',
+                                        outTime: entry.outTime || '',
+                                        hours: hours,
+                                        remarks: entry.remarks || ''
+                                    });
                                 }
-                                totalHours += (isNaN(hours) ? 0 : hours);
-                                loggedDates.push({
-                                    date: dateStr,
-                                    status: status,
-                                    shifts: shifts,
-                                    inTime: entry.inTime || '',
-                                    outTime: entry.outTime || '',
-                                    hours: hours,
-                                    remarks: entry.remarks || ''
-                                });
                             }
                         }
                     });
@@ -17711,7 +17721,9 @@
                 }
 
                 container.innerHTML = staffList.map((emp, idx) => {
-                    const savedEntry = existingAttendance[emp.name] || null;
+                    const empNameClean = String(emp.name || '').trim();
+                    const empIdClean = String(emp.id || '').trim();
+                    const savedEntry = existingAttendance[empNameClean] || (empIdClean ? existingAttendance[empIdClean] : null) || (Object.keys(existingAttendance).find(k => k.toLowerCase() === empNameClean.toLowerCase()) ? existingAttendance[Object.keys(existingAttendance).find(k => k.toLowerCase() === empNameClean.toLowerCase())] : null);
                     const defaultStatus = savedEntry ? savedEntry.status : 'present';
                     const savedInTime = savedEntry ? (savedEntry.inTime || '') : '';
                     const savedOutTime = savedEntry ? (savedEntry.outTime || '') : '';
