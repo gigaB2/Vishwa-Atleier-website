@@ -1391,7 +1391,7 @@
             <p>Available weight for highest volume qualities currently in stock</p>
           </div>
         </div>
-        <div class="chart-container-wrapper" style="height: 260px;">
+        <div class="chart-container-wrapper" style="position: relative; width: 100%; height: 260px;">
           <canvas id="chart-dash-top-qualities"></canvas>
         </div>
       </div>
@@ -3607,41 +3607,44 @@
         }
       }
 
-      // Render Horizontal Bar Chart for Top Qualities by Available Stock
+    // Render Horizontal Bar Chart for Top Qualities by Available Stock
       renderDashboardTopQualitiesChart(qualitiesList.filter(q => q.availWeight > 0).slice(0, 8));
     }
+
+    let _lastTopQualitiesKey = '';
 
     function renderDashboardTopQualitiesChart(topQualities) {
       const canvas = document.getElementById('chart-dash-top-qualities');
       if (!canvas) return;
 
-      if (dashTopChartInstance) {
-        dashTopChartInstance.destroy();
-      }
+      const isNullState = topQualities.length === 0;
+      const labels = isNullState ? ['No Stock Available'] : topQualities.map(q => q.quality);
+      const dataWeights = isNullState ? [0] : topQualities.map(q => parseFloat(q.availWeight.toFixed(2)));
 
-      if (topQualities.length === 0) {
-        // Empty state chart
-        dashTopChartInstance = new Chart(canvas, {
-          type: 'bar',
-          data: {
-            labels: ['No Stock Available'],
-            datasets: [{
-              label: 'Available (Kg)',
-              data: [0],
-              backgroundColor: 'rgba(148, 163, 184, 0.2)'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } }
-          }
-        });
+      // Data signature to prevent redundant canvas operations
+      const currentDataKey = (isNullState ? 'EMPTY' : 'DATA') + '___' + JSON.stringify(labels) + '___' + JSON.stringify(dataWeights);
+
+      // If chart exists and data is identical, keep canvas stable with zero flicker
+      if (dashTopChartInstance && _lastTopQualitiesKey === currentDataKey) {
         return;
       }
 
-      const labels = topQualities.map(q => q.quality);
-      const dataWeights = topQualities.map(q => parseFloat(q.availWeight.toFixed(2)));
+      _lastTopQualitiesKey = currentDataKey;
+
+      const bgCol = isNullState ? 'rgba(148, 163, 184, 0.2)' : 'rgba(16, 185, 129, 0.8)';
+      const borderCol = isNullState ? 'rgba(148, 163, 184, 0.4)' : '#10b981';
+
+      if (dashTopChartInstance) {
+        // Seamlessly update existing instance without destroy/recreate flicker
+        dashTopChartInstance.data.labels = labels;
+        if (dashTopChartInstance.data.datasets && dashTopChartInstance.data.datasets[0]) {
+          dashTopChartInstance.data.datasets[0].data = dataWeights;
+          dashTopChartInstance.data.datasets[0].backgroundColor = bgCol;
+          dashTopChartInstance.data.datasets[0].borderColor = borderCol;
+        }
+        dashTopChartInstance.update('none'); // Update without entrance animation
+        return;
+      }
 
       dashTopChartInstance = new Chart(canvas, {
         type: 'bar',
@@ -3650,8 +3653,8 @@
           datasets: [{
             label: 'Available Weight (Kg)',
             data: dataWeights,
-            backgroundColor: 'rgba(16, 185, 129, 0.8)',
-            borderColor: '#10b981',
+            backgroundColor: bgCol,
+            borderColor: borderCol,
             borderWidth: 1,
             borderRadius: 6,
             maxBarThickness: 24
@@ -3661,6 +3664,9 @@
           indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
+          animation: {
+            duration: 0 // Zero-animation avoids flickering during data updates
+          },
           plugins: {
             legend: { display: false },
             tooltip: {
