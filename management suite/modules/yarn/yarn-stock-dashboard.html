@@ -4263,10 +4263,6 @@
 
                 <div class="slip-meta-strip">
                   <div class="meta-cell">
-                    <span class="meta-label">CHALLAN NO</span>
-                    <span class="meta-val">${sale.challanNo}</span>
-                  </div>
-                  <div class="meta-cell">
                     <span class="meta-label">DATE</span>
                     <span class="meta-val">${formatDate(sale.date)}</span>
                   </div>
@@ -4335,7 +4331,7 @@
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Packing Slip - Challan No: ${sale.challanNo}</title>
+          <title>Packing Slip - ${companyName} (${formatDate(sale.date)})</title>
           <style>
             @page {
               size: A4 portrait;
