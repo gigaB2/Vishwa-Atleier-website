@@ -3440,7 +3440,7 @@
       stockData.forEach(lot => {
         const qName = (lot.quality || 'Unspecified Quality').trim();
         const supplier = (lot.supplier || 'Unspecified Supplier').trim();
-        const lotNo = (lot.lotNo || '-').trim();
+        const lotNo = String(lot.lotNumber || lot.lotNo || lot.lot_no || lot.lot || lot.challanNo || '-').trim();
         const typeName = lot.itemType || 'Polyester';
         const code = lot.code || '';
         const color = lot.color || '';
