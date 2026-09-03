@@ -1697,11 +1697,31 @@
 
 
 
+      <!-- Sales Search & Filter Container -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="filter-bar">
+          <div class="form-group" style="flex: 2; min-width: 250px;">
+            <label for="sales-search">Search (Comma Separated)</label>
+            <input type="text" id="sales-search" class="search-input" placeholder="e.g. Challan, Customer, Bori, Color, Specs..." oninput="renderSalesTable()" style="margin-bottom: 0; width: 100%;">
+          </div>
+          <div class="form-group" style="flex: 1; min-width: 140px;">
+            <label for="sales-from-date">From Date</label>
+            <input type="date" id="sales-from-date" onchange="renderSalesTable()" style="margin-bottom: 0;">
+          </div>
+          <div class="form-group" style="flex: 1; min-width: 140px;">
+            <label for="sales-to-date">To Date</label>
+            <input type="date" id="sales-to-date" onchange="renderSalesTable()" style="margin-bottom: 0;">
+          </div>
+          <div class="form-group">
+            <button type="button" class="btn btn-secondary" onclick="clearSalesFilters()" style="height: 38px; white-space: nowrap;">Clear Filters</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Sales List Card -->
       <div class="card">
-        <div class="search-row">
+        <div class="search-row" style="margin-bottom: 1rem;">
           <h3>Sales Ledger</h3>
-          <input type="text" id="sales-search" class="search-input" placeholder="Search sales..." oninput="renderSalesTable()">
         </div>
         <div class="table-container">
           <table>
@@ -6022,23 +6042,45 @@
       return parts.length > 0 ? parts.join(' | ') : (item.twist || '-');
     }
 
+    function clearSalesFilters() {
+      const searchEl = document.getElementById('sales-search');
+      const fromEl = document.getElementById('sales-from-date');
+      const toEl = document.getElementById('sales-to-date');
+      if (searchEl) searchEl.value = '';
+      if (fromEl) fromEl.value = '';
+      if (toEl) toEl.value = '';
+      renderSalesTable();
+    }
+
     function renderSalesTable() {
-      const search = document.getElementById('sales-search').value.toLowerCase();
+      const rawSearch = document.getElementById('sales-search') ? document.getElementById('sales-search').value : '';
+      const searchTerms = rawSearch.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      const fromDate = document.getElementById('sales-from-date') ? document.getElementById('sales-from-date').value : '';
+      const toDate = document.getElementById('sales-to-date') ? document.getElementById('sales-to-date').value : '';
       const body = document.getElementById('sales-table-body');
+      if (!body) return;
       body.innerHTML = '';
 
       updateSalesSortIcons();
 
-      const filtered = dataStore[activeDivision].sales.filter(s => {
-        if (!search) return true;
-        const itemsComp = s.items ? s.items.map(i => i.composition).join(' ') : '';
-        const itemsColor = s.items ? s.items.map(i => i.color).join(' ') : '';
-        const itemsTwist = s.items ? s.items.map(i => i.twist).join(' ') : '';
-        const itemsDenier = s.items ? s.items.map(i => i.denier).join(' ') : '';
-        const itemsTpm = s.items ? s.items.map(i => i.tpm).join(' ') : '';
-        const itemsBori = s.items ? s.items.map(i => i.boriNo).join(' ') : '';
-        const searchable = `${s.challanNo || ''} ${s.customerName || ''} ${s.boriNo || ''} ${s.composition || ''} ${s.color || ''} ${s.twist || ''} ${s.denier || ''} ${s.tpm || ''} ${itemsComp} ${itemsColor} ${itemsTwist} ${itemsDenier} ${itemsTpm} ${itemsBori}`.toLowerCase();
-        return searchable.includes(search);
+      const filtered = (dataStore[activeDivision]?.sales || []).filter(s => {
+        // Date range filter
+        if (fromDate && s.date && s.date < fromDate) return false;
+        if (toDate && s.date && s.date > toDate) return false;
+
+        // Comma separated search filter (AND logic)
+        if (searchTerms.length > 0) {
+          const itemsComp = s.items ? s.items.map(i => i.composition).join(' ') : '';
+          const itemsColor = s.items ? s.items.map(i => i.color).join(' ') : '';
+          const itemsTwist = s.items ? s.items.map(i => i.twist).join(' ') : '';
+          const itemsDenier = s.items ? s.items.map(i => i.denier).join(' ') : '';
+          const itemsTpm = s.items ? s.items.map(i => i.tpm).join(' ') : '';
+          const itemsBori = s.items ? s.items.map(i => i.boriNo).join(' ') : '';
+          const searchable = `${s.challanNo || ''} ${s.customerName || ''} ${s.boriNo || ''} ${s.composition || ''} ${s.color || ''} ${s.twist || ''} ${s.denier || ''} ${s.tpm || ''} ${itemsComp} ${itemsColor} ${itemsTwist} ${itemsDenier} ${itemsTpm} ${itemsBori}`.toLowerCase();
+          return searchTerms.every(term => searchable.includes(term));
+        }
+
+        return true;
       });
 
       filtered.sort((a, b) => {
