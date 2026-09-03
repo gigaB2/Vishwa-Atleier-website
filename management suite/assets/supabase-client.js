@@ -660,18 +660,29 @@
           const eKey = String(lEmp.id || lEmp.name);
           if (empMap.has(eKey)) {
             const rEmp = empMap.get(eKey);
-            // Merge fields: preserve images if local has them and remote doesn't, or vice-versa
-            const mergedEmp = {
-              ...rEmp,
-              ...lEmp,
-              idFront: lEmp.idFront || rEmp.idFront || '',
-              idBack: lEmp.idBack || rEmp.idBack || '',
-              machines: (Array.isArray(lEmp.machines) && lEmp.machines.length > 0) ? lEmp.machines : (rEmp.machines || []),
-              salaryAmount: (lEmp.salaryAmount !== undefined && lEmp.salaryAmount !== null && lEmp.salaryAmount !== '') ? lEmp.salaryAmount : rEmp.salaryAmount
-            };
-            empMap.set(eKey, mergedEmp);
+            // If local is not actively being edited, remote server employee definition takes precedence
+            if (!isLocallyActive) {
+              empMap.set(eKey, {
+                ...lEmp,
+                ...rEmp,
+                idFront: rEmp.idFront || lEmp.idFront || '',
+                idBack: rEmp.idBack || lEmp.idBack || ''
+              });
+            } else {
+              const mergedEmp = {
+                ...rEmp,
+                ...lEmp,
+                idFront: lEmp.idFront || rEmp.idFront || '',
+                idBack: lEmp.idBack || rEmp.idBack || '',
+                machines: (Array.isArray(lEmp.machines) && lEmp.machines.length > 0) ? lEmp.machines : (rEmp.machines || []),
+                salaryAmount: (lEmp.salaryAmount !== undefined && lEmp.salaryAmount !== null && lEmp.salaryAmount !== '') ? lEmp.salaryAmount : rEmp.salaryAmount
+              };
+              empMap.set(eKey, mergedEmp);
+            }
           } else {
-            empMap.set(eKey, lEmp);
+            if (isLocallyActive) {
+              empMap.set(eKey, lEmp);
+            }
           }
         });
 
@@ -682,7 +693,15 @@
         const remoteLoans = Array.isArray(parsedRemote.loans) ? filterDeletedEntities(parsedRemote.loans) : [];
         const loanMap = new Map();
         remoteLoans.forEach(ln => { if (ln && ln.id) loanMap.set(String(ln.id), ln); });
-        localLoans.forEach(ln => { if (ln && ln.id) loanMap.set(String(ln.id), ln); });
+        localLoans.forEach(ln => {
+          if (ln && ln.id) {
+            if (!loanMap.has(String(ln.id)) && isLocallyActive) {
+              loanMap.set(String(ln.id), ln);
+            } else if (loanMap.has(String(ln.id)) && isLocallyActive) {
+              loanMap.set(String(ln.id), { ...loanMap.get(String(ln.id)), ...ln });
+            }
+          }
+        });
         const mergedLoans = filterDeletedEntities(Array.from(loanMap.values()));
 
         // Deep merge attendance by date and employee
@@ -704,22 +723,25 @@
               if (rTime > lTime) {
                 mergedAttendance[dateKey][empKey] = { ...lEntry, ...rEntry };
               } else if (lTime > rTime) {
-                mergedAttendance[dateKey][empKey] = { ...rEntry, ...lEntry };
+                mergedAttendance[dateKey][empKey] = isLocallyActive ? { ...rEntry, ...lEntry } : { ...lEntry, ...rEntry };
               } else {
                 mergedAttendance[dateKey][empKey] = isLocallyActive ? { ...rEntry, ...lEntry } : { ...lEntry, ...rEntry };
               }
             } else if (rEntry) {
               mergedAttendance[dateKey][empKey] = rEntry;
             } else if (lEntry) {
-              mergedAttendance[dateKey][empKey] = lEntry;
+              if (isLocallyActive) {
+                mergedAttendance[dateKey][empKey] = lEntry;
+              }
             }
           });
         });
 
         // Merge salary settlements
         const mergedSalaryPayments = {
-          ...(parsedLocal.salaryPayments || {}),
-          ...(parsedRemote.salaryPayments || {})
+          ...(isLocallyActive ? parsedLocal.salaryPayments : {}),
+          ...(parsedRemote.salaryPayments || {}),
+          ...(isLocallyActive ? parsedLocal.salaryPayments : {})
         };
 
         return {
