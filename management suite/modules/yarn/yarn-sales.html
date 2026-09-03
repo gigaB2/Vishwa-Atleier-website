@@ -1424,73 +1424,9 @@
       <button class="main-tab-btn" id="tab-btn-doubler" onclick="switchDivision('doubler')">Doubler/MX</button>
     </div>
 
-    <!-- Active Division Header Title & Navigation Tabs -->
+    <!-- Active Division Header Title -->
     <div class="division-head">
       <h2 id="division-title" style="text-transform: uppercase; letter-spacing: 0.05em; font-size: 1.4rem;">Covering Yarn Management</h2>
-      <!-- Action & View Selector Menu (Production, Sales, Stock Dashboard) -->
-      <div class="yarn-nav-menu-container" id="yarnNavMenuContainer">
-        <button type="button" class="yarn-menu-trigger-btn" id="yarnNavMenuTrigger" aria-haspopup="true" aria-expanded="false" onclick="toggleYarnNavMenu(event)" title="Select Action / View">
-          <span class="yarn-hamburger-icon" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
-          </span>
-          <span class="yarn-menu-active-label" id="yarnActiveNavLabel">Sales</span>
-          <svg class="yarn-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </button>
-
-        <!-- Dropdown Menu Popover -->
-        <div class="yarn-nav-dropdown" id="yarnNavDropdown" role="menu">
-          <div class="yarn-nav-dropdown-header">
-            <span>ACTIONS & VIEWS</span>
-          </div>
-          <div class="yarn-nav-menu-list">
-            <button type="button" class="yarn-nav-menu-item" id="tab-btn-production" role="menuitem" onclick="selectYarnNavSubTab('production')">
-              <div class="yarn-nav-item-icon icon-production">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                </svg>
-              </div>
-              <div class="yarn-nav-item-text">
-                <span class="yarn-nav-item-title">Production</span>
-                <span class="yarn-nav-item-desc">Log production & entries</span>
-              </div>
-              <div class="yarn-nav-item-indicator"></div>
-            </button>
-
-            <button type="button" class="yarn-nav-menu-item active" id="tab-btn-sales" role="menuitem" onclick="selectYarnNavSubTab('sales')">
-              <div class="yarn-nav-item-icon icon-sales">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"></path>
-                  <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                </svg>
-              </div>
-              <div class="yarn-nav-item-text">
-                <span class="yarn-nav-item-title">Sales</span>
-                <span class="yarn-nav-item-desc">Sales entries, bills & challans</span>
-              </div>
-              <div class="yarn-nav-item-indicator"></div>
-            </button>
-
-            <button type="button" class="yarn-nav-menu-item" id="tab-btn-stock" role="menuitem" onclick="selectYarnNavSubTab('stock-dashboard')">
-              <div class="yarn-nav-item-icon icon-stock">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
-              </div>
-              <div class="yarn-nav-item-text">
-                <span class="yarn-nav-item-title">Stock Dashboard</span>
-                <span class="yarn-nav-item-desc">Live bori stock & quick sell</span>
-              </div>
-              <div class="yarn-nav-item-indicator"></div>
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
 
 
