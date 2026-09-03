@@ -1994,21 +1994,21 @@
               </div>
             </div>
 
-            <!-- Row 2: Color, Denier, TPM, Twist, Rolls, Production Qty, Actions -->
+            <!-- Row 2: Color, Denier, TPM, Twist, Rolls, Gross Wt, Tare Wt, Net Qty, Actions -->
             <div class="yp-form-row">
-              <div class="form-group" style="flex: 1.2 1 120px;">
+              <div class="form-group" style="flex: 1.1 1 110px;">
                 <label for="prod-color">Color</label>
                 <input type="text" id="prod-color" placeholder="Color" required>
               </div>
-              <div class="form-group" style="flex: 1 1 95px;">
+              <div class="form-group" style="flex: 0.9 1 85px;">
                 <label for="prod-denier">Denier</label>
                 <input type="number" id="prod-denier" placeholder="Denier" required min="1" step="any">
               </div>
-              <div class="form-group" style="flex: 1 1 95px;">
+              <div class="form-group" style="flex: 0.9 1 85px;">
                 <label for="prod-tpm">TPM</label>
                 <input type="number" id="prod-tpm" placeholder="TPM" required min="0">
               </div>
-              <div class="form-group yp-twist-group" style="flex: 1 1 110px;">
+              <div class="form-group yp-twist-group" style="flex: 1 1 100px;">
                 <label for="prod-twist-trigger">Twist</label>
                 <div class="yp-custom-select" id="prod-twist-custom">
                   <select id="prod-twist" required tabindex="-1" aria-hidden="true">
@@ -2023,13 +2023,21 @@
                   <div class="dropdown-list" id="prod-twist-menu" role="listbox"></div>
                 </div>
               </div>
-              <div class="form-group" style="flex: 1 1 90px;">
+              <div class="form-group" style="flex: 0.9 1 80px;">
                 <label for="prod-rolls">Rolls</label>
                 <input type="number" id="prod-rolls" placeholder="Rolls" required min="1">
               </div>
-              <div class="form-group" style="flex: 1.2 1 120px;">
-                <label for="prod-qty">Production Qty (Kg)</label>
-                <input type="number" step="any" id="prod-qty" placeholder="Qty (Kg)" required min="0.01">
+              <div class="form-group" style="flex: 1 1 95px;">
+                <label for="prod-gross-weight"><span style="color: var(--accent);">Gross Wt</span></label>
+                <input type="number" step="any" id="prod-gross-weight" placeholder="Gross (Kg)" min="0" oninput="autoCalcProdNetWeight()">
+              </div>
+              <div class="form-group" style="flex: 1 1 95px;">
+                <label for="prod-tare-weight"><span style="color: var(--accent);">Tare Wt</span></label>
+                <input type="number" step="any" id="prod-tare-weight" placeholder="Tare (Kg)" min="0" oninput="autoCalcProdNetWeight()">
+              </div>
+              <div class="form-group" style="flex: 1.1 1 105px;">
+                <label for="prod-qty"><strong>Net Wt (Kg)</strong></label>
+                <input type="number" step="any" id="prod-qty" placeholder="Net Qty (Kg)" required min="0.01">
               </div>
               <div class="form-actions" style="margin-left: auto;">
                 <button type="submit" class="btn btn-primary" id="prod-submit-btn">Save</button>
@@ -2124,8 +2132,14 @@
                 <th onclick="toggleProdSort('rolls')" style="cursor: pointer; user-select: none;">
                   Rolls <span id="sort-icon-rolls">↕</span>
                 </th>
+                <th onclick="toggleProdSort('grossWeight')" style="cursor: pointer; user-select: none;">
+                  Gross Wt (Kg) <span id="sort-icon-grossWeight">↕</span>
+                </th>
+                <th onclick="toggleProdSort('tareWeight')" style="cursor: pointer; user-select: none;">
+                  Tare Wt (Kg) <span id="sort-icon-tareWeight">↕</span>
+                </th>
                 <th onclick="toggleProdSort('qty')" style="cursor: pointer; user-select: none;">
-                  Qty (Kg) <span id="sort-icon-qty">↕</span>
+                  Net Wt (Kg) <span id="sort-icon-qty">↕</span>
                 </th>
                 <th class="actions-col">Actions</th>
               </tr>
@@ -2829,12 +2843,31 @@
       return maxNum + 1;
     }
 
+    window.autoCalcProdNetWeight = function() {
+      const grossEl = document.getElementById('prod-gross-weight');
+      const tareEl = document.getElementById('prod-tare-weight');
+      const netEl = document.getElementById('prod-qty');
+      if (!grossEl || !tareEl || !netEl) return;
+
+      const gross = parseFloat(grossEl.value);
+      const tare = parseFloat(tareEl.value) || 0;
+
+      if (!isNaN(gross) && gross > 0) {
+        const net = Math.max(0, gross - tare);
+        netEl.value = parseFloat(net.toFixed(2));
+      }
+    };
+
     function resetProductionForm(preserveLot = false) {
       const currentLot = preserveLot ? (document.getElementById('prod-lot')?.value || '') : '';
       document.getElementById('production-form').reset();
       document.getElementById('prod-edit-id').value = '';
       document.getElementById('prod-name').value = '';
       document.getElementById('prod-name-search').value = '';
+      const grossInput = document.getElementById('prod-gross-weight');
+      if (grossInput) grossInput.value = '';
+      const tareInput = document.getElementById('prod-tare-weight');
+      if (tareInput) tareInput.value = '';
       const divLabel = activeDivision === 'doubler' ? 'Doubler/MX' : activeDivision.toUpperCase();
       document.getElementById('prod-form-title').innerText = `Add ${divLabel} Production Log`;
       document.getElementById('prod-submit-btn').innerText = 'Save';
@@ -2879,6 +2912,10 @@
       const lotNumPart = document.getElementById('prod-lot').value.trim();
       const lotNo = lotNumPart ? (lotPrefix + (typeof cleanLotNumber === 'function' ? cleanLotNumber(lotNumPart) : lotNumPart.replace(/^[C|T|D|B]-Lot\s*/i, ''))) : '';
 
+      const grossVal = parseFloat(document.getElementById('prod-gross-weight')?.value) || 0;
+      const tareVal = parseFloat(document.getElementById('prod-tare-weight')?.value) || 0;
+      const netVal = !isNaN(parseFloat(document.getElementById('prod-qty').value)) ? parseFloat(parseFloat(document.getElementById('prod-qty').value).toFixed(2)) : 0;
+
       const costingProd = window._currentSelectedCostingProduct;
       const data = {
         id: editId || 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -2892,7 +2929,9 @@
         tpm: parseInt(document.getElementById('prod-tpm').value),
         twist: document.getElementById('prod-twist').value,
         rolls: parseInt(document.getElementById('prod-rolls').value, 10) || 0,
-        qty: !isNaN(parseFloat(document.getElementById('prod-qty').value)) ? parseFloat(parseFloat(document.getElementById('prod-qty').value).toFixed(2)) : 0,
+        grossWeight: grossVal,
+        tareWeight: tareVal,
+        qty: netVal,
         configType: costingProd ? costingProd.configType : '',
         ply: costingProd ? costingProd.ply : '',
         yarns: costingProd && costingProd.yarns ? costingProd.yarns : []
@@ -3820,6 +3859,8 @@
             maxRolls: stock.remainingRolls,
             maxQty: stock.remainingQty,
             rollsQty: stock.remainingRolls,
+            grossWeight: parseFloat(prod.grossWeight) || 0,
+            tareWeight: parseFloat(prod.tareWeight) || 0,
             saleQty: stock.remainingQty,
             rate: prefilledRate,
             amount: prefilledRate * stock.remainingQty
@@ -3938,13 +3979,17 @@
       tbody.innerHTML = '';
 
       items.forEach(item => {
+        const grossStr = (parseFloat(item.grossWeight) || 0) > 0 ? `${(parseFloat(item.grossWeight) || 0).toFixed(2)} Kg` : '-';
+        const tareStr = (parseFloat(item.tareWeight) || 0) > 0 ? `${(parseFloat(item.tareWeight) || 0).toFixed(2)} Kg` : '-';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${item.boriNo}</strong></td>
           <td><span style="font-size:0.8rem; color:var(--muted);">${item.composition}</span></td>
           <td>${item.color || '-'}</td>
           <td style="text-align: center;">${item.rollsQty || 0}</td>
-          <td style="text-align: right;">${(item.saleQty || 0).toFixed(2)} Kg</td>
+          <td style="text-align: right; color: var(--muted);">${grossStr}</td>
+          <td style="text-align: right; color: var(--muted);">${tareStr}</td>
+          <td style="text-align: right; font-weight: 600;">${(item.saleQty || 0).toFixed(2)} Kg</td>
           <td style="text-align: right;">₹${(item.rate || 0).toFixed(2)}</td>
           <td style="text-align: right;"><strong>₹${(item.amount || 0).toFixed(2)}</strong></td>
         `;
@@ -3953,6 +3998,8 @@
 
       const totalBoris = items.length;
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
+      const totalGross = items.reduce((sum, item) => sum + (parseFloat(item.grossWeight) || 0), 0) || parseFloat(sale.totalGrossWeight) || parseFloat(sale.grossWeight) || 0;
+      const totalTare = items.reduce((sum, item) => sum + (parseFloat(item.tareWeight) || 0), 0) || parseFloat(sale.totalTareWeight) || parseFloat(sale.tareWeight) || 0;
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const subtotalVal = sale.subtotalAmount || sale.amount || 0;
       const discountAmount = sale.discountAmount || 0;
@@ -3962,6 +4009,10 @@
 
       document.getElementById('details-summary-total-boris').innerText = totalBoris;
       document.getElementById('details-summary-total-rolls').innerText = totalRolls;
+      const dGrossEl = document.getElementById('details-summary-total-gross');
+      if (dGrossEl) dGrossEl.innerText = `${totalGross.toFixed(2)} Kg`;
+      const dTareEl = document.getElementById('details-summary-total-tare');
+      if (dTareEl) dTareEl.innerText = `${totalTare.toFixed(2)} Kg`;
       document.getElementById('details-summary-total-weight').innerText = `${totalWeight.toFixed(2)} Kg`;
       document.getElementById('details-summary-subtotal').innerText = `₹${subtotalVal.toFixed(2)}`;
 
@@ -4477,6 +4528,8 @@
 
       const totalBoris = items.length;
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
+      const totalGrossWeight = items.reduce((sum, item) => sum + (parseFloat(item.grossWeight) || 0), 0) || parseFloat(sale.totalGrossWeight) || parseFloat(sale.grossWeight) || 0;
+      const totalTareWeight = items.reduce((sum, item) => sum + (parseFloat(item.tareWeight) || 0), 0) || parseFloat(sale.totalTareWeight) || parseFloat(sale.tareWeight) || 0;
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const lotNo = resolveSaleLotNo(sale);
 
@@ -4496,6 +4549,8 @@
       const customerAddress = sale.customerAddress || "Industrial Area, Surat, Gujarat, India";
 
       const itemsHtml = items.map((item, index) => {
+        const grossStr = (parseFloat(item.grossWeight) || 0) > 0 ? (parseFloat(item.grossWeight) || 0).toFixed(2) : '-';
+        const tareStr = (parseFloat(item.tareWeight) || 0) > 0 ? (parseFloat(item.tareWeight) || 0).toFixed(2) : '-';
         return `
           <tr>
             <td style="text-align: center;">${index + 1}</td>
@@ -4504,6 +4559,8 @@
             <td>${item.twist || '-'}</td>
             <td>${item.color || '-'}</td>
             <td style="text-align: center;">${item.rollsQty || 0}</td>
+            <td style="text-align: right; color: #555555;">${grossStr}</td>
+            <td style="text-align: right; color: #555555;">${tareStr}</td>
             <td style="text-align: right; font-weight: 600;">${(parseFloat(item.saleQty) || 0).toFixed(2)} Kg</td>
           </tr>
         `;
@@ -4669,7 +4726,7 @@
               margin-bottom: 30px;
             }
             .declarations {
-              width: 52%;
+              width: 50%;
               font-size: 10px;
               color: #444444;
               line-height: 1.6;
@@ -4678,7 +4735,7 @@
               border-radius: 4px;
             }
             .summary-table {
-              width: 42%;
+              width: 46%;
               border-collapse: collapse;
               border: 1px solid #000000;
             }
@@ -4758,13 +4815,15 @@
             <table class="items-table">
               <thead>
                 <tr>
-                  <th style="width: 7%; text-align: center;">Sr. No.</th>
-                  <th style="width: 18%;">Bori/Box No</th>
-                  <th style="width: 30%;">Name</th>
-                  <th style="width: 15%;">Twist</th>
-                  <th style="width: 14%;">Color</th>
+                  <th style="width: 6%; text-align: center;">Sr. No.</th>
+                  <th style="width: 14%;">Bori/Box No</th>
+                  <th style="width: 24%;">Name</th>
+                  <th style="width: 10%;">Twist</th>
+                  <th style="width: 10%;">Color</th>
                   <th style="width: 6%; text-align: center;">Rolls</th>
-                  <th style="width: 16%; text-align: right;">Weight (Kg)</th>
+                  <th style="width: 10%; text-align: right;">Gross Wt</th>
+                  <th style="width: 10%; text-align: right;">Tare Wt</th>
+                  <th style="width: 10%; text-align: right;">Net Wt (Kg)</th>
                 </tr>
               </thead>
               <tbody>
@@ -4788,8 +4847,18 @@
                   <td>Total Rolls</td>
                   <td style="text-align: right; font-weight: 600;">${totalRolls}</td>
                 </tr>
+                ${totalGrossWeight > 0 ? `
+                <tr>
+                  <td>Total Gross Weight</td>
+                  <td style="text-align: right; font-weight: 600;">${totalGrossWeight.toFixed(2)} Kg</td>
+                </tr>
+                <tr>
+                  <td>Total Tare Weight</td>
+                  <td style="text-align: right; font-weight: 600;">${totalTareWeight.toFixed(2)} Kg</td>
+                </tr>
+                ` : ''}
                 <tr class="total-row">
-                  <td><strong>Total Weight</strong></td>
+                  <td><strong>Total Net Weight</strong></td>
                   <td style="text-align: right; font-weight: 700;">${totalWeight.toFixed(2)} Kg</td>
                 </tr>
               </table>
@@ -5529,6 +5598,8 @@
       tbody.innerHTML = '';
 
       modalChallanItems.forEach((item, index) => {
+        const grossStr = (parseFloat(item.grossWeight) || 0) > 0 ? (parseFloat(item.grossWeight) || 0).toFixed(2) : '-';
+        const tareStr = (parseFloat(item.tareWeight) || 0) > 0 ? (parseFloat(item.tareWeight) || 0).toFixed(2) : '-';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${item.boriNo}</strong></td>
@@ -5538,8 +5609,14 @@
           <td style="text-align: center;">
             <input type="number" value="${item.rollsQty}" readonly style="height:32px; padding:2px 6px; font-size:0.85rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); cursor: not-allowed; width: 70px; text-align: center;" required>
           </td>
+          <td style="text-align: right; font-size:0.82rem; color:var(--muted);">
+            ${grossStr} ${grossStr !== '-' ? 'Kg' : ''}
+          </td>
+          <td style="text-align: right; font-size:0.82rem; color:var(--muted);">
+            ${tareStr} ${tareStr !== '-' ? 'Kg' : ''}
+          </td>
           <td style="text-align: right;">
-            <input type="number" step="0.001" value="${item.saleQty}" readonly style="height:32px; padding:2px 6px; font-size:0.85rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); cursor: not-allowed; width: 95px; text-align: center;" required>
+            <input type="number" step="0.001" value="${item.saleQty}" readonly style="height:32px; padding:2px 6px; font-size:0.85rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); cursor: not-allowed; width: 95px; text-align: center; font-weight:600;" required>
           </td>
           <td style="text-align: right;">
             <strong id="modal-item-amt-${index}">₹${(item.amount || 0).toFixed(2)}</strong>
@@ -5580,6 +5657,8 @@
     window.calculateModalTotals = function() {
       const totalBoris = modalChallanItems.length;
       const totalRolls = modalChallanItems.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
+      const totalGross = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.grossWeight) || 0), 0);
+      const totalTare = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.tareWeight) || 0), 0);
       const totalWeight = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const subtotal = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
@@ -5610,6 +5689,10 @@
 
       document.getElementById('modal-summary-total-boris').innerText = totalBoris;
       document.getElementById('modal-summary-total-rolls').innerText = totalRolls;
+      const grossSummaryEl = document.getElementById('modal-summary-total-gross');
+      if (grossSummaryEl) grossSummaryEl.innerText = `${totalGross.toFixed(2)} Kg`;
+      const tareSummaryEl = document.getElementById('modal-summary-total-tare');
+      if (tareSummaryEl) tareSummaryEl.innerText = `${totalTare.toFixed(2)} Kg`;
       document.getElementById('modal-summary-total-weight').innerText = `${totalWeight.toFixed(2)} Kg`;
       document.getElementById('modal-summary-subtotal').innerText = `₹${subtotal.toFixed(2)}`;
       
@@ -5690,6 +5773,10 @@
       const gstAmount = taxableAmount * (gstPercent / 100);
       const grandTotal = taxableAmount + gstAmount;
 
+      const totalGrossWeight = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.grossWeight) || 0), 0);
+      const totalTareWeight = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.tareWeight) || 0), 0);
+      const totalNetWeight = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
+
       const data = {
         id: editId || 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         challanNo: challanNo,
@@ -5711,6 +5798,9 @@
         subtotalAmount: subtotal,
         gstAmount: gstAmount,
         totalAmount: grandTotal,
+        totalGrossWeight: totalGrossWeight,
+        totalTareWeight: totalTareWeight,
+        totalQty: totalNetWeight,
         items: modalChallanItems.map(item => ({
           boriNo: item.boriNo,
           composition: item.composition,
@@ -5720,6 +5810,8 @@
           tpm: item.tpm,
           twist: item.twist,
           rollsQty: parseInt(item.rollsQty),
+          grossWeight: parseFloat(item.grossWeight) || 0,
+          tareWeight: parseFloat(item.tareWeight) || 0,
           saleQty: parseFloat(item.saleQty),
           rate: parseFloat(item.rate),
           amount: parseFloat(item.amount)
@@ -5733,7 +5825,9 @@
         tpm: modalChallanItems[0].tpm,
         twist: modalChallanItems[0].twist,
         rollsQty: modalChallanItems.reduce((sum, i) => sum + parseInt(i.rollsQty), 0),
-        saleQty: modalChallanItems.reduce((sum, i) => sum + parseFloat(i.saleQty), 0),
+        grossWeight: totalGrossWeight,
+        tareWeight: totalTareWeight,
+        saleQty: totalNetWeight,
         rate: modalChallanItems[0].rate,
         amount: subtotal
       };
@@ -5976,7 +6070,7 @@
     };
 
     function updateSortIcons() {
-      ['date', 'boriNo', 'productName', 'lotNo', 'color', 'denier', 'tpm', 'twist', 'rolls', 'qty'].forEach(key => {
+      ['date', 'boriNo', 'productName', 'lotNo', 'color', 'denier', 'tpm', 'twist', 'rolls', 'grossWeight', 'tareWeight', 'qty'].forEach(key => {
         const iconEl = document.getElementById(`sort-icon-${key}`);
         if (iconEl) {
           if (prodSortKey === key) {
@@ -6072,6 +6166,8 @@
         else if (prodSortKey === 'denier') { valA = dynA.denier || a.denier; valB = dynB.denier || b.denier; }
         else if (prodSortKey === 'tpm') { valA = dynA.tpm || a.tpm; valB = dynB.tpm || b.tpm; }
         else if (prodSortKey === 'twist') { valA = dynA.twist || a.twist; valB = dynB.twist || b.twist; }
+        else if (prodSortKey === 'grossWeight') { valA = parseFloat(a.grossWeight) || 0; valB = parseFloat(b.grossWeight) || 0; }
+        else if (prodSortKey === 'tareWeight') { valA = parseFloat(a.tareWeight) || 0; valB = parseFloat(b.tareWeight) || 0; }
 
         if (valA === undefined || valA === null) valA = '';
         if (valB === undefined || valB === null) valB = '';
@@ -6112,7 +6208,7 @@
       updateBatchSellButtonState();
 
       if (filtered.length === 0) {
-        body.innerHTML = '<tr><td colspan="12" class="muted" style="text-align: center;">No production records found</td></tr>';
+        body.innerHTML = '<tr><td colspan="14" class="muted" style="text-align: center;">No production records found</td></tr>';
         return;
       }
 
@@ -6125,6 +6221,8 @@
 
         const formattedQtyStr = Number(numQty).toFixed(2);
         const formattedRemStr = Number(remainingQtyNum).toFixed(2);
+        const formattedGross = (parseFloat(l.grossWeight) || 0) > 0 ? `${(parseFloat(l.grossWeight) || 0).toFixed(2)} Kg` : '-';
+        const formattedTare = (parseFloat(l.tareWeight) || 0) > 0 ? `${(parseFloat(l.tareWeight) || 0).toFixed(2)} Kg` : '-';
 
         let rollsDisplay = l.rolls;
         let qtyDisplay = `${formattedQtyStr} Kg`;
@@ -6175,6 +6273,8 @@
           <td>${dyn.tpm || l.tpm}</td>
           <td>${dyn.twist || l.twist}</td>
           <td>${rollsDisplay}</td>
+          <td>${formattedGross}</td>
+          <td>${formattedTare}</td>
           <td>${qtyDisplay}</td>
           <td class="actions-cell">
             <div class="action-menu-container">
@@ -6601,6 +6701,8 @@
           maxRolls: cand.remainingRolls,
           maxQty: cand.remainingQty,
           rollsQty: rollsFromThisBori,
+          grossWeight: parseFloat(log.grossWeight) || 0,
+          tareWeight: parseFloat(log.tareWeight) || 0,
           saleQty: parseFloat(qtyFromThisBori.toFixed(3)),
           rate: defaultRate,
           amount: parseFloat((qtyFromThisBori * defaultRate).toFixed(2))
@@ -6852,6 +6954,8 @@
       document.getElementById('prod-tpm').value = log.tpm;
       document.getElementById('prod-twist').value = log.twist;
       document.getElementById('prod-rolls').value = log.rolls;
+      document.getElementById('prod-gross-weight').value = (parseFloat(log.grossWeight) || 0) > 0 ? parseFloat(log.grossWeight).toFixed(2) : '';
+      document.getElementById('prod-tare-weight').value = (parseFloat(log.tareWeight) || 0) > 0 ? parseFloat(log.tareWeight).toFixed(2) : '';
       document.getElementById('prod-qty').value = !isNaN(parseFloat(log.qty)) ? parseFloat(log.qty).toFixed(2) : log.qty;
 
       document.getElementById('prod-form-title').innerText = `Edit ${activeDivision.toUpperCase()} Production Log`;
@@ -6914,6 +7018,8 @@
       document.getElementById('prod-tpm').value = log.tpm;
       document.getElementById('prod-twist').value = log.twist;
       document.getElementById('prod-rolls').value = log.rolls;
+      document.getElementById('prod-gross-weight').value = (parseFloat(log.grossWeight) || 0) > 0 ? parseFloat(log.grossWeight).toFixed(2) : '';
+      document.getElementById('prod-tare-weight').value = (parseFloat(log.tareWeight) || 0) > 0 ? parseFloat(log.tareWeight).toFixed(2) : '';
       document.getElementById('prod-qty').value = !isNaN(parseFloat(log.qty)) ? parseFloat(log.qty).toFixed(2) : log.qty;
 
       document.getElementById('prod-form-title').innerText = `Add ${activeDivision.toUpperCase()} Production Log (Repeat Entry)`;
@@ -7879,9 +7985,11 @@
                   <th>Composition</th>
                   <th>Color</th>
                   <th>Specs</th>
-                  <th style="width: 90px; text-align: center;">Rolls Qty</th>
-                  <th style="width: 110px; text-align: right;">Weight (Kg)</th>
-                  <th style="width: 120px; text-align: right;">Amount (₹)</th>
+                  <th style="width: 80px; text-align: center;">Rolls</th>
+                  <th style="width: 95px; text-align: right;">Gross Wt</th>
+                  <th style="width: 95px; text-align: right;">Tare Wt</th>
+                  <th style="width: 105px; text-align: right;">Net Wt (Kg)</th>
+                  <th style="width: 110px; text-align: right;">Amount (₹)</th>
                 </tr>
               </thead>
               <tbody id="modal-sales-items-body">
@@ -7895,7 +8003,9 @@
             <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
               <span style="font-size: 0.85rem;">Total Boris/Boxes: <strong id="modal-summary-total-boris">0</strong></span>
               <span style="font-size: 0.85rem;">Total Rolls: <strong id="modal-summary-total-rolls">0</strong></span>
-              <span style="font-size: 0.85rem;">Total Weight: <strong id="modal-summary-total-weight">0.00 Kg</strong></span>
+              <span style="font-size: 0.85rem;">Gross: <strong id="modal-summary-total-gross">0.00 Kg</strong></span>
+              <span style="font-size: 0.85rem;">Tare: <strong id="modal-summary-total-tare">0.00 Kg</strong></span>
+              <span style="font-size: 0.85rem;">Net Wt: <strong id="modal-summary-total-weight">0.00 Kg</strong></span>
               <span style="font-size: 0.85rem;">Subtotal: <strong id="modal-summary-subtotal">₹0.00</strong></span>
               <span style="font-size: 0.85rem;">Taxable: <strong id="modal-summary-taxable" style="color: var(--accent);">₹0.00</strong></span>
               <span style="font-size: 0.85rem;">GST: <strong id="modal-summary-gst">₹0.00</strong></span>
@@ -7967,7 +8077,9 @@
                 <th>Composition</th>
                 <th>Color</th>
                 <th style="text-align: center;">Rolls Qty</th>
-                <th style="text-align: right;">Weight (Kg)</th>
+                <th style="text-align: right;">Gross Wt</th>
+                <th style="text-align: right;">Tare Wt</th>
+                <th style="text-align: right;">Net Wt (Kg)</th>
                 <th style="text-align: right;">Rate/Kg (₹)</th>
                 <th style="text-align: right;">Amount (₹)</th>
               </tr>
@@ -7983,7 +8095,9 @@
           <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
             <span style="font-size: 0.85rem;">Total Boris/Boxes: <strong id="details-summary-total-boris">0</strong></span>
             <span style="font-size: 0.85rem;">Total Rolls: <strong id="details-summary-total-rolls">0</strong></span>
-            <span style="font-size: 0.85rem;">Total Weight: <strong id="details-summary-total-weight">0.00 Kg</strong></span>
+            <span style="font-size: 0.85rem;">Gross: <strong id="details-summary-total-gross">0.00 Kg</strong></span>
+            <span style="font-size: 0.85rem;">Tare: <strong id="details-summary-total-tare">0.00 Kg</strong></span>
+            <span style="font-size: 0.85rem;">Net Wt: <strong id="details-summary-total-weight">0.00 Kg</strong></span>
             <span style="font-size: 0.85rem;">Subtotal: <strong id="details-summary-subtotal">₹0.00</strong></span>
             <span id="details-summary-discount-row" style="font-size: 0.85rem; display: none;"></span>
             <span style="font-size: 0.85rem;">Taxable: <strong id="details-summary-taxable" style="color: var(--accent);">₹0.00</strong></span>

@@ -3510,6 +3510,9 @@
           ? parseFloat(item.amount)
           : ((item.saleQty || 0) * itemRate);
 
+        const grossStr = (parseFloat(item.grossWeight) || 0) > 0 ? `${(parseFloat(item.grossWeight) || 0).toFixed(2)} Kg` : '-';
+        const tareStr = (parseFloat(item.tareWeight) || 0) > 0 ? `${(parseFloat(item.tareWeight) || 0).toFixed(2)} Kg` : '-';
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${item.boriNo}</strong></td>
@@ -3517,7 +3520,9 @@
           <td>${formatItemSpecs(item)}</td>
           <td>${item.color || '-'}</td>
           <td style="text-align: center;">${item.rollsQty || 0}</td>
-          <td style="text-align: right;">${(item.saleQty || 0).toFixed(2)} Kg</td>
+          <td style="text-align: right; color: var(--muted);">${grossStr}</td>
+          <td style="text-align: right; color: var(--muted);">${tareStr}</td>
+          <td style="text-align: right; font-weight: 600;">${(item.saleQty || 0).toFixed(2)} Kg</td>
           <td style="text-align: right;">₹${itemRate.toFixed(2)}</td>
           <td style="text-align: right;"><strong>₹${itemAmt.toFixed(2)}</strong></td>
         `;
@@ -3526,6 +3531,8 @@
 
       const totalBoris = items.length;
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
+      const totalGross = items.reduce((sum, item) => sum + (parseFloat(item.grossWeight) || 0), 0) || parseFloat(sale.totalGrossWeight) || parseFloat(sale.grossWeight) || 0;
+      const totalTare = items.reduce((sum, item) => sum + (parseFloat(item.tareWeight) || 0), 0) || parseFloat(sale.totalTareWeight) || parseFloat(sale.tareWeight) || 0;
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const subtotalVal = sale.subtotalAmount || sale.amount || items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
@@ -3536,6 +3543,10 @@
 
       document.getElementById('details-summary-total-boris').innerText = totalBoris;
       document.getElementById('details-summary-total-rolls').innerText = totalRolls;
+      const dGrossEl = document.getElementById('details-summary-total-gross');
+      if (dGrossEl) dGrossEl.innerText = `${totalGross.toFixed(2)} Kg`;
+      const dTareEl = document.getElementById('details-summary-total-tare');
+      if (dTareEl) dTareEl.innerText = `${totalTare.toFixed(2)} Kg`;
       document.getElementById('details-summary-total-weight').innerText = `${totalWeight.toFixed(2)} Kg`;
       document.getElementById('details-summary-subtotal').innerText = `₹${subtotalVal.toFixed(2)}`;
 
@@ -4052,6 +4063,8 @@
 
       const totalBoris = items.length;
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
+      const totalGrossWeight = items.reduce((sum, item) => sum + (parseFloat(item.grossWeight) || 0), 0) || parseFloat(sale.totalGrossWeight) || parseFloat(sale.grossWeight) || 0;
+      const totalTareWeight = items.reduce((sum, item) => sum + (parseFloat(item.tareWeight) || 0), 0) || parseFloat(sale.totalTareWeight) || parseFloat(sale.tareWeight) || 0;
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const lotNo = resolveSaleLotNo(sale);
 
@@ -4071,6 +4084,8 @@
       const customerAddress = sale.customerAddress || "Industrial Area, Surat, Gujarat, India";
 
       const itemsHtml = items.map((item, index) => {
+        const grossStr = (parseFloat(item.grossWeight) || 0) > 0 ? (parseFloat(item.grossWeight) || 0).toFixed(2) : '-';
+        const tareStr = (parseFloat(item.tareWeight) || 0) > 0 ? (parseFloat(item.tareWeight) || 0).toFixed(2) : '-';
         return `
           <tr>
             <td style="text-align: center;">${index + 1}</td>
@@ -4079,6 +4094,8 @@
             <td>${item.twist || '-'}</td>
             <td>${item.color || '-'}</td>
             <td style="text-align: center;">${item.rollsQty || 0}</td>
+            <td style="text-align: right; color: #555555;">${grossStr}</td>
+            <td style="text-align: right; color: #555555;">${tareStr}</td>
             <td style="text-align: right; font-weight: 600;">${(parseFloat(item.saleQty) || 0).toFixed(2)} Kg</td>
           </tr>
         `;
@@ -4333,13 +4350,15 @@
             <table class="items-table">
               <thead>
                 <tr>
-                  <th style="width: 7%; text-align: center;">Sr. No.</th>
-                  <th style="width: 18%;">Bori/Box No</th>
-                  <th style="width: 30%;">Name</th>
-                  <th style="width: 15%;">Twist</th>
-                  <th style="width: 14%;">Color</th>
+                  <th style="width: 6%; text-align: center;">Sr. No.</th>
+                  <th style="width: 14%;">Bori/Box No</th>
+                  <th style="width: 24%;">Name</th>
+                  <th style="width: 10%;">Twist</th>
+                  <th style="width: 10%;">Color</th>
                   <th style="width: 6%; text-align: center;">Rolls</th>
-                  <th style="width: 16%; text-align: right;">Weight (Kg)</th>
+                  <th style="width: 10%; text-align: right;">Gross Wt</th>
+                  <th style="width: 10%; text-align: right;">Tare Wt</th>
+                  <th style="width: 10%; text-align: right;">Net Wt (Kg)</th>
                 </tr>
               </thead>
               <tbody>
@@ -4363,8 +4382,18 @@
                   <td>Total Rolls</td>
                   <td style="text-align: right; font-weight: 600;">${totalRolls}</td>
                 </tr>
+                ${totalGrossWeight > 0 ? `
+                <tr>
+                  <td>Total Gross Weight</td>
+                  <td style="text-align: right; font-weight: 600;">${totalGrossWeight.toFixed(2)} Kg</td>
+                </tr>
+                <tr>
+                  <td>Total Tare Weight</td>
+                  <td style="text-align: right; font-weight: 600;">${totalTareWeight.toFixed(2)} Kg</td>
+                </tr>
+                ` : ''}
                 <tr class="total-row">
-                  <td><strong>Total Weight</strong></td>
+                  <td><strong>Total Net Weight</strong></td>
                   <td style="text-align: right; font-weight: 700;">${totalWeight.toFixed(2)} Kg</td>
                 </tr>
               </table>
@@ -4928,6 +4957,8 @@
       tbody.innerHTML = '';
 
       modalChallanItems.forEach((item, index) => {
+        const grossStr = (parseFloat(item.grossWeight) || 0) > 0 ? (parseFloat(item.grossWeight) || 0).toFixed(2) : '-';
+        const tareStr = (parseFloat(item.tareWeight) || 0) > 0 ? (parseFloat(item.tareWeight) || 0).toFixed(2) : '-';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${item.boriNo}</strong></td>
@@ -4937,8 +4968,14 @@
           <td style="text-align: center;">
             <input type="number" value="${item.rollsQty}" readonly style="height:32px; padding:2px 6px; font-size:0.85rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); cursor: not-allowed; width: 70px; text-align: center;" required>
           </td>
+          <td style="text-align: right; font-size:0.82rem; color:var(--muted);">
+            ${grossStr} ${grossStr !== '-' ? 'Kg' : ''}
+          </td>
+          <td style="text-align: right; font-size:0.82rem; color:var(--muted);">
+            ${tareStr} ${tareStr !== '-' ? 'Kg' : ''}
+          </td>
           <td style="text-align: right;">
-            <input type="number" step="0.001" value="${item.saleQty}" readonly style="height:32px; padding:2px 6px; font-size:0.85rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); cursor: not-allowed; width: 95px; text-align: center;" required>
+            <input type="number" step="0.001" value="${item.saleQty}" readonly style="height:32px; padding:2px 6px; font-size:0.85rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); cursor: not-allowed; width: 95px; text-align: center; font-weight:600;" required>
           </td>
           <td style="text-align: right;">
             <strong id="modal-item-amt-${index}">₹${(item.amount || 0).toFixed(2)}</strong>
@@ -4979,6 +5016,8 @@
     window.calculateModalTotals = function() {
       const totalBoris = modalChallanItems.length;
       const totalRolls = modalChallanItems.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
+      const totalGross = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.grossWeight) || 0), 0);
+      const totalTare = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.tareWeight) || 0), 0);
       const totalWeight = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const subtotal = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
@@ -5000,6 +5039,8 @@
 
       const totalBorisEl = document.getElementById('modal-summary-total-boris');
       const totalRollsEl = document.getElementById('modal-summary-total-rolls');
+      const totalGrossEl = document.getElementById('modal-summary-total-gross');
+      const totalTareEl = document.getElementById('modal-summary-total-tare');
       const totalWeightEl = document.getElementById('modal-summary-total-weight');
       const subtotalEl = document.getElementById('modal-summary-subtotal');
       const taxableEl = document.getElementById('modal-summary-taxable');
@@ -5009,6 +5050,8 @@
 
       if (totalBorisEl) totalBorisEl.innerText = totalBoris;
       if (totalRollsEl) totalRollsEl.innerText = totalRolls;
+      if (totalGrossEl) totalGrossEl.innerText = `${totalGross.toFixed(2)} Kg`;
+      if (totalTareEl) totalTareEl.innerText = `${totalTare.toFixed(2)} Kg`;
       if (totalWeightEl) totalWeightEl.innerText = `${totalWeight.toFixed(2)} Kg`;
       if (subtotalEl) subtotalEl.innerText = `₹${subtotal.toFixed(2)}`;
       if (taxableEl) taxableEl.innerText = `₹${taxableAmount.toFixed(2)}`;
@@ -5093,6 +5136,10 @@
       const gstAmount = taxableAmount * (gstPercent / 100);
       const grandTotal = taxableAmount + gstAmount;
 
+      const totalGrossWeight = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.grossWeight) || 0), 0);
+      const totalTareWeight = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.tareWeight) || 0), 0);
+      const totalNetWeight = modalChallanItems.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
+
       const data = {
         id: editId || 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         updated_at: new Date().toISOString(),
@@ -5116,6 +5163,9 @@
         subtotalAmount: subtotal,
         gstAmount: gstAmount,
         totalAmount: grandTotal,
+        totalGrossWeight: totalGrossWeight,
+        totalTareWeight: totalTareWeight,
+        totalQty: totalNetWeight,
         items: modalChallanItems.map(item => ({
           boriNo: item.boriNo,
           composition: item.composition,
@@ -5125,6 +5175,8 @@
           tpm: item.tpm,
           twist: item.twist,
           rollsQty: parseInt(item.rollsQty),
+          grossWeight: parseFloat(item.grossWeight) || 0,
+          tareWeight: parseFloat(item.tareWeight) || 0,
           saleQty: parseFloat(item.saleQty),
           rate: parseFloat(item.rate),
           amount: parseFloat(item.amount)
@@ -5138,7 +5190,9 @@
         tpm: modalChallanItems[0].tpm,
         twist: modalChallanItems[0].twist,
         rollsQty: modalChallanItems.reduce((sum, i) => sum + parseInt(i.rollsQty), 0),
-        saleQty: modalChallanItems.reduce((sum, i) => sum + parseFloat(i.saleQty), 0),
+        grossWeight: totalGrossWeight,
+        tareWeight: totalTareWeight,
+        saleQty: totalNetWeight,
         rate: modalChallanItems[0].rate,
         amount: subtotal
       };
@@ -6874,9 +6928,11 @@
                   <th>Composition</th>
                   <th>Color</th>
                   <th>Specs</th>
-                  <th style="width: 90px; text-align: center;">Rolls Qty</th>
-                  <th style="width: 110px; text-align: right;">Weight (Kg)</th>
-                  <th style="width: 120px; text-align: right;">Amount (₹)</th>
+                  <th style="width: 80px; text-align: center;">Rolls</th>
+                  <th style="width: 95px; text-align: right;">Gross Wt</th>
+                  <th style="width: 95px; text-align: right;">Tare Wt</th>
+                  <th style="width: 105px; text-align: right;">Net Wt (Kg)</th>
+                  <th style="width: 110px; text-align: right;">Amount (₹)</th>
                 </tr>
               </thead>
               <tbody id="modal-sales-items-body">
@@ -6890,7 +6946,9 @@
             <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
               <span style="font-size: 0.85rem;">Total Boris/Boxes: <strong id="modal-summary-total-boris">0</strong></span>
               <span style="font-size: 0.85rem;">Total Rolls: <strong id="modal-summary-total-rolls">0</strong></span>
-              <span style="font-size: 0.85rem;">Total Weight: <strong id="modal-summary-total-weight">0.00 Kg</strong></span>
+              <span style="font-size: 0.85rem;">Gross: <strong id="modal-summary-total-gross">0.00 Kg</strong></span>
+              <span style="font-size: 0.85rem;">Tare: <strong id="modal-summary-total-tare">0.00 Kg</strong></span>
+              <span style="font-size: 0.85rem;">Net Wt: <strong id="modal-summary-total-weight">0.00 Kg</strong></span>
               <span style="font-size: 0.85rem;">Subtotal: <strong id="modal-summary-subtotal">₹0.00</strong></span>
               <span style="font-size: 0.85rem;">Taxable: <strong id="modal-summary-taxable" style="color: var(--accent);">₹0.00</strong></span>
               <span style="font-size: 0.85rem;">GST: <strong id="modal-summary-gst">₹0.00</strong></span>
@@ -6963,7 +7021,9 @@
                 <th>Specs</th>
                 <th>Color</th>
                 <th style="text-align: center;">Rolls Qty</th>
-                <th style="text-align: right;">Weight (Kg)</th>
+                <th style="text-align: right;">Gross Wt</th>
+                <th style="text-align: right;">Tare Wt</th>
+                <th style="text-align: right;">Net Wt (Kg)</th>
                 <th style="text-align: right;">Rate/Kg (₹)</th>
                 <th style="text-align: right;">Amount (₹)</th>
               </tr>
@@ -6979,7 +7039,9 @@
           <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
             <span style="font-size: 0.85rem;">Total Boris/Boxes: <strong id="details-summary-total-boris">0</strong></span>
             <span style="font-size: 0.85rem;">Total Rolls: <strong id="details-summary-total-rolls">0</strong></span>
-            <span style="font-size: 0.85rem;">Total Weight: <strong id="details-summary-total-weight">0.00 Kg</strong></span>
+            <span style="font-size: 0.85rem;">Gross: <strong id="details-summary-total-gross">0.00 Kg</strong></span>
+            <span style="font-size: 0.85rem;">Tare: <strong id="details-summary-total-tare">0.00 Kg</strong></span>
+            <span style="font-size: 0.85rem;">Net Wt: <strong id="details-summary-total-weight">0.00 Kg</strong></span>
             <span style="font-size: 0.85rem;">Subtotal: <strong id="details-summary-subtotal">₹0.00</strong></span>
             <span id="details-summary-discount-row" style="font-size: 0.85rem; display: none;"></span>
             <span style="font-size: 0.85rem;">Taxable: <strong id="details-summary-taxable" style="color: var(--accent);">₹0.00</strong></span>

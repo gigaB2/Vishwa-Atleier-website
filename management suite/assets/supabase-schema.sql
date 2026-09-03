@@ -505,13 +505,19 @@ CREATE TABLE IF NOT EXISTS public.vf_yarn_production_logs (
     tpm INTEGER,
     twist TEXT,
     rolls INTEGER DEFAULT 0,
-    qty NUMERIC(10, 3) NOT NULL DEFAULT 0,
+    gross_weight NUMERIC(10, 3) DEFAULT 0,
+    tare_weight NUMERIC(10, 3) DEFAULT 0,
+    qty NUMERIC(10, 3) NOT NULL DEFAULT 0, -- Net Weight
     config_type TEXT,
     ply TEXT,
     yarns JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+-- Migration safety for existing vf_yarn_production_logs tables:
+ALTER TABLE public.vf_yarn_production_logs ADD COLUMN IF NOT EXISTS gross_weight NUMERIC(10, 3) DEFAULT 0;
+ALTER TABLE public.vf_yarn_production_logs ADD COLUMN IF NOT EXISTS tare_weight NUMERIC(10, 3) DEFAULT 0;
+
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_prod_div ON public.vf_yarn_production_logs(division);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_prod_date ON public.vf_yarn_production_logs(date DESC);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_prod_bori ON public.vf_yarn_production_logs(bori_no);
@@ -535,7 +541,9 @@ CREATE TABLE IF NOT EXISTS public.vf_yarn_sales_logs (
     gst_rate NUMERIC(6, 2) DEFAULT 12,
     subtotal_amount NUMERIC(12, 2),
     items JSONB DEFAULT '[]'::jsonb,
-    total_qty NUMERIC(10, 3) DEFAULT 0,
+    total_gross_weight NUMERIC(10, 3) DEFAULT 0,
+    total_tare_weight NUMERIC(10, 3) DEFAULT 0,
+    total_qty NUMERIC(10, 3) DEFAULT 0, -- Total Net Weight
     total_amount NUMERIC(12, 2) DEFAULT 0,
     gst_amount NUMERIC(12, 2) DEFAULT 0,
     raw_data JSONB DEFAULT '{}'::jsonb,
@@ -544,6 +552,8 @@ CREATE TABLE IF NOT EXISTS public.vf_yarn_sales_logs (
 );
 
 -- Migration safety for existing vf_yarn_sales_logs tables:
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS total_gross_weight NUMERIC(10, 3) DEFAULT 0;
+ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS total_tare_weight NUMERIC(10, 3) DEFAULT 0;
 ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS customer_address TEXT;
 ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS seller_company_id TEXT;
 ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS seller_name TEXT;

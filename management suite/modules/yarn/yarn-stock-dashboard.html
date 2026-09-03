@@ -3882,6 +3882,8 @@
 
       const totalBoris = items.length;
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
+      const totalGrossWeight = items.reduce((sum, item) => sum + (parseFloat(item.grossWeight) || 0), 0) || parseFloat(sale.totalGrossWeight) || parseFloat(sale.grossWeight) || 0;
+      const totalTareWeight = items.reduce((sum, item) => sum + (parseFloat(item.tareWeight) || 0), 0) || parseFloat(sale.totalTareWeight) || parseFloat(sale.tareWeight) || 0;
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const lotNo = resolveSaleLotNo(sale);
 
@@ -3901,6 +3903,8 @@
       const customerAddress = sale.customerAddress || "Industrial Area, Surat, Gujarat, India";
 
       const itemsHtml = items.map((item, index) => {
+        const grossStr = (parseFloat(item.grossWeight) || 0) > 0 ? (parseFloat(item.grossWeight) || 0).toFixed(2) : '-';
+        const tareStr = (parseFloat(item.tareWeight) || 0) > 0 ? (parseFloat(item.tareWeight) || 0).toFixed(2) : '-';
         return `
           <tr>
             <td style="text-align: center;">${index + 1}</td>
@@ -3909,6 +3913,8 @@
             <td>${item.twist || '-'}</td>
             <td>${item.color || '-'}</td>
             <td style="text-align: center;">${item.rollsQty || 0}</td>
+            <td style="text-align: right; color: #555555;">${grossStr}</td>
+            <td style="text-align: right; color: #555555;">${tareStr}</td>
             <td style="text-align: right; font-weight: 600;">${(parseFloat(item.saleQty) || 0).toFixed(2)} Kg</td>
           </tr>
         `;
@@ -4163,13 +4169,15 @@
             <table class="items-table">
               <thead>
                 <tr>
-                  <th style="width: 7%; text-align: center;">Sr. No.</th>
-                  <th style="width: 18%;">Bori/Box No</th>
-                  <th style="width: 30%;">Name</th>
-                  <th style="width: 15%;">Twist</th>
-                  <th style="width: 14%;">Color</th>
+                  <th style="width: 6%; text-align: center;">Sr. No.</th>
+                  <th style="width: 14%;">Bori/Box No</th>
+                  <th style="width: 24%;">Name</th>
+                  <th style="width: 10%;">Twist</th>
+                  <th style="width: 10%;">Color</th>
                   <th style="width: 6%; text-align: center;">Rolls</th>
-                  <th style="width: 16%; text-align: right;">Weight (Kg)</th>
+                  <th style="width: 10%; text-align: right;">Gross Wt</th>
+                  <th style="width: 10%; text-align: right;">Tare Wt</th>
+                  <th style="width: 10%; text-align: right;">Net Wt (Kg)</th>
                 </tr>
               </thead>
               <tbody>
@@ -4193,8 +4201,18 @@
                   <td>Total Rolls</td>
                   <td style="text-align: right; font-weight: 600;">${totalRolls}</td>
                 </tr>
+                ${totalGrossWeight > 0 ? `
+                <tr>
+                  <td>Total Gross Weight</td>
+                  <td style="text-align: right; font-weight: 600;">${totalGrossWeight.toFixed(2)} Kg</td>
+                </tr>
+                <tr>
+                  <td>Total Tare Weight</td>
+                  <td style="text-align: right; font-weight: 600;">${totalTareWeight.toFixed(2)} Kg</td>
+                </tr>
+                ` : ''}
                 <tr class="total-row">
-                  <td><strong>Total Weight</strong></td>
+                  <td><strong>Total Net Weight</strong></td>
                   <td style="text-align: right; font-weight: 700;">${totalWeight.toFixed(2)} Kg</td>
                 </tr>
               </table>

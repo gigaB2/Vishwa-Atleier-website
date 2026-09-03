@@ -2733,6 +2733,8 @@
                     tpm: parseInt(yp.tpm, 10) || null,
                     twist: yp.twist || null,
                     rolls: parseInt(yp.rolls, 10) || 0,
+                    gross_weight: parseFloat(yp.grossWeight) || 0,
+                    tare_weight: parseFloat(yp.tareWeight) || 0,
                     qty: parseFloat(yp.qty) || 0,
                     config_type: yp.configType || null,
                     ply: yp.ply ? String(yp.ply) : null,
@@ -2744,7 +2746,7 @@
                 if (yarnProdRows.length > 0) {
                   for (let i = 0; i < yarnProdRows.length; i += 300) {
                     const chunk = yarnProdRows.slice(i, i + 300);
-                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?on_conflict=id`, {
+                    const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?on_conflict=id`, {
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
@@ -2753,7 +2755,37 @@
                         'Prefer': 'resolution=merge-duplicates'
                       },
                       body: JSON.stringify(chunk)
-                    }).catch(() => {});
+                    }).catch(() => null);
+
+                    // Fallback for older schemas
+                    if (res && !res.ok) {
+                      const minimalChunk = chunk.map(r => ({
+                        id: r.id,
+                        division: r.division,
+                        date: r.date,
+                        bori_no: r.bori_no,
+                        product_name: r.product_name,
+                        product_id: r.product_id,
+                        lot_no: r.lot_no,
+                        color: r.color,
+                        denier: r.denier,
+                        tpm: r.tpm,
+                        twist: r.twist,
+                        rolls: r.rolls,
+                        qty: r.qty,
+                        updated_at: r.updated_at
+                      }));
+                      await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?on_conflict=id`, {
+                        method: 'POST',
+                        headers: {
+                          'apikey': SUPABASE_ANON_KEY,
+                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Content-Type': 'application/json',
+                          'Prefer': 'resolution=merge-duplicates'
+                        },
+                        body: JSON.stringify(minimalChunk)
+                      }).catch(() => {});
+                    }
                   }
                 }
               } catch(e) {
@@ -2785,6 +2817,8 @@
                     gst_rate: (ys.gstRate !== undefined && ys.gstRate !== null) ? parseFloat(ys.gstRate) : null,
                     subtotal_amount: (ys.subtotalAmount !== undefined && ys.subtotalAmount !== null) ? parseFloat(ys.subtotalAmount) : null,
                     items: Array.isArray(ys.items) ? ys.items : [],
+                    total_gross_weight: parseFloat(ys.totalGrossWeight || ys.grossWeight) || 0,
+                    total_tare_weight: parseFloat(ys.totalTareWeight || ys.tareWeight) || 0,
                     total_qty: parseFloat(ys.totalQty || ys.saleQty || ys.qty) || 0,
                     total_amount: parseFloat(ys.totalAmount || ys.amount) || 0,
                     gst_amount: parseFloat(ys.gstAmount || ys.gst) || 0,
