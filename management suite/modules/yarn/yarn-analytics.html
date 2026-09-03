@@ -703,8 +703,8 @@
       <!-- Time Period & Range Controls -->
       <div class="filter-group">
         <select class="time-select" id="timePeriodSelect" onchange="handleTimePeriodChange(this.value)">
-          <option value="all">All Time</option>
-          <option value="this-month" selected>This Month</option>
+          <option value="all" selected>All Time</option>
+          <option value="this-month">This Month</option>
           <option value="last-30">Last 30 Days</option>
           <option value="last-7">Last 7 Days</option>
           <option value="custom">Custom Date Range...</option>
@@ -741,7 +741,7 @@
           </div>
         </div>
         <div class="kpi-val" id="kpi-sales-weight">0.00 kg</div>
-        <div class="kpi-sub" id="kpi-sales-bori">0 Boris / 0 Dispatches</div>
+        <div class="kpi-sub" id="kpi-sales-bori">0 Boris • 0 Bills</div>
       </div>
 
       <!-- Card 3: Live Finished Stock Balance -->
@@ -1019,11 +1019,11 @@
 
   <script>
     // ==========================================================================
-    // YARN ANALYTICS ENGINE & CHART CONTROLLER
+    // YARN ANALYTICS ENGINE & CHART CONTROLLER (100% Vishwa Suite Aligned)
     // ==========================================================================
 
     let currentDivision = 'all'; // 'all', 'covering', 'tfo', 'doubler'
-    let currentPeriod = 'this-month'; // 'all', 'this-month', 'last-30', 'last-7', 'custom'
+    let currentPeriod = 'all'; // 'all', 'this-month', 'last-30', 'last-7', 'custom'
     let customFrom = null;
     let customTo = null;
 
@@ -1064,7 +1064,7 @@
     // Format Currency
     function formatCurrency(num) {
       if (isNaN(num)) return '₹ 0.00';
-      return '₹ ' + Number(num).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+      return '₹ ' + Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     // Format Number with 2 decimal places
@@ -1073,7 +1073,71 @@
       return Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kg';
     }
 
-    // Load logs from localStorage and Supabase cache
+    // Helper to calculate Bori stock (Identical to yarn-stock-dashboard.html)
+    function getBoriStock(prod, editSalesId = '', division = null) {
+      if (!prod || !prod.boriNo) return { remainingRolls: 0, remainingQty: 0 };
+      const targetDiv = division || prod.division || prod._division || currentDivision;
+      const salesList = (rawData[targetDiv] && rawData[targetDiv].sales) ? rawData[targetDiv].sales : [];
+      const targetBoriClean = String(prod.boriNo).trim().toLowerCase();
+
+      const boriSales = salesList.filter(s => {
+        if (!s) return false;
+        if (editSalesId && String(s.id) === String(editSalesId)) return false;
+        if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+          return s.items.some(i => i && String(i.boriNo || '').trim().toLowerCase() === targetBoriClean);
+        }
+        return String(s.boriNo || '').trim().toLowerCase() === targetBoriClean;
+      });
+
+      let soldRolls = 0;
+      let soldQty = 0;
+
+      boriSales.forEach(s => {
+        if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+          s.items.filter(i => i && String(i.boriNo || '').trim().toLowerCase() === targetBoriClean).forEach(i => {
+            soldRolls += (parseInt(i.rollsQty, 10) || 0);
+            soldQty += (parseFloat(i.saleQty) || 0);
+          });
+        } else if (String(s.boriNo || '').trim().toLowerCase() === targetBoriClean) {
+          soldRolls += (parseInt(s.rollsQty, 10) || 0);
+          soldQty += (parseFloat(s.saleQty) || 0);
+        }
+      });
+
+      const prodRolls = parseInt(prod.rolls, 10) || 0;
+      const prodQty = parseFloat(prod.qty || prod.weight || prod.netWeight || 0);
+
+      return {
+        remainingRolls: Math.max(0, prodRolls - soldRolls),
+        remainingQty: Math.max(0, parseFloat((prodQty - soldQty).toFixed(3)))
+      };
+    }
+
+    // Resolve Product Name dynamically from costing sheet
+    function getDynamicProductInfo(log, division = null) {
+      if (!log) return { productName: '-' };
+      const div = division || log._division || currentDivision;
+      const storageKeys = {
+        covering: 'costing-covering-products-v1',
+        tfo: 'costing-tfo-products-v1',
+        doubler: 'costing-doubler-products-v1'
+      };
+      
+      let prodName = log.productName || log.name || log.composition || '-';
+
+      if (log.productId && div && storageKeys[div]) {
+        try {
+          const key = storageKeys[div];
+          const products = JSON.parse(localStorage.getItem(key) || '[]');
+          const found = products.find(p => String(p.id) === String(log.productId));
+          if (found && found.name) prodName = found.name;
+        } catch(e) {}
+      }
+
+      return { productName: prodName };
+    }
+
+    // Load logs from localStorage and Supabase
     function fetchAllYarnData() {
       ['covering', 'tfo', 'doubler'].forEach(div => {
         let prod = [];
@@ -1143,17 +1207,23 @@
 
       let allProduction = [];
       let allSales = [];
+      let rawProdListForStock = [];
 
       activeDivisions.forEach(div => {
-        const pList = (rawData[div].production || []).filter(item => {
-          const d = item.date || item.createdAt;
-          return isDateWithinSelectedRange(d);
-        }).map(item => ({ ...item, _division: div }));
+        const fullProd = (rawData[div].production || []).map(p => ({ ...p, _division: div }));
+        const fullSales = (rawData[div].sales || []).map(s => ({ ...s, _division: div }));
 
-        const sList = (rawData[div].sales || []).filter(item => {
+        rawProdListForStock = rawProdListForStock.concat(fullProd);
+
+        const pList = fullProd.filter(item => {
           const d = item.date || item.createdAt;
           return isDateWithinSelectedRange(d);
-        }).map(item => ({ ...item, _division: div }));
+        });
+
+        const sList = fullSales.filter(item => {
+          const d = item.date || item.saleDate || item.createdAt;
+          return isDateWithinSelectedRange(d);
+        });
 
         allProduction = allProduction.concat(pList);
         allSales = allSales.concat(sList);
@@ -1161,18 +1231,19 @@
 
       // Sort chronological
       allProduction.sort((a, b) => new Date(a.date || a.createdAt || 0) - new Date(b.date || b.createdAt || 0));
-      allSales.sort((a, b) => new Date(a.date || a.createdAt || 0) - new Date(b.date || b.createdAt || 0));
+      allSales.sort((a, b) => new Date(a.date || a.saleDate || a.createdAt || 0) - new Date(b.date || b.saleDate || b.createdAt || 0));
 
       return {
         production: allProduction,
-        sales: allSales
+        sales: allSales,
+        rawProdListForStock: rawProdListForStock
       };
     }
 
     // Update KPI Header Cards
     function renderKPICards(dataset) {
       let totalProdWeight = 0;
-      let totalProdBori = 0;
+      let totalProdBori = dataset.production.length;
       let totalSalesWeight = 0;
       let totalSalesBori = 0;
       let totalSalesRevenue = 0;
@@ -1180,30 +1251,49 @@
       const lotsSet = new Set();
 
       dataset.production.forEach(p => {
-        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        const w = parseFloat(p.qty || p.weight || p.netWeight || 0);
         totalProdWeight += w;
-        totalProdBori += 1;
-        if (p.productName || p.quality) qualitiesSet.add(p.productName || p.quality);
-        if (p.lotNo || p.lotNumber) lotsSet.add(p.lotNo || p.lotNumber);
+        const qName = getDynamicProductInfo(p, p._division).productName;
+        if (qName && qName !== '-') qualitiesSet.add(qName);
+        if (p.lotNo || p.lot) lotsSet.add(p.lotNo || p.lot);
       });
 
       dataset.sales.forEach(s => {
-        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
-        const rate = parseFloat(s.rate || s.price) || 0;
-        const bCount = parseInt(s.boriCount || s.totalBoris || 1, 10) || 1;
-        const val = parseFloat(s.totalAmount || s.billAmount) || (w * rate);
+        let billWeight = 0;
+        let billAmount = parseFloat(s.totalAmount || s.subtotalAmount || s.taxableAmount || s.amount || 0);
 
-        totalSalesWeight += w;
-        totalSalesBori += bCount;
-        totalSalesRevenue += val;
+        if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+          totalSalesBori += s.items.length;
+          s.items.forEach(i => {
+            const w = parseFloat(i.saleQty || i.qty || i.weight || 0);
+            billWeight += w;
+            const q = i.productName || i.composition || i.name;
+            if (q) qualitiesSet.add(q);
+            if (i.lotNo || i.lot) lotsSet.add(i.lotNo || i.lot);
+          });
+        } else {
+          totalSalesBori += 1;
+          billWeight = parseFloat(s.saleQty || s.totalQty || s.qty || s.weight || 0);
+          const q = s.productName || s.composition || s.name;
+          if (q) qualitiesSet.add(q);
+          if (s.lotNo || s.lot) lotsSet.add(s.lotNo || s.lot);
+        }
 
-        if (s.productName || s.quality) qualitiesSet.add(s.productName || s.quality);
-        if (s.lotNo || s.lotNumber) lotsSet.add(s.lotNo || s.lotNumber);
+        totalSalesWeight += billWeight;
+        totalSalesRevenue += billAmount;
       });
 
-      // Available stock in hand
-      const netStockWeight = Math.max(0, totalProdWeight - totalSalesWeight);
-      const netStockBori = Math.max(0, totalProdBori - totalSalesBori);
+      // Calculate Live In-Hand Stock using getBoriStock
+      let netStockWeight = 0;
+      let netStockBori = 0;
+
+      dataset.rawProdListForStock.forEach(prod => {
+        const stock = getBoriStock(prod, '', prod._division);
+        if (stock.remainingRolls > 0 && stock.remainingQty > 0.001) {
+          netStockBori += 1;
+          netStockWeight += stock.remainingQty;
+        }
+      });
 
       // Avg Rate
       const avgRate = totalSalesWeight > 0 ? (totalSalesRevenue / totalSalesWeight) : 0;
@@ -1216,7 +1306,7 @@
       document.getElementById('kpi-sales-bori').textContent = `${totalSalesBori.toLocaleString()} Boris • ${dataset.sales.length} Bills`;
 
       document.getElementById('kpi-stock-weight').textContent = formatWeight(netStockWeight);
-      document.getElementById('kpi-stock-bori').textContent = `${netStockBori.toLocaleString()} Boris In-Hand`;
+      document.getElementById('kpi-stock-bori').textContent = `${netStockBori.toLocaleString()} Boris Available`;
 
       document.getElementById('kpi-revenue-val').textContent = formatCurrency(totalSalesRevenue);
       document.getElementById('kpi-avg-rate').textContent = `₹ ${avgRate.toFixed(2)} /kg`;
@@ -1256,7 +1346,7 @@
       const dayMap = new Map();
       dataset.production.forEach(p => {
         const d = (p.date || p.createdAt || '').substring(0, 10) || 'Unknown';
-        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        const w = parseFloat(p.qty || p.weight || p.netWeight || 0);
         dayMap.set(d, (dayMap.get(d) || 0) + w);
       });
 
@@ -1350,7 +1440,7 @@
       let doublerWeight = 0;
 
       dataset.production.forEach(p => {
-        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        const w = parseFloat(p.qty || p.weight || p.netWeight || 0);
         if (p._division === 'covering') covWeight += w;
         else if (p._division === 'tfo') tfoWeight += w;
         else if (p._division === 'doubler') doublerWeight += w;
@@ -1417,19 +1507,25 @@
 
       const theme = getChartTheme();
 
-      // Aggregate by month/period bucket
+      // Aggregate by month bucket
       const bucketMap = new Map();
 
       dataset.production.forEach(p => {
         const monthKey = (p.date || p.createdAt || '').substring(0, 7) || 'Unknown';
-        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        const w = parseFloat(p.qty || p.weight || p.netWeight || 0);
         if (!bucketMap.has(monthKey)) bucketMap.set(monthKey, { prod: 0, sales: 0 });
         bucketMap.get(monthKey).prod += w;
       });
 
       dataset.sales.forEach(s => {
-        const monthKey = (s.date || s.createdAt || '').substring(0, 7) || 'Unknown';
-        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
+        const monthKey = (s.date || s.saleDate || s.createdAt || '').substring(0, 7) || 'Unknown';
+        let w = 0;
+        if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+          w = s.items.reduce((sum, item) => sum + (parseFloat(item.saleQty || item.qty || 0) || 0), 0);
+        } else {
+          w = parseFloat(s.saleQty || s.totalQty || s.qty || s.weight || 0);
+        }
+
         if (!bucketMap.has(monthKey)) bucketMap.set(monthKey, { prod: 0, sales: 0 });
         bucketMap.get(monthKey).sales += w;
       });
@@ -1523,9 +1619,17 @@
       const qualityMap = new Map();
 
       dataset.sales.forEach(s => {
-        const q = String(s.productName || s.quality || 'Standard Yarn').trim();
-        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
-        qualityMap.set(q, (qualityMap.get(q) || 0) + w);
+        if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+          s.items.forEach(i => {
+            const q = String(i.productName || i.composition || i.name || 'Standard Yarn').trim();
+            const w = parseFloat(i.saleQty || i.qty || i.weight || 0);
+            qualityMap.set(q, (qualityMap.get(q) || 0) + w);
+          });
+        } else {
+          const q = String(s.productName || s.composition || s.name || 'Standard Yarn').trim();
+          const w = parseFloat(s.saleQty || s.totalQty || s.qty || s.weight || 0);
+          qualityMap.set(q, (qualityMap.get(q) || 0) + w);
+        }
       });
 
       // Sort descending and take top 6
@@ -1599,7 +1703,7 @@
     }
 
     // ==========================================================================
-    // CHART 5: Commercial Revenue Trajectory (Combo Bar + Line)
+    // CHART 5: Commercial Revenue Trajectory (Combo Bar)
     // ==========================================================================
     function renderRevenueChart(dataset) {
       const canvas = document.getElementById('chartRevenue');
@@ -1611,10 +1715,8 @@
       const revMap = new Map();
 
       dataset.sales.forEach(s => {
-        const d = (s.date || s.createdAt || '').substring(0, 7) || 'Unknown';
-        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
-        const rate = parseFloat(s.rate || s.price) || 0;
-        const val = parseFloat(s.totalAmount || s.billAmount) || (w * rate);
+        const d = (s.date || s.saleDate || s.createdAt || '').substring(0, 7) || 'Unknown';
+        const val = parseFloat(s.totalAmount || s.subtotalAmount || s.taxableAmount || s.amount || 0);
         revMap.set(d, (revMap.get(d) || 0) + val);
       });
 
@@ -1688,8 +1790,13 @@
       const custMap = new Map();
 
       dataset.sales.forEach(s => {
-        const c = String(s.customer || s.buyer || s.partyName || 'Retail Customer').trim();
-        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
+        const c = String(s.customerName || s.customer || s.buyer || s.partyName || 'Retail Customer').trim();
+        let w = 0;
+        if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+          w = s.items.reduce((sum, item) => sum + (parseFloat(item.saleQty || item.qty || 0) || 0), 0);
+        } else {
+          w = parseFloat(s.saleQty || s.totalQty || s.qty || s.weight || 0);
+        }
         custMap.set(c, (custMap.get(c) || 0) + w);
       });
 
@@ -1761,31 +1868,25 @@
 
       const theme = getChartTheme();
 
-      const prodMap = new Map();
-      const soldMap = new Map();
+      const stockMap = new Map();
 
-      dataset.production.forEach(p => {
-        const q = String(p.productName || p.quality || 'Standard Yarn').trim();
-        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
-        prodMap.set(q, (prodMap.get(q) || 0) + w);
+      dataset.rawProdListForStock.forEach(prod => {
+        const stock = getBoriStock(prod, '', prod._division);
+        if (stock.remainingRolls > 0 && stock.remainingQty > 0.001) {
+          const dyn = getDynamicProductInfo(prod, prod._division);
+          const qName = dyn.productName || prod.productName || prod.composition || 'Finished Yarn';
+          stockMap.set(qName, (stockMap.get(qName) || 0) + stock.remainingQty);
+        }
       });
 
-      dataset.sales.forEach(s => {
-        const q = String(s.productName || s.quality || 'Standard Yarn').trim();
-        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
-        soldMap.set(q, (soldMap.get(q) || 0) + w);
-      });
+      const sorted = Array.from(stockMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
 
-      const allQualities = Array.from(new Set([...prodMap.keys(), ...soldMap.keys()])).slice(0, 6);
-      const inStockData = allQualities.map(q => {
-        const p = prodMap.get(q) || 0;
-        const s = soldMap.get(q) || 0;
-        return Number(Math.max(0, p - s).toFixed(2));
-      });
+      let labels = sorted.map(item => item[0]);
+      let data = sorted.map(item => Number(item[1].toFixed(2)));
 
-      let labels = allQualities;
       if (labels.length === 0) {
-        labels = ['No Stock Data'];
+        labels = ['No Available Stock'];
+        data = [0];
       }
 
       chartInstances.stockHealth = new Chart(canvas, {
@@ -1794,7 +1895,7 @@
           labels: labels,
           datasets: [{
             label: 'Net In-Hand Stock (Kg)',
-            data: inStockData.length > 0 ? inStockData : [0],
+            data: data,
             backgroundColor: theme.accent4,
             borderRadius: 6,
             maxBarThickness: 28
@@ -1849,8 +1950,8 @@
       const machineMap = new Map();
 
       dataset.production.forEach(p => {
-        const m = String(p.machineNo || p.machine || p.lotNo || 'Machine 1').trim();
-        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        const m = String(p.machineNo || p.machine || p.lotNo || p.lot || 'Machine 1').trim();
+        const w = parseFloat(p.qty || p.weight || p.netWeight || 0);
         machineMap.set(m, (machineMap.get(m) || 0) + w);
       });
 
@@ -1942,7 +2043,7 @@
       if (showSkeleton) {
         setTimeout(() => {
           setSkeletonsVisible(false);
-        }, 320);
+        }, 250);
       } else {
         setSkeletonsVisible(false);
       }
@@ -1992,16 +2093,27 @@
       let csv = 'Type,Division,Date,Product / Quality,Lot No,Weight (Kg),Boris/Boxes,Customer / Machine,Rate (₹),Amount (₹)\n';
 
       dataset.production.forEach(p => {
-        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
-        csv += `"Production","${p._division || ''}","${p.date || p.createdAt || ''}","${p.productName || p.quality || ''}","${p.lotNo || p.lotNumber || ''}",${w},1,"${p.machineNo || ''}",0,0\n`;
+        const w = parseFloat(p.qty || p.weight || p.netWeight || 0);
+        const qName = getDynamicProductInfo(p, p._division).productName;
+        csv += `"Production","${p._division || ''}","${p.date || p.createdAt || ''}","${qName}","${p.lotNo || p.lot || ''}",${w},1,"${p.machineNo || p.machine || ''}",0,0\n`;
       });
 
       dataset.sales.forEach(s => {
-        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
-        const b = parseInt(s.boriCount || 1, 10) || 1;
-        const rate = parseFloat(s.rate || s.price) || 0;
-        const amt = parseFloat(s.totalAmount || s.billAmount) || (w * rate);
-        csv += `"Sales","${s._division || ''}","${s.date || s.createdAt || ''}","${s.productName || s.quality || ''}","${s.lotNo || s.lotNumber || ''}",${w},${b},"${s.customer || ''}",${rate},${amt}\n`;
+        const d = s.date || s.saleDate || s.createdAt || '';
+        const c = s.customerName || s.customer || s.buyer || '';
+        if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+          s.items.forEach(i => {
+            const w = parseFloat(i.saleQty || i.qty || 0);
+            const r = parseFloat(i.rate || 0);
+            const a = parseFloat(i.amount || (w * r) || 0);
+            csv += `"Sales","${s._division || ''}","${d}","${i.productName || i.composition || i.name || ''}","${i.lotNo || i.lot || ''}",${w},1,"${c}",${r},${a}\n`;
+          });
+        } else {
+          const w = parseFloat(s.saleQty || s.totalQty || s.qty || 0);
+          const r = parseFloat(s.rate || 0);
+          const a = parseFloat(s.totalAmount || s.amount || (w * r) || 0);
+          csv += `"Sales","${s._division || ''}","${d}","${s.productName || s.composition || s.name || ''}","${s.lotNo || s.lot || ''}",${w},1,"${c}",${r},${a}\n`;
+        }
       });
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -2018,7 +2130,7 @@
     // EVENT LISTENERS & BOOTSTRAP
     // ==========================================================================
     document.addEventListener('DOMContentLoaded', () => {
-      // Default to current month custom dates if needed
+      // Default custom date range if needed
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
       const todayStr = now.toISOString().split('T')[0];
@@ -2034,9 +2146,17 @@
 
       // Storage sync
       window.addEventListener('storage', (e) => {
-        if (e.key && e.key.startsWith('yarn_')) {
+        if (!e.key || e.key.startsWith('yarn_') || e.key.startsWith('costing-') || e.key === 'vf_deleted_entity_ids') {
           refreshAnalyticsView(false);
         }
+      });
+
+      // Supabase real-time sync listeners
+      window.addEventListener('supabase-sync', () => {
+        refreshAnalyticsView(false);
+      });
+      window.addEventListener('supabase-ready', () => {
+        refreshAnalyticsView(false);
       });
     });
   </script>
