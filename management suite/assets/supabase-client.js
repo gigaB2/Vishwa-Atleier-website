@@ -794,18 +794,22 @@
     const lastWrite = lastLocalWrites[key] || 0;
     const timeSinceLastWrite = Date.now() - lastWrite;
 
-    if (timeSinceLastWrite < 3000) {
-      // User is actively editing this key locally. Defer application instead of dropping!
+    // Check if user is actively typing in a form input or textarea
+    const activeEl = document.activeElement;
+    const isActivelyTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+
+    if (timeSinceLastWrite < 1500 && isActivelyTyping) {
+      // User is actively typing into an input field on this workstation. Defer application briefly!
       pendingRemoteUpdates[key] = valStr;
       clearTimeout(deferredApplyTimers[key]);
       deferredApplyTimers[key] = setTimeout(() => {
         const currentElapsed = Date.now() - (lastLocalWrites[key] || 0);
-        if (currentElapsed >= 3000 && pendingRemoteUpdates[key]) {
+        if (currentElapsed >= 1500 && pendingRemoteUpdates[key]) {
           const deferredVal = pendingRemoteUpdates[key];
           delete pendingRemoteUpdates[key];
           applyRemoteKeyUpdate(key, deferredVal);
         }
-      }, (3000 - timeSinceLastWrite) + 150);
+      }, (1500 - timeSinceLastWrite) + 100);
       return;
     }
 
@@ -3383,7 +3387,7 @@
         if (isImmediate) {
           executeDbWrite();
         } else {
-          debouncedWriteTimers[key] = setTimeout(executeDbWrite, 1200);
+          debouncedWriteTimers[key] = setTimeout(executeDbWrite, 250);
         }
         return true;
       } catch (e) {
@@ -5894,9 +5898,9 @@
     }, 250);
   }
 
-  // Smart polling interval & Visibility Throttling (3.5s fast polling for instant cross-PC updates without refresh)
+  // Smart polling interval & Visibility Throttling (2s fast polling for instant cross-PC updates without refresh)
   let syncIntervalId = null;
-  const POLL_INTERVAL_MS = 3500;
+  const POLL_INTERVAL_MS = 2000;
 
   function startSmartSync() {
     if (!syncIntervalId) {

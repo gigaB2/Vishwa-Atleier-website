@@ -18228,6 +18228,24 @@
                 renderAttendanceTab();
             }
 
+            // Global refresh helper for instant cross-device realtime synchronization
+            window.refreshData = function () {
+                if (typeof loadState === 'function') loadState();
+                if (typeof renderDashboardOverview === 'function') renderDashboardOverview();
+                if (typeof renderAttendanceSummaryTable === 'function') renderAttendanceSummaryTable();
+                if (typeof renderEmployeeRoster === 'function') renderEmployeeRoster();
+                if (typeof renderPayrollSummaryTable === 'function') renderPayrollSummaryTable();
+                if (typeof renderAdvancesTable === 'function') renderAdvancesTable();
+                if (typeof renderSalaryBreakdownTable === 'function') renderSalaryBreakdownTable();
+                if (typeof renderDepartmentBreakdownTable === 'function') renderDepartmentBreakdownTable();
+                if (typeof renderEmployeeCalendarView === 'function') {
+                    const calModal = document.getElementById('att-employee-calendar-modal');
+                    if (calModal && calModal.style.display !== 'none' && typeof currentCalEmpName !== 'undefined' && currentCalEmpName) {
+                        renderEmployeeCalendarView();
+                    }
+                }
+            };
+
             // Realtime Live Cross-Device & Cross-Tab Sync Listeners
             window.addEventListener('supabase-sync', function (e) {
                 try {
