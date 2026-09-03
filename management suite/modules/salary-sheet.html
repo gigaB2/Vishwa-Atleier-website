@@ -7166,7 +7166,6 @@
 
                 if (!state) {
                     state = { ...defaultData };
-                    saveState();
                 }
 
                 if (state && !state.salaryPayments) {
@@ -7181,59 +7180,21 @@
                     state.attendance = {};
                 }
 
-                // Auto-migrate: check and add missing default employees if they aren't in state yet
+                // In-memory migrations without auto-saving
                 if (state && state.employees) {
-                    let updatedEmployees = false;
-
-                    // Migrate sub-roles to standard "Beam Loading"
                     state.employees.forEach(e => {
                         if (e.role && e.role.startsWith('Beam Loading -')) {
                             e.role = 'Beam Loading';
-                            updatedEmployees = true;
+                        }
+                        if (e.salaryStyle === 'Per Month') {
+                            e.salaryStyle = 'Per Month Fixed';
                         }
                     });
-
-                    if (updatedEmployees) {
-                        saveState();
-                    }
-                }
-
-                // Remove CEO / Founder if still present in storage
-
-                if (state && state.employees) {
-
-                    const originalLength = state.employees.length;
 
                     state.employees = state.employees.filter(e => e.id !== 'ceo');
-
-                    state.tasks = state.tasks.filter(t => t.assignedTo !== 'ceo' && t.assignedBy !== 'ceo');
-
-
-
-                    // Migrate "Per Month" -> "Per Month Fixed"
-
-                    let migrated = false;
-
-                    state.employees.forEach(e => {
-
-                        if (e.salaryStyle === 'Per Month') {
-
-                            e.salaryStyle = 'Per Month Fixed';
-
-                            migrated = true;
-
-                        }
-
-                    });
-
-
-
-                    if (state.employees.length !== originalLength || migrated) {
-
-                        saveState();
-
+                    if (state.tasks) {
+                        state.tasks = state.tasks.filter(t => t.assignedTo !== 'ceo' && t.assignedBy !== 'ceo');
                     }
-
                 }
 
                 const globalTheme = localStorage.getItem('vishwa_fashions_theme');
@@ -7253,28 +7214,14 @@
                 }
 
             } catch (e) {
-
                 console.error("Failed to load state", e);
-
                 state = { ...defaultData };
-
-                if (state && state.employees) {
-
-                    state.employees = state.employees.filter(e => e.id !== 'ceo');
-
-                    state.tasks = state.tasks.filter(t => t.assignedTo !== 'ceo' && t.assignedBy !== 'ceo');
-
-                }
-
             }
 
             if (typeof checkAndPushHistory === 'function') {
                 checkAndPushHistory();
             }
-
         }
-
-
 
         function saveState() {
             try {
@@ -7287,30 +7234,17 @@
             }
         }
 
-
-
         function toggleTheme() {
-
             if (!state) state = { ...defaultData };
-
             state.darkMode = !state.darkMode;
             document.documentElement.classList.toggle('dark-mode', state.darkMode);
             localStorage.setItem('vishwa_fashions_theme', state.darkMode ? 'true' : 'false');
-
-            saveState();
-
             if (state.darkMode) {
-
                 document.body.classList.add('dark-mode');
-
             } else {
-
                 document.body.classList.remove('dark-mode');
-
             }
-
             updateThemeToggleText();
-
         }
 
 
@@ -18335,11 +18269,19 @@
                 if (typeof renderAdvancesTable === 'function') renderAdvancesTable();
                 if (typeof renderSalaryBreakdownTable === 'function') renderSalaryBreakdownTable();
                 if (typeof renderDepartmentBreakdownTable === 'function') renderDepartmentBreakdownTable();
+                if (typeof renderSalarySheet === 'function') renderSalarySheet();
+                if (typeof renderTeamRoster === 'function') renderTeamRoster();
+                if (typeof renderBeamLoadingTab === 'function') renderBeamLoadingTab();
+                if (typeof renderLoansTab === 'function') renderLoansTab();
                 if (typeof renderEmployeeCalendarView === 'function') {
                     const calModal = document.getElementById('att-employee-calendar-modal');
                     if (calModal && calModal.style.display !== 'none' && typeof currentCalEmpName !== 'undefined' && currentCalEmpName) {
                         renderEmployeeCalendarView();
                     }
+                }
+                const bulkModal = document.getElementById('att-bulk-modal');
+                if (bulkModal && bulkModal.style.display !== 'none' && typeof loadDateAttendanceIntoForm === 'function') {
+                    loadDateAttendanceIntoForm();
                 }
             };
 
@@ -18347,7 +18289,7 @@
             window.addEventListener('supabase-sync', function (e) {
                 try {
                     const syncedKey = e && e.detail ? e.detail.key : null;
-                    if (!syncedKey || syncedKey === STATE_KEY) {
+                    if (!syncedKey || syncedKey === STATE_KEY || syncedKey === 'productionLogs' || syncedKey === 'machines' || syncedKey === 'basePickRate' || syncedKey === 'customPickRates') {
                         loadState();
                         if (typeof refreshData === 'function') {
                             refreshData();
@@ -18359,7 +18301,7 @@
             });
 
             window.addEventListener('storage', function (e) {
-                if (e.key === STATE_KEY) {
+                if (!e.key || e.key === STATE_KEY || e.key === 'productionLogs' || e.key === 'machines' || e.key === 'basePickRate' || e.key === 'customPickRates') {
                     try {
                         loadState();
                         if (typeof refreshData === 'function') {

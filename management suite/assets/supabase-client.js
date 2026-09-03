@@ -702,40 +702,24 @@
             }
           }
         });
-        const mergedLoans = filterDeletedEntities(Array.from(loanMap.values()));
-
-        // Deep merge attendance by date and employee
-        const mergedAttendance = {};
+        // Attendance merging: when not actively editing on this PC, remote server state is 100% authoritative
+        let mergedAttendance = {};
         const remoteAtt = (parsedRemote.attendance && typeof parsedRemote.attendance === 'object') ? parsedRemote.attendance : {};
         const localAtt = (parsedLocal.attendance && typeof parsedLocal.attendance === 'object') ? parsedLocal.attendance : {};
-        const allAttDates = new Set([...Object.keys(remoteAtt), ...Object.keys(localAtt)]);
-        allAttDates.forEach(dateKey => {
-          mergedAttendance[dateKey] = {};
-          const rEmps = (remoteAtt[dateKey] && typeof remoteAtt[dateKey] === 'object') ? remoteAtt[dateKey] : {};
-          const lEmps = (localAtt[dateKey] && typeof localAtt[dateKey] === 'object') ? localAtt[dateKey] : {};
-          const allEmpKeys = new Set([...Object.keys(rEmps), ...Object.keys(lEmps)]);
-          allEmpKeys.forEach(empKey => {
-            const rEntry = rEmps[empKey];
-            const lEntry = lEmps[empKey];
-            if (rEntry && lEntry) {
-              const rTime = rEntry.updatedAt ? new Date(rEntry.updatedAt).getTime() : 0;
-              const lTime = lEntry.updatedAt ? new Date(lEntry.updatedAt).getTime() : 0;
-              if (rTime > lTime) {
-                mergedAttendance[dateKey][empKey] = { ...lEntry, ...rEntry };
-              } else if (lTime > rTime) {
-                mergedAttendance[dateKey][empKey] = isLocallyActive ? { ...rEntry, ...lEntry } : { ...lEntry, ...rEntry };
-              } else {
-                mergedAttendance[dateKey][empKey] = isLocallyActive ? { ...rEntry, ...lEntry } : { ...lEntry, ...rEntry };
-              }
-            } else if (rEntry) {
-              mergedAttendance[dateKey][empKey] = rEntry;
-            } else if (lEntry) {
-              if (isLocallyActive) {
-                mergedAttendance[dateKey][empKey] = lEntry;
-              }
+
+        if (!isLocallyActive) {
+          mergedAttendance = remoteAtt;
+        } else {
+          // If locally active within 3s, preserve local edits over remote
+          mergedAttendance = { ...remoteAtt };
+          Object.entries(localAtt).forEach(([dateKey, lEmps]) => {
+            if (!mergedAttendance[dateKey]) {
+              mergedAttendance[dateKey] = lEmps;
+            } else {
+              mergedAttendance[dateKey] = { ...mergedAttendance[dateKey], ...lEmps };
             }
           });
-        });
+        }
 
         // Merge salary settlements
         const mergedSalaryPayments = {
@@ -4986,26 +4970,14 @@
                     };
                   });
                 }
-                // Deep merge reconstructed attendance with any locally existing attendance
-                const combinedAttendance = { ...(existingStaffState.attendance || {}) };
-                Object.entries(reconstructedAttendance).forEach(([dKey, dMap]) => {
-                  if (!combinedAttendance[dKey]) combinedAttendance[dKey] = {};
-                  Object.entries(dMap).forEach(([eKey, rEntry]) => {
-                    const lEntry = combinedAttendance[dKey][eKey];
-                    if (!lEntry) {
-                      combinedAttendance[dKey][eKey] = rEntry;
-                    } else {
-                      const rTime = rEntry.updatedAt ? new Date(rEntry.updatedAt).getTime() : 0;
-                      const lTime = lEntry.updatedAt ? new Date(lEntry.updatedAt).getTime() : 0;
-                      combinedAttendance[dKey][eKey] = (rTime >= lTime) ? { ...lEntry, ...rEntry } : { ...rEntry, ...lEntry };
-                    }
-                  });
-                });
+                // Use authoritative attendance from vf_kv_store; only fallback to relational table reconstruction if empty
+                const hasExistingAtt = existingStaffState.attendance && typeof existingStaffState.attendance === 'object' && Object.keys(existingStaffState.attendance).length > 0;
+                const finalAttendance = hasExistingAtt ? existingStaffState.attendance : reconstructedAttendance;
 
                 const mergedStaffState = {
                   ...existingStaffState,
                   employees: reconstructedEmployees.length > 0 ? reconstructedEmployees : (existingStaffState.employees || []),
-                  attendance: combinedAttendance,
+                  attendance: finalAttendance,
                   loans: reconstructedLoans.length > 0 ? reconstructedLoans : (existingStaffState.loans || []),
                   salaryPayments: Object.keys(reconstructedSettlements).length > 0 ? reconstructedSettlements : (existingStaffState.salaryPayments || {})
                 };
