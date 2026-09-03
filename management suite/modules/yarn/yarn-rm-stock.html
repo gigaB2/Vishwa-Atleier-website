@@ -1413,7 +1413,7 @@
                 <th>Item Type</th>
                 <th>Supplier</th>
                 <th>Yarn Quality</th>
-                <th>Lot No</th>
+                <th>Challan / Lot No</th>
                 <th>Code</th>
                 <th>Color</th>
                 <th style="text-align: right;">Available Cones</th>
@@ -3375,8 +3375,8 @@
     window.switchStockTab = switchStockTab;
     window.switchTab = switchStockTab;
 
-    // Navigate to Stock Book and filter by specific quality & supplier
-    function goToStockBookQuality(qualityName, supplierName, lotNo) {
+    // Navigate to Stock Book and filter by specific quality, supplier, lot, or challan
+    function goToStockBookQuality(qualityName, supplierName, lotNo, challanNo) {
       switchStockTab('stock-book');
       const qualSelect = document.getElementById('quality-filter');
       const suppSelect = document.getElementById('supplier-filter');
@@ -3403,7 +3403,9 @@
       }
 
       if (searchInput) {
-        if (lotNo && lotNo !== '-') {
+        if (challanNo && challanNo !== '-') {
+          searchInput.value = challanNo;
+        } else if (lotNo && lotNo !== '-') {
           searchInput.value = lotNo;
         } else if (qualityName) {
           searchInput.value = qualityName;
@@ -3433,24 +3435,26 @@
       let totalIssuedWeight = 0;
       let totalGrWeight = 0;
 
-      // Quality & Lot Aggregation Map
-      // Key: supplier + quality + lotNo + itemType + code + color
+      // Quality, Challan & Lot Aggregation Map
+      // Key: supplier + quality + challanNo + lotNo + itemType + code + color
       const qualityMap = {};
 
       stockData.forEach(lot => {
         const qName = (lot.quality || 'Unspecified Quality').trim();
         const supplier = (lot.supplier || 'Unspecified Supplier').trim();
-        const lotNo = String(lot.lotNumber || lot.lotNo || lot.lot_no || lot.lot || lot.challanNo || '-').trim();
+        const challanNo = String(lot.challanNo || lot.challanNumber || '').trim();
+        const lotNo = String(lot.lotNumber || lot.lotNo || lot.lot_no || lot.lot || '').trim();
         const typeName = lot.itemType || 'Polyester';
         const code = lot.code || '';
         const color = lot.color || '';
-        const groupKey = `${supplier}___${qName}___${lotNo}___${typeName}___${code}___${color}`;
+        const groupKey = `${supplier}___${qName}___${challanNo}___${lotNo}___${typeName}___${code}___${color}`;
 
         if (!qualityMap[groupKey]) {
           qualityMap[groupKey] = {
             key: groupKey,
             quality: qName,
             supplier: supplier,
+            challanNo: challanNo,
             lotNo: lotNo,
             itemType: typeName,
             code: code,
@@ -3527,7 +3531,7 @@
       if (searchVal) {
         const terms = searchVal.split(',').map(t => t.trim()).filter(Boolean);
         qualitiesList = qualitiesList.filter(q => {
-          const text = `${q.quality} ${q.lotNo} ${q.supplier} ${q.itemType} ${q.code} ${q.color}`.toLowerCase();
+          const text = `${q.quality} ${q.challanNo} ${q.lotNo} ${q.supplier} ${q.itemType} ${q.code} ${q.color}`.toLowerCase();
           return terms.every(term => text.includes(term));
         });
       }
@@ -3571,13 +3575,19 @@
             const escapedQName = q.quality.replace(/'/g, "\\'");
             const escapedSupplier = q.supplier.replace(/'/g, "\\'");
             const escapedLotNo = (q.lotNo || '').replace(/'/g, "\\'");
+            const escapedChallanNo = (q.challanNo || '').replace(/'/g, "\\'");
 
             return `
               <tr>
                 <td><span class="badge badge-primary">${q.itemType}</span></td>
                 <td style="font-weight: 600; color: var(--fg);">${q.supplier || '—'}</td>
                 <td style="font-weight: 700; color: var(--fg);">${q.quality}</td>
-                <td><span class="badge" style="font-family: var(--font-mono); font-size: 0.8rem; background: rgba(139, 92, 246, 0.1); color: var(--accent); font-weight: 600;">${q.lotNo || '-'}</span></td>
+                <td>
+                  <div style="display: flex; flex-direction: column; gap: 3px; align-items: flex-start;">
+                    ${q.challanNo ? `<span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600; color: var(--fg);"><span style="color: var(--muted); font-size: 0.72rem; font-weight: normal;">Ch:</span> ${q.challanNo}</span>` : ''}
+                    ${q.lotNo && q.lotNo !== '-' ? `<span class="badge" style="font-family: var(--font-mono); font-size: 0.75rem; background: rgba(139, 92, 246, 0.12); color: var(--accent); font-weight: 600;"><span style="opacity: 0.7; font-size: 0.7rem;">Lot:</span> ${q.lotNo}</span>` : (q.challanNo ? '' : '<span style="color: var(--muted);">-</span>')}
+                  </div>
+                </td>
                 <td><span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);">${q.code || '-'}</span></td>
                 <td>${q.color || '-'}</td>
                 <td style="text-align: right;">
@@ -3602,7 +3612,7 @@
                   ${statusBadge}
                 </td>
                 <td style="text-align: center;">
-                  <button class="dash-btn-link" onclick="goToStockBookQuality('${escapedQName}', '${escapedSupplier}', '${escapedLotNo}')" title="View boxes & lots in Stock Book">
+                  <button class="dash-btn-link" onclick="goToStockBookQuality('${escapedQName}', '${escapedSupplier}', '${escapedLotNo}', '${escapedChallanNo}')" title="View boxes & lots in Stock Book">
                     <span>Stock Book</span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                   </button>
@@ -3624,7 +3634,14 @@
       if (!canvas) return;
 
       const isNullState = topQualities.length === 0;
-      const labels = isNullState ? ['No Stock Available'] : topQualities.map(q => (q.lotNo && q.lotNo !== '-') ? `${q.quality} (Lot ${q.lotNo})` : q.quality);
+      const labels = isNullState ? ['No Stock Available'] : topQualities.map(q => {
+        const hasLot = q.lotNo && q.lotNo !== '-';
+        const hasCh = q.challanNo && q.challanNo !== '-';
+        if (hasLot && hasCh) return `${q.quality} (Ch: ${q.challanNo}, Lot: ${q.lotNo})`;
+        if (hasLot) return `${q.quality} (Lot: ${q.lotNo})`;
+        if (hasCh) return `${q.quality} (Ch: ${q.challanNo})`;
+        return q.quality;
+      });
       const dataWeights = isNullState ? [0] : topQualities.map(q => parseFloat(q.availWeight.toFixed(2)));
 
       // Data signature to prevent redundant canvas operations
