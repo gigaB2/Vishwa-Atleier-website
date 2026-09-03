@@ -4843,10 +4843,6 @@
           opt.textContent = comp.sellerName + (comp.isDefault ? ' (Default)' : '');
           compSelect.appendChild(opt);
         });
-        const customOpt = document.createElement('option');
-        customOpt.value = '__custom__';
-        customOpt.textContent = '✏️ Custom Company Name...';
-        compSelect.appendChild(customOpt);
 
         // Pre-select default or sale's company
         let targetSale = null;
@@ -4857,12 +4853,12 @@
         }
 
         const preSelectComp = getSellerCompanyInfo(targetSale);
-        const nameInput = document.getElementById('ps-modal-company-custom-name');
-        if (nameInput) {
-          nameInput.value = preSelectComp.sellerName || "Vishwa Fashions";
-        }
-        if (compSelect && preSelectComp && preSelectComp.id) {
-          compSelect.value = preSelectComp.id;
+        if (compSelect && preSelectComp) {
+          if (preSelectComp.id) {
+            compSelect.value = preSelectComp.id;
+          } else if (preSelectComp.sellerName) {
+            compSelect.value = preSelectComp.sellerName;
+          }
         }
       }
 
@@ -4882,37 +4878,16 @@
       pendingPackingSlipTarget = null;
     };
 
-    window.onPackingSlipCompanyDropdownChange = function(val) {
-      const nameInput = document.getElementById('ps-modal-company-custom-name');
-      if (!nameInput) return;
-      if (val === '__custom__') {
-        nameInput.value = '';
-        nameInput.focus();
-      } else {
-        const companies = getAvailableCompanies();
-        const found = companies.find(c => c.id === val || c.sellerName === val);
-        if (found) {
-          nameInput.value = found.sellerName || '';
-        }
-      }
-    };
-
     window.confirmGeneratePackingSlipWithCompany = function() {
-      const nameInput = document.getElementById('ps-modal-company-custom-name');
-      const subInput = document.getElementById('ps-modal-company-custom-sub');
       const compSelect = document.getElementById('ps-modal-company-select');
+      const subInput = document.getElementById('ps-modal-company-custom-sub');
 
-      const chosenName = nameInput ? nameInput.value.trim() : '';
-      if (!chosenName) {
-        showToast('Please enter a company name for the packing slip.', 'error');
-        if (nameInput) nameInput.focus();
-        return;
-      }
-
-      const chosenSub = subInput ? subInput.value.trim() : 'YARN MANUFACTURING & PROCESSING DIVISION';
-      const chosenCompId = compSelect ? compSelect.value : '';
+      const chosenCompVal = compSelect ? compSelect.value : '';
       const companies = getAvailableCompanies();
-      const matchedComp = companies.find(c => c.id === chosenCompId || c.sellerName === chosenName) || {};
+      const matchedComp = companies.find(c => c.id === chosenCompVal || c.sellerName === chosenCompVal) || companies[0] || {};
+
+      const chosenName = matchedComp.sellerName || chosenCompVal || 'Vishwa Fashions';
+      const chosenSub = subInput ? subInput.value.trim() : 'YARN MANUFACTURING & PROCESSING DIVISION';
 
       const overrideCompany = {
         ...matchedComp,
@@ -8087,19 +8062,14 @@
       </div>
       <div class="modal-body" style="padding: 0;">
         <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 1rem; line-height: 1.4;">
-          Select or enter the company name that should appear on the generated packing slip:
+          Select the company name that should appear on the generated packing slip:
         </p>
 
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="ps-modal-company-select" style="font-size: 0.82rem; font-weight: 600; color: var(--fg); margin-bottom: 4px; display: block;">Select Registered Company</label>
-          <select id="ps-modal-company-select" onchange="onPackingSlipCompanyDropdownChange(this.value)" style="width: 100%; padding: 8px 10px; font-weight: 600; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--fg);">
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label for="ps-modal-company-select" style="font-size: 0.85rem; font-weight: 600; color: var(--fg); margin-bottom: 6px; display: block;">Select Registered Company</label>
+          <select id="ps-modal-company-select" style="width: 100%; padding: 10px 12px; font-weight: 600; font-size: 0.95rem; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg-card); color: var(--fg);">
             <!-- Populated dynamically -->
           </select>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="ps-modal-company-custom-name" style="font-size: 0.82rem; font-weight: 600; color: var(--fg); margin-bottom: 4px; display: block;">Company Name (Heading)</label>
-          <input type="text" id="ps-modal-company-custom-name" placeholder="Company Name" style="width: 100%; padding: 8px 10px; font-weight: 600; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--fg);" required>
         </div>
 
         <div class="form-group" style="margin-bottom: 16px;">
