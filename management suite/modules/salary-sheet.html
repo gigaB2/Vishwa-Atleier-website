@@ -2506,41 +2506,97 @@
             display: none !important;
         }
 
-        /* Responsive Tablet Design (768px - 1100px) */
-        @media (max-width: 1100px) {
+        /* Responsive Tablet Design (681px - 1100px): Everything in 1 Single Line */
+        @media (min-width: 681px) and (max-width: 1100px) {
             .att-emp-card {
-                display: grid !important;
-                grid-template-columns: 1.2fr 1fr !important;
-                gap: 0.5rem 0.85rem !important;
-                padding: 0.75rem 1rem !important;
-                border-radius: 14px !important;
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 0.5rem !important;
+                padding: 0.5rem 0.75rem !important;
+                border-radius: 12px !important;
             }
 
-            .att-card-row-top,
-            .att-card-row-bottom {
-                display: contents !important;
+            .att-card-row-top {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 0.5rem !important;
+                flex: 1 1 auto !important;
+                min-width: 0 !important;
             }
 
             .att-card-col-emp {
-                grid-column: 1 / 2 !important;
-                min-width: 0 !important;
-                max-width: 100% !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 0.5rem !important;
+                min-width: 130px !important;
+                flex: 1 1 140px !important;
+                overflow: hidden !important;
             }
 
             .att-card-col-status {
-                grid-column: 2 / 3 !important;
+                min-width: 135px !important;
+                flex: 0 0 145px !important;
+                max-width: 155px !important;
+            }
+
+            .att-select-status {
+                height: 32px !important;
+                font-size: 0.75rem !important;
+                padding: 0 4px !important;
+            }
+
+            .att-card-row-bottom {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 0.45rem !important;
+                flex: 1 1 auto !important;
                 min-width: 0 !important;
-                max-width: 100% !important;
             }
 
             .att-card-col-timings {
-                grid-column: 1 / 2 !important;
-                max-width: 100% !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 0.35rem !important;
+                flex: 0 0 195px !important;
+                max-width: 200px !important;
+            }
+
+            .att-time-cell {
+                gap: 0.2rem !important;
+                min-width: 0 !important;
+            }
+
+            .att-time-lbl {
+                font-size: 0.65rem !important;
+            }
+
+            .att-time-input {
+                height: 32px !important;
+                font-size: 0.74rem !important;
+                padding: 0 2px !important;
             }
 
             .att-card-col-notes {
-                grid-column: 2 / 3 !important;
-                max-width: 100% !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 0.35rem !important;
+                flex: 1 1 120px !important;
+                min-width: 90px !important;
+            }
+
+            .att-hours-pill {
+                padding: 3px 6px !important;
+                font-size: 0.7rem !important;
+            }
+
+            .att-remark-input {
+                height: 32px !important;
+                font-size: 0.75rem !important;
+                padding: 0 6px !important;
             }
         }
 
@@ -6460,9 +6516,6 @@
                             <h2 style="margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; color: var(--fg); letter-spacing: -0.01em;">
                                 Quick Daily Attendance Logger
                             </h2>
-                            <p style="color: var(--muted); font-size: 0.78rem; margin: 2px 0 0 0;">
-                                Select date, set employee shift / leave status, log inward & outward times, and optional notes.
-                            </p>
                         </div>
                     </div>
                     
