@@ -6255,6 +6255,7 @@
       });
 
       updateBatchSellButtonState();
+      if (typeof restoreExcelVisualSelection === 'function') restoreExcelVisualSelection();
     }
 
     let stockDashSortKey = 'remainingQty';
@@ -6728,6 +6729,7 @@
 
       if (filtered.length === 0) {
         body.innerHTML = '<tr><td colspan="11" class="muted" style="text-align: center;">No sales records found</td></tr>';
+        if (typeof restoreExcelVisualSelection === 'function') restoreExcelVisualSelection();
         return;
       }
 
@@ -6798,6 +6800,7 @@
         `;
         body.appendChild(tr);
       });
+      if (typeof restoreExcelVisualSelection === 'function') restoreExcelVisualSelection();
     }
 
     // Action Menu Dropdown Controllers
@@ -7353,24 +7356,46 @@
     // --- Excel-Style Click and Drag Cell Selection & Dynamic Calculation Engine ---
     let selectedCells = new Set();
     let currentDragCells = new Set();
+    let selectedCellKeys = new Set();
     let isCellSelecting = false;
     let startCell = null;
     let anchorCell = null;
     let isWidgetDismissed = false;
 
+    function getCellKey(cell) {
+      if (!cell || !cell.parentElement) return null;
+      const row = cell.parentElement;
+      const tbody = row.parentElement;
+      if (!tbody || !tbody.id) return null;
+      const rowIndex = Array.from(tbody.children).indexOf(row);
+      const colIndex = cell.cellIndex;
+      return `${tbody.id}|${rowIndex}|${colIndex}`;
+    }
+
     function clearExcelSelection() {
       document.querySelectorAll('td.excel-selected').forEach(cell => cell.classList.remove('excel-selected'));
       selectedCells.clear();
       currentDragCells.clear();
+      selectedCellKeys.clear();
     }
 
     function updateVisualSelection() {
       document.querySelectorAll('td.excel-selected').forEach(cell => cell.classList.remove('excel-selected'));
+      selectedCellKeys.clear();
+
       selectedCells.forEach(cell => {
-        if (cell && cell.isConnected) cell.classList.add('excel-selected');
+        if (cell && cell.isConnected) {
+          cell.classList.add('excel-selected');
+          const key = getCellKey(cell);
+          if (key) selectedCellKeys.add(key);
+        }
       });
       currentDragCells.forEach(cell => {
-        if (cell && cell.isConnected) cell.classList.add('excel-selected');
+        if (cell && cell.isConnected) {
+          cell.classList.add('excel-selected');
+          const key = getCellKey(cell);
+          if (key) selectedCellKeys.add(key);
+        }
       });
 
       const totalSize = selectedCells.size + currentDragCells.size;
@@ -7378,6 +7403,28 @@
         calculateExcelSum();
       } else {
         updateScrollSumWidget();
+      }
+    }
+
+    function restoreExcelVisualSelection() {
+      if (selectedCellKeys.size === 0) return;
+      selectedCells.clear();
+      selectedCellKeys.forEach(key => {
+        const [tbodyId, rIdxStr, cIdxStr] = key.split('|');
+        const tbody = document.getElementById(tbodyId);
+        if (tbody) {
+          const rIdx = parseInt(rIdxStr, 10);
+          const cIdx = parseInt(cIdxStr, 10);
+          const row = tbody.children[rIdx];
+          if (row && row.children[cIdx]) {
+            const cell = row.children[cIdx];
+            cell.classList.add('excel-selected');
+            selectedCells.add(cell);
+          }
+        }
+      });
+      if (selectedCells.size > 0) {
+        calculateExcelSum();
       }
     }
 
@@ -7466,6 +7513,114 @@
       const widget = document.getElementById('scroll-sum-widget');
       if (widget && selectedCells.size === 0 && currentDragCells.size === 0) {
         widget.style.display = 'none';
+      }
+    }
+
+    function handleSelectionSum() {
+      if (isWidgetDismissed || selectedCells.size > 0 || currentDragCells.size > 0) return;
+      const widget = document.getElementById('scroll-sum-widget');
+      if (!widget) return;
+
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+        updateScrollSumWidget();
+        return;
+      }
+
+      const selectedText = selection.toString().trim();
+      if (!selectedText) {
+        updateScrollSumWidget();
+        return;
+      }
+
+      const numbers = [];
+      let isCurrency = selectedText.includes('₹');
+      let isKg = /\bkg\b/i.test(selectedText);
+      let isCops = /cops/i.test(selectedText);
+      let isBoxes = /bori|box/i.test(selectedText);
+
+      const parts = selectedText.split(/[\r\n\t,]+/);
+      parts.forEach(part => {
+        const clean = part.trim();
+        if (!clean) return;
+
+        const salMatches = clean.match(/₹\s*([\d,]+\.?\d*)/g);
+        if (salMatches) {
+          salMatches.forEach(m => {
+            const val = parseFloat(m.replace(/[₹\s,]/g, ''));
+            if (!isNaN(val)) numbers.push(val);
+          });
+          return;
+        }
+
+        const kgMatch = clean.match(/^([\d,]+\.?\d*)\s*kg$/i);
+        if (kgMatch) {
+          const val = parseFloat(kgMatch[1].replace(/,/g, ''));
+          if (!isNaN(val)) numbers.push(val);
+          return;
+        }
+
+        const rawNums = clean.match(/-?[\d,]+\.?\d*/g);
+        if (rawNums) {
+          rawNums.forEach(n => {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(clean) || /^\d{2}\/\d{2}\/\d{4}$/.test(clean)) return;
+            const val = parseFloat(n.replace(/,/g, ''));
+            if (!isNaN(val)) numbers.push(val);
+          });
+        }
+      });
+
+      if (numbers.length > 0) {
+        const count = numbers.length;
+        const sum = numbers.reduce((acc, c) => acc + c, 0);
+        const avg = sum / count;
+        const min = Math.min(...numbers);
+        const max = Math.max(...numbers);
+
+        let prefix = isCurrency ? '₹ ' : '';
+        let suffix = isKg ? ' Kg' : (isCops ? ' Cops' : (isBoxes ? ' Boris' : ''));
+        const decimals = (isCurrency || isKg) ? 2 : (Number.isInteger(sum) ? 0 : 2);
+
+        widget.style.display = 'block';
+        const titleEl = document.getElementById('widget-box-title');
+        if (titleEl) titleEl.innerHTML = `✨ <strong>Selected Text Sum</strong> (${count} ${count === 1 ? 'number' : 'numbers'})`;
+
+        const mWrap = document.getElementById('stat-meters-wrap');
+        const hWrap = document.getElementById('stat-hours-wrap');
+        const cWrap = document.getElementById('stat-count-wrap');
+        const sWrap = document.getElementById('stat-salary-wrap');
+
+        if (mWrap) mWrap.style.display = 'flex';
+        if (hWrap) hWrap.style.display = count > 1 ? 'flex' : 'none';
+        if (cWrap) cWrap.style.display = 'flex';
+        if (sWrap) sWrap.style.display = count > 1 ? 'flex' : 'none';
+
+        const lbl1 = document.getElementById('stat-label-1');
+        if (lbl1) lbl1.innerText = 'TOTAL SUM';
+        const val1 = document.getElementById('scroll-sum-meters');
+        if (val1) {
+          val1.innerText = `${prefix}${sum.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: 2 })}${suffix}`;
+          val1.style.color = '#10b981';
+        }
+
+        const lbl2 = document.getElementById('stat-label-2');
+        if (lbl2) lbl2.innerText = 'AVERAGE';
+        const val2 = document.getElementById('scroll-sum-hours');
+        if (val2) {
+          val2.innerText = `${prefix}${avg.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: 2 })}${suffix}`;
+          val2.style.color = '#60a5fa';
+        }
+
+        const val3 = document.getElementById('scroll-sum-count');
+        if (val3) val3.innerText = `${count} nums`;
+
+        const val4 = document.getElementById('scroll-sum-salary');
+        if (val4) {
+          val4.innerText = `${min.toFixed(decimals)} / ${max.toFixed(decimals)}${suffix}`;
+          val4.style.color = '#a78bfa';
+        }
+      } else {
+        updateScrollSumWidget();
       }
     }
 
@@ -7728,7 +7883,7 @@
     function initExcelCellSelection() {
       document.addEventListener('mousedown', (e) => {
         if (window.innerWidth < 640) return;
-        if (e.target.closest('#scroll-sum-widget') || e.target.closest('#floating-batch-bar') || e.target.closest('.modal-content')) return;
+        if (e.target.closest('#scroll-sum-widget') || e.target.closest('#floating-batch-bar') || e.target.closest('.modal-content') || e.target.closest('.action-menu-dropdown')) return;
 
         const td = e.target.closest('td');
         if (!td) {
@@ -7839,6 +7994,12 @@
 
           updateVisualSelection();
         }
+        handleSelectionSum();
+      });
+
+      document.addEventListener('keyup', handleSelectionSum);
+      document.addEventListener('selectionchange', () => {
+        setTimeout(handleSelectionSum, 60);
       });
 
       document.addEventListener('keydown', (e) => {
