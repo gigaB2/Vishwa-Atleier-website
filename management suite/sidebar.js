@@ -416,6 +416,10 @@
       <span class="vf-sb-icon vf-sb-icon-purple"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
       Stock Dashboard
     </a>
+    <a class="vf-sb-link" data-mode="yarn" href="modules/yarn/yarn-analytics.html">
+      <span class="vf-sb-icon vf-sb-icon-purple"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+      Yarn Analytics
+    </a>
 
     <button class="vf-sb-folder" data-mode="weaving" aria-expanded="false" onclick="_vfToggleFolder(this)">
       <span class="vf-sb-icon vf-sb-icon-blue"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
@@ -882,6 +886,7 @@
     'yarn-production.html': 'modules/yarn/yarn-production.html',
     'yarn-sales.html': 'modules/yarn/yarn-sales.html',
     'yarn-stock-dashboard.html': 'modules/yarn/yarn-stock-dashboard.html',
+    'yarn-analytics.html': 'modules/yarn/yarn-analytics.html',
     'yarn-rm-stock.html': 'modules/yarn/yarn-rm-stock.html',
     'yarn-rm-analytics.html': 'modules/yarn/yarn-rm-stock.html?tab=analytics',
     'weaving-costing.html': 'modules/weaving/weaving-costing.html',
@@ -1829,6 +1834,7 @@
     'yarn-production': 'yarn-production.html',
     'yarn-sales': 'yarn-sales.html',
     'yarn-stock-dashboard': 'yarn-stock-dashboard.html',
+    'yarn-analytics': 'yarn-analytics.html',
 
     // Weaving Production
     'weaving-production': 'weaving-production.html',
@@ -1918,6 +1924,7 @@
     { pattern: /yarn-production\.html/i, key: 'yarn-production', parent: null },
     { pattern: /yarn-sales\.html/i, key: 'yarn-sales', parent: null },
     { pattern: /yarn-stock-dashboard\.html/i, key: 'yarn-stock-dashboard', parent: null },
+    { pattern: /yarn-analytics\.html/i, key: 'yarn-analytics', parent: null },
 
     // Weaving Production
     { pattern: /weaving-production\.html\?tab=analytics/i, key: 'weaving-prod-analytics', parent: 'weaving-production' },

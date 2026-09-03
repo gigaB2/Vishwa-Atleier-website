@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="../../assets/config.js"></script>
+  <script src="../../assets/supabase-client.js"></script>
+
+  <script>
+    (function() {
+      const isDark = localStorage.getItem('vishwa_fashions_theme') === 'true' || 
+                     (localStorage.getItem('vishwa_fashions_theme') === null && true);
+      if (isDark) {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
+      const isCollapsed = localStorage.getItem('vf_sidebar_collapsed') === 'true';
+      if (isCollapsed) {
+        document.documentElement.classList.add('vf-sidebar-collapsed');
+      }
+    })();
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yarn Analytics — Vishwa Fashions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../sidebar.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../../sidebar.js" defer></script>
+
+  <style>
+    :root {
+      --bg: #f8f7fc;
+      --surface: #ffffff;
+      --surface-glass: rgba(255, 255, 255, 0.85);
+      --surface-subtle: #f1f0f7;
+      --fg: #1a1a2e;
+      --muted: #8b8fa3;
+      --muted-light: #b0b4c8;
+      --border: #e8e7f1;
+      --border-subtle: rgba(232, 231, 241, 0.8);
+      --accent: #7c3aed;
+      --accent-light: #a78bfa;
+      --accent-dark: #5b21b6;
+      --accent2: #ec4899;
+      --accent3: #f97316;
+      --accent4: #3b82f6;
+      --accent5: #06b6d4;
+      --error: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 24px;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.08);
+      --primary-gradient: linear-gradient(135deg, #7c3aed, #ec4899);
+      --card-gradient: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.75) 100%);
+      --skeleton-bg: #e2e8f0;
+      --skeleton-shimmer: #f1f5f9;
+    }
+
+    body.dark-mode, .dark-mode {
+      --bg: #000000;
+      --surface: #0a0a0a;
+      --surface-glass: rgba(14, 14, 16, 0.82);
+      --surface-subtle: #141416;
+      --fg: #ffffff;
+      --muted: #a1a1aa;
+      --muted-light: #71717a;
+      --border: #27272a;
+      --border-subtle: rgba(39, 39, 42, 0.7);
+      --accent: #7c3aed;
+      --accent-light: #a78bfa;
+      --accent-dark: #5b21b6;
+      --accent2: #ec4899;
+      --accent3: #f97316;
+      --accent4: #3b82f6;
+      --accent5: #06b6d4;
+      --error: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.55);
+      --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.7);
+      --card-gradient: linear-gradient(180deg, rgba(20,20,24,0.95) 0%, rgba(10,10,12,0.85) 100%);
+      --skeleton-bg: #18181b;
+      --skeleton-shimmer: #27272a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    /* Background Ambient Gradients */
+    .ambient-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .ambient-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.12;
+      transition: all 0.5s ease;
+    }
+
+    .orb-1 {
+      width: 500px;
+      height: 500px;
+      background: var(--accent);
+      top: -100px;
+      right: 5%;
+    }
+
+    .orb-2 {
+      width: 450px;
+      height: 450px;
+      background: var(--accent2);
+      bottom: 10%;
+      left: 10%;
+    }
+
+    .analytics-container {
+      position: relative;
+      z-index: 1;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 1.75rem 2rem 4rem 2rem;
+      width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      .analytics-container {
+        padding: 1rem 1rem 3rem 1rem;
+      }
+    }
+
+    /* Page Header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .header-branding {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(124, 58, 237, 0.25);
+      width: fit-content;
+    }
+
+    .header-badge svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 2.1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .page-desc {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    /* Control Toolbar */
+    .control-toolbar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .division-pill-group {
+      display: inline-flex;
+      background: var(--surface-subtle);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      gap: 3px;
+      flex-wrap: wrap;
+    }
+
+    .division-pill-btn {
+      padding: 0.45rem 1.1rem;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+
+    .division-pill-btn:hover {
+      color: var(--fg);
+      background: rgba(124, 58, 237, 0.06);
+    }
+
+    .division-pill-btn.active {
+      background: var(--surface);
+      color: var(--accent);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      font-weight: 700;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+
+    .time-select {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.5rem 0.9rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .time-select:focus {
+      border-color: var(--accent);
+    }
+
+    .custom-date-range {
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .custom-date-range.show {
+      display: inline-flex;
+    }
+
+    .custom-date-input {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--fg);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 0.45rem 0.75rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .custom-date-input:focus {
+      border-color: var(--accent);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1.15rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      font-family: var(--font-body);
+      user-select: none;
+      height: 38px;
+    }
+
+    .btn-primary {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.25);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.94;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      color: var(--fg);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(124, 58, 237, 0.05);
+      transform: translateY(-1px);
+    }
+
+    /* KPI Bento Row */
+    .kpi-bento-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 1.1rem;
+      margin-bottom: 1.75rem;
+    }
+
+    @media (max-width: 1280px) {
+      .kpi-bento-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .kpi-bento-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+      }
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.15rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: rgba(124, 58, 237, 0.3);
+    }
+
+    .kpi-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.85rem;
+    }
+
+    .kpi-icon-wrap {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .icon-purple { background: rgba(124, 58, 237, 0.12); color: var(--accent); }
+    .icon-pink { background: rgba(236, 72, 153, 0.12); color: var(--accent2); }
+    .icon-blue { background: rgba(59, 130, 246, 0.12); color: var(--accent4); }
+    .icon-green { background: rgba(16, 185, 129, 0.12); color: var(--success); }
+    .icon-orange { background: rgba(249, 115, 22, 0.12); color: var(--accent3); }
+    .icon-cyan { background: rgba(6, 182, 212, 0.12); color: var(--accent5); }
+
+    .kpi-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .kpi-val {
+      font-family: var(--font-mono);
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--fg);
+      line-height: 1.2;
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.02em;
+      word-break: break-all;
+    }
+
+    .kpi-sub {
+      font-size: 0.76rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Main Bento Layout */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1080px) {
+      .bento-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+      }
+    }
+
+    .bento-col-12 { grid-column: span 12; }
+    .bento-col-8  { grid-column: span 8; }
+    .bento-col-6  { grid-column: span 6; }
+    .bento-col-4  { grid-column: span 4; }
+
+    @media (max-width: 1080px) {
+      .bento-col-12, .bento-col-8, .bento-col-6, .bento-col-4 {
+        grid-column: span 12 !important;
+      }
+    }
+
+    /* Bento Card */
+    .bento-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      min-height: 380px;
+    }
+
+    .bento-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: rgba(124, 58, 237, 0.25);
+    }
+
+    .bento-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.1rem;
+      gap: 1rem;
+    }
+
+    .bento-title-box {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .bento-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      line-height: 1.3;
+    }
+
+    .bento-title svg {
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* 1-Line Description as requested */
+    .bento-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 3px;
+      line-height: 1.35;
+      font-weight: 400;
+    }
+
+    .bento-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .bento-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--surface-subtle);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+    }
+
+    .bento-chart-wrap {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      min-height: 260px;
+    }
+
+    /* Bento Skeleton Loading Animation */
+    .bento-skeleton-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--surface);
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-radius: var(--radius-lg);
+      transition: opacity 0.3s ease, visibility 0.3s;
+      pointer-events: none;
+    }
+
+    .bento-skeleton-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .skeleton-box {
+      background: linear-gradient(90deg, var(--skeleton-bg) 25%, var(--skeleton-shimmer) 50%, var(--skeleton-bg) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .skeleton-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      height: 100%;
+      padding: 10px 0;
+    }
+
+    .skeleton-bar {
+      flex: 1;
+      border-radius: 6px 6px 0 0;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+      }
+      .ambient-bg, .control-toolbar, .header-actions, .vf-sidebar, #vfSidebar {
+        display: none !important;
+      }
+      .analytics-container {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .bento-card {
+        break-inside: avoid;
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Backdrop -->
+  <div class="ambient-bg">
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+  </div>
+
+  <div class="analytics-container">
+    
+    <!-- Top Header -->
+    <header class="page-header">
+      <div class="header-branding">
+        <div class="header-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+          Analytics &amp; Intelligence
+        </div>
+        <h1 class="page-title">
+          Yarn Analytics
+        </h1>
+        <p class="page-desc">Comprehensive manufacturing performance, sales velocity, price realization, and inventory balance.</p>
+      </div>
+
+      <div class="header-actions">
+        <button type="button" class="btn btn-secondary" onclick="exportAnalyticsCSV()" title="Export all filtered analytics to CSV">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="window.print()" title="Print Summary Report">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Report
+        </button>
+        <button type="button" class="btn btn-primary" onclick="triggerRefreshWithAnimation()" title="Refresh Analytics Data">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh Data
+        </button>
+      </div>
+    </header>
+
+    <!-- Filter & Division Toolbar -->
+    <div class="control-toolbar">
+      <!-- Division Switcher Pills -->
+      <div class="division-pill-group" id="divisionFilterGroup">
+        <button type="button" class="division-pill-btn active" data-div="all" onclick="selectDivision('all')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          All Divisions
+        </button>
+        <button type="button" class="division-pill-btn" data-div="covering" onclick="selectDivision('covering')">
+          Covering
+        </button>
+        <button type="button" class="division-pill-btn" data-div="tfo" onclick="selectDivision('tfo')">
+          TFO
+        </button>
+        <button type="button" class="division-pill-btn" data-div="doubler" onclick="selectDivision('doubler')">
+          Doubler/MX
+        </button>
+      </div>
+
+      <!-- Time Period & Range Controls -->
+      <div class="filter-group">
+        <select class="time-select" id="timePeriodSelect" onchange="handleTimePeriodChange(this.value)">
+          <option value="all">All Time</option>
+          <option value="this-month" selected>This Month</option>
+          <option value="last-30">Last 30 Days</option>
+          <option value="last-7">Last 7 Days</option>
+          <option value="custom">Custom Date Range...</option>
+        </select>
+
+        <div class="custom-date-range" id="customDateRangeBox">
+          <input type="date" class="custom-date-input" id="customDateFrom" onchange="handleCustomDateFilter()">
+          <span style="color: var(--muted); font-size: 0.8rem;">to</span>
+          <input type="date" class="custom-date-input" id="customDateTo" onchange="handleCustomDateFilter()">
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 Key Metric Bento Cards -->
+    <div class="kpi-bento-grid">
+      <!-- Card 1: Production -->
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Total Produced</span>
+          <div class="kpi-icon-wrap icon-purple">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+        </div>
+        <div class="kpi-val" id="kpi-prod-weight">0.00 kg</div>
+        <div class="kpi-sub" id="kpi-prod-bori">0 Boris / Boxes</div>
+      </div>
+
+      <!-- Card 2: Sales Dispatched -->
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Total Dispatched</span>
+          <div class="kpi-icon-wrap icon-blue">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/></svg>
+          </div>
+        </div>
+        <div class="kpi-val" id="kpi-sales-weight">0.00 kg</div>
+        <div class="kpi-sub" id="kpi-sales-bori">0 Boris / 0 Dispatches</div>
+      </div>
+
+      <!-- Card 3: Live Finished Stock Balance -->
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Stock in Hand</span>
+          <div class="kpi-icon-wrap icon-green">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+        </div>
+        <div class="kpi-val" id="kpi-stock-weight">0.00 kg</div>
+        <div class="kpi-sub" id="kpi-stock-bori">0 Boris Available</div>
+      </div>
+
+      <!-- Card 4: Sales Revenue Value -->
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Sales Realized</span>
+          <div class="kpi-icon-wrap icon-orange">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+        </div>
+        <div class="kpi-val" id="kpi-revenue-val">₹ 0.00</div>
+        <div class="kpi-sub" id="kpi-revenue-sub">Gross Invoice Value</div>
+      </div>
+
+      <!-- Card 5: Avg Price Realization -->
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Avg Realization</span>
+          <div class="kpi-icon-wrap icon-pink">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="18" x2="12" y2="20"/><line x1="12" y1="4" x2="12" y2="6"/></svg>
+          </div>
+        </div>
+        <div class="kpi-val" id="kpi-avg-rate">₹ 0 /kg</div>
+        <div class="kpi-sub" id="kpi-avg-rate-sub">Weighted Avg Rate</div>
+      </div>
+
+      <!-- Card 6: Active Qualities Count -->
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Active Qualities</span>
+          <div class="kpi-icon-wrap icon-cyan">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+          </div>
+        </div>
+        <div class="kpi-val" id="kpi-qualities-count">0</div>
+        <div class="kpi-sub" id="kpi-lots-count">0 Running Lots</div>
+      </div>
+    </div>
+
+    <!-- Main Bento Grid with Graphs & Clean 1-Line Descriptions -->
+    <div class="bento-grid">
+      
+      <!-- Graph 1: Production Output Momentum (Span 8) -->
+      <div class="bento-card bento-col-8">
+        <div class="bento-card-header">
+          <div class="bento-title-box">
+            <h3 class="bento-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Production Output Momentum
+            </h3>
+            <p class="bento-desc">Daily and cumulative finished yarn production trends across machine lines.</p>
+          </div>
+          <div class="bento-actions">
+            <span class="bento-badge" id="badge-prod-unit">Kg Output</span>
+          </div>
+        </div>
+        <div class="bento-chart-wrap">
+          <div class="bento-skeleton-overlay" id="skel-prod-momentum">
+            <div class="skeleton-bars">
+              <div class="skeleton-box skeleton-bar" style="height: 35%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 60%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 45%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 80%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 65%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 95%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 50%;"></div>
+            </div>
+          </div>
+          <canvas id="chartProdMomentum"></canvas>
+        </div>
+      </div>
+
+      <!-- Graph 2: Division Output Share (Span 4) -->
+      <div class="bento-card bento-col-4">
+        <div class="bento-card-header">
+          <div class="bento-title-box">
+            <h3 class="bento-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+              Division Output Share
+            </h3>
+            <p class="bento-desc">Proportional distribution of total manufacturing output across yarn divisions.</p>
+          </div>
+          <div class="bento-actions">
+            <span class="bento-badge">Ratio %</span>
+          </div>
+        </div>
+        <div class="bento-chart-wrap">
+          <div class="bento-skeleton-overlay" id="skel-div-share">
+            <div style="height: 100%; display: flex; align-items: center; justify-content: center;">
+              <div class="skeleton-box" style="width: 170px; height: 170px; border-radius: 50%;"></div>
+            </div>
+          </div>
+          <canvas id="chartDivShare"></canvas>
+        </div>
+      </div>
+
+      <!-- Graph 3: Production vs Dispatched Sales Balance (Span 6) -->
+      <div class="bento-card bento-col-6">
+        <div class="bento-card-header">
+          <div class="bento-title-box">
+            <h3 class="bento-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Production vs. Sales Velocity
+            </h3>
+            <p class="bento-desc">Direct comparison between manufactured volume and dispatched sales tonnage.</p>
+          </div>
+          <div class="bento-actions">
+            <span class="bento-badge">Vol Balance</span>
+          </div>
+        </div>
+        <div class="bento-chart-wrap">
+          <div class="bento-skeleton-overlay" id="skel-prod-sales">
+            <div class="skeleton-bars">
+              <div class="skeleton-box skeleton-bar" style="height: 40%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 70%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 55%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 90%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 60%;"></div>
+            </div>
+          </div>
+          <canvas id="chartProdVsSales"></canvas>
+        </div>
+      </div>
+
+      <!-- Graph 4: Top-Selling Qualities & Realization (Span 6) -->
+      <div class="bento-card bento-col-6">
+        <div class="bento-card-header">
+          <div class="bento-title-box">
+            <h3 class="bento-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              Top-Selling Qualities &amp; Demand
+            </h3>
+            <p class="bento-desc">Best-selling yarn qualities ranked by dispatch tonnage and pricing realization.</p>
+          </div>
+          <div class="bento-actions">
+            <span class="bento-badge">By Tonnage</span>
+          </div>
+        </div>
+        <div class="bento-chart-wrap">
+          <div class="bento-skeleton-overlay" id="skel-top-qualities">
+            <div style="display: flex; flex-direction: column; gap: 14px; height: 100%; justify-content: center;">
+              <div class="skeleton-box" style="height: 24px; width: 85%;"></div>
+              <div class="skeleton-box" style="height: 24px; width: 68%;"></div>
+              <div class="skeleton-box" style="height: 24px; width: 92%;"></div>
+              <div class="skeleton-box" style="height: 24px; width: 50%;"></div>
+              <div class="skeleton-box" style="height: 24px; width: 75%;"></div>
+            </div>
+          </div>
+          <canvas id="chartTopQualities"></canvas>
+        </div>
+      </div>
+
+      <!-- Graph 5: Revenue & Commercial Sales Trajectory (Span 8) -->
+      <div class="bento-card bento-col-8">
+        <div class="bento-card-header">
+          <div class="bento-title-box">
+            <h3 class="bento-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Commercial Revenue Trajectory
+            </h3>
+            <p class="bento-desc">Commercial revenue trajectory generated from finished yarn dispatches and sales bills.</p>
+          </div>
+          <div class="bento-actions">
+            <span class="bento-badge">₹ Value</span>
+          </div>
+        </div>
+        <div class="bento-chart-wrap">
+          <div class="bento-skeleton-overlay" id="skel-revenue">
+            <div class="skeleton-bars">
+              <div class="skeleton-box skeleton-bar" style="height: 30%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 50%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 75%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 45%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 85%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 65%;"></div>
+            </div>
+          </div>
+          <canvas id="chartRevenue"></canvas>
+        </div>
+      </div>
+
+      <!-- Graph 6: Customer Concentration & Buyer Share (Span 4) -->
+      <div class="bento-card bento-col-4">
+        <div class="bento-card-header">
+          <div class="bento-title-box">
+            <h3 class="bento-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Top Customers &amp; Buyers
+            </h3>
+            <p class="bento-desc">Key buyer concentration and client-wise yarn shipment distribution.</p>
+          </div>
+          <div class="bento-actions">
+            <span class="bento-badge">Client Share</span>
+          </div>
+        </div>
+        <div class="bento-chart-wrap">
+          <div class="bento-skeleton-overlay" id="skel-top-buyers">
+            <div style="height: 100%; display: flex; align-items: center; justify-content: center;">
+              <div class="skeleton-box" style="width: 170px; height: 170px; border-radius: 50%;"></div>
+            </div>
+          </div>
+          <canvas id="chartTopBuyers"></canvas>
+        </div>
+      </div>
+
+      <!-- Graph 7: Live Finished Stock Health (Span 6) -->
+      <div class="bento-card bento-col-6">
+        <div class="bento-card-header">
+          <div class="bento-title-box">
+            <h3 class="bento-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              Live Finished Stock Readiness
+            </h3>
+            <p class="bento-desc">Live finished stock readiness, available bori count, and net inventory weight.</p>
+          </div>
+          <div class="bento-actions">
+            <span class="bento-badge">In-Hand</span>
+          </div>
+        </div>
+        <div class="bento-chart-wrap">
+          <div class="bento-skeleton-overlay" id="skel-stock-health">
+            <div class="skeleton-bars">
+              <div class="skeleton-box skeleton-bar" style="height: 80%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 45%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 60%;"></div>
+              <div class="skeleton-box skeleton-bar" style="height: 90%;"></div>
+            </div>
+          </div>
+          <canvas id="chartStockHealth"></canvas>
+        </div>
+      </div>
+
+      <!-- Graph 8: Machine & Lot Productivity Breakdown (Span 6) -->
+      <div class="bento-card bento-col-6">
+        <div class="bento-card-header">
+          <div class="bento-title-box">
+            <h3 class="bento-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Machinery &amp; Lot Productivity Matrix
+            </h3>
+            <p class="bento-desc">Comparative performance index and output distribution across machinery.</p>
+          </div>
+          <div class="bento-actions">
+            <span class="bento-badge">Efficiency</span>
+          </div>
+        </div>
+        <div class="bento-chart-wrap">
+          <div class="bento-skeleton-overlay" id="skel-machinery">
+            <div style="display: flex; flex-direction: column; gap: 14px; height: 100%; justify-content: center;">
+              <div class="skeleton-box" style="height: 22px; width: 75%;"></div>
+              <div class="skeleton-box" style="height: 22px; width: 90%;"></div>
+              <div class="skeleton-box" style="height: 22px; width: 60%;"></div>
+              <div class="skeleton-box" style="height: 22px; width: 80%;"></div>
+            </div>
+          </div>
+          <canvas id="chartMachinery"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // ==========================================================================
+    // YARN ANALYTICS ENGINE & CHART CONTROLLER
+    // ==========================================================================
+
+    let currentDivision = 'all'; // 'all', 'covering', 'tfo', 'doubler'
+    let currentPeriod = 'this-month'; // 'all', 'this-month', 'last-30', 'last-7', 'custom'
+    let customFrom = null;
+    let customTo = null;
+
+    // Chart Instances registry
+    const chartInstances = {};
+
+    // Raw Datastore
+    const rawData = {
+      covering: { production: [], sales: [] },
+      tfo: { production: [], sales: [] },
+      doubler: { production: [], sales: [] }
+    };
+
+    // Helper: Determine if dark mode is active
+    function isDarkMode() {
+      return document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+    }
+
+    // Chart Theme Palette
+    function getChartTheme() {
+      const dark = isDarkMode();
+      return {
+        textColor: dark ? '#a1a1aa' : '#64748b',
+        titleColor: dark ? '#ffffff' : '#0f172a',
+        gridColor: dark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+        tooltipBg: dark ? '#18181b' : '#ffffff',
+        tooltipFg: dark ? '#ffffff' : '#0f172a',
+        tooltipBorder: dark ? '#27272a' : '#e2e8f0',
+        accent1: '#7c3aed',
+        accent2: '#ec4899',
+        accent3: '#3b82f6',
+        accent4: '#10b981',
+        accent5: '#f97316',
+        accent6: '#06b6d4'
+      };
+    }
+
+    // Format Currency
+    function formatCurrency(num) {
+      if (isNaN(num)) return '₹ 0.00';
+      return '₹ ' + Number(num).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    }
+
+    // Format Number with 2 decimal places
+    function formatWeight(num) {
+      if (isNaN(num)) return '0.00 kg';
+      return Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kg';
+    }
+
+    // Load logs from localStorage and Supabase cache
+    function fetchAllYarnData() {
+      ['covering', 'tfo', 'doubler'].forEach(div => {
+        let prod = [];
+        let sales = [];
+        try {
+          prod = JSON.parse(localStorage.getItem(`yarn_${div}_production_logs`) || '[]');
+          sales = JSON.parse(localStorage.getItem(`yarn_${div}_sales_logs`) || '[]');
+        } catch(e) {
+          console.error(`Error loading yarn_${div} logs:`, e);
+        }
+
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+          prod = window.VishwaSupabase.filterDeletedEntities(prod);
+          sales = window.VishwaSupabase.filterDeletedEntities(sales);
+        }
+
+        rawData[div].production = Array.isArray(prod) ? prod : [];
+        rawData[div].sales = Array.isArray(sales) ? sales : [];
+      });
+    }
+
+    // Filter by Date Range
+    function isDateWithinSelectedRange(dateStr) {
+      if (!dateStr) return true;
+      if (currentPeriod === 'all') return true;
+
+      const recordDate = new Date(dateStr);
+      if (isNaN(recordDate.getTime())) return true;
+
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+
+      if (currentPeriod === 'last-7') {
+        const d = new Date(today);
+        d.setDate(d.getDate() - 7);
+        d.setHours(0, 0, 0, 0);
+        return recordDate >= d && recordDate <= today;
+      }
+
+      if (currentPeriod === 'last-30') {
+        const d = new Date(today);
+        d.setDate(d.getDate() - 30);
+        d.setHours(0, 0, 0, 0);
+        return recordDate >= d && recordDate <= today;
+      }
+
+      if (currentPeriod === 'this-month') {
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        return recordDate >= startOfMonth && recordDate <= today;
+      }
+
+      if (currentPeriod === 'custom' && customFrom && customTo) {
+        const fromDate = new Date(customFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        const toDate = new Date(customTo);
+        toDate.setHours(23, 59, 59, 999);
+        return recordDate >= fromDate && recordDate <= toDate;
+      }
+
+      return true;
+    }
+
+    // Filter and Aggregate Data according to active Division & Time Range
+    function getAggregatedDataset() {
+      const activeDivisions = currentDivision === 'all' ? ['covering', 'tfo', 'doubler'] : [currentDivision];
+
+      let allProduction = [];
+      let allSales = [];
+
+      activeDivisions.forEach(div => {
+        const pList = (rawData[div].production || []).filter(item => {
+          const d = item.date || item.createdAt;
+          return isDateWithinSelectedRange(d);
+        }).map(item => ({ ...item, _division: div }));
+
+        const sList = (rawData[div].sales || []).filter(item => {
+          const d = item.date || item.createdAt;
+          return isDateWithinSelectedRange(d);
+        }).map(item => ({ ...item, _division: div }));
+
+        allProduction = allProduction.concat(pList);
+        allSales = allSales.concat(sList);
+      });
+
+      // Sort chronological
+      allProduction.sort((a, b) => new Date(a.date || a.createdAt || 0) - new Date(b.date || b.createdAt || 0));
+      allSales.sort((a, b) => new Date(a.date || a.createdAt || 0) - new Date(b.date || b.createdAt || 0));
+
+      return {
+        production: allProduction,
+        sales: allSales
+      };
+    }
+
+    // Update KPI Header Cards
+    function renderKPICards(dataset) {
+      let totalProdWeight = 0;
+      let totalProdBori = 0;
+      let totalSalesWeight = 0;
+      let totalSalesBori = 0;
+      let totalSalesRevenue = 0;
+      const qualitiesSet = new Set();
+      const lotsSet = new Set();
+
+      dataset.production.forEach(p => {
+        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        totalProdWeight += w;
+        totalProdBori += 1;
+        if (p.productName || p.quality) qualitiesSet.add(p.productName || p.quality);
+        if (p.lotNo || p.lotNumber) lotsSet.add(p.lotNo || p.lotNumber);
+      });
+
+      dataset.sales.forEach(s => {
+        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
+        const rate = parseFloat(s.rate || s.price) || 0;
+        const bCount = parseInt(s.boriCount || s.totalBoris || 1, 10) || 1;
+        const val = parseFloat(s.totalAmount || s.billAmount) || (w * rate);
+
+        totalSalesWeight += w;
+        totalSalesBori += bCount;
+        totalSalesRevenue += val;
+
+        if (s.productName || s.quality) qualitiesSet.add(s.productName || s.quality);
+        if (s.lotNo || s.lotNumber) lotsSet.add(s.lotNo || s.lotNumber);
+      });
+
+      // Available stock in hand
+      const netStockWeight = Math.max(0, totalProdWeight - totalSalesWeight);
+      const netStockBori = Math.max(0, totalProdBori - totalSalesBori);
+
+      // Avg Rate
+      const avgRate = totalSalesWeight > 0 ? (totalSalesRevenue / totalSalesWeight) : 0;
+
+      // Update DOM
+      document.getElementById('kpi-prod-weight').textContent = formatWeight(totalProdWeight);
+      document.getElementById('kpi-prod-bori').textContent = `${totalProdBori.toLocaleString()} Boris / Boxes`;
+
+      document.getElementById('kpi-sales-weight').textContent = formatWeight(totalSalesWeight);
+      document.getElementById('kpi-sales-bori').textContent = `${totalSalesBori.toLocaleString()} Boris • ${dataset.sales.length} Bills`;
+
+      document.getElementById('kpi-stock-weight').textContent = formatWeight(netStockWeight);
+      document.getElementById('kpi-stock-bori').textContent = `${netStockBori.toLocaleString()} Boris In-Hand`;
+
+      document.getElementById('kpi-revenue-val').textContent = formatCurrency(totalSalesRevenue);
+      document.getElementById('kpi-avg-rate').textContent = `₹ ${avgRate.toFixed(2)} /kg`;
+
+      document.getElementById('kpi-qualities-count').textContent = qualitiesSet.size.toString();
+      document.getElementById('kpi-lots-count').textContent = `${lotsSet.size} Distinct Lots`;
+    }
+
+    // Toggle Skeletons
+    function setSkeletonsVisible(visible) {
+      const skels = document.querySelectorAll('.bento-skeleton-overlay');
+      skels.forEach(el => {
+        if (visible) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
+    }
+
+    // Destroy Chart
+    function destroyChart(key) {
+      if (chartInstances[key]) {
+        chartInstances[key].destroy();
+        delete chartInstances[key];
+      }
+    }
+
+    // ==========================================================================
+    // CHART 1: Production Momentum (Area Line Chart)
+    // ==========================================================================
+    function renderProdMomentumChart(dataset) {
+      const canvas = document.getElementById('chartProdMomentum');
+      destroyChart('prodMomentum');
+      if (!canvas) return;
+
+      const theme = getChartTheme();
+
+      // Aggregate daily output
+      const dayMap = new Map();
+      dataset.production.forEach(p => {
+        const d = (p.date || p.createdAt || '').substring(0, 10) || 'Unknown';
+        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        dayMap.set(d, (dayMap.get(d) || 0) + w);
+      });
+
+      const sortedDates = Array.from(dayMap.keys()).sort();
+      let labels = sortedDates.map(d => {
+        try {
+          const parts = d.split('-');
+          if (parts.length === 3) return `${parts[2]}/${parts[1]}`;
+          return d;
+        } catch(e) { return d; }
+      });
+
+      let dailyData = sortedDates.map(d => Number((dayMap.get(d) || 0).toFixed(2)));
+
+      if (labels.length === 0) {
+        labels = ['No Data'];
+        dailyData = [0];
+      }
+
+      const ctx = canvas.getContext('2d');
+      const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+      gradient.addColorStop(0, 'rgba(124, 58, 237, 0.35)');
+      gradient.addColorStop(1, 'rgba(124, 58, 237, 0.00)');
+
+      chartInstances.prodMomentum = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Daily Output (Kg)',
+            data: dailyData,
+            borderColor: theme.accent1,
+            backgroundColor: gradient,
+            borderWidth: 2.5,
+            pointBackgroundColor: theme.accent1,
+            pointBorderColor: '#ffffff',
+            pointRadius: labels.length > 25 ? 2 : 4,
+            pointHoverRadius: 6,
+            fill: true,
+            tension: 0.35
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: theme.tooltipBg,
+              titleColor: theme.tooltipFg,
+              bodyColor: theme.tooltipFg,
+              borderColor: theme.tooltipBorder,
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                label: (ctx) => ` Output: ${ctx.parsed.y.toLocaleString()} kg`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: theme.gridColor },
+              ticks: { color: theme.textColor, font: { family: 'JetBrains Mono', size: 10 } }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: theme.gridColor },
+              ticks: {
+                color: theme.textColor,
+                font: { family: 'JetBrains Mono', size: 10 },
+                callback: (val) => `${val} kg`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ==========================================================================
+    // CHART 2: Division Share (Donut Chart)
+    // ==========================================================================
+    function renderDivShareChart(dataset) {
+      const canvas = document.getElementById('chartDivShare');
+      destroyChart('divShare');
+      if (!canvas) return;
+
+      const theme = getChartTheme();
+
+      let covWeight = 0;
+      let tfoWeight = 0;
+      let doublerWeight = 0;
+
+      dataset.production.forEach(p => {
+        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        if (p._division === 'covering') covWeight += w;
+        else if (p._division === 'tfo') tfoWeight += w;
+        else if (p._division === 'doubler') doublerWeight += w;
+      });
+
+      const total = covWeight + tfoWeight + doublerWeight;
+      const data = total > 0 ? [covWeight, tfoWeight, doublerWeight] : [1, 1, 1];
+      const labels = ['Covering', 'TFO', 'Doubler/MX'];
+
+      chartInstances.divShare = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: [theme.accent1, theme.accent2, theme.accent3],
+            borderWidth: 2,
+            borderColor: isDarkMode() ? '#0a0a0a' : '#ffffff',
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '72%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: theme.textColor,
+                font: { family: 'Inter', size: 11, weight: 600 },
+                padding: 12,
+                boxWidth: 12
+              }
+            },
+            tooltip: {
+              backgroundColor: theme.tooltipBg,
+              titleColor: theme.tooltipFg,
+              bodyColor: theme.tooltipFg,
+              borderColor: theme.tooltipBorder,
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                label: (ctx) => {
+                  if (total === 0) return ' No production data';
+                  const val = ctx.parsed;
+                  const pct = ((val / total) * 100).toFixed(1);
+                  return ` ${ctx.label}: ${val.toFixed(2)} kg (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ==========================================================================
+    // CHART 3: Production vs Sales Velocity (Grouped Bar Chart)
+    // ==========================================================================
+    function renderProdVsSalesChart(dataset) {
+      const canvas = document.getElementById('chartProdVsSales');
+      destroyChart('prodVsSales');
+      if (!canvas) return;
+
+      const theme = getChartTheme();
+
+      // Aggregate by month/period bucket
+      const bucketMap = new Map();
+
+      dataset.production.forEach(p => {
+        const monthKey = (p.date || p.createdAt || '').substring(0, 7) || 'Unknown';
+        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        if (!bucketMap.has(monthKey)) bucketMap.set(monthKey, { prod: 0, sales: 0 });
+        bucketMap.get(monthKey).prod += w;
+      });
+
+      dataset.sales.forEach(s => {
+        const monthKey = (s.date || s.createdAt || '').substring(0, 7) || 'Unknown';
+        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
+        if (!bucketMap.has(monthKey)) bucketMap.set(monthKey, { prod: 0, sales: 0 });
+        bucketMap.get(monthKey).sales += w;
+      });
+
+      const sortedBuckets = Array.from(bucketMap.keys()).sort();
+      let labels = sortedBuckets;
+      let prodData = sortedBuckets.map(b => Number(bucketMap.get(b).prod.toFixed(2)));
+      let salesData = sortedBuckets.map(b => Number(bucketMap.get(b).sales.toFixed(2)));
+
+      if (labels.length === 0) {
+        labels = ['Current Period'];
+        prodData = [0];
+        salesData = [0];
+      }
+
+      chartInstances.prodVsSales = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Production (Kg)',
+              data: prodData,
+              backgroundColor: theme.accent1,
+              borderRadius: 6,
+              maxBarThickness: 28
+            },
+            {
+              label: 'Dispatched Sales (Kg)',
+              data: salesData,
+              backgroundColor: theme.accent3,
+              borderRadius: 6,
+              maxBarThickness: 28
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              align: 'end',
+              labels: {
+                color: theme.textColor,
+                font: { family: 'Inter', size: 11, weight: 600 },
+                boxWidth: 12
+              }
+            },
+            tooltip: {
+              backgroundColor: theme.tooltipBg,
+              titleColor: theme.tooltipFg,
+              bodyColor: theme.tooltipFg,
+              borderColor: theme.tooltipBorder,
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} kg`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: theme.gridColor },
+              ticks: { color: theme.textColor, font: { family: 'JetBrains Mono', size: 10 } }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: theme.gridColor },
+              ticks: {
+                color: theme.textColor,
+                font: { family: 'JetBrains Mono', size: 10 },
+                callback: (val) => `${val} kg`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ==========================================================================
+    // CHART 4: Top-Selling Qualities (Horizontal Bar Chart)
+    // ==========================================================================
+    function renderTopQualitiesChart(dataset) {
+      const canvas = document.getElementById('chartTopQualities');
+      destroyChart('topQualities');
+      if (!canvas) return;
+
+      const theme = getChartTheme();
+
+      const qualityMap = new Map();
+
+      dataset.sales.forEach(s => {
+        const q = String(s.productName || s.quality || 'Standard Yarn').trim();
+        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
+        qualityMap.set(q, (qualityMap.get(q) || 0) + w);
+      });
+
+      // Sort descending and take top 6
+      const sorted = Array.from(qualityMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
+
+      let labels = sorted.map(item => item[0]);
+      let data = sorted.map(item => Number(item[1].toFixed(2)));
+
+      if (labels.length === 0) {
+        labels = ['No Sales Quality Data'];
+        data = [0];
+      }
+
+      chartInstances.topQualities = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Sales Volume (Kg)',
+            data: data,
+            backgroundColor: [
+              '#7c3aed',
+              '#ec4899',
+              '#3b82f6',
+              '#10b981',
+              '#f97316',
+              '#06b6d4'
+            ],
+            borderRadius: 6,
+            maxBarThickness: 22
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: theme.tooltipBg,
+              titleColor: theme.tooltipFg,
+              bodyColor: theme.tooltipFg,
+              borderColor: theme.tooltipBorder,
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                label: (ctx) => ` Dispatched: ${ctx.parsed.x.toLocaleString()} kg`
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              grid: { color: theme.gridColor },
+              ticks: {
+                color: theme.textColor,
+                font: { family: 'JetBrains Mono', size: 10 },
+                callback: (val) => `${val} kg`
+              }
+            },
+            y: {
+              grid: { display: false },
+              ticks: {
+                color: theme.titleColor,
+                font: { family: 'Inter', size: 11, weight: 600 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ==========================================================================
+    // CHART 5: Commercial Revenue Trajectory (Combo Bar + Line)
+    // ==========================================================================
+    function renderRevenueChart(dataset) {
+      const canvas = document.getElementById('chartRevenue');
+      destroyChart('revenue');
+      if (!canvas) return;
+
+      const theme = getChartTheme();
+
+      const revMap = new Map();
+
+      dataset.sales.forEach(s => {
+        const d = (s.date || s.createdAt || '').substring(0, 7) || 'Unknown';
+        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
+        const rate = parseFloat(s.rate || s.price) || 0;
+        const val = parseFloat(s.totalAmount || s.billAmount) || (w * rate);
+        revMap.set(d, (revMap.get(d) || 0) + val);
+      });
+
+      const sorted = Array.from(revMap.keys()).sort();
+      let labels = sorted;
+      let values = sorted.map(k => Number((revMap.get(k) || 0).toFixed(2)));
+
+      if (labels.length === 0) {
+        labels = ['Current Period'];
+        values = [0];
+      }
+
+      chartInstances.revenue = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Sales Revenue (₹)',
+            data: values,
+            backgroundColor: 'rgba(236, 72, 153, 0.85)',
+            borderRadius: 6,
+            maxBarThickness: 32
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: theme.tooltipBg,
+              titleColor: theme.tooltipFg,
+              bodyColor: theme.tooltipFg,
+              borderColor: theme.tooltipBorder,
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                label: (ctx) => ` Revenue: ${formatCurrency(ctx.parsed.y)}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: theme.gridColor },
+              ticks: { color: theme.textColor, font: { family: 'JetBrains Mono', size: 10 } }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: theme.gridColor },
+              ticks: {
+                color: theme.textColor,
+                font: { family: 'JetBrains Mono', size: 10 },
+                callback: (val) => `₹ ${val >= 100000 ? (val/100000).toFixed(1) + 'L' : val.toLocaleString()}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ==========================================================================
+    // CHART 6: Top Customers / Buyer Concentration (Donut Chart)
+    // ==========================================================================
+    function renderTopBuyersChart(dataset) {
+      const canvas = document.getElementById('chartTopBuyers');
+      destroyChart('topBuyers');
+      if (!canvas) return;
+
+      const theme = getChartTheme();
+
+      const custMap = new Map();
+
+      dataset.sales.forEach(s => {
+        const c = String(s.customer || s.buyer || s.partyName || 'Retail Customer').trim();
+        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
+        custMap.set(c, (custMap.get(c) || 0) + w);
+      });
+
+      const sorted = Array.from(custMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+      let labels = sorted.map(item => item[0]);
+      let data = sorted.map(item => Number(item[1].toFixed(2)));
+
+      if (labels.length === 0) {
+        labels = ['No Client Data'];
+        data = [1];
+      }
+
+      chartInstances.topBuyers = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: [
+              '#3b82f6',
+              '#10b981',
+              '#f97316',
+              '#7c3aed',
+              '#ec4899'
+            ],
+            borderWidth: 2,
+            borderColor: isDarkMode() ? '#0a0a0a' : '#ffffff',
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '68%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: theme.textColor,
+                font: { family: 'Inter', size: 10, weight: 600 },
+                boxWidth: 10,
+                padding: 8
+              }
+            },
+            tooltip: {
+              backgroundColor: theme.tooltipBg,
+              titleColor: theme.tooltipFg,
+              bodyColor: theme.tooltipFg,
+              borderColor: theme.tooltipBorder,
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                label: (ctx) => ` ${ctx.label}: ${ctx.parsed.toLocaleString()} kg`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ==========================================================================
+    // CHART 7: Live Finished Stock Health (Bar Chart)
+    // ==========================================================================
+    function renderStockHealthChart(dataset) {
+      const canvas = document.getElementById('chartStockHealth');
+      destroyChart('stockHealth');
+      if (!canvas) return;
+
+      const theme = getChartTheme();
+
+      const prodMap = new Map();
+      const soldMap = new Map();
+
+      dataset.production.forEach(p => {
+        const q = String(p.productName || p.quality || 'Standard Yarn').trim();
+        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        prodMap.set(q, (prodMap.get(q) || 0) + w);
+      });
+
+      dataset.sales.forEach(s => {
+        const q = String(s.productName || s.quality || 'Standard Yarn').trim();
+        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
+        soldMap.set(q, (soldMap.get(q) || 0) + w);
+      });
+
+      const allQualities = Array.from(new Set([...prodMap.keys(), ...soldMap.keys()])).slice(0, 6);
+      const inStockData = allQualities.map(q => {
+        const p = prodMap.get(q) || 0;
+        const s = soldMap.get(q) || 0;
+        return Number(Math.max(0, p - s).toFixed(2));
+      });
+
+      let labels = allQualities;
+      if (labels.length === 0) {
+        labels = ['No Stock Data'];
+      }
+
+      chartInstances.stockHealth = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Net In-Hand Stock (Kg)',
+            data: inStockData.length > 0 ? inStockData : [0],
+            backgroundColor: theme.accent4,
+            borderRadius: 6,
+            maxBarThickness: 28
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: theme.tooltipBg,
+              titleColor: theme.tooltipFg,
+              bodyColor: theme.tooltipFg,
+              borderColor: theme.tooltipBorder,
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                label: (ctx) => ` Available: ${ctx.parsed.y.toLocaleString()} kg`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: theme.gridColor },
+              ticks: { color: theme.textColor, font: { family: 'Inter', size: 10, weight: 600 } }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: theme.gridColor },
+              ticks: {
+                color: theme.textColor,
+                font: { family: 'JetBrains Mono', size: 10 },
+                callback: (val) => `${val} kg`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ==========================================================================
+    // CHART 8: Machinery / Lot Productivity (Horizontal Bar Chart)
+    // ==========================================================================
+    function renderMachineryChart(dataset) {
+      const canvas = document.getElementById('chartMachinery');
+      destroyChart('machinery');
+      if (!canvas) return;
+
+      const theme = getChartTheme();
+
+      const machineMap = new Map();
+
+      dataset.production.forEach(p => {
+        const m = String(p.machineNo || p.machine || p.lotNo || 'Machine 1').trim();
+        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        machineMap.set(m, (machineMap.get(m) || 0) + w);
+      });
+
+      const sorted = Array.from(machineMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
+
+      let labels = sorted.map(item => item[0]);
+      let data = sorted.map(item => Number(item[1].toFixed(2)));
+
+      if (labels.length === 0) {
+        labels = ['No Machine Records'];
+        data = [0];
+      }
+
+      chartInstances.machinery = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Output (Kg)',
+            data: data,
+            backgroundColor: theme.accent6,
+            borderRadius: 6,
+            maxBarThickness: 22
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: theme.tooltipBg,
+              titleColor: theme.tooltipFg,
+              bodyColor: theme.tooltipFg,
+              borderColor: theme.tooltipBorder,
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                label: (ctx) => ` Produced: ${ctx.parsed.x.toLocaleString()} kg`
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              grid: { color: theme.gridColor },
+              ticks: {
+                color: theme.textColor,
+                font: { family: 'JetBrains Mono', size: 10 },
+                callback: (val) => `${val} kg`
+              }
+            },
+            y: {
+              grid: { display: false },
+              ticks: {
+                color: theme.titleColor,
+                font: { family: 'Inter', size: 11, weight: 600 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ==========================================================================
+    // REFRESH & RENDER CONTROLLER
+    // ==========================================================================
+    function refreshAnalyticsView(showSkeleton = false) {
+      if (showSkeleton) {
+        setSkeletonsVisible(true);
+      }
+
+      fetchAllYarnData();
+      const dataset = getAggregatedDataset();
+
+      renderKPICards(dataset);
+
+      // Render all 8 bento graphs
+      renderProdMomentumChart(dataset);
+      renderDivShareChart(dataset);
+      renderProdVsSalesChart(dataset);
+      renderTopQualitiesChart(dataset);
+      renderRevenueChart(dataset);
+      renderTopBuyersChart(dataset);
+      renderStockHealthChart(dataset);
+      renderMachineryChart(dataset);
+
+      if (showSkeleton) {
+        setTimeout(() => {
+          setSkeletonsVisible(false);
+        }, 320);
+      } else {
+        setSkeletonsVisible(false);
+      }
+    }
+
+    function triggerRefreshWithAnimation() {
+      refreshAnalyticsView(true);
+    }
+
+    // ==========================================================================
+    // FILTER EVENT HANDLERS
+    // ==========================================================================
+    function selectDivision(div) {
+      currentDivision = div;
+      const btns = document.querySelectorAll('.division-pill-btn');
+      btns.forEach(b => {
+        if (b.getAttribute('data-div') === div) b.classList.add('active');
+        else b.classList.remove('active');
+      });
+      triggerRefreshWithAnimation();
+    }
+
+    function handleTimePeriodChange(val) {
+      currentPeriod = val;
+      const customBox = document.getElementById('customDateRangeBox');
+      if (val === 'custom') {
+        customBox.classList.add('show');
+      } else {
+        customBox.classList.remove('show');
+        triggerRefreshWithAnimation();
+      }
+    }
+
+    function handleCustomDateFilter() {
+      customFrom = document.getElementById('customDateFrom').value;
+      customTo = document.getElementById('customDateTo').value;
+      if (customFrom && customTo) {
+        triggerRefreshWithAnimation();
+      }
+    }
+
+    // ==========================================================================
+    // CSV EXPORT
+    // ==========================================================================
+    function exportAnalyticsCSV() {
+      const dataset = getAggregatedDataset();
+      let csv = 'Type,Division,Date,Product / Quality,Lot No,Weight (Kg),Boris/Boxes,Customer / Machine,Rate (₹),Amount (₹)\n';
+
+      dataset.production.forEach(p => {
+        const w = parseFloat(p.netWeight || p.weight || p.grossWeight) || 0;
+        csv += `"Production","${p._division || ''}","${p.date || p.createdAt || ''}","${p.productName || p.quality || ''}","${p.lotNo || p.lotNumber || ''}",${w},1,"${p.machineNo || ''}",0,0\n`;
+      });
+
+      dataset.sales.forEach(s => {
+        const w = parseFloat(s.weight || s.netWeight || s.totalWeight) || 0;
+        const b = parseInt(s.boriCount || 1, 10) || 1;
+        const rate = parseFloat(s.rate || s.price) || 0;
+        const amt = parseFloat(s.totalAmount || s.billAmount) || (w * rate);
+        csv += `"Sales","${s._division || ''}","${s.date || s.createdAt || ''}","${s.productName || s.quality || ''}","${s.lotNo || s.lotNumber || ''}",${w},${b},"${s.customer || ''}",${rate},${amt}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Yarn_Analytics_${currentDivision}_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // ==========================================================================
+    // EVENT LISTENERS & BOOTSTRAP
+    // ==========================================================================
+    document.addEventListener('DOMContentLoaded', () => {
+      // Default to current month custom dates if needed
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const todayStr = now.toISOString().split('T')[0];
+      document.getElementById('customDateFrom').value = firstDay;
+      document.getElementById('customDateTo').value = todayStr;
+
+      refreshAnalyticsView(true);
+
+      // Listen to theme switch to re-theme Chart.js automatically
+      window.addEventListener('themeChanged', () => {
+        refreshAnalyticsView(false);
+      });
+
+      // Storage sync
+      window.addEventListener('storage', (e) => {
+        if (e.key && e.key.startsWith('yarn_')) {
+          refreshAnalyticsView(false);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
