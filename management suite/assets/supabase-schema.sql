@@ -765,6 +765,62 @@ CREATE TABLE IF NOT EXISTS public.vf_rm_suppliers (
 CREATE INDEX IF NOT EXISTS idx_vf_rm_suppliers_name ON public.vf_rm_suppliers(name);
 CREATE INDEX IF NOT EXISTS idx_vf_rm_suppliers_updated_at ON public.vf_rm_suppliers(updated_at DESC);
 
+-- 30. Dedicated Relational Table: Fabric Jacquard Designs (Design Library)
+CREATE TABLE IF NOT EXISTS public.vf_fabric_designs (
+    id TEXT PRIMARY KEY,
+    design_name TEXT NOT NULL,
+    design_number TEXT,
+    quality TEXT,
+    image_url TEXT,
+    ep_file_url TEXT,
+    picks INTEGER DEFAULT 0,
+    repeats INTEGER DEFAULT 1,
+    total_hooks INTEGER DEFAULT 0,
+    width NUMERIC(10, 2),
+    avg_weight NUMERIC(10, 3),
+    costing_id TEXT,
+    deleted BOOLEAN DEFAULT false,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_designs_name ON public.vf_fabric_designs(design_name);
+CREATE INDEX IF NOT EXISTS idx_vf_designs_quality ON public.vf_fabric_designs(quality);
+CREATE INDEX IF NOT EXISTS idx_vf_designs_deleted ON public.vf_fabric_designs(deleted);
+CREATE INDEX IF NOT EXISTS idx_vf_designs_updated_at ON public.vf_fabric_designs(updated_at DESC);
+
+-- 31. Dedicated Relational Table: Machinery Assets (Looms, Jacquards, Fanis, Jalas)
+CREATE TABLE IF NOT EXISTS public.vf_machinery_assets (
+    id TEXT PRIMARY KEY,
+    asset_type TEXT NOT NULL, -- 'loom' | 'jacquard' | 'fani' | 'jala' | 'machine'
+    name TEXT NOT NULL,
+    code TEXT,
+    model TEXT,
+    status TEXT DEFAULT 'Active',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_machinery_type ON public.vf_machinery_assets(asset_type);
+CREATE INDEX IF NOT EXISTS idx_vf_machinery_name ON public.vf_machinery_assets(name);
+CREATE INDEX IF NOT EXISTS idx_vf_machinery_status ON public.vf_machinery_assets(status);
+
+-- 32. Dedicated Relational Table: Companies & Billing Entities
+CREATE TABLE IF NOT EXISTS public.vf_companies (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    gstin TEXT,
+    address TEXT,
+    phone TEXT,
+    email TEXT,
+    bank_details JSONB DEFAULT '{}'::jsonb,
+    is_default BOOLEAN DEFAULT false,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_companies_name ON public.vf_companies(name);
+
 -- ==============================================================================
 -- Row Level Security (RLS) Configuration
 -- ==============================================================================
@@ -797,6 +853,9 @@ ALTER TABLE public.vf_salary_settlements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_rm_qualities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_fp_qualities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_rm_suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_fabric_designs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_machinery_assets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_companies ENABLE ROW LEVEL SECURITY;
 
 -- Dynamic Policy Configuration:
 -- Production Mode: Allows read/write for all authenticated API requests & anon key (matching client tokens)
@@ -941,6 +1000,21 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_rm_suppliers' AND policyname = 'Allow public access to vf_rm_suppliers') THEN
         CREATE POLICY "Allow public access to vf_rm_suppliers" ON public.vf_rm_suppliers FOR ALL USING (true) WITH CHECK (true);
     END IF;
+
+    -- 29. vf_fabric_designs
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fabric_designs' AND policyname = 'Allow public access to vf_fabric_designs') THEN
+        CREATE POLICY "Allow public access to vf_fabric_designs" ON public.vf_fabric_designs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 30. vf_machinery_assets
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_machinery_assets' AND policyname = 'Allow public access to vf_machinery_assets') THEN
+        CREATE POLICY "Allow public access to vf_machinery_assets" ON public.vf_machinery_assets FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 31. vf_companies
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_companies' AND policyname = 'Allow public access to vf_companies') THEN
+        CREATE POLICY "Allow public access to vf_companies" ON public.vf_companies FOR ALL USING (true) WITH CHECK (true);
+    END IF;
 END $$;
 
 -- ==============================================================================
@@ -996,9 +1070,13 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_rm_qualities;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fp_qualities;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_rm_suppliers;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_designs;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_machinery_assets;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_companies;
     END IF;
 EXCEPTION
     WHEN duplicate_object THEN NULL;
     WHEN others THEN NULL;
 END $$;
+
 

@@ -2,8 +2,13 @@ const assert = require('assert');
 const test = require('node:test');
 const fs = require('fs');
 
+const path = require('path');
+
 test('Multi-User Concurrency & Merge Validation', async (t) => {
-  const clientCode = fs.readFileSync('management suite/assets/supabase-client.js', 'utf8');
+  const filePath = fs.existsSync(path.join(__dirname, '../assets/supabase-client.js'))
+    ? path.join(__dirname, '../assets/supabase-client.js')
+    : 'assets/supabase-client.js';
+  const clientCode = fs.readFileSync(filePath, 'utf8');
 
   // Create isolated sandbox context
   function createTestEnv() {

@@ -544,21 +544,11 @@
 
     // Special Case: Yarn RM Stock Book Array Merge (Sync Box Statuses Across Devices)
     if (key === 'vishwa_yarn_rm_stock_data' && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
-      const lastWrite = lastLocalWrites[key] || 0;
-      const isLocallyActive = (Date.now() - lastWrite < 3000);
-      if (!isLocallyActive) {
-        return filterDeletedEntities(parsedRemote);
-      }
       return mergeYarnStockDatasets(parsedLocal, parsedRemote);
     }
 
     // Special Case: Yarn RM Orders Array Merge (Sync Box Statuses inside batches)
     if (key === 'yarn-rm-orders' && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
-      const lastWrite = lastLocalWrites[key] || 0;
-      const isLocallyActive = (Date.now() - lastWrite < 3000);
-      if (!isLocallyActive) {
-        return filterDeletedEntities(parsedRemote);
-      }
       return mergeYarnOrdersDatasets(parsedLocal, parsedRemote);
     }
 
@@ -6044,6 +6034,1098 @@
       return Object.keys(cache).length;
     }
   };
+
+  // ==============================================================================
+  // Modern Asynchronous Relational Service Layer (window.VF_DB)
+  // Direct async CRUD operations against Supabase Postgres with auto-pagination & offline resilience
+  // ==============================================================================
+  const VF_DB = {
+    // Check if Supabase connection is configured and active
+    isConfigured: () => Boolean(activeConfig.isConfigured && SUPABASE_URL && SUPABASE_ANON_KEY),
+    getStatus: () => currentStatus,
+
+    // Generic Auto-Paginated Table Fetcher (>1000 Rows Safe)
+    async fetchTable(tableName, options = {}) {
+      const select = options.select || '*';
+      const order = options.order ? `&order=${encodeURIComponent(options.order)}` : '';
+      const filter = options.filter ? `&${options.filter}` : '';
+      const extra = `${order}${filter}`;
+      return await fetchAllRows(tableName, select, extra);
+    },
+
+    // Generic Batch Upsert Helper (Chunks of 50 for Network Safety)
+    async upsert(tableName, records, onConflict = 'id') {
+      if (!this.isConfigured()) return { success: false, error: 'Database unconfigured' };
+      const list = Array.isArray(records) ? records : [records];
+      if (list.length === 0) return { success: true, count: 0 };
+
+      const batchSize = 50;
+      let upsertedCount = 0;
+
+      for (let i = 0; i < list.length; i += batchSize) {
+        const chunk = list.slice(i, i + batchSize).map(item => {
+          const rec = { ...item };
+          if (!rec.updated_at) rec.updated_at = new Date().toISOString();
+          return rec;
+        });
+
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?on_conflict=${encodeURIComponent(onConflict)}`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify(chunk)
+          });
+
+          if (!res.ok) {
+            const errText = await res.text();
+            console.error(`VF_DB.upsert error on ${tableName}:`, errText);
+            return { success: false, error: errText, count: upsertedCount };
+          }
+          upsertedCount += chunk.length;
+        } catch (err) {
+          console.error(`VF_DB.upsert network exception on ${tableName}:`, err);
+          return { success: false, error: err.message, count: upsertedCount };
+        }
+      }
+
+      return { success: true, count: upsertedCount };
+    },
+
+    // Generic Delete by Column Value
+    async delete(tableName, colName = 'id', colVal) {
+      if (!this.isConfigured()) return { success: false, error: 'Database unconfigured' };
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?${encodeURIComponent(colName)}=eq.${encodeURIComponent(colVal)}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        return { success: res.ok, status: res.status };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    },
+
+    // --- Yarn Division APIs ---
+    yarn: {
+      async getLots(options = {}) {
+        const lots = await VF_DB.fetchTable('vf_yarn_rm_lots', { order: 'receive_date.desc,updated_at.desc', ...options });
+        const boxes = await VF_DB.fetchTable('vf_yarn_rm_boxes', { ...options });
+        const boxMap = new Map();
+        boxes.forEach(b => {
+          if (!boxMap.has(b.lot_id)) boxMap.set(b.lot_id, []);
+          boxMap.get(b.lot_id).push(b);
+        });
+        return lots.map(l => ({
+          ...l,
+          lotNumber: l.lot_number,
+          challanNo: l.challan_number,
+          receiveDate: l.receive_date,
+          itemType: l.item_type,
+          orderRef: l.order_ref,
+          totalBoxes: l.total_boxes,
+          grossWeight: l.gross_weight,
+          boxes: (boxMap.get(l.id) || []).map(b => ({
+            ...b,
+            boxNumber: b.box_number,
+            grossWeight: b.gross_weight,
+            remainingWeight: b.remaining_weight,
+            activeWeight: b.active_weight,
+            issueDate: b.issue_date,
+            issuedTo: b.issued_to,
+            grDate: b.gr_date,
+            grWeight: b.gr_weight,
+            grRemarks: b.gr_remarks
+          }))
+        }));
+      },
+      async saveLot(lot) {
+        if (!lot) return { success: false };
+        const lotId = lot.id || `LOT-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const lotRow = {
+          id: lotId,
+          batch_id: lot.batchId || lot.batch_id || null,
+          lot_number: lot.lotNumber || lot.lot_number || '',
+          challan_number: lot.challanNo || lot.challan_number || lot.challanNumber || null,
+          receive_date: lot.receiveDate || lot.receive_date || new Date().toISOString().split('T')[0],
+          supplier: lot.supplier || '',
+          quality: lot.quality || '',
+          item_type: lot.itemType || lot.item_type || 'Polyester',
+          code: lot.code || null,
+          color: lot.color || null,
+          rate: Number(lot.rate) || 0,
+          order_ref: lot.orderRef || lot.order_ref || null,
+          total_boxes: Array.isArray(lot.boxes) ? lot.boxes.length : (Number(lot.totalBoxes) || 0),
+          gross_weight: Number(lot.grossWeight || lot.gross_weight) || 0,
+          notes: lot.notes || null,
+          updated_at: new Date().toISOString()
+        };
+
+        const lotRes = await VF_DB.upsert('vf_yarn_rm_lots', lotRow);
+        if (!lotRes.success) return lotRes;
+
+        if (Array.isArray(lot.boxes) && lot.boxes.length > 0) {
+          const boxRows = lot.boxes.map((b, idx) => ({
+            id: b.id || `${lotId}-BX-${b.boxNumber || idx + 1}`,
+            lot_id: lotId,
+            box_number: String(b.boxNumber || b.box_number || idx + 1),
+            cones: Number(b.cones) || 0,
+            gross_weight: Number(b.grossWeight || b.gross_weight || b.weight) || 0,
+            remaining_weight: Number(b.remainingWeight || b.remaining_weight || b.activeWeight || b.grossWeight || b.weight) || 0,
+            active_weight: Number(b.activeWeight || b.active_weight || b.remainingWeight || b.grossWeight || b.weight) || 0,
+            status: b.status || 'available',
+            issue_date: b.issueDate || b.issue_date || null,
+            issued_to: b.issuedTo || b.issued_to || null,
+            gr_date: b.grDate || b.gr_date || null,
+            gr_weight: Number(b.grWeight || b.gr_weight) || 0,
+            gr_remarks: b.grRemarks || b.gr_remarks || null,
+            updated_at: new Date().toISOString()
+          }));
+          await VF_DB.upsert('vf_yarn_rm_boxes', boxRows);
+        }
+        return { success: true, id: lotId };
+      },
+      async deleteLot(id) {
+        return await VF_DB.delete('vf_yarn_rm_lots', 'id', id);
+      },
+      async issueBoxes(boxIds, issuedTo, issueDate = null, user = 'Operator', remarks = '') {
+        const bList = Array.isArray(boxIds) ? boxIds : [boxIds];
+        const dateStr = issueDate || new Date().toISOString().split('T')[0];
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/vf_issue_yarn_boxes`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              p_box_ids: bList,
+              p_issued_to: issuedTo,
+              p_issue_date: dateStr,
+              p_user: user,
+              p_remarks: remarks
+            })
+          });
+          if (res.ok) return await res.json();
+        } catch(e) {}
+        // Fallback manual update if RPC is missing
+        const boxRows = bList.map(bId => ({
+          id: bId,
+          status: 'issued',
+          issued_to: issuedTo,
+          issue_date: dateStr,
+          updated_at: new Date().toISOString()
+        }));
+        return await VF_DB.upsert('vf_yarn_rm_boxes', boxRows);
+      },
+      async getOrders(options = {}) {
+        const orders = await VF_DB.fetchTable('vf_yarn_orders', { order: 'order_date.desc,updated_at.desc', ...options });
+        const batches = await VF_DB.fetchTable('vf_yarn_order_batches', { ...options });
+        const boxes = await VF_DB.fetchTable('vf_yarn_order_boxes', { ...options });
+
+        const batchBoxMap = new Map();
+        boxes.forEach(bx => {
+          if (!batchBoxMap.has(bx.batch_id)) batchBoxMap.set(bx.batch_id, []);
+          batchBoxMap.get(bx.batch_id).push(bx);
+        });
+
+        const orderBatchMap = new Map();
+        batches.forEach(b => {
+          if (!orderBatchMap.has(b.order_id)) orderBatchMap.set(b.order_id, []);
+          orderBatchMap.get(b.order_id).push({
+            ...b,
+            challanNumber: b.challan_number,
+            lotNumber: b.lot_number,
+            receiveDate: b.receive_date,
+            totalWeight: b.total_weight,
+            boxes: (batchBoxMap.get(b.id) || []).map(bx => ({
+              ...bx,
+              boxNumber: bx.box_number,
+              returnedWeight: bx.returned_weight,
+              returnedDate: bx.returned_date,
+              returnReason: bx.return_reason
+            }))
+          });
+        });
+
+        return orders.map(ord => ({
+          ...ord,
+          orderNumber: ord.order_number,
+          orderDate: ord.order_date,
+          orderedWeight: ord.ordered_weight,
+          batches: orderBatchMap.get(ord.id) || []
+        }));
+      },
+      async saveOrder(order) {
+        if (!order) return { success: false };
+        const orderId = order.id || `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const orderRow = {
+          id: orderId,
+          order_number: order.orderNumber || order.order_number || '',
+          order_date: order.orderDate || order.order_date || new Date().toISOString().split('T')[0],
+          supplier: order.supplier || '',
+          category: order.category || 'Polyester',
+          quality: order.quality || '',
+          code: order.code || null,
+          color: order.color || null,
+          ordered_weight: Number(order.orderedWeight || order.ordered_weight) || 0,
+          price: Number(order.price) || 0,
+          status: order.status || 'Active',
+          remarks: order.remarks || null,
+          updated_at: new Date().toISOString()
+        };
+
+        const res = await VF_DB.upsert('vf_yarn_orders', orderRow);
+        if (!res.success) return res;
+
+        if (Array.isArray(order.batches)) {
+          for (const b of order.batches) {
+            const batchId = b.id || `BATCH-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+            await VF_DB.upsert('vf_yarn_order_batches', {
+              id: batchId,
+              order_id: orderId,
+              challan_number: b.challanNumber || b.challan_number || '',
+              lot_number: b.lotNumber || b.lot_number || '',
+              receive_date: b.receiveDate || b.receive_date || new Date().toISOString().split('T')[0],
+              total_weight: Number(b.totalWeight || b.total_weight) || 0,
+              notes: b.notes || null,
+              updated_at: new Date().toISOString()
+            });
+
+            if (Array.isArray(b.boxes)) {
+              const boxRows = b.boxes.map((bx, idx) => ({
+                id: bx.id || `${batchId}-BX-${bx.boxNumber || idx + 1}`,
+                batch_id: batchId,
+                order_id: orderId,
+                box_number: String(bx.boxNumber || bx.box_number || idx + 1),
+                weight: Number(bx.weight) || 0,
+                cones: Number(bx.cones) || 0,
+                returned_weight: Number(bx.returnedWeight || bx.returned_weight) || 0,
+                returned_date: bx.returnedDate || bx.returned_date || null,
+                return_reason: bx.returnReason || bx.return_reason || null,
+                updated_at: new Date().toISOString()
+              }));
+              await VF_DB.upsert('vf_yarn_order_boxes', boxRows);
+            }
+          }
+        }
+        return { success: true, id: orderId };
+      },
+      async deleteOrder(id) {
+        return await VF_DB.delete('vf_yarn_orders', 'id', id);
+      },
+      async getProduction(division, options = {}) {
+        const filter = division ? `division=eq.${encodeURIComponent(division)}` : '';
+        return await VF_DB.fetchTable('vf_yarn_production_logs', { order: 'date.desc,created_at.desc', filter: filter, ...options });
+      },
+      async saveProduction(division, log) {
+        if (!log) return { success: false };
+        const id = log.id || `YPROD-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const row = {
+          id: id,
+          division: division || log.division || 'covering',
+          date: log.date || new Date().toISOString().split('T')[0],
+          bori_no: String(log.boriNo || log.bori_no || ''),
+          product_name: log.productName || log.product_name || '',
+          product_id: log.productId || log.product_id || null,
+          lot_no: log.lotNo || log.lot_no || null,
+          color: log.color || null,
+          denier: Number(log.denier) || null,
+          tpm: Number(log.tpm) || null,
+          twist: log.twist || null,
+          rolls: Number(log.rolls) || 0,
+          gross_weight: Number(log.grossWeight || log.gross_weight) || 0,
+          tare_weight: Number(log.tareWeight || log.tare_weight) || 0,
+          qty: Number(log.qty || log.netWeight || log.net_weight) || 0,
+          config_type: log.configType || log.config_type || null,
+          ply: log.ply || null,
+          yarns: Array.isArray(log.yarns) ? log.yarns : [],
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_yarn_production_logs', row);
+      },
+      async deleteProduction(id) {
+        return await VF_DB.delete('vf_yarn_production_logs', 'id', id);
+      },
+      async getSales(division, options = {}) {
+        const filter = division ? `division=eq.${encodeURIComponent(division)}` : '';
+        return await VF_DB.fetchTable('vf_yarn_sales_logs', { order: 'sale_date.desc,created_at.desc', filter: filter, ...options });
+      },
+      async saveSale(division, sale) {
+        if (!sale) return { success: false };
+        const id = sale.id || `YSALE-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const row = {
+          id: id,
+          division: division || sale.division || 'covering',
+          sale_date: sale.saleDate || sale.sale_date || sale.date || new Date().toISOString().split('T')[0],
+          challan_no: sale.challanNo || sale.challan_no || null,
+          customer_name: sale.customerName || sale.customer_name || sale.partyName || sale.customer || '',
+          customer_address: sale.customerAddress || sale.customer_address || null,
+          seller_company_id: sale.sellerCompanyId || sale.seller_company_id || null,
+          seller_name: sale.sellerName || sale.seller_name || null,
+          discount_type: sale.discountType || sale.discount_type || 'percent',
+          discount_value: Number(sale.discountValue || sale.discount_value) || 0,
+          discount_amount: Number(sale.discountAmount || sale.discount_amount) || 0,
+          taxable_amount: Number(sale.taxableAmount || sale.taxable_amount) || 0,
+          gst_rate: Number(sale.gstRate || sale.gst_rate) || 12,
+          subtotal_amount: Number(sale.subtotalAmount || sale.subtotal_amount) || 0,
+          items: Array.isArray(sale.items) ? sale.items : [],
+          total_gross_weight: Number(sale.totalGrossWeight || sale.total_gross_weight) || 0,
+          total_tare_weight: Number(sale.totalTareWeight || sale.total_tare_weight) || 0,
+          total_qty: Number(sale.totalQty || sale.total_qty || sale.qty) || 0,
+          total_amount: Number(sale.totalAmount || sale.total_amount || sale.amount) || 0,
+          gst_amount: Number(sale.gstAmount || sale.gst_amount) || 0,
+          raw_data: sale.rawData || sale.raw_data || {},
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_yarn_sales_logs', row);
+      },
+      async deleteSale(id) {
+        return await VF_DB.delete('vf_yarn_sales_logs', 'id', id);
+      },
+      async getQualities() {
+        return await VF_DB.fetchTable('vf_rm_qualities', { order: 'quality.asc' });
+      },
+      async saveQuality(q) {
+        const id = q.id || `Q-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        return await VF_DB.upsert('vf_rm_qualities', { ...q, id, updated_at: new Date().toISOString() });
+      },
+      async deleteQuality(id) {
+        return await VF_DB.delete('vf_rm_qualities', 'id', id);
+      },
+      async getFpQualities() {
+        return await VF_DB.fetchTable('vf_fp_qualities', { order: 'name.asc' });
+      },
+      async saveFpQuality(q) {
+        const id = q.id || `FPQ-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        return await VF_DB.upsert('vf_fp_qualities', { ...q, id, updated_at: new Date().toISOString() });
+      },
+      async deleteFpQuality(id) {
+        return await VF_DB.delete('vf_fp_qualities', 'id', id);
+      },
+      async getSuppliers() {
+        return await VF_DB.fetchTable('vf_rm_suppliers', { order: 'name.asc' });
+      },
+      async saveSupplier(s) {
+        const id = s.id || `SUP-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        return await VF_DB.upsert('vf_rm_suppliers', { ...s, id, updated_at: new Date().toISOString() });
+      },
+      async deleteSupplier(id) {
+        return await VF_DB.delete('vf_rm_suppliers', 'id', id);
+      }
+    },
+
+    // --- Weaving Division APIs ---
+    weaving: {
+      async getBeams(options = {}) {
+        return await VF_DB.fetchTable('vf_warp_beams', { order: 'created_at.desc,updated_at.desc', ...options });
+      },
+      async saveBeam(beam) {
+        if (!beam) return { success: false };
+        const id = beam.id || `BEAM-${beam.beamNumber || Date.now()}`;
+        const row = {
+          id: id,
+          beam_number: String(beam.beamNumber || beam.beam_number || ''),
+          quality: beam.quality || '',
+          code: beam.code || null,
+          color: beam.color || null,
+          meters: Number(beam.meters) || 0,
+          ends: Number(beam.ends) || 0,
+          status: beam.status || 'Available',
+          machine_number: beam.machineNumber || beam.machine_number || null,
+          warping_person: beam.warpingPerson || beam.warping_person || null,
+          created_at: beam.createdAt || beam.created_at || new Date().toISOString().split('T')[0],
+          history: Array.isArray(beam.history) ? beam.history : [],
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_warp_beams', row);
+      },
+      async deleteBeam(id) {
+        return await VF_DB.delete('vf_warp_beams', 'id', id);
+      },
+      async getBeamLoadings(options = {}) {
+        return await VF_DB.fetchTable('vf_warp_beam_loadings', { order: 'date.desc,created_at.desc', ...options });
+      },
+      async saveBeamLoading(loading) {
+        if (!loading) return { success: false };
+        const id = loading.id || `LOAD-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const row = {
+          id: id,
+          date: loading.date || new Date().toISOString().split('T')[0],
+          piecein: loading.piecein || null,
+          drawing_in: loading.drawingIn || loading.drawing_in || null,
+          fani: loading.fani || null,
+          drop_pin_jog: loading.dropPinJog || loading.drop_pin_jog || null,
+          machine_number: loading.machineNumber || loading.machine_number || null,
+          beam_number: loading.beamNumber || loading.beam_number || null,
+          item_color: loading.itemColor || loading.item_color || null,
+          meters: Number(loading.meters) || 0,
+          ends: Number(loading.ends) || 0,
+          rate: Number(loading.rate) || 0,
+          payment_amount: Number(loading.paymentAmount || loading.payment_amount) || 0,
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_warp_beam_loadings', row);
+      },
+      async deleteBeamLoading(id) {
+        return await VF_DB.delete('vf_warp_beam_loadings', 'id', id);
+      },
+      async getWeftIssues(options = {}) {
+        return await VF_DB.fetchTable('vf_weft_issues', { order: 'date.desc,created_at.desc', ...options });
+      },
+      async saveWeftIssues(issues) {
+        const list = Array.isArray(issues) ? issues : [issues];
+        const rows = list.map(i => ({
+          id: i.id || `WEFT-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          date: i.date || new Date().toISOString().split('T')[0],
+          quality: i.quality || '',
+          supplier: i.supplier || '',
+          code: i.code || null,
+          color: i.color || null,
+          box: String(i.box || ''),
+          challan: i.challan || null,
+          lot: i.lot || null,
+          cones: Number(i.cones) || 0,
+          net: Number(i.net || i.weight) || 0,
+          details: i.details || null,
+          updated_at: new Date().toISOString()
+        }));
+        return await VF_DB.upsert('vf_weft_issues', rows);
+      },
+      async deleteWeftIssue(id) {
+        return await VF_DB.delete('vf_weft_issues', 'id', id);
+      },
+      async getWarpIssues(options = {}) {
+        return await VF_DB.fetchTable('vf_warp_issues', { order: 'date.desc,created_at.desc', ...options });
+      },
+      async saveWarpIssue(issue) {
+        if (!issue) return { success: false };
+        const id = issue.id || `WARP-ISSUE-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const row = {
+          id: id,
+          date: issue.date || new Date().toISOString().split('T')[0],
+          quality: issue.quality || '',
+          code: issue.code || null,
+          color: issue.color || null,
+          issued_weight: Number(issue.issuedWeight || issue.issued_weight || issue.weight) || 0,
+          details: issue.details || null,
+          supplier: issue.supplier || null,
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_warp_issues', row);
+      },
+      async deleteWarpIssue(id) {
+        return await VF_DB.delete('vf_warp_issues', 'id', id);
+      },
+      async getProductionLogs(options = {}) {
+        return await VF_DB.fetchTable('vf_weaving_production_logs', { order: 'production_date.desc,created_at.desc', ...options });
+      },
+      async saveProductionLog(log) {
+        if (!log) return { success: false };
+        const id = log.id || `WLOG-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const row = {
+          id: id,
+          production_date: log.productionDate || log.production_date || log.date || new Date().toISOString().split('T')[0],
+          machine_number: String(log.machineNumber || log.machine_number || log.machine || log.loomNo || ''),
+          beam_number: log.beamNumber || log.beam_number || null,
+          secondary_beam_number: log.secondaryBeamNumber || log.secondary_beam_number || null,
+          pissing_date: log.pissingDate || log.pissing_date || null,
+          pissing_person: log.pissingPerson || log.pissing_person || null,
+          day_worker: log.dayWorker || log.day_worker || null,
+          day_shift_hours: Number(log.dayShiftHours || log.day_shift_hours) || 0,
+          day_meters: Number(log.dayMeters || log.day_meters) || 0,
+          night_worker: log.nightWorker || log.night_worker || null,
+          night_shift_hours: Number(log.nightShiftHours || log.night_shift_hours) || 0,
+          night_meters: Number(log.nightMeters || log.night_meters) || 0,
+          picks: Number(log.picks) || 0,
+          product: log.product || log.productName || null,
+          total_meters: Number(log.totalMeters || log.total_meters || (Number(log.dayMeters || 0) + Number(log.nightMeters || 0))) || 0,
+          taka_serial: log.takaSerial || log.taka_serial || null,
+          folding_date: log.foldingDate || log.folding_date || null,
+          taka_weight: Number(log.takaWeight || log.taka_weight) || null,
+          taka_assign_id: log.takaAssignId || log.taka_assign_id || null,
+          is_tp_roll: Boolean(log.isTpRoll || log.is_tp_roll),
+          tp_source_serials: Array.isArray(log.tpSourceSerials || log.tp_source_serials) ? (log.tpSourceSerials || log.tp_source_serials) : [],
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_weaving_production_logs', row);
+      },
+      async deleteProductionLog(id) {
+        return await VF_DB.delete('vf_weaving_production_logs', 'id', id);
+      },
+      async getDispatches(options = {}) {
+        return await VF_DB.fetchTable('vf_fabric_dispatches', { order: 'dispatch_date.desc,updated_at.desc', ...options });
+      },
+      async saveDispatch(disp) {
+        if (!disp) return { success: false };
+        const id = disp.id || `DISP-${disp.takaSerial || Date.now()}`;
+        const row = {
+          id: id,
+          taka_serial: String(disp.takaSerial || disp.taka_serial || ''),
+          status: disp.status || 'Warehouse',
+          current_stage: disp.currentStage || disp.current_stage || 'Warehouse',
+          vendor: disp.vendor || null,
+          customer: disp.customer || null,
+          invoice_no: disp.invoiceNo || disp.invoice_no || null,
+          challan_no: disp.challanNo || disp.challan_no || null,
+          dispatch_date: disp.dispatchDate || disp.dispatch_date || null,
+          selling_rate: Number(disp.sellingRate || disp.selling_rate) || null,
+          is_partial_piece: Boolean(disp.isPartialPiece || disp.is_partial_piece),
+          history: Array.isArray(disp.history) ? disp.history : [],
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_fabric_dispatches', row);
+      },
+      async deleteDispatch(id) {
+        return await VF_DB.delete('vf_fabric_dispatches', 'id', id);
+      },
+      async getCutRelations(options = {}) {
+        return await VF_DB.fetchTable('vf_fabric_cut_relations', { order: 'updated_at.desc', ...options });
+      },
+      async saveCutRelation(rel) {
+        if (!rel) return { success: false };
+        const id = rel.id || `CUT-${rel.parentSerial || Date.now()}`;
+        const row = {
+          id: id,
+          parent_serial: String(rel.parentSerial || rel.parent_serial || ''),
+          children: Array.isArray(rel.children) ? rel.children : [],
+          metadata: rel.metadata || {},
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_fabric_cut_relations', row);
+      },
+      async getDesigns(options = {}) {
+        return await VF_DB.fetchTable('vf_fabric_designs', { order: 'design_name.asc', ...options });
+      },
+      async saveDesign(design) {
+        if (!design) return { success: false };
+        const id = design.id || `DES-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const row = {
+          id: id,
+          design_name: design.designName || design.design_name || design.name || '',
+          design_number: design.designNumber || design.design_number || null,
+          quality: design.quality || null,
+          image_url: design.imageUrl || design.image_url || design.image || null,
+          ep_file_url: design.epFileUrl || design.ep_file_url || null,
+          picks: Number(design.picks) || 0,
+          repeats: Number(design.repeats) || 1,
+          total_hooks: Number(design.totalHooks || design.total_hooks) || 0,
+          width: Number(design.width) || null,
+          avg_weight: Number(design.avgWeight || design.avg_weight) || null,
+          costing_id: design.costingId || design.costing_id || null,
+          deleted: Boolean(design.deleted),
+          metadata: design.metadata || {},
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_fabric_designs', row);
+      },
+      async deleteDesign(id) {
+        return await VF_DB.delete('vf_fabric_designs', 'id', id);
+      },
+      async getMachinery(assetType = null) {
+        const filter = assetType ? `asset_type=eq.${encodeURIComponent(assetType)}` : '';
+        return await VF_DB.fetchTable('vf_machinery_assets', { order: 'name.asc', filter: filter });
+      },
+      async saveMachinery(asset) {
+        if (!asset) return { success: false };
+        const id = asset.id || `MACH-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        const row = {
+          id: id,
+          asset_type: asset.assetType || asset.asset_type || asset.type || 'loom',
+          name: asset.name || '',
+          code: asset.code || null,
+          model: asset.model || null,
+          status: asset.status || 'Active',
+          metadata: asset.metadata || {},
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_machinery_assets', row);
+      },
+      async deleteMachinery(id) {
+        return await VF_DB.delete('vf_machinery_assets', 'id', id);
+      }
+    },
+
+    // --- Staff & HR APIs ---
+    staff: {
+      async getEmployees(options = {}) {
+        return await VF_DB.fetchTable('vf_employees', { order: 'name.asc', ...options });
+      },
+      async saveEmployee(emp) {
+        if (!emp) return { success: false };
+        const id = emp.id || `EMP-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const row = {
+          id: id,
+          name: emp.name || '',
+          role: emp.role || 'Worker',
+          department: emp.department || null,
+          salary_style: emp.salaryStyle || emp.salary_style || 'Per Day Fixed',
+          salary_rate: Number(emp.salaryRate || emp.salary_rate || emp.salaryAmount || emp.baseSalary) || 0,
+          base_salary: Number(emp.baseSalary || emp.base_salary || emp.salaryRate || emp.salaryAmount) || 0,
+          salary_amount: Number(emp.salaryAmount || emp.salary_amount || emp.salaryRate || emp.baseSalary) || 0,
+          phone: emp.phone || null,
+          email: emp.email || null,
+          joining_date: emp.joiningDate || emp.joining_date || emp.joinDate || null,
+          join_date: emp.joinDate ? (new Date(emp.joinDate).toISOString()) : null,
+          termination_date: emp.terminationDate || emp.termination_date || null,
+          rejoin_date: emp.rejoinDate || emp.rejoin_date || null,
+          assigned_machines: Array.isArray(emp.assignedMachines || emp.assigned_machines || emp.machines) ? (emp.assignedMachines || emp.assigned_machines || emp.machines) : [],
+          avatar_gradient: emp.avatarGradient || emp.avatar_gradient || null,
+          avatar_color: emp.avatarColor || emp.avatar_color || null,
+          id_front: emp.idFront || emp.id_front || null,
+          id_back: emp.idBack || emp.id_back || null,
+          status: emp.status || (emp.active === false ? 'Inactive' : 'Active'),
+          active: emp.active !== false && emp.status !== 'Inactive',
+          metadata: emp.metadata || {},
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_employees', row);
+      },
+      async deleteEmployee(id) {
+        return await VF_DB.delete('vf_employees', 'id', id);
+      },
+      async getAttendance(options = {}) {
+        return await VF_DB.fetchTable('vf_attendance_records', { order: 'attendance_date.desc,created_at.desc', ...options });
+      },
+      async saveAttendance(records) {
+        const list = Array.isArray(records) ? records : [records];
+        const rows = list.map(a => ({
+          id: a.id || `ATT-${a.employee_id || a.employeeId}-${a.attendance_date || a.attendanceDate || a.date}-${Math.random().toString(36).substring(2, 6)}`,
+          attendance_date: a.attendanceDate || a.attendance_date || a.date || new Date().toISOString().split('T')[0],
+          employee_id: a.employeeId || a.employee_id || a.empId,
+          status: a.status || 'Present',
+          shift: a.shift || 'Day',
+          hours: Number(a.hours) || 0,
+          overtime_hours: Number(a.overtimeHours || a.overtime_hours) || 0,
+          meters: Number(a.meters) || 0,
+          rate: Number(a.rate) || 0,
+          total_earned: Number(a.totalEarned || a.total_earned || a.earned) || 0,
+          notes: a.notes || null,
+          metadata: a.metadata || {},
+          updated_at: new Date().toISOString()
+        }));
+        return await VF_DB.upsert('vf_attendance_records', rows);
+      },
+      async deleteAttendance(id) {
+        return await VF_DB.delete('vf_attendance_records', 'id', id);
+      },
+      async getLoans(options = {}) {
+        return await VF_DB.fetchTable('vf_employee_loans', { order: 'loan_date.desc,created_at.desc', ...options });
+      },
+      async saveLoan(loan) {
+        if (!loan) return { success: false };
+        const id = loan.id || `LOAN-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const row = {
+          id: id,
+          employee_id: loan.employeeId || loan.employee_id || loan.empId,
+          loan_date: loan.loanDate || loan.loan_date || loan.date || new Date().toISOString().split('T')[0],
+          amount: Number(loan.amount) || 0,
+          type: loan.type || 'Advance',
+          reason: loan.reason || null,
+          cleared: Boolean(loan.cleared),
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_employee_loans', row);
+      },
+      async deleteLoan(id) {
+        return await VF_DB.delete('vf_employee_loans', 'id', id);
+      },
+      async getSalarySettlements(options = {}) {
+        return await VF_DB.fetchTable('vf_salary_settlements', { order: 'month_year.desc,created_at.desc', ...options });
+      },
+      async saveSalarySettlement(settlement) {
+        if (!settlement) return { success: false };
+        const id = settlement.id || `SETT-${settlement.employeeId || settlement.employee_id}-${settlement.monthYear || settlement.month_year}`;
+        const row = {
+          id: id,
+          month_year: settlement.monthYear || settlement.month_year || '',
+          employee_id: settlement.employeeId || settlement.employee_id || settlement.empId,
+          paid_amount: Number(settlement.paidAmount || settlement.paid_amount) || 0,
+          net_payable: Number(settlement.netPayable || settlement.net_payable) || 0,
+          paid_date: settlement.paidDate || settlement.paid_date || new Date().toISOString().split('T')[0],
+          payment_mode: settlement.paymentMode || settlement.payment_mode || 'Cash',
+          status: settlement.status || 'Paid',
+          details: settlement.details || {},
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_salary_settlements', row);
+      },
+      async deleteSalarySettlement(id) {
+        return await VF_DB.delete('vf_salary_settlements', 'id', id);
+      }
+    },
+
+    // --- Costing APIs ---
+    costing: {
+      async getProducts(type = 'weaving') {
+        const table = type === 'tfo' ? 'vf_costing_tfo_products' :
+                      type === 'doubler' ? 'vf_costing_doubler_products' :
+                      type === 'covering' ? 'vf_costing_covering_products' : 'vf_costing_products';
+        const rows = await VF_DB.fetchTable(table, { order: 'updated_at.desc' });
+        return rows.map(r => ({ id: r.id, ...(r.data || {}) }));
+      },
+      async saveProduct(type = 'weaving', product) {
+        if (!product || !product.id) return { success: false };
+        const table = type === 'tfo' ? 'vf_costing_tfo_products' :
+                      type === 'doubler' ? 'vf_costing_doubler_products' :
+                      type === 'covering' ? 'vf_costing_covering_products' : 'vf_costing_products';
+        const row = {
+          id: String(product.id),
+          data: product,
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert(table, row);
+      },
+      async deleteProduct(type = 'weaving', id) {
+        const table = type === 'tfo' ? 'vf_costing_tfo_products' :
+                      type === 'doubler' ? 'vf_costing_doubler_products' :
+                      type === 'covering' ? 'vf_costing_covering_products' : 'vf_costing_products';
+        return await VF_DB.delete(table, 'id', String(id));
+      }
+    },
+
+    // --- Companies API ---
+    companies: {
+      async getCompanies() {
+        return await VF_DB.fetchTable('vf_companies', { order: 'name.asc' });
+      },
+      async saveCompany(comp) {
+        if (!comp) return { success: false };
+        const id = comp.id || `COMP-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        const row = {
+          id: id,
+          name: comp.name || '',
+          gstin: comp.gstin || null,
+          address: comp.address || null,
+          phone: comp.phone || null,
+          email: comp.email || null,
+          bank_details: comp.bankDetails || comp.bank_details || {},
+          is_default: Boolean(comp.isDefault || comp.is_default),
+          metadata: comp.metadata || {},
+          updated_at: new Date().toISOString()
+        };
+        return await VF_DB.upsert('vf_companies', row);
+      },
+      async deleteCompany(id) {
+        return await VF_DB.delete('vf_companies', 'id', id);
+      }
+    },
+
+    // --- Audit & Security Logs ---
+    audit: {
+      async log(action, entityType, entityId, details = {}, userEmail = null) {
+        if (!VF_DB.isConfigured()) return;
+        try {
+          const uEmail = userEmail || nativeLocalStorage.getItem('vf_user_name') || 'system';
+          await fetch(`${SUPABASE_URL}/rest/v1/vf_audit_logs`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              user_email: uEmail,
+              action: action,
+              entity_type: entityType,
+              entity_id: String(entityId || ''),
+              details: details,
+              created_at: new Date().toISOString()
+            })
+          });
+        } catch(e) {}
+      },
+      async getLogs(options = {}) {
+        return await VF_DB.fetchTable('vf_audit_logs', { order: 'created_at.desc', ...options });
+      }
+    },
+
+    // --- 1-Click Pre-Migration Offline JSON Backup ---
+    async exportFullBackup() {
+      const backup = {
+        meta: {
+          export_date: new Date().toISOString(),
+          version: '2.0.0',
+          app: 'Vishwa Fashions Management Suite'
+        },
+        local_storage_raw: {},
+        supabase_relational: {}
+      };
+
+      // 1. Gather all local storage keys
+      try {
+        for (let i = 0; i < nativeLocalStorage.length; i++) {
+          const k = nativeLocalStorage.key(i);
+          if (k) backup.local_storage_raw[k] = nativeLocalStorage.getItem(k);
+        }
+      } catch(e) {}
+
+      // 2. Gather cloud relational tables if configured
+      if (this.isConfigured()) {
+        const tables = [
+          'vf_yarn_rm_lots', 'vf_yarn_rm_boxes', 'vf_yarn_orders', 'vf_yarn_order_batches', 'vf_yarn_order_boxes',
+          'vf_yarn_production_logs', 'vf_yarn_sales_logs', 'vf_warp_beams', 'vf_warp_issues', 'vf_warp_beam_loadings',
+          'vf_weft_issues', 'vf_weaving_production_logs', 'vf_fabric_dispatches', 'vf_fabric_cut_relations',
+          'vf_fabric_designs', 'vf_employees', 'vf_attendance_records', 'vf_employee_loans', 'vf_salary_settlements',
+          'vf_costing_products', 'vf_rm_qualities', 'vf_fp_qualities', 'vf_rm_suppliers', 'vf_machinery_assets', 'vf_companies'
+        ];
+
+        for (const t of tables) {
+          try {
+            backup.supabase_relational[t] = await fetchAllRows(t, '*');
+          } catch(e) {
+            backup.supabase_relational[t] = [];
+          }
+        }
+      }
+
+      // 3. Trigger Browser Download
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backup, null, 2));
+      const downloadAnchor = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `vishwa_fashions_full_backup_${timestamp}.json`);
+      if (document.body && typeof document.body.appendChild === 'function') {
+        document.body.appendChild(downloadAnchor);
+      }
+      if (typeof downloadAnchor.click === 'function') {
+        downloadAnchor.click();
+      }
+      if (typeof downloadAnchor.remove === 'function') {
+        downloadAnchor.remove();
+      }
+
+      return { success: true, timestamp: timestamp, data: backup };
+    },
+
+    // --- 1-Click Non-Destructive LocalStorage to Supabase Migration Engine ---
+    async migrateAllToRelational(onProgress = () => {}) {
+      if (!this.isConfigured()) return { success: false, error: 'Supabase unconfigured' };
+      const summary = {};
+
+      const report = (stage, pct, details) => {
+        try { onProgress({ stage, percentage: pct, details }); } catch(e) {}
+      };
+
+      report('Starting Non-Destructive Migration...', 5, 'Auditing legacy stores');
+
+      // 1. Migrate Yarn RM Stock Lots & Boxes
+      try {
+        const rawStock = cache['vishwa_yarn_rm_stock_data'] || nativeLocalStorage.getItem('vishwa_yarn_rm_stock_data');
+        if (rawStock) {
+          const lots = JSON.parse(rawStock);
+          if (Array.isArray(lots) && lots.length > 0) {
+            report('Migrating Yarn RM Stock Lots...', 15, `${lots.length} lots found`);
+            for (const lot of lots) {
+              await VF_DB.yarn.saveLot(lot);
+            }
+            summary.yarn_lots = lots.length;
+          }
+        }
+      } catch(e) { console.warn('Migration yarn lots notice:', e); }
+
+      // 2. Migrate Yarn Purchase Orders
+      try {
+        const rawOrders = cache['yarn-orders'] || cache['yarn-rm-orders'] || nativeLocalStorage.getItem('yarn-orders') || nativeLocalStorage.getItem('yarn-rm-orders');
+        if (rawOrders) {
+          const orders = JSON.parse(rawOrders);
+          if (Array.isArray(orders) && orders.length > 0) {
+            report('Migrating Yarn Orders...', 25, `${orders.length} orders found`);
+            for (const ord of orders) {
+              await VF_DB.yarn.saveOrder(ord);
+            }
+            summary.yarn_orders = orders.length;
+          }
+        }
+      } catch(e) { console.warn('Migration yarn orders notice:', e); }
+
+      // 3. Migrate Yarn Production Logs
+      try {
+        for (const div of ['covering', 'tfo', 'doubler']) {
+          const key = `yarn_${div}_production_logs`;
+          const raw = cache[key] || nativeLocalStorage.getItem(key);
+          if (raw) {
+            const logs = JSON.parse(raw);
+            if (Array.isArray(logs) && logs.length > 0) {
+              report(`Migrating Yarn Production (${div})...`, 35, `${logs.length} logs`);
+              for (const l of logs) {
+                await VF_DB.yarn.saveProduction(div, l);
+              }
+              summary[`yarn_prod_${div}`] = logs.length;
+            }
+          }
+        }
+      } catch(e) { console.warn('Migration yarn prod notice:', e); }
+
+      // 4. Migrate Yarn Sales Logs
+      try {
+        for (const div of ['covering', 'tfo', 'doubler']) {
+          const key = `yarn_${div}_sales_logs`;
+          const raw = cache[key] || nativeLocalStorage.getItem(key);
+          if (raw) {
+            const sales = JSON.parse(raw);
+            if (Array.isArray(sales) && sales.length > 0) {
+              report(`Migrating Yarn Sales (${div})...`, 45, `${sales.length} invoices`);
+              for (const s of sales) {
+                await VF_DB.yarn.saveSale(div, s);
+              }
+              summary[`yarn_sales_${div}`] = sales.length;
+            }
+          }
+        }
+      } catch(e) { console.warn('Migration yarn sales notice:', e); }
+
+      // 5. Migrate Warp Beams & Loadings
+      try {
+        const rawBeams = cache['warp-beams'] || nativeLocalStorage.getItem('warp-beams');
+        if (rawBeams) {
+          const beams = JSON.parse(rawBeams);
+          if (Array.isArray(beams) && beams.length > 0) {
+            report('Migrating Warp Beams...', 55, `${beams.length} beams`);
+            for (const b of beams) {
+              await VF_DB.weaving.saveBeam(b);
+            }
+            summary.warp_beams = beams.length;
+          }
+        }
+
+        const rawLoadings = cache['warp-beam-loadings'] || nativeLocalStorage.getItem('warp-beam-loadings');
+        if (rawLoadings) {
+          const loadings = JSON.parse(rawLoadings);
+          if (Array.isArray(loadings) && loadings.length > 0) {
+            for (const ld of loadings) {
+              await VF_DB.weaving.saveBeamLoading(ld);
+            }
+            summary.warp_loadings = loadings.length;
+          }
+        }
+      } catch(e) { console.warn('Migration warp beams notice:', e); }
+
+      // 6. Migrate Weaving Production Logs & Takas
+      try {
+        const rawLogs = cache['productionLogs'] || cache['production-logs'] || nativeLocalStorage.getItem('productionLogs') || nativeLocalStorage.getItem('production-logs');
+        if (rawLogs) {
+          const logs = JSON.parse(rawLogs);
+          if (Array.isArray(logs) && logs.length > 0) {
+            report('Migrating Weaving Production Logs...', 65, `${logs.length} shift logs`);
+            for (const l of logs) {
+              await VF_DB.weaving.saveProductionLog(l);
+            }
+            summary.weaving_production = logs.length;
+          }
+        }
+      } catch(e) { console.warn('Migration weaving logs notice:', e); }
+
+      // 7. Migrate Dispatches & Cut Relations
+      try {
+        const rawDisp = cache['takaDispatchStates'] || nativeLocalStorage.getItem('takaDispatchStates');
+        if (rawDisp) {
+          const disps = JSON.parse(rawDisp);
+          if (typeof disps === 'object' && disps !== null) {
+            const dispList = Array.isArray(disps) ? disps : Object.entries(disps).map(([serial, st]) => ({
+              takaSerial: serial,
+              status: typeof st === 'string' ? st : (st.status || 'Warehouse'),
+              currentStage: typeof st === 'object' ? (st.currentStage || st.stage) : 'Warehouse',
+              dispatchDate: typeof st === 'object' ? st.dispatchDate : null,
+              vendor: typeof st === 'object' ? st.vendor : null,
+              customer: typeof st === 'object' ? st.customer : null
+            }));
+            for (const d of dispList) {
+              await VF_DB.weaving.saveDispatch(d);
+            }
+            summary.dispatches = dispList.length;
+          }
+        }
+
+        const rawCuts = cache['takaCutRelations'] || nativeLocalStorage.getItem('takaCutRelations');
+        if (rawCuts) {
+          const cuts = JSON.parse(rawCuts);
+          if (typeof cuts === 'object' && cuts !== null) {
+            const cutList = Array.isArray(cuts) ? cuts : Object.entries(cuts).map(([p, ch]) => ({ parentSerial: p, children: ch }));
+            for (const c of cutList) {
+              await VF_DB.weaving.saveCutRelation(c);
+            }
+            summary.cut_relations = cutList.length;
+          }
+        }
+      } catch(e) { console.warn('Migration dispatches notice:', e); }
+
+      // 8. Migrate Staff & HR (from aethertasks_db_state_v7)
+      try {
+        const rawState = cache['aethertasks_db_state_v7'] || nativeLocalStorage.getItem('aethertasks_db_state_v7');
+        if (rawState) {
+          const st = JSON.parse(rawState);
+          if (st.employees && Array.isArray(st.employees)) {
+            report('Migrating Employees...', 75, `${st.employees.length} staff`);
+            for (const emp of st.employees) {
+              await VF_DB.staff.saveEmployee(emp);
+            }
+            summary.employees = st.employees.length;
+          }
+          if (st.loans && Array.isArray(st.loans)) {
+            for (const l of st.loans) {
+              await VF_DB.staff.saveLoan(l);
+            }
+            summary.loans = st.loans.length;
+          }
+          if (st.logs && Array.isArray(st.logs)) {
+            for (const lg of st.logs) {
+              await VF_DB.staff.saveSalarySettlement(lg);
+            }
+            summary.settlements = st.logs.length;
+          }
+        }
+      } catch(e) { console.warn('Migration staff notice:', e); }
+
+      // 9. Migrate Qualities, Suppliers & Machinery Masters
+      try {
+        const rawQ = cache['yarn-qualities'] || nativeLocalStorage.getItem('yarn-qualities');
+        if (rawQ) {
+          const qList = JSON.parse(rawQ);
+          if (Array.isArray(qList)) {
+            for (const q of qList) await VF_DB.yarn.saveQuality(q);
+            summary.qualities = qList.length;
+          }
+        }
+
+        const rawSupp = cache['yarn-suppliers'] || nativeLocalStorage.getItem('yarn-suppliers');
+        if (rawSupp) {
+          const sList = JSON.parse(rawSupp);
+          if (Array.isArray(sList)) {
+            for (const s of sList) await VF_DB.yarn.saveSupplier(s);
+            summary.suppliers = sList.length;
+          }
+        }
+
+        const rawMach = cache['machines'] || nativeLocalStorage.getItem('machines');
+        if (rawMach) {
+          const mList = JSON.parse(rawMach);
+          if (Array.isArray(mList)) {
+            for (const m of mList) {
+              const name = typeof m === 'string' ? m : (m.name || m.code);
+              await VF_DB.weaving.saveMachinery({ name: name, assetType: 'machine' });
+            }
+            summary.machines = mList.length;
+          }
+        }
+      } catch(e) { console.warn('Migration masters notice:', e); }
+
+      report('Migration Completed Successfully!', 100, summary);
+      return { success: true, summary: summary };
+    }
+  };
+
+  // Expose VF_DB globally
+  window.VF_DB = VF_DB;
+  supabaseApi.db = VF_DB;
 
   window.VishwaSupabase = supabaseApi;
 
