@@ -4999,6 +4999,8 @@
           tpm: sale.tpm,
           twist: sale.twist,
           rollsQty: sale.rollsQty,
+          grossWeight: parseFloat(sale.totalGrossWeight) || parseFloat(sale.grossWeight) || 0,
+          tareWeight: parseFloat(sale.totalTareWeight) || parseFloat(sale.tareWeight) || 0,
           saleQty: sale.saleQty
         }];
       }
@@ -5035,6 +5037,12 @@
             ? String(item.lotNo).trim() 
             : saleLotNo;
           const specs = `${item.denier ? item.denier + 'D' : ''}${item.tpm ? ' | ' + item.tpm + ' TPM' : ''}${item.twist ? ' | ' + item.twist : ''}`.trim() || '-';
+          const grossValNum = parseFloat(item.grossWeight) || 0;
+          const tareValNum = parseFloat(item.tareWeight) || 0;
+          const netValNum = parseFloat(item.saleQty) || 0;
+
+          const grossDisplay = grossValNum > 0 ? `${grossValNum.toFixed(2)} <small>Kg</small>` : `_______ <small>Kg</small>`;
+          const tareDisplay = tareValNum > 0 ? `${tareValNum.toFixed(2)} <small>Kg</small>` : `_______ <small>Kg</small>`;
           
           return `
             <div class="slip-card">
@@ -5085,16 +5093,20 @@
 
                 <div class="slip-metrics-row">
                   <div class="metric-box">
-                    <span class="metric-lbl">TOTAL ROLLS / CONES</span>
+                    <span class="metric-lbl">TOTAL ROLLS</span>
                     <span class="metric-num">${item.rollsQty || 0} <small>Nos</small></span>
-                  </div>
-                  <div class="metric-box highlight-metric">
-                    <span class="metric-lbl">NET WEIGHT</span>
-                    <span class="metric-num">${(parseFloat(item.saleQty) || 0).toFixed(2)} <small>Kg</small></span>
                   </div>
                   <div class="metric-box">
                     <span class="metric-lbl">GROSS WEIGHT</span>
-                    <span class="metric-num gross-val">_______ <small>Kg</small></span>
+                    <span class="metric-num ${grossValNum > 0 ? '' : 'gross-val'}">${grossDisplay}</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="metric-lbl">TARE WEIGHT</span>
+                    <span class="metric-num ${tareValNum > 0 ? '' : 'gross-val'}">${tareDisplay}</span>
+                  </div>
+                  <div class="metric-box highlight-metric">
+                    <span class="metric-lbl">NET WEIGHT</span>
+                    <span class="metric-num">${netValNum.toFixed(2)} <small>Kg</small></span>
                   </div>
                 </div>
 
@@ -5538,8 +5550,9 @@
           twist: dyn.twist || prod.twist || '-',
           lotNo: lot,
           rollsQty: copsQty,
-          saleQty: netWt,
-          grossWeight: parseFloat(prod.grossWeight) || 0
+          grossWeight: parseFloat(prod.grossWeight) || 0,
+          tareWeight: parseFloat(prod.tareWeight) || 0,
+          saleQty: netWt
         });
       });
 
@@ -5579,8 +5592,9 @@
         twist: dyn.twist || prod.twist || '-',
         lotNo: lot,
         rollsQty: copsQty,
-        saleQty: netWt,
-        grossWeight: parseFloat(prod.grossWeight) || 0
+        grossWeight: parseFloat(prod.grossWeight) || 0,
+        tareWeight: parseFloat(prod.tareWeight) || 0,
+        saleQty: netWt
       };
 
       const syntheticSale = {
