@@ -547,11 +547,21 @@
 
     // Special Case: Yarn RM Stock Book Array Merge (Sync Box Statuses Across Devices)
     if (key === 'vishwa_yarn_rm_stock_data' && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
+      const lastWrite = lastLocalWrites[key] || 0;
+      const isLocallyActive = (Date.now() - lastWrite < 3000);
+      if (!isLocallyActive) {
+        return filterDeletedEntities(parsedRemote);
+      }
       return mergeYarnStockDatasets(parsedLocal, parsedRemote);
     }
 
     // Special Case: Yarn RM Orders Array Merge (Sync Box Statuses inside batches)
     if (key === 'yarn-rm-orders' && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
+      const lastWrite = lastLocalWrites[key] || 0;
+      const isLocallyActive = (Date.now() - lastWrite < 3000);
+      if (!isLocallyActive) {
+        return filterDeletedEntities(parsedRemote);
+      }
       return mergeYarnOrdersDatasets(parsedLocal, parsedRemote);
     }
 
@@ -565,6 +575,7 @@
       // Master entity registries: when remote arrives and local user is not actively typing,
       // the remote server snapshot is the single source of truth. Deleted items must NOT be resurrected!
       const MASTER_ENTITY_KEYS = [
+        'yarn-rm-orders', 'vishwa_yarn_rm_stock_data',
         'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
         'manage-jalas', 'manage-fanis', 'machines', 'warp-beams', 'warp-issues',
         'yarn-issues', 'costing-products-v4', 'costing-tfo-products-v1',

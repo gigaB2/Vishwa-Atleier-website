@@ -1434,6 +1434,9 @@
       // Auto-heal and sync all orders and batches into Yarn RM Stock Book
       useEffect(() => {
         if (!Array.isArray(orders) || orders.length === 0) return;
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.isHydrated === 'function' && !window.VishwaSupabase.isHydrated()) {
+          return; // Wait until cloud hydration completes
+        }
         try {
           const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
           let stockList = rawStock ? JSON.parse(rawStock) : [];
