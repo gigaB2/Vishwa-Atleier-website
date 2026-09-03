@@ -2376,15 +2376,16 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            flex: 1 1 450px;
+            flex: 1 1 auto;
+            justify-content: flex-end;
         }
 
         .att-card-col-timings {
             display: flex;
             align-items: center;
             gap: 0.4rem;
-            flex: 1 1 230px;
-            max-width: 250px;
+            flex: 1 1 240px;
+            max-width: 270px;
         }
 
         .att-time-cell {
@@ -2422,8 +2423,7 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            flex: 2 1 200px;
-            min-width: 160px;
+            flex: 0 0 auto;
         }
 
         .att-hours-pill {
@@ -2447,19 +2447,6 @@
             border-color: rgba(239, 68, 68, 0.4);
             color: var(--error);
             transform: scale(0.96);
-        }
-
-        .att-remark-input {
-            width: 100%;
-            height: 36px;
-            border: 1.5px solid var(--border);
-            background: var(--bg);
-            padding: 0 10px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            color: var(--fg);
-            outline: none;
-            box-sizing: border-box;
         }
 
         #att-bulk-modal.modal-overlay,
@@ -2553,7 +2540,7 @@
                 flex-direction: row !important;
                 align-items: center !important;
                 gap: 0.45rem !important;
-                flex: 1 1 auto !important;
+                flex: 0 0 auto !important;
                 min-width: 0 !important;
             }
 
@@ -2583,20 +2570,13 @@
             .att-card-col-notes {
                 display: flex !important;
                 align-items: center !important;
-                gap: 0.35rem !important;
-                flex: 1 1 120px !important;
-                min-width: 90px !important;
+                flex: 0 0 auto !important;
+                min-width: 0 !important;
             }
 
             .att-hours-pill {
                 padding: 3px 6px !important;
                 font-size: 0.7rem !important;
-            }
-
-            .att-remark-input {
-                height: 32px !important;
-                font-size: 0.75rem !important;
-                padding: 0 6px !important;
             }
         }
 
@@ -17775,7 +17755,7 @@
                                 </div>
                             </div>
 
-                            <!-- Bottom Group / Right: In/Out Timings, Hours Badge & Remarks -->
+                            <!-- Bottom Group / Right: In/Out Timings & Hours Badge -->
                             <div class="att-card-row-bottom">
                                 <div class="att-card-col-timings">
                                     <div class="att-time-cell">
@@ -17793,9 +17773,6 @@
                                         <span id="att_hrs_${idx}" data-hours="${calcHoursVal}" class="att-hours-pill" onclick="resetAttRowTimer(${idx})" title="Click to reset timer to 0">
                                             ${calcHoursText}
                                         </span>
-                                    </div>
-                                    <div style="flex: 1 1 auto; min-width: 90px;">
-                                        <input type="text" id="att_remark_${idx}" value="${savedRemarks}" placeholder="Optional note..." class="att-remark-input">
                                     </div>
                                 </div>
                             </div>
