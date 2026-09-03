@@ -1411,6 +1411,7 @@
             <thead>
               <tr>
                 <th>Item Type</th>
+                <th>Supplier</th>
                 <th>Yarn Quality</th>
                 <th>Code</th>
                 <th>Color</th>
@@ -3373,12 +3374,14 @@
     window.switchStockTab = switchStockTab;
     window.switchTab = switchStockTab;
 
-    // Navigate to Stock Book and filter by specific quality
-    function goToStockBookQuality(qualityName) {
+    // Navigate to Stock Book and filter by specific quality & supplier
+    function goToStockBookQuality(qualityName, supplierName) {
       switchStockTab('stock-book');
       const qualSelect = document.getElementById('quality-filter');
+      const suppSelect = document.getElementById('supplier-filter');
       const searchInput = document.getElementById('search-input');
-      if (qualSelect) {
+      
+      if (qualSelect && qualityName) {
         let found = false;
         for (let i = 0; i < qualSelect.options.length; i++) {
           if (qualSelect.options[i].value.toLowerCase() === qualityName.toLowerCase()) {
@@ -3390,9 +3393,19 @@
         if (!found && searchInput) {
           searchInput.value = qualityName;
         }
-      } else if (searchInput) {
+      } else if (searchInput && qualityName) {
         searchInput.value = qualityName;
       }
+
+      if (suppSelect && supplierName) {
+        for (let i = 0; i < suppSelect.options.length; i++) {
+          if (suppSelect.options[i].value.toLowerCase() === supplierName.toLowerCase()) {
+            suppSelect.selectedIndex = i;
+            break;
+          }
+        }
+      }
+
       renderStockBook();
     }
 
@@ -3416,24 +3429,26 @@
       let totalIssuedWeight = 0;
       let totalGrWeight = 0;
 
-      // Quality Aggregation Map
-      // Key: qualityName
+      // Quality & Supplier Aggregation Map
+      // Key: supplier + quality + itemType + code + color
       const qualityMap = {};
 
       stockData.forEach(lot => {
         const qName = (lot.quality || 'Unspecified Quality').trim();
+        const supplier = (lot.supplier || 'Unspecified Supplier').trim();
         const typeName = lot.itemType || 'Polyester';
         const code = lot.code || '';
         const color = lot.color || '';
-        const supplier = lot.supplier || '';
+        const groupKey = `${supplier}___${qName}___${typeName}___${code}___${color}`;
 
-        if (!qualityMap[qName]) {
-          qualityMap[qName] = {
+        if (!qualityMap[groupKey]) {
+          qualityMap[groupKey] = {
+            key: groupKey,
             quality: qName,
+            supplier: supplier,
             itemType: typeName,
             code: code,
             color: color,
-            suppliers: new Set(),
             availCones: 0,
             availWeight: 0,
             availBoxes: 0,
@@ -3444,8 +3459,6 @@
           };
         }
 
-        if (supplier) qualityMap[qName].suppliers.add(supplier);
-
         (lot.boxes || []).forEach(box => {
           const gross = parseFloat(box.grossWeight) || parseFloat(box.weight) || 0;
           const rem = parseFloat(box.remainingWeight !== undefined ? box.remainingWeight : (gross - (parseFloat(box.grWeight) || 0)));
@@ -3454,8 +3467,8 @@
           const status = box.status || 'available';
 
           totalReceivedWeight += gross;
-          qualityMap[qName].totalReceivedKg += gross;
-          qualityMap[qName].totalBoxes += 1;
+          qualityMap[groupKey].totalReceivedKg += gross;
+          qualityMap[groupKey].totalBoxes += 1;
 
           if (status === 'available') {
             const safeRem = Math.max(0, rem);
@@ -3463,21 +3476,21 @@
             totalAvailCones += cones;
             totalAvailBoxes += 1;
 
-            qualityMap[qName].availWeight += safeRem;
-            qualityMap[qName].availCones += cones;
-            qualityMap[qName].availBoxes += 1;
+            qualityMap[groupKey].availWeight += safeRem;
+            qualityMap[groupKey].availCones += cones;
+            qualityMap[groupKey].availBoxes += 1;
 
             if (gr > 0) {
               totalGrWeight += gr;
-              qualityMap[qName].grKg += gr;
+              qualityMap[groupKey].grKg += gr;
             }
           } else if (status === 'issued') {
             totalIssuedWeight += gross;
-            qualityMap[qName].usedKg += gross;
+            qualityMap[groupKey].usedKg += gross;
           } else if (status === 'gr') {
             const safeGr = gr > 0 ? gr : gross;
             totalGrWeight += safeGr;
-            qualityMap[qName].grKg += safeGr;
+            qualityMap[groupKey].grKg += safeGr;
           }
         });
       });
@@ -3507,12 +3520,11 @@
 
       if (searchVal) {
         qualitiesList = qualitiesList.filter(q => {
-          const supStr = Array.from(q.suppliers).join(' ').toLowerCase();
           return q.quality.toLowerCase().includes(searchVal) ||
+                 q.supplier.toLowerCase().includes(searchVal) ||
                  q.itemType.toLowerCase().includes(searchVal) ||
                  q.code.toLowerCase().includes(searchVal) ||
-                 q.color.toLowerCase().includes(searchVal) ||
-                 supStr.includes(searchVal);
+                 q.color.toLowerCase().includes(searchVal);
         });
       }
 
@@ -3532,13 +3544,13 @@
       // Render Table Rows
       const tbody = document.getElementById('dash-table-tbody');
       const countLabel = document.getElementById('dash-qualities-count-label');
-      if (countLabel) countLabel.textContent = `Showing ${qualitiesList.length} qualities`;
+      if (countLabel) countLabel.textContent = `Showing ${qualitiesList.length} items`;
 
       if (tbody) {
         if (qualitiesList.length === 0) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="12" style="text-align: center; padding: 3rem; color: var(--muted);">
+              <td colspan="13" style="text-align: center; padding: 3rem; color: var(--muted);">
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
                 <div style="font-weight: 600; font-size: 1rem; color: var(--fg); margin-bottom: 0.25rem;">No Qualities Found</div>
                 <div>No yarn qualities match the current filters. Try changing or clearing filters.</div>
@@ -3553,10 +3565,12 @@
               : `<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: var(--muted);">Zero Stock</span>`;
 
             const escapedQName = q.quality.replace(/'/g, "\\'");
+            const escapedSupplier = q.supplier.replace(/'/g, "\\'");
 
             return `
               <tr>
                 <td><span class="badge badge-primary">${q.itemType}</span></td>
+                <td style="font-weight: 600; color: var(--fg);">${q.supplier || '—'}</td>
                 <td style="font-weight: 700; color: var(--fg);">${q.quality}</td>
                 <td><span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);">${q.code || '-'}</span></td>
                 <td>${q.color || '-'}</td>
@@ -3582,7 +3596,7 @@
                   ${statusBadge}
                 </td>
                 <td style="text-align: center;">
-                  <button class="dash-btn-link" onclick="goToStockBookQuality('${escapedQName}')" title="View boxes & lots in Stock Book">
+                  <button class="dash-btn-link" onclick="goToStockBookQuality('${escapedQName}', '${escapedSupplier}')" title="View boxes & lots in Stock Book">
                     <span>Stock Book</span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                   </button>
