@@ -2893,9 +2893,9 @@
                       body: JSON.stringify(chunk)
                     }).catch(() => null);
 
-                    // Fallback for older schemas
+                    // Fallback for schemas missing newer columns
                     if (res && !res.ok) {
-                      const minimalChunk = chunk.map(r => ({
+                      const fallbackWithWeights = chunk.map(r => ({
                         id: r.id,
                         division: r.division,
                         date: r.date,
@@ -2908,10 +2908,12 @@
                         tpm: r.tpm,
                         twist: r.twist,
                         rolls: r.rolls,
+                        gross_weight: r.gross_weight || 0,
+                        tare_weight: r.tare_weight || 0,
                         qty: r.qty,
                         updated_at: r.updated_at
                       }));
-                      await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?on_conflict=id`, {
+                      const fallbackRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?on_conflict=id`, {
                         method: 'POST',
                         headers: {
                           'apikey': SUPABASE_ANON_KEY,
@@ -2919,8 +2921,37 @@
                           'Content-Type': 'application/json',
                           'Prefer': 'resolution=merge-duplicates'
                         },
-                        body: JSON.stringify(minimalChunk)
-                      }).catch(() => {});
+                        body: JSON.stringify(fallbackWithWeights)
+                      }).catch(() => null);
+
+                      if (fallbackRes && !fallbackRes.ok) {
+                        const minimalChunk = chunk.map(r => ({
+                          id: r.id,
+                          division: r.division,
+                          date: r.date,
+                          bori_no: r.bori_no,
+                          product_name: r.product_name,
+                          product_id: r.product_id,
+                          lot_no: r.lot_no,
+                          color: r.color,
+                          denier: r.denier,
+                          tpm: r.tpm,
+                          twist: r.twist,
+                          rolls: r.rolls,
+                          qty: r.qty,
+                          updated_at: r.updated_at
+                        }));
+                        await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?on_conflict=id`, {
+                          method: 'POST',
+                          headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'resolution=merge-duplicates'
+                          },
+                          body: JSON.stringify(minimalChunk)
+                        }).catch(() => {});
+                      }
                     }
                   }
                 }
@@ -4538,6 +4569,8 @@
                     tpm: yp.tpm !== null ? Number(yp.tpm) : '',
                     twist: yp.twist || '',
                     rolls: Number(yp.rolls) || 0,
+                    grossWeight: yp.gross_weight !== null && yp.gross_weight !== undefined ? Number(yp.gross_weight) : 0,
+                    tareWeight: yp.tare_weight !== null && yp.tare_weight !== undefined ? Number(yp.tare_weight) : 0,
                     qty: Number(yp.qty) || 0,
                     configType: yp.config_type || '',
                     ply: yp.ply || '',
@@ -4603,6 +4636,8 @@
 
                   const reconstructed = divRows.map(ys => {
                     const raw = (ys.raw_data && typeof ys.raw_data === 'object') ? ys.raw_data : {};
+                    const totalGross = (ys.total_gross_weight !== null && ys.total_gross_weight !== undefined) ? Number(ys.total_gross_weight) : ((raw.totalGrossWeight !== undefined && raw.totalGrossWeight !== null) ? Number(raw.totalGrossWeight) : (Number(raw.grossWeight) || 0));
+                    const totalTare = (ys.total_tare_weight !== null && ys.total_tare_weight !== undefined) ? Number(ys.total_tare_weight) : ((raw.totalTareWeight !== undefined && raw.totalTareWeight !== null) ? Number(raw.totalTareWeight) : (Number(raw.tareWeight) || 0));
                     return {
                       id: ys.id,
                       saleDate: ys.sale_date,
@@ -4620,6 +4655,10 @@
                       gstRate: (ys.gst_rate !== undefined && ys.gst_rate !== null) ? Number(ys.gst_rate) : (raw.gstRate !== undefined ? Number(raw.gstRate) : null),
                       subtotalAmount: (ys.subtotal_amount !== undefined && ys.subtotal_amount !== null) ? Number(ys.subtotal_amount) : (raw.subtotalAmount !== undefined ? Number(raw.subtotalAmount) : null),
                       items: Array.isArray(ys.items) && ys.items.length > 0 ? ys.items : (Array.isArray(raw.items) ? raw.items : []),
+                      totalGrossWeight: totalGross,
+                      totalTareWeight: totalTare,
+                      grossWeight: totalGross,
+                      tareWeight: totalTare,
                       totalQty: Number(ys.total_qty || raw.totalQty || raw.saleQty) || 0,
                       saleQty: Number(ys.total_qty || raw.totalQty || raw.saleQty) || 0,
                       qty: Number(ys.total_qty || raw.totalQty || raw.saleQty) || 0,
@@ -5220,6 +5259,8 @@
           tpm: yp.tpm !== null ? Number(yp.tpm) : '',
           twist: yp.twist || '',
           rolls: Number(yp.rolls) || 0,
+          grossWeight: yp.gross_weight !== null && yp.gross_weight !== undefined ? Number(yp.gross_weight) : 0,
+          tareWeight: yp.tare_weight !== null && yp.tare_weight !== undefined ? Number(yp.tare_weight) : 0,
           qty: Number(yp.qty) || 0,
           configType: yp.config_type || '',
           ply: yp.ply || '',
@@ -5247,23 +5288,36 @@
         const query = division ? `division=eq.${encodeURIComponent(division)}&order=sale_date.desc` : 'order=sale_date.desc';
         const rows = await fetchAllRowsPaginated('vf_yarn_sales_logs', '*', query);
         if (!Array.isArray(rows) || rows.length === 0) return null;
-        return rows.map(ys => ({
-          id: ys.id,
-          division: ys.division,
-          saleDate: ys.sale_date,
-          date: ys.sale_date,
-          challanNo: ys.challan_no || '',
-          customerName: ys.customer_name,
-          customer: ys.customer_name,
-          items: Array.isArray(ys.items) ? ys.items : [],
-          totalQty: Number(ys.total_qty) || 0,
-          saleQty: Number(ys.total_qty) || 0,
-          qty: Number(ys.total_qty) || 0,
-          totalAmount: Number(ys.total_amount) || 0,
-          amount: Number(ys.total_amount) || 0,
-          gstAmount: Number(ys.gst_amount) || 0,
-          gst: Number(ys.gst_amount) || 0
-        }));
+        return rows.map(ys => {
+          const raw = (ys.raw_data && typeof ys.raw_data === 'object') ? ys.raw_data : {};
+          const totalGross = (ys.total_gross_weight !== null && ys.total_gross_weight !== undefined) ? Number(ys.total_gross_weight) : ((raw.totalGrossWeight !== undefined && raw.totalGrossWeight !== null) ? Number(raw.totalGrossWeight) : (Number(raw.grossWeight) || 0));
+          const totalTare = (ys.total_tare_weight !== null && ys.total_tare_weight !== undefined) ? Number(ys.total_tare_weight) : ((raw.totalTareWeight !== undefined && raw.totalTareWeight !== null) ? Number(raw.totalTareWeight) : (Number(raw.tareWeight) || 0));
+          return {
+            id: ys.id,
+            division: ys.division,
+            saleDate: ys.sale_date,
+            date: ys.sale_date,
+            challanNo: ys.challan_no || raw.challanNo || '',
+            customerName: ys.customer_name || raw.customerName || '',
+            customer: ys.customer_name || raw.customerName || '',
+            customerAddress: ys.customer_address || raw.customerAddress || 'Industrial Area, Surat, Gujarat, India',
+            sellerCompanyId: ys.seller_company_id || raw.sellerCompanyId || '',
+            sellerName: ys.seller_name || raw.sellerName || 'Vishwa Fashions',
+            items: Array.isArray(ys.items) && ys.items.length > 0 ? ys.items : (Array.isArray(raw.items) ? raw.items : []),
+            totalGrossWeight: totalGross,
+            totalTareWeight: totalTare,
+            grossWeight: totalGross,
+            tareWeight: totalTare,
+            totalQty: Number(ys.total_qty || raw.totalQty || raw.saleQty) || 0,
+            saleQty: Number(ys.total_qty || raw.totalQty || raw.saleQty) || 0,
+            qty: Number(ys.total_qty || raw.totalQty || raw.saleQty) || 0,
+            totalAmount: Number(ys.total_amount || raw.totalAmount || raw.amount) || 0,
+            amount: Number(ys.total_amount || raw.totalAmount || raw.amount) || 0,
+            gstAmount: Number(ys.gst_amount || raw.gstAmount || raw.gst) || 0,
+            gst: Number(ys.gst_amount || raw.gstAmount || raw.gst) || 0,
+            ...raw
+          };
+        });
       } catch(e) {
         console.error('fetchYarnSalesRelational error:', e);
         return null;

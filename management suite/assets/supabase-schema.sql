@@ -517,6 +517,9 @@ CREATE TABLE IF NOT EXISTS public.vf_yarn_production_logs (
 -- Migration safety for existing vf_yarn_production_logs tables:
 ALTER TABLE public.vf_yarn_production_logs ADD COLUMN IF NOT EXISTS gross_weight NUMERIC(10, 3) DEFAULT 0;
 ALTER TABLE public.vf_yarn_production_logs ADD COLUMN IF NOT EXISTS tare_weight NUMERIC(10, 3) DEFAULT 0;
+ALTER TABLE public.vf_yarn_production_logs ADD COLUMN IF NOT EXISTS config_type TEXT;
+ALTER TABLE public.vf_yarn_production_logs ADD COLUMN IF NOT EXISTS ply TEXT;
+ALTER TABLE public.vf_yarn_production_logs ADD COLUMN IF NOT EXISTS yarns JSONB DEFAULT '[]'::jsonb;
 
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_prod_div ON public.vf_yarn_production_logs(division);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_prod_date ON public.vf_yarn_production_logs(date DESC);
