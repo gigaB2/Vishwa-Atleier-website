@@ -6078,6 +6078,18 @@ function showToast(message, type = 'info') {
     localStorage.setItem('yarn-fp-qualities', JSON.stringify(rawMaterialFpQualities));
     localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
 
+    if (state.employees) {
+      let fullState = {};
+      const stored = localStorage.getItem(STATE_KEY);
+      if (stored) {
+        try { fullState = JSON.parse(stored) || {}; } catch(e) {}
+      }
+      fullState.employees = state.employees;
+      fullState.loans = state.loans || [];
+      fullState.logs = state.logs || [];
+      localStorage.setItem(STATE_KEY, JSON.stringify(fullState));
+    }
+
     window.dispatchEvent(new Event('storage'));
     renderAll();
     console.log("Undo performed");
