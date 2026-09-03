@@ -17759,12 +17759,12 @@
                             <div class="att-card-row-bottom">
                                 <div class="att-card-col-timings">
                                     <div class="att-time-cell">
-                                        <span class="att-time-lbl">In:</span>
-                                        <input type="time" id="att_in_${idx}" value="${savedInTime}" onchange="calcAttRowHours(${idx})" class="att-time-input">
+                                        <span class="att-time-lbl">In: <span style="color: var(--error, #ef4444); font-weight: 800;">*</span></span>
+                                        <input type="time" id="att_in_${idx}" value="${savedInTime}" oninput="this.style.borderColor=''" onchange="calcAttRowHours(${idx})" class="att-time-input" required>
                                     </div>
                                     <div class="att-time-cell">
-                                        <span class="att-time-lbl">Out:</span>
-                                        <input type="time" id="att_out_${idx}" value="${savedOutTime}" onchange="calcAttRowHours(${idx})" class="att-time-input">
+                                        <span class="att-time-lbl">Out: <span style="color: var(--error, #ef4444); font-weight: 800;">*</span></span>
+                                        <input type="time" id="att_out_${idx}" value="${savedOutTime}" oninput="this.style.borderColor=''" onchange="calcAttRowHours(${idx})" class="att-time-input" required>
                                     </div>
                                 </div>
 
@@ -17806,10 +17806,68 @@
                 const container = document.getElementById('att-modal-list-container');
                 if (!container) return;
 
+                const cards = container.querySelectorAll('.att-emp-card');
+
+                // Clear previous validation error highlights
+                cards.forEach(card => {
+                    const inEl = card.querySelector('.att-time-input[id^="att_in_"]');
+                    const outEl = card.querySelector('.att-time-input[id^="att_out_"]');
+                    if (inEl) inEl.style.borderColor = '';
+                    if (outEl) outEl.style.borderColor = '';
+                });
+
+                // Validation: In Time & Out Time are strictly compulsory for all working statuses
+                let missingTimeList = [];
+                let firstMissingInput = null;
+
+                cards.forEach(card => {
+                    const idx = card.getAttribute('data-emp-idx');
+                    const empName = card.getAttribute('data-emp-name');
+                    const selectEl = document.getElementById(`att_status_select_${idx}`);
+                    const inEl = document.getElementById(`att_in_${idx}`);
+                    const outEl = document.getElementById(`att_out_${idx}`);
+
+                    if (empName && selectEl) {
+                        const status = selectEl.value || 'present';
+                        const isWorkingStatus = (status === 'present' || status === 'night_shift' || status === 'double_shift' || status === 'half_day');
+
+                        if (isWorkingStatus) {
+                            const inVal = inEl ? inEl.value.trim() : '';
+                            const outVal = outEl ? outEl.value.trim() : '';
+
+                            if (!inVal || !outVal) {
+                                missingTimeList.push({
+                                    name: empName,
+                                    missingIn: !inVal,
+                                    missingOut: !outVal
+                                });
+                                if (inEl && !inVal) {
+                                    inEl.style.borderColor = '#ef4444';
+                                    if (!firstMissingInput) firstMissingInput = inEl;
+                                }
+                                if (outEl && !outVal) {
+                                    outEl.style.borderColor = '#ef4444';
+                                    if (!firstMissingInput) firstMissingInput = outEl;
+                                }
+                            }
+                        }
+                    }
+                });
+
+                if (missingTimeList.length > 0) {
+                    const namesStr = missingTimeList.slice(0, 5).map(m => `• ${m.name} (Missing: ${m.missingIn && m.missingOut ? 'In & Out time' : (m.missingIn ? 'In time' : 'Out time')})`).join('\n');
+                    const extraCount = missingTimeList.length > 5 ? `\n...and ${missingTimeList.length - 5} more.` : '';
+                    alert(`⚠️ In Time and Out Time are COMPULSORY for all working staff.\n\nPlease enter both In and Out times for:\n\n${namesStr}${extraCount}`);
+                    if (firstMissingInput) {
+                        firstMissingInput.focus();
+                        firstMissingInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return;
+                }
+
                 if (!state.attendance) state.attendance = {};
                 if (!state.attendance[dateStr]) state.attendance[dateStr] = {};
 
-                const cards = container.querySelectorAll('.att-emp-card');
                 cards.forEach(card => {
                     const idx = card.getAttribute('data-emp-idx');
                     const empName = card.getAttribute('data-emp-name');
@@ -17817,7 +17875,6 @@
                     const inEl = document.getElementById(`att_in_${idx}`);
                     const outEl = document.getElementById(`att_out_${idx}`);
                     const hrsEl = document.getElementById(`att_hrs_${idx}`);
-                    const remarkInput = document.getElementById(`att_remark_${idx}`);
 
                     if (empName && selectEl) {
                         const status = selectEl.value || 'present';
@@ -17825,7 +17882,6 @@
                         const inTime = inEl ? inEl.value : '';
                         const outTime = outEl ? outEl.value : '';
                         const hours = hrsEl ? parseFloat(hrsEl.getAttribute('data-hours') || '0') : 0;
-                        const remarks = remarkInput ? remarkInput.value.trim() : '';
 
                         state.attendance[dateStr][empName] = {
                             status: status,
@@ -17833,7 +17889,6 @@
                             inTime: inTime,
                             outTime: outTime,
                             hours: isNaN(hours) ? 0 : hours,
-                            remarks: remarks,
                             updatedAt: new Date().toISOString()
                         };
                     }
