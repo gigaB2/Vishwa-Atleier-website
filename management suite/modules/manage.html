@@ -6090,6 +6090,27 @@ function showToast(message, type = 'info') {
     }
   });
 
+  function saveQualitiesState() {
+    localStorage.setItem('yarn-qualities', JSON.stringify(rawMaterialQualities));
+    window.dispatchEvent(new Event('storage'));
+    renderQualities();
+    populateFpYarnSelector();
+  }
+
+  function saveFpQualitiesState() {
+    localStorage.setItem('yarn-fp-qualities', JSON.stringify(rawMaterialFpQualities));
+    window.dispatchEvent(new Event('storage'));
+    renderFpQualities();
+  }
+
+  function saveSuppliersState() {
+    localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
+    window.dispatchEvent(new Event('storage'));
+    renderSuppliers();
+    populateSupplierDropdown();
+    renderQualities();
+  }
+
   function saveState() {
     localStorage.setItem('machines', JSON.stringify(state.machines));
     localStorage.setItem('productionLogs', JSON.stringify(state.productionLogs));
@@ -6101,9 +6122,17 @@ function showToast(message, type = 'info') {
     localStorage.setItem('jalas', JSON.stringify(jalas));
     localStorage.setItem('manage-fanis', JSON.stringify(fanis));
     localStorage.setItem('fanis', JSON.stringify(fanis));
-    localStorage.setItem('yarn-qualities', JSON.stringify(rawMaterialQualities));
-    localStorage.setItem('yarn-fp-qualities', JSON.stringify(rawMaterialFpQualities));
-    localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
+    
+    // Save qualities and suppliers safely
+    if (rawMaterialQualities && rawMaterialQualities.length > 0) {
+      localStorage.setItem('yarn-qualities', JSON.stringify(rawMaterialQualities));
+    }
+    if (rawMaterialFpQualities && rawMaterialFpQualities.length > 0) {
+      localStorage.setItem('yarn-fp-qualities', JSON.stringify(rawMaterialFpQualities));
+    }
+    if (rawMaterialSuppliers && rawMaterialSuppliers.length > 0) {
+      localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
+    }
     
     // Save employees to its custom key
     if (state.employees) {
@@ -6463,8 +6492,7 @@ function showToast(message, type = 'info') {
       window.VishwaSupabase.broadcastFormClear(['new-quality-name', 'new-quality-code', 'new-quality-color', 'new-quality-type', 'new-quality-supplier']);
     }
 
-    saveState();
-    renderQualities();
+    saveQualitiesState();
   }
 
   function editQuality(id) {
@@ -6510,20 +6538,15 @@ function showToast(message, type = 'info') {
   function deleteQuality(id) {
     if (confirm('Are you sure you want to delete this quality?')) {
       pushToUndo();
-      const targetQuality = rawMaterialQualities.find(q => q.id === id);
       if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
         window.VishwaSupabase.recordDeletion('yarn-qualities', id);
-        if (targetQuality && targetQuality.quality) {
-          window.VishwaSupabase.recordDeletion('yarn-qualities', targetQuality.quality);
-        }
       }
       if (editingQualityId === id) {
         cancelQualityEdit();
       }
       rawMaterialQualities = rawMaterialQualities.filter(q => q.id !== id);
-      saveState();
-      renderQualities();
-      populateFpYarnSelector();
+      saveQualitiesState();
+      showToast('Quality removed.', 'success');
     }
   }
 
@@ -6931,8 +6954,7 @@ function showToast(message, type = 'info') {
       window.VishwaSupabase.broadcastFormClear(['new-fp-name', 'new-fp-composition', 'new-fp-denier', 'new-fp-tpm', 'new-fp-color']);
     }
 
-    saveState();
-    renderFpQualities();
+    saveFpQualitiesState();
     showToast('FP Quality saved successfully!', 'success');
   }
 
@@ -6994,20 +7016,14 @@ function showToast(message, type = 'info') {
   function deleteFpQuality(id) {
     if (confirm('Are you sure you want to delete this FP Quality?')) {
       pushToUndo();
-      const targetQuality = rawMaterialFpQualities.find(q => q.id === id);
       if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
         window.VishwaSupabase.recordDeletion('yarn-fp-qualities', id);
-        if (targetQuality) {
-          if (targetQuality.name) window.VishwaSupabase.recordDeletion('yarn-fp-qualities', targetQuality.name);
-          if (targetQuality.code) window.VishwaSupabase.recordDeletion('yarn-fp-qualities', targetQuality.code);
-        }
       }
       if (editingFpQualityId === id) {
         cancelFpQualityEdit();
       }
       rawMaterialFpQualities = rawMaterialFpQualities.filter(q => q.id !== id);
-      saveState();
-      renderFpQualities();
+      saveFpQualitiesState();
       showToast('FP Quality removed.', 'success');
     }
   }
@@ -7125,10 +7141,8 @@ function showToast(message, type = 'info') {
       window.VishwaSupabase.broadcastFormClear(['new-supplier-name', 'new-supplier-phone', 'new-supplier-email', 'new-supplier-address', 'new-supplier-notes']);
     }
 
-    saveState();
-    renderSuppliers();
-    populateSupplierDropdown();
-    renderQualities();
+    saveSuppliersState();
+    showToast('Supplier saved successfully!', 'success');
   }
 
   function editSupplier(id) {
@@ -7176,32 +7190,20 @@ function showToast(message, type = 'info') {
     const s = rawMaterialSuppliers.find(item => item.id === id);
     if (!s) return;
 
-    const usedBy = rawMaterialQualities.filter(q => q.supplier === s.name);
-    if (usedBy.length > 0) {
-      if (!confirm(`This supplier "${s.name}" is referenced by ${usedBy.length} raw material qualities. Deleting it will leave those qualities with empty/missing suppliers. Continue?`)) {
-        return;
-      }
-    } else {
-      if (!confirm(`Are you sure you want to delete supplier "${s.name}"?`)) {
-        return;
-      }
+    if (!confirm(`Are you sure you want to delete supplier "${s.name}"?`)) {
+      return;
     }
 
     pushToUndo();
     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
       window.VishwaSupabase.recordDeletion('yarn-suppliers', id);
-      if (s && s.name) {
-        window.VishwaSupabase.recordDeletion('yarn-suppliers', s.name);
-      }
     }
     if (editingSupplierId === id) {
       cancelSupplierEdit();
     }
     rawMaterialSuppliers = rawMaterialSuppliers.filter(item => item.id !== id);
-    saveState();
-    renderSuppliers();
-    populateSupplierDropdown();
-    renderQualities();
+    saveSuppliersState();
+    showToast('Supplier removed.', 'success');
   }
 
   // Active Tab management
@@ -9632,9 +9634,9 @@ function showToast(message, type = 'info') {
     if (!localStorage.getItem('manage-jacquards')) localStorage.setItem('manage-jacquards', JSON.stringify(jacquards));
     if (!localStorage.getItem('manage-jalas')) localStorage.setItem('manage-jalas', JSON.stringify(jalas));
     if (!localStorage.getItem('manage-fanis')) localStorage.setItem('manage-fanis', JSON.stringify(fanis));
-    if (!localStorage.getItem('yarn-qualities')) localStorage.setItem('yarn-qualities', JSON.stringify(rawMaterialQualities));
-    if (!localStorage.getItem('yarn-fp-qualities')) localStorage.setItem('yarn-fp-qualities', JSON.stringify(rawMaterialFpQualities));
-    if (!localStorage.getItem('yarn-suppliers')) localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
+    if (!localStorage.getItem('yarn-qualities') && rawMaterialQualities && rawMaterialQualities.length > 0) localStorage.setItem('yarn-qualities', JSON.stringify(rawMaterialQualities));
+    if (!localStorage.getItem('yarn-fp-qualities') && rawMaterialFpQualities && rawMaterialFpQualities.length > 0) localStorage.setItem('yarn-fp-qualities', JSON.stringify(rawMaterialFpQualities));
+    if (!localStorage.getItem('yarn-suppliers') && rawMaterialSuppliers && rawMaterialSuppliers.length > 0) localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
 
     // Auto-migrate: migrate sub-roles to standard "Beam Loading"
     let currentEmployees = loadEmployeesState();

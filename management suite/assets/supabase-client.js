@@ -264,9 +264,6 @@
         if (item.id && tombstoneSet.has(String(item.id).trim().toLowerCase())) return false;
         if (item._id && tombstoneSet.has(String(item._id).trim().toLowerCase())) return false;
         if (item.uuid && tombstoneSet.has(String(item.uuid).trim().toLowerCase())) return false;
-        if (item.name && tombstoneSet.has(String(item.name).trim().toLowerCase())) return false;
-        if (item.quality && tombstoneSet.has(String(item.quality).trim().toLowerCase())) return false;
-        if (item.code && tombstoneSet.has(String(item.code).trim().toLowerCase())) return false;
         if (item.loanId && tombstoneSet.has(String(item.loanId).trim().toLowerCase())) return false;
         if (item.empId && tombstoneSet.has(String(item.empId).trim().toLowerCase())) return false;
         if (item.boriNo && tombstoneSet.has(String(item.boriNo).trim().toLowerCase())) return false;
@@ -585,6 +582,11 @@
       ];
 
       const isMasterKey = MASTER_ENTITY_KEYS.includes(key) || (typeof key === 'string' && key.startsWith('yarn_') && (key.includes('_sales_logs') || key.includes('_production_logs')));
+
+      // Absolute protection: If remote has master data and local is empty, always adopt remote
+      if (isMasterKey && cleanRemote.length > 0 && cleanLocal.length === 0) {
+        return cleanRemote;
+      }
 
       if (isMasterKey && !isLocallyActive) {
         return cleanRemote;
@@ -2154,7 +2156,141 @@
               }
             }
 
-            // Dedicated Relational Synchronization for Yarn RM Stock Book
+            // Dedicated Relational Synchronization for RM Qualities
+            if (key === 'yarn-qualities' && Array.isArray(value)) {
+              try {
+                const qRows = value.filter(q => q && q.id).map(q => ({
+                  id: String(q.id),
+                  quality: String(q.quality || ''),
+                  code: String(q.code || ''),
+                  color: String(q.color || ''),
+                  type: String(q.type || 'Polyester'),
+                  supplier: String(q.supplier || ''),
+                  created_at: q.createdAt || nowIso,
+                  updated_at: nowIso
+                }));
+
+                if (qRows.length > 0) {
+                  for (let i = 0; i < qRows.length; i += 300) {
+                    const chunk = qRows.slice(i, i + 300);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                  const currentIds = qRows.map(r => `"${r.id}"`).join(',');
+                  fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities?id=not.in.(${currentIds})`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                  }).catch(() => {});
+                } else if (value.length === 0) {
+                  fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                  }).catch(() => {});
+                }
+              } catch(e) {
+                console.warn('RM Qualities relational sync notice:', e);
+              }
+            }
+
+            // Dedicated Relational Synchronization for FP Qualities
+            if (key === 'yarn-fp-qualities' && Array.isArray(value)) {
+              try {
+                const fpRows = value.filter(q => q && q.id).map(q => ({
+                  id: String(q.id),
+                  division: String(q.division || 'covering'),
+                  name: String(q.name || ''),
+                  composition: q.composition || '',
+                  yarns: Array.isArray(q.yarns) ? q.yarns : [],
+                  denier: q.denier !== '' && q.denier !== null && !isNaN(q.denier) ? Number(q.denier) : null,
+                  tpm: q.tpm !== '' && q.tpm !== null && !isNaN(q.tpm) ? parseInt(q.tpm, 10) : null,
+                  twist: q.twist || '',
+                  color: q.color || '',
+                  created_at: q.createdAt || nowIso,
+                  updated_at: nowIso
+                }));
+
+                if (fpRows.length > 0) {
+                  for (let i = 0; i < fpRows.length; i += 300) {
+                    const chunk = fpRows.slice(i, i + 300);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                  const currentIds = fpRows.map(r => `"${r.id}"`).join(',');
+                  fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities?id=not.in.(${currentIds})`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                  }).catch(() => {});
+                } else if (value.length === 0) {
+                  fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                  }).catch(() => {});
+                }
+              } catch(e) {
+                console.warn('FP Qualities relational sync notice:', e);
+              }
+            }
+
+            // Dedicated Relational Synchronization for RM Suppliers
+            if (key === 'yarn-suppliers' && Array.isArray(value)) {
+              try {
+                const sRows = value.filter(s => s && s.id).map(s => ({
+                  id: String(s.id),
+                  name: String(s.name || ''),
+                  phone: s.phone || '',
+                  email: s.email || '',
+                  address: s.address || '',
+                  notes: s.notes || '',
+                  created_at: s.createdAt || nowIso,
+                  updated_at: nowIso
+                }));
+
+                if (sRows.length > 0) {
+                  for (let i = 0; i < sRows.length; i += 300) {
+                    const chunk = sRows.slice(i, i + 300);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                  const currentIds = sRows.map(r => `"${r.id}"`).join(',');
+                  fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers?id=not.in.(${currentIds})`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                  }).catch(() => {});
+                } else if (value.length === 0) {
+                  fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                  }).catch(() => {});
+                }
+              } catch(e) {
+                console.warn('RM Suppliers relational sync notice:', e);
+              }
+            }
+
             // Dedicated Relational Synchronization for Yarn RM Stock Book
             if (key === 'vishwa_yarn_rm_stock_data' && Array.isArray(value)) {
               try {
@@ -3291,12 +3427,15 @@
           window.dispatchEvent(new Event('storage'));
         } catch(e) {}
 
-        // Delete from dedicated table if costing or yarn key
+        // Delete from dedicated table if costing, yarn, qualities, or supplier key
         let table = null;
         if (key === 'costing-products-v4') table = 'vf_costing_products';
         else if (key === 'costing-tfo-products-v1') table = 'vf_costing_tfo_products';
         else if (key === 'costing-doubler-products-v1') table = 'vf_costing_doubler_products';
         else if (key === 'costing-covering-products-v1') table = 'vf_costing_covering_products';
+        else if (key === 'yarn-qualities') table = 'vf_rm_qualities';
+        else if (key === 'yarn-fp-qualities') table = 'vf_fp_qualities';
+        else if (key === 'yarn-suppliers') table = 'vf_rm_suppliers';
         else if (key && key.startsWith('yarn_') && key.endsWith('_production_logs')) table = 'vf_yarn_production_logs';
         else if (key && key.startsWith('yarn_') && key.endsWith('_sales_logs')) table = 'vf_yarn_sales_logs';
 
@@ -3926,6 +4065,109 @@
               }
             } catch (err) {
               console.warn('Dedicated tables reconciliation notice:', err);
+            }
+
+            // Reconcile Dedicated RM Qualities Relational Table
+            try {
+              const qKey = 'yarn-qualities';
+              const dbQualities = await fetchAllRowsPaginated('vf_rm_qualities', '*', 'order=created_at.desc');
+              if (Array.isArray(dbQualities) && dbQualities.length > 0) {
+                const tombstones = getDeletedTombstones();
+                const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()));
+                const reconstructedQualities = dbQualities
+                  .filter(q => q && q.id && !tombstoneSet.has(String(q.id).toLowerCase()))
+                  .map(q => ({
+                    id: q.id,
+                    quality: q.quality,
+                    code: q.code || '',
+                    color: q.color || '',
+                    type: q.type || 'Polyester',
+                    supplier: q.supplier || '',
+                    createdAt: q.created_at || new Date().toISOString()
+                  }));
+
+                const lastQWrite = lastLocalWrites[qKey] || 0;
+                if (Date.now() - lastQWrite >= 3000 && reconstructedQualities.length > 0) {
+                  const qStr = JSON.stringify(reconstructedQualities);
+                  cache[qKey] = qStr;
+                  lastSavedHashes[qKey] = computeHash(qStr);
+                  safeLocalStorageSet(qKey, qStr);
+                  if (!updatedKeys.includes(qKey)) updatedKeys.push(qKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (qErr) {
+              console.warn('RM Qualities relational reconciliation notice:', qErr);
+            }
+
+            // Reconcile Dedicated FP Qualities Relational Table
+            try {
+              const fpKey = 'yarn-fp-qualities';
+              const dbFpQualities = await fetchAllRowsPaginated('vf_fp_qualities', '*', 'order=created_at.desc');
+              if (Array.isArray(dbFpQualities) && dbFpQualities.length > 0) {
+                const tombstones = getDeletedTombstones();
+                const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()));
+                const reconstructedFp = dbFpQualities
+                  .filter(q => q && q.id && !tombstoneSet.has(String(q.id).toLowerCase()))
+                  .map(q => ({
+                    id: q.id,
+                    division: q.division || 'covering',
+                    name: q.name,
+                    composition: q.composition || '',
+                    yarns: Array.isArray(q.yarns) ? q.yarns : [],
+                    denier: q.denier !== null && q.denier !== '' ? Number(q.denier) : '',
+                    tpm: q.tpm !== null && q.tpm !== '' ? Number(q.tpm) : '',
+                    twist: q.twist || '',
+                    color: q.color || '',
+                    createdAt: q.created_at || new Date().toISOString(),
+                    updatedAt: q.updated_at || new Date().toISOString()
+                  }));
+
+                const lastFpWrite = lastLocalWrites[fpKey] || 0;
+                if (Date.now() - lastFpWrite >= 3000 && reconstructedFp.length > 0) {
+                  const fpStr = JSON.stringify(reconstructedFp);
+                  cache[fpKey] = fpStr;
+                  lastSavedHashes[fpKey] = computeHash(fpStr);
+                  safeLocalStorageSet(fpKey, fpStr);
+                  if (!updatedKeys.includes(fpKey)) updatedKeys.push(fpKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (fpErr) {
+              console.warn('FP Qualities relational reconciliation notice:', fpErr);
+            }
+
+            // Reconcile Dedicated RM Suppliers Relational Table
+            try {
+              const sKey = 'yarn-suppliers';
+              const dbSuppliers = await fetchAllRowsPaginated('vf_rm_suppliers', '*', 'order=created_at.desc');
+              if (Array.isArray(dbSuppliers) && dbSuppliers.length > 0) {
+                const tombstones = getDeletedTombstones();
+                const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()));
+                const reconstructedSuppliers = dbSuppliers
+                  .filter(s => s && s.id && !tombstoneSet.has(String(s.id).toLowerCase()))
+                  .map(s => ({
+                    id: s.id,
+                    name: s.name,
+                    phone: s.phone || '',
+                    email: s.email || '',
+                    address: s.address || '',
+                    notes: s.notes || '',
+                    createdAt: s.created_at || new Date().toISOString()
+                  }));
+
+                const lastSWrite = lastLocalWrites[sKey] || 0;
+                if (Date.now() - lastSWrite >= 3000 && reconstructedSuppliers.length > 0) {
+                  const sStr = JSON.stringify(reconstructedSuppliers);
+                  cache[sKey] = sStr;
+                  lastSavedHashes[sKey] = computeHash(sStr);
+                  safeLocalStorageSet(sKey, sStr);
+                  if (!updatedKeys.includes(sKey)) updatedKeys.push(sKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (sErr) {
+              console.warn('RM Suppliers relational reconciliation notice:', sErr);
             }
 
             // Reconcile Dedicated Yarn RM Relational Tables for enterprise data integrity

@@ -2523,20 +2523,16 @@
 
             const deleteQuality = (id) => {
                 if (confirm('Delete quality?')) {
-                    const qObj = (qualities || []).find(q => q.id === id);
                     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
                         window.VishwaSupabase.recordDeletion('yarn-qualities', id);
-                        if (qObj && qObj.quality) window.VishwaSupabase.recordDeletion('yarn-qualities', qObj.quality);
                     }
                     setQualities(qualities.filter(q => q.id !== id));
                 }
             };
             const deleteSupplier = (id) => {
                 if (confirm('Delete supplier?')) {
-                    const sObj = (suppliers || []).find(s => s.id === id);
                     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
                         window.VishwaSupabase.recordDeletion('yarn-suppliers', id);
-                        if (sObj && sObj.name) window.VishwaSupabase.recordDeletion('yarn-suppliers', sObj.name);
                     }
                     setSuppliers(suppliers.filter(s => s.id !== id));
                 }

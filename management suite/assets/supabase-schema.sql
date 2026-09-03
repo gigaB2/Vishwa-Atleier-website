@@ -703,6 +703,54 @@ CREATE INDEX IF NOT EXISTS idx_vf_salary_month ON public.vf_salary_settlements(m
 CREATE INDEX IF NOT EXISTS idx_vf_salary_emp ON public.vf_salary_settlements(employee_id);
 CREATE INDEX IF NOT EXISTS idx_vf_salary_status ON public.vf_salary_settlements(status);
 
+-- 27. Dedicated Relational Table: Raw Material Qualities (Catalogue)
+CREATE TABLE IF NOT EXISTS public.vf_rm_qualities (
+    id TEXT PRIMARY KEY,
+    quality TEXT NOT NULL,
+    code TEXT NOT NULL,
+    color TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'Polyester',
+    supplier TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_rm_qualities_name ON public.vf_rm_qualities(quality);
+CREATE INDEX IF NOT EXISTS idx_vf_rm_qualities_type ON public.vf_rm_qualities(type);
+CREATE INDEX IF NOT EXISTS idx_vf_rm_qualities_supplier ON public.vf_rm_qualities(supplier);
+CREATE INDEX IF NOT EXISTS idx_vf_rm_qualities_updated_at ON public.vf_rm_qualities(updated_at DESC);
+
+-- 28. Dedicated Relational Table: Finished Product Qualities (Catalogue)
+CREATE TABLE IF NOT EXISTS public.vf_fp_qualities (
+    id TEXT PRIMARY KEY,
+    division TEXT NOT NULL DEFAULT 'covering',
+    name TEXT NOT NULL,
+    composition TEXT,
+    yarns JSONB DEFAULT '[]'::jsonb,
+    denier NUMERIC(10, 2),
+    tpm INTEGER,
+    twist TEXT,
+    color TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_fp_qualities_div ON public.vf_fp_qualities(division);
+CREATE INDEX IF NOT EXISTS idx_vf_fp_qualities_name ON public.vf_fp_qualities(name);
+CREATE INDEX IF NOT EXISTS idx_vf_fp_qualities_updated_at ON public.vf_fp_qualities(updated_at DESC);
+
+-- 29. Dedicated Relational Table: Raw Material Suppliers (Catalogue)
+CREATE TABLE IF NOT EXISTS public.vf_rm_suppliers (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    phone TEXT,
+    email TEXT,
+    address TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_rm_suppliers_name ON public.vf_rm_suppliers(name);
+CREATE INDEX IF NOT EXISTS idx_vf_rm_suppliers_updated_at ON public.vf_rm_suppliers(updated_at DESC);
+
 -- ==============================================================================
 -- Row Level Security (RLS) Configuration
 -- ==============================================================================
@@ -732,6 +780,9 @@ ALTER TABLE public.vf_employees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_attendance_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_employee_loans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_salary_settlements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_rm_qualities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_fp_qualities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_rm_suppliers ENABLE ROW LEVEL SECURITY;
 
 -- Dynamic Policy Configuration:
 -- Production Mode: Allows read/write for all authenticated API requests & anon key (matching client tokens)
@@ -861,6 +912,21 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_salary_settlements' AND policyname = 'Allow public access to vf_salary_settlements') THEN
         CREATE POLICY "Allow public access to vf_salary_settlements" ON public.vf_salary_settlements FOR ALL USING (true) WITH CHECK (true);
     END IF;
+
+    -- 26. vf_rm_qualities
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_rm_qualities' AND policyname = 'Allow public access to vf_rm_qualities') THEN
+        CREATE POLICY "Allow public access to vf_rm_qualities" ON public.vf_rm_qualities FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 27. vf_fp_qualities
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fp_qualities' AND policyname = 'Allow public access to vf_fp_qualities') THEN
+        CREATE POLICY "Allow public access to vf_fp_qualities" ON public.vf_fp_qualities FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 28. vf_rm_suppliers
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_rm_suppliers' AND policyname = 'Allow public access to vf_rm_suppliers') THEN
+        CREATE POLICY "Allow public access to vf_rm_suppliers" ON public.vf_rm_suppliers FOR ALL USING (true) WITH CHECK (true);
+    END IF;
 END $$;
 
 -- ==============================================================================
@@ -913,6 +979,9 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_attendance_records;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_employee_loans;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_salary_settlements;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_rm_qualities;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fp_qualities;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_rm_suppliers;
     END IF;
 EXCEPTION
     WHEN duplicate_object THEN NULL;
