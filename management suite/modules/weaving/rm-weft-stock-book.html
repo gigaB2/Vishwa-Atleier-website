@@ -5033,7 +5033,7 @@
                                     groups[itemType].push(item);
                                 });
 
-                                const yarnTypesOrder = ['Polyester', 'Nylon', 'Viscose', 'Cotton', 'Silk', 'Linen', 'Wool', 'Acrylic', 'Blend'];
+                                const yarnTypesOrder = ['Polyester', 'Nylon', 'Viscose'];
                                 const otherTypes = Object.keys(groups).filter(t => !yarnTypesOrder.includes(t));
                                 const allOrderedTypes = [...yarnTypesOrder, ...otherTypes];
 

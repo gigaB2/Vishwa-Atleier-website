@@ -4619,7 +4619,7 @@
                                     groups[item.itemType].push(item);
                                 });
 
-                                const yarnTypesOrder = ['Polyester', 'Nylon', 'Viscose', 'Cotton', 'Silk', 'Linen', 'Wool', 'Acrylic', 'Blend'];
+                                const yarnTypesOrder = ['Polyester', 'Nylon', 'Viscose'];
                                 const otherTypes = Object.keys(groups).filter(t => !yarnTypesOrder.includes(t));
                                 const visibleTypes = [...yarnTypesOrder, ...otherTypes].filter(t => groups[t] && groups[t].length > 0);
 

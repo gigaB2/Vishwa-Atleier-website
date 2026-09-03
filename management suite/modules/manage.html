@@ -2982,12 +2982,6 @@
             <option value="Polyester">Polyester</option>
             <option value="Nylon">Nylon</option>
             <option value="Viscose">Viscose</option>
-            <option value="Cotton">Cotton</option>
-            <option value="Silk">Silk</option>
-            <option value="Linen">Linen</option>
-            <option value="Wool">Wool</option>
-            <option value="Acrylic">Acrylic</option>
-            <option value="Blend">Blend</option>
           </select>
         </div>
         <div class="form-group">
@@ -6245,7 +6239,7 @@ function showToast(message, type = 'info') {
       groups[type].push(q);
     });
 
-    const yarnTypes = ['Polyester', 'Nylon', 'Viscose', 'Cotton', 'Silk', 'Linen', 'Wool', 'Acrylic', 'Blend'];
+    const yarnTypes = ['Polyester', 'Nylon', 'Viscose'];
     
     let html = '';
     yarnTypes.forEach(type => {
@@ -6515,7 +6509,7 @@ function showToast(message, type = 'info') {
     document.getElementById('new-quality-name').value = q.quality;
     document.getElementById('new-quality-code').value = q.code;
     document.getElementById('new-quality-color').value = q.color;
-    document.getElementById('new-quality-type').value = q.type || 'Other';
+    document.getElementById('new-quality-type').value = (q.type && ['Polyester', 'Nylon', 'Viscose'].includes(q.type)) ? q.type : 'Polyester';
     document.getElementById('new-quality-supplier').value = q.supplier;
 
     const submitBtn = document.getElementById('btn-add-quality');
