@@ -699,28 +699,35 @@
             const rEntry = rEmps[empKey];
             const lEntry = lEmps[empKey];
             if (rEntry && lEntry) {
-              const rTime = rEntry.updatedAt ? new Date(rEntry.updatedAt).getTime() : 0;
-              const lTime = lEntry.updatedAt ? new Date(lEntry.updatedAt).getTime() : 0;
-              mergedAttendance[dateKey][empKey] = (lTime >= rTime) ? { ...rEntry, ...lEntry } : { ...lEntry, ...rEntry };
-            } else if (lEntry) {
-              mergedAttendance[dateKey][empKey] = lEntry;
+              // If local is not actively being modified, server is single source of truth
+              if (!isLocallyActive) {
+                mergedAttendance[dateKey][empKey] = rEntry;
+              } else {
+                const rTime = rEntry.updatedAt ? new Date(rEntry.updatedAt).getTime() : 0;
+                const lTime = lEntry.updatedAt ? new Date(lEntry.updatedAt).getTime() : 0;
+                mergedAttendance[dateKey][empKey] = (lTime >= rTime) ? { ...rEntry, ...lEntry } : { ...lEntry, ...rEntry };
+              }
             } else if (rEntry) {
               mergedAttendance[dateKey][empKey] = rEntry;
+            } else if (lEntry) {
+              if (isLocallyActive) {
+                mergedAttendance[dateKey][empKey] = lEntry;
+              }
             }
           });
         });
 
         // Merge salary settlements
         const mergedSalaryPayments = {
-          ...(parsedRemote.salaryPayments || {}),
-          ...(parsedLocal.salaryPayments || {})
+          ...(parsedLocal.salaryPayments || {}),
+          ...(parsedRemote.salaryPayments || {})
         };
 
         return {
           ...(isLocallyActive ? parsedRemote : parsedLocal),
           ...(isLocallyActive ? parsedLocal : parsedRemote),
-          employees: mergedEmployees,
-          loans: mergedLoans,
+          employees: (!isLocallyActive && remoteEmps.length > 0) ? remoteEmps : mergedEmployees,
+          loans: (!isLocallyActive && remoteLoans.length > 0) ? remoteLoans : mergedLoans,
           attendance: mergedAttendance,
           salaryPayments: mergedSalaryPayments
         };
