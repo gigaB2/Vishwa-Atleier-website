@@ -1413,6 +1413,7 @@
                 <th>Item Type</th>
                 <th>Supplier</th>
                 <th>Yarn Quality</th>
+                <th>Lot No</th>
                 <th>Code</th>
                 <th>Color</th>
                 <th style="text-align: right;">Available Cones</th>
@@ -3375,7 +3376,7 @@
     window.switchTab = switchStockTab;
 
     // Navigate to Stock Book and filter by specific quality & supplier
-    function goToStockBookQuality(qualityName, supplierName) {
+    function goToStockBookQuality(qualityName, supplierName, lotNo) {
       switchStockTab('stock-book');
       const qualSelect = document.getElementById('quality-filter');
       const suppSelect = document.getElementById('supplier-filter');
@@ -3390,11 +3391,6 @@
             break;
           }
         }
-        if (!found && searchInput) {
-          searchInput.value = qualityName;
-        }
-      } else if (searchInput && qualityName) {
-        searchInput.value = qualityName;
       }
 
       if (suppSelect && supplierName) {
@@ -3403,6 +3399,14 @@
             suppSelect.selectedIndex = i;
             break;
           }
+        }
+      }
+
+      if (searchInput) {
+        if (lotNo && lotNo !== '-') {
+          searchInput.value = lotNo;
+        } else if (qualityName) {
+          searchInput.value = qualityName;
         }
       }
 
@@ -3429,23 +3433,25 @@
       let totalIssuedWeight = 0;
       let totalGrWeight = 0;
 
-      // Quality & Supplier Aggregation Map
-      // Key: supplier + quality + itemType + code + color
+      // Quality & Lot Aggregation Map
+      // Key: supplier + quality + lotNo + itemType + code + color
       const qualityMap = {};
 
       stockData.forEach(lot => {
         const qName = (lot.quality || 'Unspecified Quality').trim();
         const supplier = (lot.supplier || 'Unspecified Supplier').trim();
+        const lotNo = (lot.lotNo || '-').trim();
         const typeName = lot.itemType || 'Polyester';
         const code = lot.code || '';
         const color = lot.color || '';
-        const groupKey = `${supplier}___${qName}___${typeName}___${code}___${color}`;
+        const groupKey = `${supplier}___${qName}___${lotNo}___${typeName}___${code}___${color}`;
 
         if (!qualityMap[groupKey]) {
           qualityMap[groupKey] = {
             key: groupKey,
             quality: qName,
             supplier: supplier,
+            lotNo: lotNo,
             itemType: typeName,
             code: code,
             color: color,
@@ -3519,12 +3525,10 @@
       let qualitiesList = Object.values(qualityMap);
 
       if (searchVal) {
+        const terms = searchVal.split(',').map(t => t.trim()).filter(Boolean);
         qualitiesList = qualitiesList.filter(q => {
-          return q.quality.toLowerCase().includes(searchVal) ||
-                 q.supplier.toLowerCase().includes(searchVal) ||
-                 q.itemType.toLowerCase().includes(searchVal) ||
-                 q.code.toLowerCase().includes(searchVal) ||
-                 q.color.toLowerCase().includes(searchVal);
+          const text = `${q.quality} ${q.lotNo} ${q.supplier} ${q.itemType} ${q.code} ${q.color}`.toLowerCase();
+          return terms.every(term => text.includes(term));
         });
       }
 
@@ -3544,13 +3548,13 @@
       // Render Table Rows
       const tbody = document.getElementById('dash-table-tbody');
       const countLabel = document.getElementById('dash-qualities-count-label');
-      if (countLabel) countLabel.textContent = `Showing ${qualitiesList.length} items`;
+      if (countLabel) countLabel.textContent = `Showing ${qualitiesList.length} entities`;
 
       if (tbody) {
         if (qualitiesList.length === 0) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="13" style="text-align: center; padding: 3rem; color: var(--muted);">
+              <td colspan="14" style="text-align: center; padding: 3rem; color: var(--muted);">
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
                 <div style="font-weight: 600; font-size: 1rem; color: var(--fg); margin-bottom: 0.25rem;">No Qualities Found</div>
                 <div>No yarn qualities match the current filters. Try changing or clearing filters.</div>
@@ -3566,12 +3570,14 @@
 
             const escapedQName = q.quality.replace(/'/g, "\\'");
             const escapedSupplier = q.supplier.replace(/'/g, "\\'");
+            const escapedLotNo = (q.lotNo || '').replace(/'/g, "\\'");
 
             return `
               <tr>
                 <td><span class="badge badge-primary">${q.itemType}</span></td>
                 <td style="font-weight: 600; color: var(--fg);">${q.supplier || '—'}</td>
                 <td style="font-weight: 700; color: var(--fg);">${q.quality}</td>
+                <td><span class="badge" style="font-family: var(--font-mono); font-size: 0.8rem; background: rgba(139, 92, 246, 0.1); color: var(--accent); font-weight: 600;">${q.lotNo || '-'}</span></td>
                 <td><span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);">${q.code || '-'}</span></td>
                 <td>${q.color || '-'}</td>
                 <td style="text-align: right;">
@@ -3596,7 +3602,7 @@
                   ${statusBadge}
                 </td>
                 <td style="text-align: center;">
-                  <button class="dash-btn-link" onclick="goToStockBookQuality('${escapedQName}', '${escapedSupplier}')" title="View boxes & lots in Stock Book">
+                  <button class="dash-btn-link" onclick="goToStockBookQuality('${escapedQName}', '${escapedSupplier}', '${escapedLotNo}')" title="View boxes & lots in Stock Book">
                     <span>Stock Book</span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                   </button>
@@ -3607,7 +3613,7 @@
         }
       }
 
-    // Render Horizontal Bar Chart for Top Qualities by Available Stock
+      // Render Horizontal Bar Chart for Top Qualities by Available Stock
       renderDashboardTopQualitiesChart(qualitiesList.filter(q => q.availWeight > 0).slice(0, 8));
     }
 
@@ -3618,7 +3624,7 @@
       if (!canvas) return;
 
       const isNullState = topQualities.length === 0;
-      const labels = isNullState ? ['No Stock Available'] : topQualities.map(q => q.quality);
+      const labels = isNullState ? ['No Stock Available'] : topQualities.map(q => (q.lotNo && q.lotNo !== '-') ? `${q.quality} (Lot ${q.lotNo})` : q.quality);
       const dataWeights = isNullState ? [0] : topQualities.map(q => parseFloat(q.availWeight.toFixed(2)));
 
       // Data signature to prevent redundant canvas operations
