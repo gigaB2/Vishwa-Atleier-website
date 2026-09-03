@@ -667,6 +667,17 @@ CREATE TABLE IF NOT EXISTS public.vf_attendance_records (
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+-- Safe column additions if vf_attendance_records table was already created in older migrations
+ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Present';
+ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS shift TEXT DEFAULT 'Day';
+ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS hours NUMERIC(5, 2) DEFAULT 0;
+ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS overtime_hours NUMERIC(5, 2) DEFAULT 0;
+ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS meters NUMERIC(10, 2) DEFAULT 0;
+ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS rate NUMERIC(10, 2) DEFAULT 0;
+ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS total_earned NUMERIC(10, 2) DEFAULT 0;
+ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+
 CREATE INDEX IF NOT EXISTS idx_vf_att_date ON public.vf_attendance_records(attendance_date DESC);
 CREATE INDEX IF NOT EXISTS idx_vf_att_emp ON public.vf_attendance_records(employee_id);
 CREATE INDEX IF NOT EXISTS idx_vf_att_status ON public.vf_attendance_records(status);

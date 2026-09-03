@@ -685,11 +685,30 @@
         localLoans.forEach(ln => { if (ln && ln.id) loanMap.set(String(ln.id), ln); });
         const mergedLoans = filterDeletedEntities(Array.from(loanMap.values()));
 
-        // Merge attendance
-        const mergedAttendance = {
-          ...(parsedRemote.attendance || {}),
-          ...(parsedLocal.attendance || {})
-        };
+        // Deep merge attendance by date and employee
+        const mergedAttendance = {};
+        const remoteAtt = (parsedRemote.attendance && typeof parsedRemote.attendance === 'object') ? parsedRemote.attendance : {};
+        const localAtt = (parsedLocal.attendance && typeof parsedLocal.attendance === 'object') ? parsedLocal.attendance : {};
+        const allAttDates = new Set([...Object.keys(remoteAtt), ...Object.keys(localAtt)]);
+        allAttDates.forEach(dateKey => {
+          mergedAttendance[dateKey] = {};
+          const rEmps = (remoteAtt[dateKey] && typeof remoteAtt[dateKey] === 'object') ? remoteAtt[dateKey] : {};
+          const lEmps = (localAtt[dateKey] && typeof localAtt[dateKey] === 'object') ? localAtt[dateKey] : {};
+          const allEmpKeys = new Set([...Object.keys(rEmps), ...Object.keys(lEmps)]);
+          allEmpKeys.forEach(empKey => {
+            const rEntry = rEmps[empKey];
+            const lEntry = lEmps[empKey];
+            if (rEntry && lEntry) {
+              const rTime = rEntry.updatedAt ? new Date(rEntry.updatedAt).getTime() : 0;
+              const lTime = lEntry.updatedAt ? new Date(lEntry.updatedAt).getTime() : 0;
+              mergedAttendance[dateKey][empKey] = (lTime >= rTime) ? { ...rEntry, ...lEntry } : { ...lEntry, ...rEntry };
+            } else if (lEntry) {
+              mergedAttendance[dateKey][empKey] = lEntry;
+            } else if (rEntry) {
+              mergedAttendance[dateKey][empKey] = rEntry;
+            }
+          });
+        });
 
         // Merge salary settlements
         const mergedSalaryPayments = {
@@ -3195,27 +3214,59 @@
 
                 // 2. Sync Attendance Records
                 if (value.attendance && typeof value.attendance === 'object') {
+                  const empList = Array.isArray(value.employees) ? value.employees : [];
+                  const empMap = new Map();
+                  empList.forEach(e => {
+                    if (e) {
+                      if (e.id) empMap.set(String(e.id).trim(), e);
+                      if (e.name) empMap.set(String(e.name).trim().toLowerCase(), e);
+                    }
+                  });
+
                   const attRows = [];
                   Object.entries(value.attendance).forEach(([dateStr, empAttMap]) => {
                     if (!dateStr || typeof empAttMap !== 'object' || empAttMap === null) return;
                     const cleanDate = String(dateStr).split('T')[0];
-                    Object.entries(empAttMap).forEach(([empId, att]) => {
-                      if (!empId || !att) return;
-                      const attId = `${cleanDate}_${empId}`;
+                    Object.entries(empAttMap).forEach(([empKey, att]) => {
+                      if (!empKey || !att) return;
+                      const trimmedKey = String(empKey).trim();
+                      const matchedEmp = empMap.get(trimmedKey) || empMap.get(trimmedKey.toLowerCase());
+                      const targetEmpId = (matchedEmp && matchedEmp.id) ? String(matchedEmp.id).trim() : trimmedKey;
+                      const attId = `${cleanDate}_${targetEmpId}`;
+
+                      const attStatus = String(att.status || 'present').trim();
+                      let shiftName = String(att.shift || 'Day').trim();
+                      if (attStatus === 'night_shift') shiftName = 'Night';
+                      else if (attStatus === 'double_shift') shiftName = 'Double';
+                      else if (attStatus === 'half_day') shiftName = 'Half';
+                      else if (attStatus === 'absent') shiftName = 'Absent';
+                      else if (attStatus === 'leave') shiftName = 'Leave';
+                      else if (attStatus === 'present') shiftName = 'Day';
+
+                      const shiftsCount = (att.shifts !== undefined && att.shifts !== null) ? Number(att.shifts) : (attStatus === 'double_shift' ? 2 : (attStatus === 'half_day' ? 0.5 : (attStatus === 'absent' || attStatus === 'leave' ? 0 : 1)));
+
                       attRows.push({
                         id: attId,
                         attendance_date: cleanDate,
-                        employee_id: String(empId).trim(),
-                        status: String(att.status || 'Present').trim(),
-                        shift: String(att.shift || 'Day').trim(),
+                        employee_id: targetEmpId,
+                        status: attStatus,
+                        shift: shiftName,
                         hours: parseFloat(att.hours) || 0,
                         overtime_hours: parseFloat(att.overtime || att.otHours) || 0,
                         meters: parseFloat(att.meters) || 0,
                         rate: parseFloat(att.rate) || 0,
                         total_earned: parseFloat(att.earned || att.totalEarned) || 0,
-                        notes: att.notes ? String(att.notes).trim() : null,
-                        metadata: typeof att.metadata === 'object' && att.metadata !== null ? att.metadata : {},
-                        updated_at: nowIso
+                        notes: att.remarks ? String(att.remarks).trim() : (att.notes ? String(att.notes).trim() : null),
+                        metadata: {
+                          ...(typeof att.metadata === 'object' && att.metadata !== null ? att.metadata : {}),
+                          shifts: shiftsCount,
+                          inTime: att.inTime || '',
+                          outTime: att.outTime || '',
+                          remarks: att.remarks || att.notes || '',
+                          empName: (matchedEmp && matchedEmp.name) ? matchedEmp.name : trimmedKey,
+                          updatedAt: att.updatedAt || nowIso
+                        },
+                        updated_at: att.updatedAt || nowIso
                       });
                     });
                   });
@@ -4828,24 +4879,51 @@
                   };
                 });
 
+                const empIdToNameMap = new Map();
+                reconstructedEmployees.forEach(e => {
+                  if (e && e.id && e.name) {
+                    empIdToNameMap.set(String(e.id).trim(), e.name);
+                  }
+                });
+
                 const reconstructedAttendance = {};
                 if (Array.isArray(dbAttendance)) {
                   dbAttendance.forEach(att => {
                     const date = att.attendance_date;
-                    const empId = att.employee_id;
+                    const empId = att.employee_id ? String(att.employee_id).trim() : '';
                     if (!date || !empId) return;
                     if (!reconstructedAttendance[date]) reconstructedAttendance[date] = {};
-                    reconstructedAttendance[date][empId] = {
-                      status: att.status || 'Present',
+
+                    const meta = (att.metadata && typeof att.metadata === 'object') ? att.metadata : {};
+                    const empName = meta.empName || empIdToNameMap.get(empId) || empId;
+                    const statusVal = att.status || 'present';
+                    const shiftsVal = (meta.shifts !== undefined && meta.shifts !== null) 
+                      ? Number(meta.shifts) 
+                      : (statusVal === 'double_shift' ? 2 : (statusVal === 'half_day' ? 0.5 : (statusVal === 'absent' || statusVal === 'leave' ? 0 : 1)));
+
+                    const attRecord = {
+                      status: statusVal,
                       shift: att.shift || 'Day',
+                      shifts: shiftsVal,
                       hours: Number(att.hours) || 0,
+                      inTime: meta.inTime || '',
+                      outTime: meta.outTime || '',
                       overtime: Number(att.overtime_hours) || 0,
                       meters: Number(att.meters) || 0,
                       rate: Number(att.rate) || 0,
                       earned: Number(att.total_earned) || 0,
                       notes: att.notes || '',
-                      ...(att.metadata && typeof att.metadata === 'object' ? att.metadata : {})
+                      remarks: meta.remarks || att.notes || '',
+                      updatedAt: att.updated_at || meta.updatedAt || new Date().toISOString(),
+                      ...meta
                     };
+
+                    // Map by employee name (used by salary-sheet.html)
+                    reconstructedAttendance[date][empName] = attRecord;
+                    // Also map by employee id (used by id-based lookups)
+                    if (empId !== empName) {
+                      reconstructedAttendance[date][empId] = attRecord;
+                    }
                   });
                 }
 
@@ -5809,9 +5887,9 @@
     }, 250);
   }
 
-  // Smart polling interval & Visibility Throttling (30s interval, disabled when tab is hidden)
+  // Smart polling interval & Visibility Throttling (3.5s fast polling for instant cross-PC updates without refresh)
   let syncIntervalId = null;
-  const POLL_INTERVAL_MS = 30000;
+  const POLL_INTERVAL_MS = 3500;
 
   function startSmartSync() {
     if (!syncIntervalId) {

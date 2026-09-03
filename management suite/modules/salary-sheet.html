@@ -14063,7 +14063,32 @@
 
         }
 
-
+        function refreshData() {
+            if (typeof renderDashboardOverview === 'function') {
+                try { renderDashboardOverview(); } catch (e) { console.error(e); }
+            }
+            if (typeof renderAttendanceTab === 'function') {
+                try { renderAttendanceTab(); } catch (e) { console.error(e); }
+            }
+            if (typeof renderAttendanceSummaryTable === 'function') {
+                try { renderAttendanceSummaryTable(); } catch (e) { console.error(e); }
+            }
+            if (typeof renderTeamRoster === 'function') {
+                try { renderTeamRoster(); } catch (e) { console.error(e); }
+            }
+            if (typeof renderLoansTab === 'function') {
+                try { renderLoansTab(); } catch (e) { console.error(e); }
+            }
+            if (typeof renderBeamLoadingTab === 'function') {
+                try { renderBeamLoadingTab(); } catch (e) { console.error(e); }
+            }
+            if (typeof renderKarigarTable === 'function') {
+                try { renderKarigarTable(); } catch (e) { console.error(e); }
+            }
+            if (typeof renderStaffTable === 'function') {
+                try { renderStaffTable(); } catch (e) { console.error(e); }
+            }
+        }
 
         function renderTeamRoster() {
 
@@ -18202,6 +18227,34 @@
             } else if (tab === 'tab-attendance' && typeof renderAttendanceTab === 'function') {
                 renderAttendanceTab();
             }
+
+            // Realtime Live Cross-Device & Cross-Tab Sync Listeners
+            window.addEventListener('supabase-sync', function (e) {
+                try {
+                    const syncedKey = e && e.detail ? e.detail.key : null;
+                    if (!syncedKey || syncedKey === STATE_KEY) {
+                        loadState();
+                        if (typeof refreshData === 'function') {
+                            refreshData();
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error handling supabase-sync event:', err);
+                }
+            });
+
+            window.addEventListener('storage', function (e) {
+                if (e.key === STATE_KEY) {
+                    try {
+                        loadState();
+                        if (typeof refreshData === 'function') {
+                            refreshData();
+                        }
+                    } catch (err) {
+                        console.error('Error handling storage event:', err);
+                    }
+                }
+            });
 
         });
 
