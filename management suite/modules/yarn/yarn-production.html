@@ -6670,15 +6670,35 @@
       document.getElementById('modal-title').innerText = `Record Sale (${itemGroup.productName} - ${itemGroup.lotNo})`;
       document.getElementById('modal-sales-submit-btn').innerText = 'Record Sale';
 
+      populateCompanyDropdown();
+
       setDefaultDate('modal-sales-date');
       const salesDate = document.getElementById('modal-sales-date').value;
       document.getElementById('modal-sales-challan').value = generateNextChallanNumber(activeDivision, salesDate);
 
       document.getElementById('modal-sales-customer').value = '';
+      if (document.getElementById('modal-sales-address')) {
+        document.getElementById('modal-sales-address').value = 'Industrial Area, Surat, Gujarat, India';
+      }
       if (document.getElementById('modal-sales-hsn')) {
         document.getElementById('modal-sales-hsn').value = '5402';
       }
+      if (document.getElementById('modal-sales-discount-type')) {
+        document.getElementById('modal-sales-discount-type').value = 'percent';
+      }
+      if (document.getElementById('modal-sales-discount-value')) {
+        document.getElementById('modal-sales-discount-value').value = '0';
+      }
       document.getElementById('modal-sales-gst').value = '12';
+
+      const rateInput = document.getElementById('modal-sales-rate');
+      if (rateInput) rateInput.value = defaultRate > 0 ? defaultRate : '';
+      if (defaultRate > 0) {
+        modalChallanItems.forEach(item => {
+          item.rate = defaultRate;
+          item.amount = parseFloat(((parseFloat(item.saleQty) || 0) * defaultRate).toFixed(2));
+        });
+      }
 
       renderModalItems();
       calculateModalTotals();
