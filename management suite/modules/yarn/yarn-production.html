@@ -2321,6 +2321,7 @@
 
     // Refresh all tables, dropdowns, KPIs, and dashboard views with latest data
     function refreshAllViews() {
+      if (typeof isCellSelecting !== 'undefined' && isCellSelecting) return;
       loadLogs();
       calculateSummaryMetrics();
       populateProductNameDropdown();
@@ -7365,8 +7366,12 @@
 
     function updateVisualSelection() {
       document.querySelectorAll('td.excel-selected').forEach(cell => cell.classList.remove('excel-selected'));
-      selectedCells.forEach(cell => cell.classList.add('excel-selected'));
-      currentDragCells.forEach(cell => cell.classList.add('excel-selected'));
+      selectedCells.forEach(cell => {
+        if (cell && cell.isConnected) cell.classList.add('excel-selected');
+      });
+      currentDragCells.forEach(cell => {
+        if (cell && cell.isConnected) cell.classList.add('excel-selected');
+      });
 
       const totalSize = selectedCells.size + currentDragCells.size;
       if (totalSize > 0) {
@@ -7381,36 +7386,62 @@
       const range = [];
       if (!table) return range;
 
+      // Map visually to a 2D grid matrix to handle colspans and rowspans accurately
+      const grid = [];
       const rows = Array.from(table.querySelectorAll('tr'));
-      const rowA = cellA.closest('tr');
-      const rowB = cellB.closest('tr');
+      rows.forEach((_, r) => { grid[r] = []; });
 
-      const rowIndexA = rows.indexOf(rowA);
-      const rowIndexB = rows.indexOf(rowB);
+      rows.forEach((row, r) => {
+        let colOffset = 0;
+        Array.from(row.children).forEach((cell) => {
+          while (grid[r][colOffset] !== undefined) {
+            colOffset++;
+          }
+          const rowspan = parseInt(cell.getAttribute('rowspan')) || 1;
+          const colspan = parseInt(cell.getAttribute('colspan')) || 1;
+          for (let rs = 0; rs < rowspan; rs++) {
+            for (let cs = 0; cs < colspan; cs++) {
+              if (grid[r + rs]) {
+                grid[r + rs][colOffset + cs] = cell;
+              }
+            }
+          }
+          colOffset += colspan;
+        });
+      });
 
-      if (rowIndexA === -1 || rowIndexB === -1) return range;
-
-      const minRow = Math.min(rowIndexA, rowIndexB);
-      const maxRow = Math.max(rowIndexA, rowIndexB);
-
-      const colIndexA = cellA.cellIndex;
-      let colIndexB = cellB.cellIndex;
-
-      if (rowB.classList.contains('summary-row') || rowB.classList.contains('total-row')) {
-        colIndexB = colIndexA;
+      // Find cellA and cellB visual coordinates
+      let rA = -1, cA = -1, rB = -1, cB = -1;
+      for (let r = 0; r < grid.length; r++) {
+        for (let c = 0; c < grid[r].length; c++) {
+          if (grid[r][c] === cellA) { rA = r; cA = c; }
+          if (grid[r][c] === cellB) { rB = r; cB = c; }
+        }
       }
 
-      const minCol = Math.min(colIndexA, colIndexB);
-      const maxCol = Math.max(colIndexA, colIndexB);
+      if (rA === -1 || rB === -1) return range;
 
+      const minRow = Math.min(rA, rB);
+      const maxRow = Math.max(rA, rB);
+      const minCol = Math.min(cA, cB);
+      const maxCol = Math.max(cA, cB);
+
+      const addedCells = new Set();
       for (let r = minRow; r <= maxRow; r++) {
         const row = rows[r];
-        if (!row || row.style.display === 'none' || row.classList.contains('summary-row') || row.classList.contains('total-row')) continue;
-        const cells = Array.from(row.children);
+        if (!row || row.style.display === 'none' || 
+            row.classList.contains('summary-row') || 
+            row.classList.contains('total-row') || 
+            row.closest('thead')) continue;
+
         for (let c = minCol; c <= maxCol; c++) {
-          const cell = cells[c];
-          if (cell && cell.tagName === 'TD') {
-            range.push(cell);
+          const cell = grid[r][c];
+          if (cell && cell.tagName === 'TD' && !addedCells.has(cell)) {
+            // Exclude checkbox-only and action-only cells
+            if (!cell.querySelector('input[type="checkbox"]') && !cell.classList.contains('actions-cell') && !cell.classList.contains('actions-col')) {
+              range.push(cell);
+              addedCells.add(cell);
+            }
           }
         }
       }
@@ -7451,12 +7482,13 @@
       const colMap = {};
 
       allCells.forEach(cell => {
+        if (!cell || !cell.isConnected) return;
         const table = cell.closest('table');
         if (!table) return;
 
         const colIdx = cell.cellIndex;
         // Don't calculate checkbox selection columns or action button columns
-        if (cell.querySelector('input[type="checkbox"]') || cell.querySelector('.action-btn') || cell.querySelector('.btn') || cell.querySelector('.floating-batch-actions')) return;
+        if (cell.querySelector('input[type="checkbox"]') || cell.querySelector('.action-menu-container') || cell.classList.contains('actions-cell')) return;
 
         const txt = cell.innerText.trim();
         if (!txt || txt === '-' || txt === '—') return;
@@ -7695,28 +7727,25 @@
 
     function initExcelCellSelection() {
       document.addEventListener('mousedown', (e) => {
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth <= 1024) return;
-        if (e.target.closest('#scroll-sum-widget') || e.target.closest('#floating-batch-bar')) return;
+        if (window.innerWidth < 640) return;
+        if (e.target.closest('#scroll-sum-widget') || e.target.closest('#floating-batch-bar') || e.target.closest('.modal-content')) return;
 
         const td = e.target.closest('td');
-        if (!td || e.target.closest('button') || e.target.closest('input') || e.target.closest('a') || e.target.closest('select') || e.target.closest('.yp-custom-select') || e.target.closest('.action-btn')) {
-          clearExcelSelection();
-          updateVisualSelection();
+        if (!td) {
+          // Clicked outside table and outside widget -> clear selection
+          if (!e.target.closest('table')) {
+            clearExcelSelection();
+            updateVisualSelection();
+          }
           return;
         }
 
-        // Skip if clicking an element with custom click handler, excluding table wrappers
-        const closestOnclick = e.target.closest('[onclick]');
-        if (closestOnclick) {
-          const isWrapper = closestOnclick.classList.contains('modal') || closestOnclick.classList.contains('modal-overlay');
-          if (!isWrapper) {
-            clearExcelSelection();
-            updateVisualSelection();
-            return;
-          }
+        // Ignore clicks on form controls or action buttons
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a') || e.target.closest('select') || e.target.closest('.action-menu-container') || td.classList.contains('actions-cell') || td.classList.contains('actions-col')) {
+          return;
         }
 
-        // Skip layout/expanded detail cells
+        // Skip layout/expanded detail cells with colspans
         if (td.hasAttribute('colspan')) {
           clearExcelSelection();
           updateVisualSelection();
@@ -7725,9 +7754,7 @@
 
         // Skip header and summary rows
         const tr = td.closest('tr');
-        if (tr && (tr.classList.contains('summary-row') || tr.classList.contains('total-row'))) {
-          clearExcelSelection();
-          updateVisualSelection();
+        if (tr && (tr.classList.contains('summary-row') || tr.classList.contains('total-row') || tr.closest('thead'))) {
           return;
         }
 
@@ -7764,9 +7791,9 @@
         if (!isCellSelecting || !startCell) return;
         const td = e.target.closest('td');
         if (td && td.closest('table') === startCell.closest('table')) {
-          if (td.hasAttribute('colspan')) return;
+          if (td.hasAttribute('colspan') || td.classList.contains('actions-cell') || td.classList.contains('actions-col')) return;
           const tr = td.closest('tr');
-          if (tr && (tr.classList.contains('summary-row') || tr.classList.contains('total-row'))) return;
+          if (tr && (tr.classList.contains('summary-row') || tr.classList.contains('total-row') || tr.closest('thead'))) return;
 
           if (window.getSelection) {
             window.getSelection().removeAllRanges();
@@ -7833,7 +7860,10 @@
               });
             }
             if (rows.length > 0) {
-              navigator.clipboard.writeText(rows.join('\n')).catch(() => {});
+              navigator.clipboard.writeText(rows.join('\n')).then(() => {
+                showToast(`Copied ${selectedCells.size} cell(s) to clipboard`, 'info');
+              }).catch(() => {});
+              e.preventDefault();
             }
           }
         }
