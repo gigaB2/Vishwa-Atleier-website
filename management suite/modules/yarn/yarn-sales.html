@@ -3238,8 +3238,11 @@
       const salesDate = document.getElementById('modal-sales-date').value;
       document.getElementById('modal-sales-challan').value = generateNextChallanNumber(activeDivision, salesDate);
 
-      // Reset customer and address
+      // Reset customer, hsn and address
       document.getElementById('modal-sales-customer').value = '';
+      if (document.getElementById('modal-sales-hsn')) {
+        document.getElementById('modal-sales-hsn').value = '5402';
+      }
       if (document.getElementById('modal-sales-address')) {
         document.getElementById('modal-sales-address').value = 'Industrial Area, Surat, Gujarat, India';
       }
@@ -3468,6 +3471,8 @@
       document.getElementById('details-modal-title').innerText = `Sale Details - ${activeDivision.toUpperCase()}`;
       document.getElementById('details-sales-challan').innerText = sale.challanNo;
       document.getElementById('details-sales-lot').innerText = resolveSaleLotNo(sale);
+      const hsnEl = document.getElementById('details-sales-hsn');
+      if (hsnEl) hsnEl.innerText = sale.hsnCode || '5402';
       document.getElementById('details-sales-date').innerText = formatDate(sale.date);
       document.getElementById('details-sales-customer').innerText = sale.customerName;
       
@@ -3936,6 +3941,7 @@
                   <div class="section-title">Challan / Invoice Details</div>
                   <div class="info-item"><span>Challan No:</span> <strong>${sale.challanNo}</strong></div>
                   <div class="info-item"><span>Lot No:</span> <strong>${lotNo}</strong></div>
+                  <div class="info-item"><span>HSN / SAC:</span> <strong>${sale.hsnCode || '5402'}</strong></div>
                   <div class="info-item"><span>Date:</span> <strong>${formatDate(sale.date)}</strong></div>
                 </td>
               </tr>
@@ -4318,6 +4324,7 @@
                   <div class="section-title">Challan Details</div>
                   <div class="info-item"><span>Challan No:</span> <strong>${sale.challanNo}</strong></div>
                   <div class="info-item"><span>Lot No:</span> <strong>${lotNo}</strong></div>
+                  <div class="info-item"><span>HSN / SAC:</span> <strong>${sale.hsnCode || '5402'}</strong></div>
                   <div class="info-item"><span>Date:</span> <strong>${formatDate(sale.date)}</strong></div>
                 </td>
               </tr>
@@ -5060,6 +5067,7 @@
       const editId = document.getElementById('modal-sales-edit-id').value;
       const challanNo = document.getElementById('modal-sales-challan').value.trim();
       const date = document.getElementById('modal-sales-date').value;
+      const hsnCode = document.getElementById('modal-sales-hsn') ? document.getElementById('modal-sales-hsn').value.trim() : '5402';
       const customerName = document.getElementById('modal-sales-customer').value.trim();
       const customerAddress = (document.getElementById('modal-sales-address') ? document.getElementById('modal-sales-address').value.trim() : '') || 'Industrial Area, Surat, Gujarat, India';
       
@@ -5091,6 +5099,7 @@
         timestamp: Date.now(),
         challanNo: challanNo,
         date: date,
+        hsnCode: hsnCode || '5402',
         customerName: customerName,
         customerAddress: customerAddress,
         sellerCompanyId: selectedComp ? selectedComp.id : '',
@@ -6408,6 +6417,9 @@
       document.getElementById('modal-sales-edit-id').value = sale.id;
       document.getElementById('modal-sales-challan').value = sale.challanNo;
       document.getElementById('modal-sales-date').value = sale.date;
+      if (document.getElementById('modal-sales-hsn')) {
+        document.getElementById('modal-sales-hsn').value = sale.hsnCode || '5402';
+      }
       document.getElementById('modal-sales-customer').value = sale.customerName;
       if (document.getElementById('modal-sales-address')) {
         document.getElementById('modal-sales-address').value = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
@@ -6808,6 +6820,10 @@
               <label for="modal-sales-lot">Lot No</label>
               <input type="text" id="modal-sales-lot" placeholder="Lot No" readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed; font-weight: bold; color: var(--accent);">
             </div>
+            <div class="form-group" style="flex: 1 1 110px;">
+              <label for="modal-sales-hsn"><span style="color: var(--accent);">HSN Code</span></label>
+              <input type="text" id="modal-sales-hsn" placeholder="e.g. 5402" value="5402" style="font-weight: 600;">
+            </div>
             <div class="form-group" style="flex: 1 1 140px;">
               <label for="modal-sales-date">Sale Date</label>
               <input type="date" id="modal-sales-date" required>
@@ -6914,6 +6930,10 @@
           <div style="flex: 1 1 100px;">
             <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Lot No</span>
             <strong id="details-sales-lot" style="font-size: 1.05rem;"></strong>
+          </div>
+          <div style="flex: 1 1 90px;">
+            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">HSN Code</span>
+            <strong id="details-sales-hsn" style="font-size: 1.05rem; color: var(--accent);">-</strong>
           </div>
           <div style="flex: 1 1 110px;">
             <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Sale Date</span>

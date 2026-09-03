@@ -3784,8 +3784,11 @@
       const salesDate = document.getElementById('modal-sales-date').value;
       document.getElementById('modal-sales-challan').value = generateNextChallanNumber(activeDivision, salesDate);
 
-      // Reset customer and address
+      // Reset customer, hsn and address
       document.getElementById('modal-sales-customer').value = '';
+      if (document.getElementById('modal-sales-hsn')) {
+        document.getElementById('modal-sales-hsn').value = '5402';
+      }
       if (document.getElementById('modal-sales-address')) {
         document.getElementById('modal-sales-address').value = 'Industrial Area, Surat, Gujarat, India';
       }
@@ -3903,6 +3906,8 @@
       document.getElementById('details-modal-title').innerText = `Sale Details - ${activeDivision.toUpperCase()}`;
       document.getElementById('details-sales-challan').innerText = sale.challanNo;
       document.getElementById('details-sales-lot').innerText = resolveSaleLotNo(sale);
+      const hsnEl = document.getElementById('details-sales-hsn');
+      if (hsnEl) hsnEl.innerText = sale.hsnCode || '5402';
       document.getElementById('details-sales-date').innerText = formatDate(sale.date);
       document.getElementById('details-sales-customer').innerText = sale.customerName;
       
@@ -4361,6 +4366,7 @@
                   <div class="section-title">Challan / Invoice Details</div>
                   <div class="info-item"><span>Challan No:</span> <strong>${sale.challanNo}</strong></div>
                   <div class="info-item"><span>Lot No:</span> <strong>${lotNo}</strong></div>
+                  <div class="info-item"><span>HSN / SAC:</span> <strong>${sale.hsnCode || '5402'}</strong></div>
                   <div class="info-item"><span>Date:</span> <strong>${formatDate(sale.date)}</strong></div>
                 </td>
               </tr>
@@ -4743,6 +4749,7 @@
                   <div class="section-title">Challan Details</div>
                   <div class="info-item"><span>Challan No:</span> <strong>${sale.challanNo}</strong></div>
                   <div class="info-item"><span>Lot No:</span> <strong>${lotNo}</strong></div>
+                  <div class="info-item"><span>HSN / SAC:</span> <strong>${sale.hsnCode || '5402'}</strong></div>
                   <div class="info-item"><span>Date:</span> <strong>${formatDate(sale.date)}</strong></div>
                 </td>
               </tr>
@@ -4816,7 +4823,116 @@
       printWindow.document.close();
     };
 
+    let pendingPackingSlipTarget = null;
+
+    window.openPackingSlipCompanyModal = function(saleOrId) {
+      pendingPackingSlipTarget = saleOrId || currentDetailSaleId;
+      if (!pendingPackingSlipTarget) {
+        showToast('No record selected for packing slip.', 'error');
+        return;
+      }
+
+      // Populate companies
+      const companies = getAvailableCompanies();
+      const compSelect = document.getElementById('ps-modal-company-select');
+      if (compSelect) {
+        compSelect.innerHTML = '';
+        companies.forEach(comp => {
+          const opt = document.createElement('option');
+          opt.value = comp.id || comp.sellerName;
+          opt.textContent = comp.sellerName + (comp.isDefault ? ' (Default)' : '');
+          compSelect.appendChild(opt);
+        });
+        const customOpt = document.createElement('option');
+        customOpt.value = '__custom__';
+        customOpt.textContent = '✏️ Custom Company Name...';
+        compSelect.appendChild(customOpt);
+
+        // Pre-select default or sale's company
+        let targetSale = null;
+        if (typeof pendingPackingSlipTarget === 'object') {
+          targetSale = pendingPackingSlipTarget;
+        } else {
+          targetSale = dataStore[activeDivision]?.sales?.find(s => s.id === pendingPackingSlipTarget);
+        }
+
+        const preSelectComp = getSellerCompanyInfo(targetSale);
+        const nameInput = document.getElementById('ps-modal-company-custom-name');
+        if (nameInput) {
+          nameInput.value = preSelectComp.sellerName || "Vishwa Fashions";
+        }
+        if (compSelect && preSelectComp && preSelectComp.id) {
+          compSelect.value = preSelectComp.id;
+        }
+      }
+
+      const modal = document.getElementById('packing-slip-company-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('active'), 10);
+      }
+    };
+
+    window.closePackingSlipCompanyModal = function() {
+      const modal = document.getElementById('packing-slip-company-modal');
+      if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => { modal.style.display = 'none'; }, 250);
+      }
+      pendingPackingSlipTarget = null;
+    };
+
+    window.onPackingSlipCompanyDropdownChange = function(val) {
+      const nameInput = document.getElementById('ps-modal-company-custom-name');
+      if (!nameInput) return;
+      if (val === '__custom__') {
+        nameInput.value = '';
+        nameInput.focus();
+      } else {
+        const companies = getAvailableCompanies();
+        const found = companies.find(c => c.id === val || c.sellerName === val);
+        if (found) {
+          nameInput.value = found.sellerName || '';
+        }
+      }
+    };
+
+    window.confirmGeneratePackingSlipWithCompany = function() {
+      const nameInput = document.getElementById('ps-modal-company-custom-name');
+      const subInput = document.getElementById('ps-modal-company-custom-sub');
+      const compSelect = document.getElementById('ps-modal-company-select');
+
+      const chosenName = nameInput ? nameInput.value.trim() : '';
+      if (!chosenName) {
+        showToast('Please enter a company name for the packing slip.', 'error');
+        if (nameInput) nameInput.focus();
+        return;
+      }
+
+      const chosenSub = subInput ? subInput.value.trim() : 'YARN MANUFACTURING & PROCESSING DIVISION';
+      const chosenCompId = compSelect ? compSelect.value : '';
+      const companies = getAvailableCompanies();
+      const matchedComp = companies.find(c => c.id === chosenCompId || c.sellerName === chosenName) || {};
+
+      const overrideCompany = {
+        ...matchedComp,
+        sellerName: chosenName,
+        subTitle: chosenSub
+      };
+
+      const target = pendingPackingSlipTarget;
+      closePackingSlipCompanyModal();
+
+      if (target) {
+        window.executePackingSlipPrint(target, overrideCompany);
+      }
+    };
+
     window.printSalePackingSlip = function(saleOrId) {
+      window.openPackingSlipCompanyModal(saleOrId);
+    };
+
+    window.executePackingSlipPrint = function(saleOrId, companyOverride) {
       let sale = null;
       if (saleOrId && typeof saleOrId === 'object') {
         sale = saleOrId;
@@ -4853,8 +4969,9 @@
         return;
       }
       
-      const company = getSellerCompanyInfo(sale);
+      const company = companyOverride || getSellerCompanyInfo(sale);
       const companyName = company.sellerName || "Vishwa Fashions";
+      const companySub = company.subTitle || "YARN MANUFACTURING & PROCESSING DIVISION";
       const companyAddress = company.sellerAddress || "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221";
       const companyPhone = company.sellerPhone || "+91 98251 12345";
       const companyEmail = company.sellerEmail || "sales@vishwafashions.com";
@@ -4887,7 +5004,7 @@
                 <div class="slip-header">
                   <div class="slip-header-left">
                     <div class="slip-company-name">${companyName}</div>
-                    <div class="slip-company-sub">YARN MANUFACTURING & PROCESSING DIVISION</div>
+                    <div class="slip-company-sub">${companySub}</div>
                   </div>
                   <div class="slip-badge">PACKING SLIP</div>
                 </div>
@@ -5574,6 +5691,7 @@
       const editId = document.getElementById('modal-sales-edit-id').value;
       const challanNo = document.getElementById('modal-sales-challan').value.trim();
       const date = document.getElementById('modal-sales-date').value;
+      const hsnCode = document.getElementById('modal-sales-hsn') ? document.getElementById('modal-sales-hsn').value.trim() : '5402';
       const customerName = document.getElementById('modal-sales-customer').value.trim();
       const customerAddress = document.getElementById('modal-sales-address') ? document.getElementById('modal-sales-address').value.trim() : 'Industrial Area, Surat, Gujarat, India';
       const companyVal = document.getElementById('modal-sales-company') ? document.getElementById('modal-sales-company').value : '';
@@ -5601,6 +5719,7 @@
         id: editId || 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         challanNo: challanNo,
         date: date,
+        hsnCode: hsnCode || '5402',
         sellerCompanyId: sellerCompany.id || '',
         sellerName: sellerCompany.sellerName || 'Vishwa Fashions',
         sellerGstin: sellerCompany.sellerGstin || '',
@@ -6533,6 +6652,9 @@
       document.getElementById('modal-sales-challan').value = generateNextChallanNumber(activeDivision, salesDate);
 
       document.getElementById('modal-sales-customer').value = '';
+      if (document.getElementById('modal-sales-hsn')) {
+        document.getElementById('modal-sales-hsn').value = '5402';
+      }
       document.getElementById('modal-sales-gst').value = '12';
 
       renderModalItems();
@@ -6836,6 +6958,9 @@
       document.getElementById('modal-sales-edit-id').value = sale.id;
       document.getElementById('modal-sales-challan').value = sale.challanNo;
       document.getElementById('modal-sales-date').value = sale.date;
+      if (document.getElementById('modal-sales-hsn')) {
+        document.getElementById('modal-sales-hsn').value = sale.hsnCode || '5402';
+      }
       document.getElementById('modal-sales-customer').value = sale.customerName;
       if (document.getElementById('modal-sales-address')) {
         document.getElementById('modal-sales-address').value = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
@@ -7725,6 +7850,10 @@
               <label for="modal-sales-lot">Lot No</label>
               <input type="text" id="modal-sales-lot" placeholder="Lot No" readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed; font-weight: bold; color: var(--accent);">
             </div>
+            <div class="form-group" style="flex: 1 1 110px;">
+              <label for="modal-sales-hsn"><span style="color: var(--accent);">HSN Code</span></label>
+              <input type="text" id="modal-sales-hsn" placeholder="e.g. 5402" value="5402" style="font-weight: 600;">
+            </div>
             <div class="form-group" style="flex: 1 1 140px;">
               <label for="modal-sales-date">Sale Date</label>
               <input type="date" id="modal-sales-date" required>
@@ -7831,6 +7960,10 @@
           <div style="flex: 1 1 100px;">
             <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Lot No</span>
             <strong id="details-sales-lot" style="font-size: 1.05rem;"></strong>
+          </div>
+          <div style="flex: 1 1 90px;">
+            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">HSN Code</span>
+            <strong id="details-sales-hsn" style="font-size: 1.05rem; color: var(--accent);">-</strong>
           </div>
           <div style="flex: 1 1 110px;">
             <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Sale Date</span>
@@ -7939,6 +8072,48 @@
         </svg>
         <span>Generate Packing Slip</span>
       </button>
+    </div>
+  </div>
+
+  <!-- Packing Slip Company Selection Modal -->
+  <div id="packing-slip-company-modal" class="modal-overlay" style="display: none; z-index: 99999;">
+    <div class="modal-content" style="max-width: 520px; border-radius: 16px; background: var(--surface); padding: 1.75rem 1.5rem; border: 1px solid var(--border); box-shadow: var(--shadow-lg);">
+      <div class="modal-header" style="padding-bottom: 12px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: var(--fg); display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          Packing Slip Company Selection
+        </h3>
+        <button type="button" class="modal-close-btn" onclick="closePackingSlipCompanyModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 0;">
+        <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 1rem; line-height: 1.4;">
+          Select or enter the company name that should appear on the generated packing slip:
+        </p>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="ps-modal-company-select" style="font-size: 0.82rem; font-weight: 600; color: var(--fg); margin-bottom: 4px; display: block;">Select Registered Company</label>
+          <select id="ps-modal-company-select" onchange="onPackingSlipCompanyDropdownChange(this.value)" style="width: 100%; padding: 8px 10px; font-weight: 600; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--fg);">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="ps-modal-company-custom-name" style="font-size: 0.82rem; font-weight: 600; color: var(--fg); margin-bottom: 4px; display: block;">Company Name (Heading)</label>
+          <input type="text" id="ps-modal-company-custom-name" placeholder="Company Name" style="width: 100%; padding: 8px 10px; font-weight: 600; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--fg);" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="ps-modal-company-custom-sub" style="font-size: 0.82rem; font-weight: 600; color: var(--fg); margin-bottom: 4px; display: block;">Sub-heading / Tagline</label>
+          <input type="text" id="ps-modal-company-custom-sub" placeholder="YARN MANUFACTURING & PROCESSING DIVISION" value="YARN MANUFACTURING & PROCESSING DIVISION" style="width: 100%; padding: 8px 10px; font-size: 0.82rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--fg);">
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-secondary" onclick="closePackingSlipCompanyModal()" style="min-height: 38px; font-weight: 600;">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="confirmGeneratePackingSlipWithCompany()" style="min-height: 38px; font-weight: 600; background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
+            Generate Slip
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
