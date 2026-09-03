@@ -3301,6 +3301,16 @@
                         body: JSON.stringify(chunk)
                       }).catch(() => {});
                     }
+                    const currentIds = attRows.map(r => `"${r.id}"`).join(',');
+                    fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records?id=not.in.(${currentIds})`, {
+                      method: 'DELETE',
+                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    }).catch(() => {});
+                  } else {
+                    fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records`, {
+                      method: 'DELETE',
+                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    }).catch(() => {});
                   }
                 }
 
@@ -3415,6 +3425,19 @@
             }
           });
         }
+      } catch(e) {}
+    },
+    async deleteAttendanceDate(dateStr) {
+      if (!dateStr || !activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+      try {
+        const cleanDate = String(dateStr).split('T')[0];
+        await fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records?attendance_date=eq.${encodeURIComponent(cleanDate)}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        }).catch(() => {});
       } catch(e) {}
     },
     // Explicit Universal Item Deletion Tombstone Tracking
@@ -4970,9 +4993,11 @@
                     };
                   });
                 }
-                // Use authoritative attendance from vf_kv_store; only fallback to relational table reconstruction if empty
-                const hasExistingAtt = existingStaffState.attendance && typeof existingStaffState.attendance === 'object' && Object.keys(existingStaffState.attendance).length > 0;
-                const finalAttendance = hasExistingAtt ? existingStaffState.attendance : reconstructedAttendance;
+                // Authoritative attendance from vf_kv_store: never resurrect deleted attendance from relational table
+                const hasStaffState = existingStaffState && (Array.isArray(existingStaffState.employees) || existingStaffState.attendance !== undefined);
+                const finalAttendance = (hasStaffState && existingStaffState.attendance && typeof existingStaffState.attendance === 'object')
+                  ? existingStaffState.attendance
+                  : reconstructedAttendance;
 
                 const mergedStaffState = {
                   ...existingStaffState,

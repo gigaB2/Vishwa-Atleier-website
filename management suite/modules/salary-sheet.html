@@ -17859,6 +17859,11 @@
 
                 delete state.attendance[dateStr];
                 saveState();
+
+                if (window.supabaseApi && typeof window.supabaseApi.deleteAttendanceDate === 'function') {
+                    window.supabaseApi.deleteAttendanceDate(dateStr);
+                }
+
                 closeBulkAttendanceModal();
                 renderAttendanceSummaryTable();
 
