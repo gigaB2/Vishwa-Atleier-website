@@ -9248,25 +9248,37 @@
                 return 0;
             }
 
-            let shifts = 0, hours = 0, meters = 0, salary = 0;
+            let hours = 0, meters = 0, salary = 0;
+            const dayShiftDates = {};
+            const nightShiftDates = {};
 
             logs.forEach(log => {
                 const picks = log.picks || 0;
                 const ratePerMeter = getRateForPicks(picks);
+                const logDate = log.productionDate || log.date || 'unknown_date';
 
                 if (log.dayWorker === empName) {
-                    shifts += 1;
-                    hours += parseFloat(log.dayShiftHours) || 0;
+                    dayShiftDates[logDate] = Math.max(dayShiftDates[logDate] || 0, parseFloat(log.dayShiftHours) || 12);
                     meters += parseFloat(log.dayMeters) || 0;
                     salary += log.daySalary || ((parseFloat(log.dayMeters) || 0) * ratePerMeter);
                 }
                 if (log.nightWorker === empName) {
-                    shifts += 1;
-                    hours += parseFloat(log.nightShiftHours) || 0;
+                    nightShiftDates[logDate] = Math.max(nightShiftDates[logDate] || 0, parseFloat(log.nightShiftHours) || 12);
                     meters += parseFloat(log.nightMeters) || 0;
                     salary += log.nightSalary || ((parseFloat(log.nightMeters) || 0) * ratePerMeter);
                 }
             });
+
+            let shifts = Object.keys(dayShiftDates).length + Object.keys(nightShiftDates).length;
+            hours = Object.values(dayShiftDates).reduce((a, b) => a + b, 0) + Object.values(nightShiftDates).reduce((a, b) => a + b, 0);
+
+            if (typeof getEmployeeMonthAttendanceStats === 'function') {
+                const attStats = getEmployeeMonthAttendanceStats(empName, monthKey);
+                if (attStats && attStats.loggedDates && attStats.loggedDates.length > 0) {
+                    shifts = attStats.totalShifts;
+                    hours = attStats.totalHours;
+                }
+            }
 
             monthLoadings.forEach(l => {
                 const piecein = (l.piecein || '').trim();
@@ -9356,63 +9368,58 @@
 
             if (!tableBody) return;
 
-
-
             const logWorkerStats = {};
+            const workerDayShifts = {};
+            const workerNightShifts = {};
 
             filteredLogs.forEach(log => {
-
                 const picks = log.picks || 0;
-
                 const ratePerMeter = getRateForPicks(picks);
-
-
+                const logDate = log.productionDate || log.date || 'unknown_date';
 
                 if (log.dayWorker) {
-
-                    const w = log.dayWorker;
-
+                    const w = String(log.dayWorker).trim();
                     if (!logWorkerStats[w]) {
-
                         logWorkerStats[w] = { shifts: 0, hours: 0, meters: 0, salary: 0 };
-
+                        workerDayShifts[w] = {};
+                        workerNightShifts[w] = {};
                     }
+                    const mtr = parseFloat(log.dayMeters) || 0;
+                    const hrs = parseFloat(log.dayShiftHours) || 12;
+                    const sal = log.daySalary || (mtr * ratePerMeter);
 
-                    logWorkerStats[w].shifts += 1;
-
-                    logWorkerStats[w].hours += parseFloat(log.dayShiftHours) || 0;
-
-                    logWorkerStats[w].meters += parseFloat(log.dayMeters) || 0;
-
-                    logWorkerStats[w].salary += log.daySalary || ((parseFloat(log.dayMeters) || 0) * ratePerMeter);
-
+                    workerDayShifts[w][logDate] = Math.max(workerDayShifts[w][logDate] || 0, hrs);
+                    logWorkerStats[w].meters += mtr;
+                    logWorkerStats[w].salary += sal;
                 }
-
-
 
                 if (log.nightWorker) {
-
-                    const w = log.nightWorker;
-
+                    const w = String(log.nightWorker).trim();
                     if (!logWorkerStats[w]) {
-
                         logWorkerStats[w] = { shifts: 0, hours: 0, meters: 0, salary: 0 };
-
+                        workerDayShifts[w] = {};
+                        workerNightShifts[w] = {};
                     }
+                    const mtr = parseFloat(log.nightMeters) || 0;
+                    const hrs = parseFloat(log.nightShiftHours) || 12;
+                    const sal = log.nightSalary || (mtr * ratePerMeter);
 
-                    logWorkerStats[w].shifts += 1;
-
-                    logWorkerStats[w].hours += parseFloat(log.nightShiftHours) || 0;
-
-                    logWorkerStats[w].meters += parseFloat(log.nightMeters) || 0;
-
-                    logWorkerStats[w].salary += log.nightSalary || ((parseFloat(log.nightMeters) || 0) * ratePerMeter);
-
+                    workerNightShifts[w][logDate] = Math.max(workerNightShifts[w][logDate] || 0, hrs);
+                    logWorkerStats[w].meters += mtr;
+                    logWorkerStats[w].salary += sal;
                 }
-
             });
 
+            // Calculate exact unique shifts & hours for each worker
+            Object.keys(logWorkerStats).forEach(w => {
+                const dayDates = Object.keys(workerDayShifts[w] || {});
+                const nightDates = Object.keys(workerNightShifts[w] || {});
+                const dayHrs = Object.values(workerDayShifts[w] || {}).reduce((a, b) => a + b, 0);
+                const nightHrs = Object.values(workerNightShifts[w] || {}).reduce((a, b) => a + b, 0);
 
+                logWorkerStats[w].shifts = dayDates.length + nightDates.length;
+                logWorkerStats[w].hours = dayHrs + nightHrs;
+            });
 
             // Load beam loadings and calculate monthly sums
             const loadings = typeof getBeamLoadings === 'function' ? getBeamLoadings() : [];
@@ -9424,60 +9431,43 @@
                     const drawing = (l.drawingIn || '').trim();
                     const fani = (l.fani || '').trim();
                     const dropPin = (l.dropPinJog || '').trim();
+                    const amt = parseFloat(l.paymentAmount) || 0;
 
                     if (piecein) {
-                        beamLoadingPayments[piecein] = (beamLoadingPayments[piecein] || 0) + (parseFloat(l.paymentAmount) || 0);
-                        if (!beamLoadingTasks[piecein]) beamLoadingTasks[piecein] = new Set();
-                        beamLoadingTasks[piecein].add('piecing');
+                        beamLoadingPayments[piecein] = (beamLoadingPayments[piecein] || 0) + amt;
+                        if (!beamLoadingTasks[piecein]) beamLoadingTasks[piecein] = [];
+                        beamLoadingTasks[piecein].push(`Piece In (Loom #${l.loomNumber || '?'}, ${l.date})`);
                     }
                     if (drawing) {
-                        beamLoadingPayments[drawing] = (beamLoadingPayments[drawing] || 0) + (parseFloat(l.paymentAmount) || 0);
-                        if (!beamLoadingTasks[drawing]) beamLoadingTasks[drawing] = new Set();
-                        beamLoadingTasks[drawing].add('Drawing');
+                        beamLoadingPayments[drawing] = (beamLoadingPayments[drawing] || 0) + amt;
+                        if (!beamLoadingTasks[drawing]) beamLoadingTasks[drawing] = [];
+                        beamLoadingTasks[drawing].push(`Drawing In (Loom #${l.loomNumber || '?'}, ${l.date})`);
                     }
                     if (fani) {
-                        beamLoadingPayments[fani] = (beamLoadingPayments[fani] || 0) + (parseFloat(l.paymentAmount) || 0);
-                        if (!beamLoadingTasks[fani]) beamLoadingTasks[fani] = new Set();
-                        beamLoadingTasks[fani].add('fani');
+                        beamLoadingPayments[fani] = (beamLoadingPayments[fani] || 0) + amt;
+                        if (!beamLoadingTasks[fani]) beamLoadingTasks[fani] = [];
+                        beamLoadingTasks[fani].push(`Fani (Loom #${l.loomNumber || '?'}, ${l.date})`);
                     }
                     if (dropPin) {
-                        beamLoadingPayments[dropPin] = (beamLoadingPayments[dropPin] || 0) + (parseFloat(l.paymentAmount) || 0);
-                        if (!beamLoadingTasks[dropPin]) beamLoadingTasks[dropPin] = new Set();
-                        beamLoadingTasks[dropPin].add('drop pin');
+                        beamLoadingPayments[dropPin] = (beamLoadingPayments[dropPin] || 0) + amt;
+                        if (!beamLoadingTasks[dropPin]) beamLoadingTasks[dropPin] = [];
+                        beamLoadingTasks[dropPin].push(`Drop Pin/Jog (Loom #${l.loomNumber || '?'}, ${l.date})`);
                     }
                 }
             });
 
-
-
-            const staffList = (state && Array.isArray(state.employees) && state.employees.length > 0)
-
-                ? state.employees
-
-                : ([] || []);
-
-
-
+            // Process all employees
+            const staffList = (state && Array.isArray(state.employees) && state.employees.length > 0) ? state.employees : [];
             const processedEmployees = [];
-
             const processedNames = new Set();
 
-
-
             staffList.forEach(emp => {
-
                 if (!emp || emp.status === 'Terminated') return;
-
                 const name = emp.name;
-
                 processedNames.add(name);
 
-
-
                 const logStats = logWorkerStats[name] || { shifts: 0, hours: 0, meters: 0, salary: 0 };
-
                 const blPay = beamLoadingPayments[name] || 0;
-
                 const salaryStyle = emp.salaryStyle || 'Per Month Fixed';
                 const baseAmount = parseFloat(emp.salaryAmount || 0);
 
@@ -9487,7 +9477,6 @@
                 }
 
                 let calculatedSalary = 0;
-
                 let workMetricsStr = '';
 
                 // Check logged attendance module stats for this month
@@ -9495,17 +9484,12 @@
                 const hasAttLogs = attStats && attStats.loggedDates && attStats.loggedDates.length > 0;
 
                 if (salaryStyle === 'Per Shift' || salaryStyle === 'Per Day') {
-
                     const effectiveShifts = hasAttLogs ? attStats.totalShifts : (logStats.shifts > 0 ? logStats.shifts : 0);
-
                     calculatedSalary = effectiveShifts * baseAmount;
-
                     workMetricsStr = hasAttLogs 
                         ? `${attStats.totalShifts} Shifts (Att Logged)` 
                         : (logStats.shifts > 0 ? `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h)` : `0 Shifts Logged`);
-
                 } else if (salaryStyle === 'Per Month Fixed') {
-
                     if (hasAttLogs && typeof calculateProRataSalary === 'function') {
                         calculatedSalary = calculateProRataSalary(emp, monthFilter);
                         workMetricsStr = `${attStats.presentDays} Days Present (Pro-Rata)`;
@@ -9517,11 +9501,8 @@
                         calculatedSalary = 0;
                         workMetricsStr = '0 Days Logged';
                     }
-
                 } else if (salaryStyle === 'Per Machine/Month') {
-
                     const machineCount = (emp.machines && emp.machines.length > 0) ? emp.machines.length : 1;
-
                     if (hasAttLogs && typeof calculateProRataSalary === 'function') {
                         calculatedSalary = calculateProRataSalary(emp, monthFilter);
                         workMetricsStr = `${machineCount} Machines • ${attStats.presentDays}d (Pro-Rata)`;
@@ -9533,9 +9514,7 @@
                         calculatedSalary = 0;
                         workMetricsStr = `${machineCount} Assigned Machine${machineCount > 1 ? 's' : ''} (0 Days)`;
                     }
-
                 } else if (salaryStyle === 'Per Spindle/Month') {
-
                     if (hasAttLogs && typeof calculateProRataSalary === 'function') {
                         calculatedSalary = calculateProRataSalary(emp, monthFilter);
                         workMetricsStr = `${attStats.presentDays} Days Present (Pro-Rata)`;
@@ -9547,15 +9526,10 @@
                         calculatedSalary = 0;
                         workMetricsStr = '0 Days Logged';
                     }
-
                 } else if (salaryStyle.includes('Piece Rate') || salaryStyle.includes('Pick') || salaryStyle === 'Per Meter/Month') {
-
                     calculatedSalary = logStats.salary;
-
-                    workMetricsStr = `${logStats.shifts} Shifts • ${logStats.meters.toFixed(1)}m`;
-
+                    workMetricsStr = `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h, ${logStats.meters.toFixed(1)}m)`;
                 } else {
-
                     if (hasAttLogs) {
                         const dailyRate = baseAmount / 26;
                         calculatedSalary = Math.round(dailyRate * attStats.presentDays);
@@ -9564,14 +9538,6 @@
                         calculatedSalary = 0;
                         workMetricsStr = '0 Days Logged';
                     }
-
-                }
-
-
-
-                if (salaryStyle.includes('Piece Rate') || salaryStyle.includes('Pick') || salaryStyle === 'Per Meter/Month') {
-                    calculatedSalary = logStats.salary;
-                    workMetricsStr = `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h, ${logStats.meters.toFixed(1)}m)`;
                 }
 
                 // Integrate beam loading pay
@@ -9584,24 +9550,14 @@
                     }
                 }
 
-
-
                 processedEmployees.push({
-
                     name: name,
-
                     role: role,
-
                     salaryStyle: salaryStyle,
-
                     salaryAmount: baseAmount,
-
-                    shifts: logStats.shifts,
-
-                    hours: logStats.hours,
-
+                    shifts: hasAttLogs ? attStats.totalShifts : logStats.shifts,
+                    hours: hasAttLogs ? attStats.totalHours : logStats.hours,
                     meters: logStats.meters,
-
                     calculatedSalary: calculatedSalary,
 
                     workMetricsStr: workMetricsStr,
@@ -10575,18 +10531,26 @@
             let grandTotalMeters = 0;
             let grandTotalLogSalary = 0;
 
+            const workerDayShifts = {};
+            const workerNightShifts = {};
+
             filteredLogs.forEach(log => {
                 const picks = log.picks || 0;
                 const ratePerMeter = getRateForPicks(picks);
+                const logDate = log.productionDate || log.date || 'unknown_date';
 
                 if (log.dayWorker) {
-                    const w = log.dayWorker;
-                    if (!logWorkerStats[w]) logWorkerStats[w] = { shifts: 0, hours: 0, meters: 0, salary: 0 };
+                    const w = String(log.dayWorker).trim();
+                    if (!logWorkerStats[w]) {
+                        logWorkerStats[w] = { shifts: 0, hours: 0, meters: 0, salary: 0 };
+                        workerDayShifts[w] = {};
+                        workerNightShifts[w] = {};
+                    }
                     const mtr = parseFloat(log.dayMeters) || 0;
-                    const hrs = parseFloat(log.dayShiftHours) || 0;
+                    const hrs = parseFloat(log.dayShiftHours) || 12;
                     const sal = log.daySalary || (mtr * ratePerMeter);
-                    logWorkerStats[w].shifts += 1;
-                    logWorkerStats[w].hours += hrs;
+
+                    workerDayShifts[w][logDate] = Math.max(workerDayShifts[w][logDate] || 0, hrs);
                     logWorkerStats[w].meters += mtr;
                     logWorkerStats[w].salary += sal;
                     grandTotalMeters += mtr;
@@ -10594,18 +10558,33 @@
                 }
 
                 if (log.nightWorker) {
-                    const w = log.nightWorker;
-                    if (!logWorkerStats[w]) logWorkerStats[w] = { shifts: 0, hours: 0, meters: 0, salary: 0 };
+                    const w = String(log.nightWorker).trim();
+                    if (!logWorkerStats[w]) {
+                        logWorkerStats[w] = { shifts: 0, hours: 0, meters: 0, salary: 0 };
+                        workerDayShifts[w] = {};
+                        workerNightShifts[w] = {};
+                    }
                     const mtr = parseFloat(log.nightMeters) || 0;
-                    const hrs = parseFloat(log.nightShiftHours) || 0;
+                    const hrs = parseFloat(log.nightShiftHours) || 12;
                     const sal = log.nightSalary || (mtr * ratePerMeter);
-                    logWorkerStats[w].shifts += 1;
-                    logWorkerStats[w].hours += hrs;
+
+                    workerNightShifts[w][logDate] = Math.max(workerNightShifts[w][logDate] || 0, hrs);
                     logWorkerStats[w].meters += mtr;
                     logWorkerStats[w].salary += sal;
                     grandTotalMeters += mtr;
                     grandTotalLogSalary += sal;
                 }
+            });
+
+            // Calculate exact unique shifts & hours for each worker across distinct dates
+            Object.keys(logWorkerStats).forEach(w => {
+                const dayDates = Object.keys(workerDayShifts[w] || {});
+                const nightDates = Object.keys(workerNightShifts[w] || {});
+                const dayHrs = Object.values(workerDayShifts[w] || {}).reduce((a, b) => a + b, 0);
+                const nightHrs = Object.values(workerNightShifts[w] || {}).reduce((a, b) => a + b, 0);
+
+                logWorkerStats[w].shifts = dayDates.length + nightDates.length;
+                logWorkerStats[w].hours = dayHrs + nightHrs;
             });
 
             // Process all employees
@@ -10643,30 +10622,12 @@
                 }
 
                 // Attendance stats in date range
-                let presentDays = 0;
-                let totalAttShifts = 0;
-                let loggedAttCount = 0;
-                if (state && state.attendance) {
-                    Object.keys(state.attendance).forEach(d => {
-                        if ((!fromDate || d >= fromDate) && (!toDate || d <= toDate)) {
-                            const dayData = state.attendance[d];
-                            if (dayData && dayData[name]) {
-                                loggedAttCount++;
-                                const entry = dayData[name];
-                                const status = entry.status || 'present';
-                                const sCount = (entry.shifts !== undefined && entry.shifts !== null) ? parseFloat(entry.shifts) : (status === 'double_shift' ? 2 : (status === 'half_day' ? 0.5 : (status === 'absent' || status === 'leave' ? 0 : 1)));
-                                if (status === 'present' || status === 'double_shift') {
-                                    presentDays += 1;
-                                    totalAttShifts += sCount;
-                                } else if (status === 'half_day') {
-                                    presentDays += 0.5;
-                                    totalAttShifts += sCount;
-                                }
-                            }
-                        }
-                    });
-                }
-                const hasAttLogs = loggedAttCount > 0;
+                const attStats = (typeof getEmployeeDateRangeAttendanceStats === 'function')
+                    ? getEmployeeDateRangeAttendanceStats(emp.name, fromDate, toDate)
+                    : null;
+                const hasAttLogs = attStats && attStats.loggedDates && attStats.loggedDates.length > 0;
+                const presentDays = hasAttLogs ? attStats.presentDays : 0;
+                const totalAttShifts = hasAttLogs ? attStats.totalShifts : 0;
 
                 let calculatedSalary = 0;
                 let workMetricsStr = '';
@@ -10674,9 +10635,14 @@
                 if (salaryStyle === 'Per Shift' || salaryStyle === 'Per Day') {
                     const effectiveShifts = hasAttLogs ? totalAttShifts : (logStats.shifts > 0 ? logStats.shifts : 0);
                     calculatedSalary = effectiveShifts * baseAmount;
-                    workMetricsStr = hasAttLogs ? `${totalAttShifts} Shifts (Att Logged)` : (logStats.shifts > 0 ? `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h)` : `0 Shifts Logged`);
+                    workMetricsStr = hasAttLogs 
+                        ? `${totalAttShifts} Shifts (Att Logged)` 
+                        : (logStats.shifts > 0 ? `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h)` : `0 Shifts Logged`);
                 } else if (salaryStyle === 'Per Month Fixed') {
-                    if (hasAttLogs) {
+                    if (hasAttLogs && typeof calculateProRataSalary === 'function' && singleMonthKey) {
+                        calculatedSalary = calculateProRataSalary(emp, singleMonthKey);
+                        workMetricsStr = `${presentDays} Days Present (Pro-Rata)`;
+                    } else if (hasAttLogs) {
                         const dailyRate = baseAmount / 26;
                         calculatedSalary = Math.round(dailyRate * presentDays);
                         workMetricsStr = `${presentDays} Days Present (Pro-Rata)`;
@@ -10686,7 +10652,10 @@
                     }
                 } else if (salaryStyle === 'Per Machine/Month') {
                     const machineCount = (emp.machines && emp.machines.length > 0) ? emp.machines.length : 1;
-                    if (hasAttLogs) {
+                    if (hasAttLogs && typeof calculateProRataSalary === 'function' && singleMonthKey) {
+                        calculatedSalary = calculateProRataSalary(emp, singleMonthKey);
+                        workMetricsStr = `${machineCount} Machines • ${presentDays}d (Pro-Rata)`;
+                    } else if (hasAttLogs) {
                         const dailyRate = (machineCount * baseAmount) / 26;
                         calculatedSalary = Math.round(dailyRate * presentDays);
                         workMetricsStr = `${machineCount} Machines • ${presentDays}d (Pro-Rata)`;
@@ -10695,7 +10664,10 @@
                         workMetricsStr = `${machineCount} Assigned Machine${machineCount > 1 ? 's' : ''} (0 Days)`;
                     }
                 } else if (salaryStyle === 'Per Spindle/Month') {
-                    if (hasAttLogs) {
+                    if (hasAttLogs && typeof calculateProRataSalary === 'function' && singleMonthKey) {
+                        calculatedSalary = calculateProRataSalary(emp, singleMonthKey);
+                        workMetricsStr = `${presentDays} Days Present (Pro-Rata)`;
+                    } else if (hasAttLogs) {
                         const dailyRate = baseAmount / 26;
                         calculatedSalary = Math.round(dailyRate * presentDays);
                         workMetricsStr = `${presentDays} Days Present (Pro-Rata)`;
@@ -10731,8 +10703,8 @@
                     role: role,
                     salaryStyle: salaryStyle,
                     salaryAmount: baseAmount,
-                    shifts: logStats.shifts,
-                    hours: logStats.hours,
+                    shifts: hasAttLogs ? totalAttShifts : logStats.shifts,
+                    hours: hasAttLogs ? attStats.totalHours : logStats.hours,
                     meters: logStats.meters,
                     calculatedSalary: calculatedSalary,
                     workMetricsStr: workMetricsStr,
@@ -17308,7 +17280,7 @@
                                     const shifts = (entry.shifts !== undefined && entry.shifts !== null) ? parseFloat(entry.shifts) : (status === 'double_shift' ? 2 : (status === 'half_day' ? 0.5 : (status === 'absent' || status === 'leave' ? 0 : 1)));
                                     const hours = (entry.hours !== undefined && entry.hours !== null) ? parseFloat(entry.hours) : 0;
                                     
-                                    if (status === 'present' || status === 'night_shift') {
+                                    if (status === 'present' || status === 'night_shift' || status === 'day_shift' || status === 'overtime') {
                                         presentDays += 1;
                                         totalShifts += shifts;
                                     } else if (status === 'double_shift') {
