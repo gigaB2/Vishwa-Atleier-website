@@ -2500,6 +2500,33 @@
         return null;
       }
     },
+    async getMultiple(keys) {
+      if (!Array.isArray(keys) || keys.length === 0) return {};
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return {};
+      try {
+        const encoded = keys.map(k => `"${encodeURIComponent(k)}"`).join(',');
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=in.(${encoded})&select=key,value`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        if (!res.ok) return {};
+        const rows = await res.json();
+        const map = {};
+        if (Array.isArray(rows)) {
+          rows.forEach(r => {
+            if (r && r.key) {
+              map[r.key] = typeof r.value === 'string' ? JSON.parse(r.value) : r.value;
+            }
+          });
+        }
+        return map;
+      } catch (e) {
+        console.error('Supabase getMultiple error:', e);
+        return {};
+      }
+    },
     // Debounced and Hash-Guarded Persistent Database Write (Zero Wasted POST Quota)
     set(key, value, isImmediate = false) {
       if (isLocalOnlyKey(key)) return false;

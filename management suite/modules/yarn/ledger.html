@@ -2358,32 +2358,8 @@
       }, 3000);
     }
 
-    // Initialize application state
+    // Initialize application state (Pure Cloud Architecture — Zero LocalStorage)
     async function init() {
-      // Load user settings strictly from Supabase Cloud
-      try {
-        let settings = {};
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
-          try {
-            settings = (await window.VishwaSupabase.get('yarn_ledger_settings')) || {};
-          } catch (e) {
-            console.error("Error reading yarn_ledger_settings from Supabase:", e);
-          }
-        }
-
-        if (settings && typeof settings === 'object') {
-          if (settings.defaultInterestRate !== undefined) defaultInterestRate = Number(settings.defaultInterestRate) || 18.0;
-          if (settings.defaultCreditDays !== undefined) defaultCreditDays = Number(settings.defaultCreditDays) || 30;
-          if (settings.calculateInterest !== undefined) calculateInterest = !!settings.calculateInterest;
-        }
-        
-        document.getElementById('toggle-interest').checked = calculateInterest;
-        document.getElementById('settings-default-interest-rate').value = defaultInterestRate;
-        document.getElementById('settings-default-credit-days').value = defaultCreditDays;
-      } catch (e) {
-        console.error("Error initializing yarn_ledger_settings:", e);
-      }
-
       // URL parameters (e.g. ?tab=purchase)
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
@@ -2416,21 +2392,34 @@
         updateSyncStatusUI(e?.detail?.status);
       });
 
-      // Load Saved Ledgers strictly from Supabase Cloud
-      await loadLedgers();
+      // User interaction activity trackers to protect active inputs & cursor
+      document.addEventListener('focusin', () => { lastUserInteractionTime = Date.now(); }, true);
+      document.addEventListener('input', () => { lastUserInteractionTime = Date.now(); }, true);
+      document.addEventListener('keydown', () => { lastUserInteractionTime = Date.now(); }, true);
 
-      // Automatically sync latest orders and sales from Supabase
-      await syncSourceData(false);
+      // Render initial loading indicator in table
+      const tbody = document.getElementById('excel-table-body');
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="23" style="text-align: center; padding: 3.5rem 1rem; color: var(--muted);">
+              <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.85rem;">
+                <div style="width: 28px; height: 28px; border: 3px solid rgba(124, 58, 237, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                <div style="font-size: 0.95rem; font-weight: 700; color: var(--fg); font-family: var(--font-display);">Connecting to Supabase Cloud...</div>
+                <div style="font-size: 0.8rem; color: var(--muted);">Fetching live transactions & real-time balances directly from cloud</div>
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+
+      // High-speed Pure Cloud Batch Load & Sync
+      await loadAndSyncFromCloud(false);
 
       // Render UI
       updateTabUI();
       populatePartyFilter();
       renderTable();
-
-      // User interaction activity trackers to protect active inputs & cursor
-      document.addEventListener('focusin', () => { lastUserInteractionTime = Date.now(); }, true);
-      document.addEventListener('input', () => { lastUserInteractionTime = Date.now(); }, true);
-      document.addEventListener('keydown', () => { lastUserInteractionTime = Date.now(); }, true);
 
       // Cloud & Real-time Event Listeners
       const handleRemoteSync = async (e) => {
@@ -2447,8 +2436,7 @@
 
         if (isUserActivelyEditing()) return;
 
-        await loadLedgers();
-        await syncSourceData(false);
+        await loadAndSyncFromCloud(false);
 
         // Guard again after async await completes
         if (isUserActivelyEditing()) return;
@@ -2471,8 +2459,7 @@
         if (isUserActivelyEditing()) return;
         const activeEl = document.activeElement;
         if (!activeEl || !document.getElementById('excel-table-body')?.contains(activeEl)) {
-          await loadLedgers();
-          await syncSourceData(false);
+          await loadAndSyncFromCloud(false);
           if (isUserActivelyEditing()) return;
           populatePartyFilter();
           renderTable(false);
@@ -2578,34 +2565,66 @@
         return Array.from(rowMap.values());
       }
 
-    // Load Ledgers directly and strictly from Supabase Cloud
-    async function loadLedgers() {
+    // All required Cloud Keys for Ledger operation
+    const CLOUD_LEDGER_KEYS = [
+      'yarn_ledger_settings',
+      'yarn_sales_ledger_data',
+      'yarn_purchase_ledger_data',
+      'yarn-rm-orders',
+      'vishwa_yarn_rm_stock_data',
+      'yarn-qualities',
+      'yarn_covering_sales_logs',
+      'yarn_tfo_sales_logs',
+      'yarn_doubler_sales_logs',
+      'yarn_ledger_deleted_keys',
+      'vf_deleted_entity_ids'
+    ];
+
+    // High-speed Pure Cloud Batch Loader (Zero LocalStorage dependency)
+    async function fetchAllCloudLedgerData() {
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.getMultiple === 'function') {
+        return await window.VishwaSupabase.getMultiple(CLOUD_LEDGER_KEYS);
+      }
+      // Parallel fetch fallback using Promise.all (dispatches all concurrently in ~150ms)
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+        const results = await Promise.all(
+          CLOUD_LEDGER_KEYS.map(async k => {
+            try {
+              const val = await window.VishwaSupabase.get(k);
+              return [k, val];
+            } catch (e) {
+              return [k, null];
+            }
+          })
+        );
+        return Object.fromEntries(results);
+      }
+      return {};
+    }
+
+    // Unified Pure Cloud Loader & Synchronizer (Zero LocalStorage — runs in ~150ms)
+    async function loadAndSyncFromCloud(showNotification = false) {
       try {
-        let cloudSales = [];
-        let cloudPurchase = [];
+        const dataMap = await fetchAllCloudLedgerData();
 
-        // Fast in-memory cache / synchronous localStorage read first
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.getFast === 'function') {
-          cloudSales = window.VishwaSupabase.getFast('yarn_sales_ledger_data') || [];
-          cloudPurchase = window.VishwaSupabase.getFast('yarn_purchase_ledger_data') || [];
-        } else {
-          try {
-            const sRaw = localStorage.getItem('yarn_sales_ledger_data');
-            if (sRaw) cloudSales = JSON.parse(sRaw);
-            const pRaw = localStorage.getItem('yarn_purchase_ledger_data');
-            if (pRaw) cloudPurchase = JSON.parse(pRaw);
-          } catch (e) {}
+        // 1. Settings
+        const settings = dataMap['yarn_ledger_settings'];
+        if (settings && typeof settings === 'object') {
+          if (settings.defaultInterestRate !== undefined) defaultInterestRate = Number(settings.defaultInterestRate) || 18.0;
+          if (settings.defaultCreditDays !== undefined) defaultCreditDays = Number(settings.defaultCreditDays) || 30;
+          if (settings.calculateInterest !== undefined) calculateInterest = !!settings.calculateInterest;
+          
+          const toggleEl = document.getElementById('toggle-interest');
+          if (toggleEl) toggleEl.checked = calculateInterest;
+          const rateEl = document.getElementById('settings-default-interest-rate');
+          if (rateEl) rateEl.value = defaultInterestRate;
+          const daysEl = document.getElementById('settings-default-credit-days');
+          if (daysEl) daysEl.value = defaultCreditDays;
         }
 
-        // Fallback to async REST get if cache was empty
-        if ((!cloudSales || cloudSales.length === 0) && (!cloudPurchase || cloudPurchase.length === 0) && window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
-          try {
-            cloudSales = (await window.VishwaSupabase.get('yarn_sales_ledger_data')) || cloudSales || [];
-            cloudPurchase = (await window.VishwaSupabase.get('yarn_purchase_ledger_data')) || cloudPurchase || [];
-          } catch (e) {
-            console.error("Error loading ledgers from Supabase:", e);
-          }
-        }
+        // 2. Saved Ledgers (strictly from cloud)
+        let cloudSales = dataMap['yarn_sales_ledger_data'] || [];
+        let cloudPurchase = dataMap['yarn_purchase_ledger_data'] || [];
 
         // Filter tombstones
         if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
@@ -2613,15 +2632,254 @@
           cloudPurchase = window.VishwaSupabase.filterDeletedEntities(cloudPurchase, 'yarn_ledger_deleted_keys');
         }
 
-        // Reconcile with local in-memory datasets
         ledgerData.sales = mergeLedgerDatasets(ledgerData.sales, Array.isArray(cloudSales) ? cloudSales : []);
         ledgerData.purchase = mergeLedgerDatasets(ledgerData.purchase, Array.isArray(cloudPurchase) ? cloudPurchase : []);
-      } catch (e) {
-        console.error("Error in loadLedgers:", e);
+
+        // 3. Source Sync (Orders & Sales Logs)
+        let syncAdded = 0;
+        let syncUpdated = 0;
+
+        const ledgerDeletedKeys = (window.VishwaSupabase && typeof window.VishwaSupabase.getDeletedTombstones === 'function')
+          ? window.VishwaSupabase.getDeletedTombstones('yarn_ledger_deleted_keys')
+          : new Set();
+
+        // Sync Purchase Ledger from fulfilled delivery batches in yarn-rm-orders
+        let rawOrders = dataMap['yarn-rm-orders'] || [];
+        let rawStock = dataMap['vishwa_yarn_rm_stock_data'] || [];
+        let rawQualities = dataMap['yarn-qualities'] || [];
+
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+          rawOrders = window.VishwaSupabase.filterDeletedEntities(rawOrders);
+          if (Array.isArray(rawStock)) rawStock = window.VishwaSupabase.filterDeletedEntities(rawStock);
+        }
+
+        const validPurchaseSyncKeys = new Set();
+
+        if (Array.isArray(rawOrders)) {
+          rawOrders.forEach(order => {
+            if (!order) return;
+            const orderRate = Number(order.price) || Number(order.rate) || Number(order.yarnRate) || Number(order.unitPrice) || 0;
+            const supplierName = (order.supplier || '').trim();
+            const orderDate = (order.orderDate || '').split('T')[0];
+            const orderNumber = order.orderNumber || order.id || '';
+            const qualityName = order.quality || order.qualityName || 'Yarn';
+            const batches = Array.isArray(order.batches) ? order.batches : [];
+
+            if (batches.length > 0) {
+              batches.forEach((batch, bIdx) => {
+                if (!batch) return;
+                
+                let batchQty = Number(batch.totalWeight) || Number(batch.receivedQty) || 0;
+                if (Array.isArray(batch.boxes) && batch.boxes.length > 0) {
+                  const boxNet = batch.boxes.reduce((acc, b) => acc + (Number(b.weight) || Number(b.grossWeight) || 0) - (Number(b.returnedWeight) || 0), 0);
+                  if (boxNet > 0 || batchQty === 0) batchQty = boxNet;
+                }
+
+                if (batchQty <= 0) return;
+
+                let effectiveRate = Number(batch.rate) || Number(batch.price) || orderRate;
+                const batchChallan = (batch.challanNumber || '').trim();
+                const receiveDate = (batch.receiveDate || orderDate || new Date().toISOString().split('T')[0]).split('T')[0];
+                const uniqueSyncKey = `order_${order.id || orderNumber}_batch_${batch.id || bIdx}_${batchChallan}`;
+                const deterministicId = 'PUR-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+                validPurchaseSyncKeys.add(uniqueSyncKey);
+
+                if (ledgerDeletedKeys.has(deterministicId) || ledgerDeletedKeys.has(uniqueSyncKey) || (batchChallan && ledgerDeletedKeys.has(batchChallan))) {
+                  return;
+                }
+
+                if (effectiveRate === 0 && Array.isArray(rawStock)) {
+                  const matchedLot = rawStock.find(lot => 
+                    (batch.id && String(lot.batchId) === String(batch.id)) ||
+                    (batchChallan && String(lot.challanNo || lot.challanNumber).trim() === batchChallan) ||
+                    (batch.lotNumber && String(lot.lotNumber).trim() === String(batch.lotNumber).trim()) ||
+                    (String(lot.orderRef) === String(orderNumber) || String(lot.orderRef) === String(order.id))
+                  );
+                  if (matchedLot) {
+                    effectiveRate = Number(matchedLot.rate) || Number(matchedLot.price) || 0;
+                  }
+                }
+
+                if (effectiveRate === 0 && Array.isArray(rawQualities)) {
+                  const matchedQual = rawQualities.find(q => (q.quality || q.name || '').trim().toLowerCase() === qualityName.trim().toLowerCase());
+                  if (matchedQual) {
+                    effectiveRate = Number(matchedQual.rate) || Number(matchedQual.price) || 0;
+                  }
+                }
+
+                const subtotal = Number((batchQty * effectiveRate).toFixed(2));
+                const existingRow = ledgerData.purchase.find(r => r.id === deterministicId || r.syncKey === uniqueSyncKey || (r.challanNo === batchChallan && r.partyName === supplierName && batchChallan !== ''));
+
+                if (!existingRow) {
+                  const gstPercent = 5.0;
+                  const gstAmount = Number(((subtotal * gstPercent) / 100).toFixed(2));
+                  const grandTotal = Number((subtotal + gstAmount).toFixed(2));
+                  const nowIso = new Date().toISOString();
+
+                  ledgerData.purchase.push({
+                    id: deterministicId,
+                    syncKey: uniqueSyncKey,
+                    orderId: order.id || '',
+                    orderNumber: orderNumber || '',
+                    batchId: batch.id || '',
+                    lotNumber: batch.lotNumber || '',
+                    source: 'yarn-rm-orders',
+                    date: receiveDate,
+                    challanNo: batchChallan || ('ORD-' + orderNumber),
+                    partyName: supplierName || 'Unknown Supplier',
+                    quality: qualityName + (batch.lotNumber ? ` (Lot: ${batch.lotNumber})` : ''),
+                    qty: batchQty,
+                    rate: effectiveRate,
+                    subtotal: subtotal,
+                    gstPercent: gstPercent,
+                    grandTotal: grandTotal,
+                    paidAmount: 0,
+                    paymentDate: '',
+                    creditDays: Number(order.creditDays) || defaultCreditDays,
+                    interestRate: defaultInterestRate,
+                    interestPaid: 0,
+                    remarks: `Auto-synced from Yarn RM Order #${orderNumber}`,
+                    isManual: false,
+                    created_at: nowIso,
+                    updated_at: nowIso
+                  });
+                  syncAdded++;
+                } else {
+                  const oldRate = existingRow.rate;
+                  const oldQty = existingRow.qty;
+                  if (!existingRow.id || existingRow.id.startsWith('PUR-1') || existingRow.id.length > 30) {
+                    existingRow.id = deterministicId;
+                  }
+                  existingRow.syncKey = uniqueSyncKey;
+                  existingRow.orderId = order.id || existingRow.orderId || '';
+                  existingRow.orderNumber = orderNumber || existingRow.orderNumber || '';
+                  existingRow.batchId = batch.id || existingRow.batchId || '';
+                  existingRow.lotNumber = batch.lotNumber || existingRow.lotNumber || '';
+                  existingRow.qty = batchQty;
+                  existingRow.rate = effectiveRate;
+                  existingRow.subtotal = subtotal;
+                  const gstAmt = Number(((existingRow.subtotal * (existingRow.gstPercent !== undefined ? existingRow.gstPercent : 5.0)) / 100).toFixed(2));
+                  existingRow.grandTotal = Number((existingRow.subtotal + gstAmt).toFixed(2));
+                  existingRow.source = 'yarn-rm-orders';
+                  existingRow.isManual = false;
+                  if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
+                  if (oldRate !== effectiveRate || oldQty !== batchQty) syncUpdated++;
+                }
+              });
+            }
+          });
+        }
+
+        if (Array.isArray(rawOrders) && rawOrders.length > 0) {
+          const prevPurchaseCount = ledgerData.purchase.length;
+          ledgerData.purchase = ledgerData.purchase.filter(r => {
+            if (r.source === 'yarn-rm-orders') {
+              return r.syncKey && validPurchaseSyncKeys.has(r.syncKey);
+            }
+            return true;
+          });
+          if (ledgerData.purchase.length !== prevPurchaseCount) {
+            syncUpdated++;
+          }
+        }
+
+        // Sync Sales Ledger directly from yarn_*_sales_logs in Supabase Cloud
+        for (const div of ['covering', 'tfo', 'doubler']) {
+          let rawSales = dataMap[`yarn_${div}_sales_logs`] || [];
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+            rawSales = window.VishwaSupabase.filterDeletedEntities(rawSales);
+          }
+
+          if (Array.isArray(rawSales)) {
+            rawSales.forEach(sale => {
+              if (!sale) return;
+              const challanNo = (sale.challanNo || sale.challanNumber || '').trim();
+              const customerName = (sale.customerName || sale.customer || 'Direct Sale').trim();
+              const saleDate = (sale.date || sale.saleDate || new Date().toISOString().split('T')[0]).split('T')[0];
+              const uniqueSyncKey = `sales_${div}_${sale.id || challanNo}`;
+              const deterministicId = 'SAL-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+              if (ledgerDeletedKeys.has(deterministicId) || ledgerDeletedKeys.has(uniqueSyncKey) || (challanNo && ledgerDeletedKeys.has(challanNo))) {
+                return;
+              }
+
+              const existingRow = ledgerData.sales.find(r => r.id === deterministicId || r.syncKey === uniqueSyncKey || (r.challanNo === challanNo && challanNo !== ''));
+
+              if (!existingRow && challanNo) {
+                const qty = Number(sale.totalQty) || Number(sale.saleQty) || Number(sale.weight) || Number(sale.qty) || 0;
+                const rate = Number(sale.rate) || 0;
+                const subtotal = Number(sale.taxableAmount) || Number(sale.subtotalAmount) || Number(sale.subtotal) || Number((qty * rate).toFixed(2));
+                const gstAmount = Number(sale.gstAmount) || Number(sale.gst) || 0;
+                const grandTotal = Number(sale.totalAmount) || Number(sale.grandTotal) || Number(sale.amount) || Number((subtotal + gstAmount).toFixed(2));
+                const gstPercent = (sale.gstRate !== undefined && sale.gstRate !== null) ? Number(sale.gstRate) : (subtotal > 0 ? Number(((gstAmount / subtotal) * 100).toFixed(1)) : 0);
+                const nowIso = new Date().toISOString();
+
+                ledgerData.sales.push({
+                  id: deterministicId,
+                  syncKey: uniqueSyncKey,
+                  source: `yarn_${div}_sales`,
+                  date: saleDate,
+                  challanNo: challanNo,
+                  partyName: customerName,
+                  quality: sale.composition || sale.productName || sale.quality || `${div.toUpperCase()} Yarn`,
+                  qty: qty,
+                  rate: rate,
+                  subtotal: subtotal,
+                  gstPercent: gstPercent,
+                  grandTotal: grandTotal,
+                  paidAmount: Number(sale.receivedAmount) || 0,
+                  paymentDate: sale.paymentDate || '',
+                  creditDays: defaultCreditDays,
+                  interestRate: defaultInterestRate,
+                  interestPaid: 0,
+                  remarks: `Auto-synced from ${div.toUpperCase()} Sales`,
+                  isManual: false,
+                  created_at: nowIso,
+                  updated_at: nowIso
+                });
+                syncAdded++;
+              } else if (existingRow) {
+                if (!existingRow.id || existingRow.id.startsWith('SAL-1') || existingRow.id.length > 30) {
+                  existingRow.id = deterministicId;
+                }
+                existingRow.source = `yarn_${div}_sales`;
+                existingRow.isManual = false;
+                if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
+              }
+            });
+          }
+        }
+
+        if (syncAdded > 0 || syncUpdated > 0) {
+          saveLedgers(false, false);
+          if (showNotification) {
+            if (syncAdded > 0 && syncUpdated > 0) {
+              showToast(`Synced ${syncAdded} new and updated rates on ${syncUpdated} orders from cloud!`, 'success');
+            } else if (syncAdded > 0) {
+              showToast(`Synced ${syncAdded} new records from Cloud Orders & Sales!`, 'success');
+            } else {
+              showToast(`Updated rates on ${syncUpdated} records from Cloud Orders!`, 'success');
+            }
+          }
+        } else if (showNotification) {
+          showToast('All orders & sales are up to date with cloud.', 'info');
+        }
+      } catch (err) {
+        console.error("Error in loadAndSyncFromCloud:", err);
       }
     }
 
-    // Save Ledgers directly and strictly to Supabase Cloud with Realtime Broadcast
+    // Compatibility wrappers for existing modal & event callers
+    async function loadLedgers() {
+      return await loadAndSyncFromCloud(false);
+    }
+
+    async function syncSourceData(showNotification = true) {
+      return await loadAndSyncFromCloud(showNotification);
+    }
+
+    // Save Ledgers directly and strictly to Supabase Cloud with Realtime Broadcast (Zero LocalStorage)
     function saveLedgers(showToastMsg = false, forceImmediate = false) {
       recordStateSnapshot();
       isLocalSaving = true;
@@ -2637,10 +2895,6 @@
         if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
           window.VishwaSupabase.set('yarn_sales_ledger_data', ledgerData.sales, forceImmediate);
           window.VishwaSupabase.set('yarn_purchase_ledger_data', ledgerData.purchase, forceImmediate);
-        }
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
-          window.VishwaSupabase.saveToSupabase('yarn_sales_ledger_data', ledgerData.sales);
-          window.VishwaSupabase.saveToSupabase('yarn_purchase_ledger_data', ledgerData.purchase);
         }
 
         if (showToastMsg) showToast('Ledger saved to Supabase cloud', 'success');
@@ -2698,270 +2952,6 @@
         showToast('Redo performed (Ctrl+Y)', 'info');
       } finally {
         isHistoryAction = false;
-      }
-    }
-
-    // Sync Data directly from Yarn Orders & Sales Logs in Supabase
-    async function syncSourceData(showNotification = true) {
-      let syncAdded = 0;
-      let syncUpdated = 0;
-
-      const ledgerDeletedKeys = (window.VishwaSupabase && typeof window.VishwaSupabase.getDeletedTombstones === 'function')
-        ? window.VishwaSupabase.getDeletedTombstones('yarn_ledger_deleted_keys')
-        : new Set();
-
-      // 1. Sync Purchase Ledger from fulfilled delivery batches in yarn-rm-orders
-      try {
-        let rawOrders = [];
-        let rawStock = [];
-        let rawQualities = [];
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
-          try {
-            rawOrders = (await window.VishwaSupabase.get('yarn-rm-orders')) || [];
-            rawStock = (await window.VishwaSupabase.get('vishwa_yarn_rm_stock_data')) || [];
-            rawQualities = (await window.VishwaSupabase.get('yarn-qualities')) || [];
-          } catch (e) {}
-        }
-
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
-          rawOrders = window.VishwaSupabase.filterDeletedEntities(rawOrders);
-          if (Array.isArray(rawStock)) rawStock = window.VishwaSupabase.filterDeletedEntities(rawStock);
-        }
-
-        const validPurchaseSyncKeys = new Set();
-
-        if (Array.isArray(rawOrders)) {
-          rawOrders.forEach(order => {
-            if (!order) return;
-            // The rate assigned for an order in yarn-rm-orders is stored in order.price
-            const orderRate = Number(order.price) || Number(order.rate) || Number(order.yarnRate) || Number(order.unitPrice) || 0;
-            const supplierName = (order.supplier || '').trim();
-            const orderDate = (order.orderDate || '').split('T')[0];
-            const orderNumber = order.orderNumber || order.id || '';
-            const qualityName = order.quality || order.qualityName || 'Yarn';
-            const batches = Array.isArray(order.batches) ? order.batches : [];
-
-            // Only fulfilled / received delivery batches with inward weight are recorded in purchase ledger
-            if (batches.length > 0) {
-              batches.forEach((batch, bIdx) => {
-                if (!batch) return;
-                
-                // Calculate received weight from boxes or batch totals
-                let batchQty = Number(batch.totalWeight) || Number(batch.receivedQty) || 0;
-                if (Array.isArray(batch.boxes) && batch.boxes.length > 0) {
-                  const boxNet = batch.boxes.reduce((acc, b) => acc + (Number(b.weight) || Number(b.grossWeight) || 0) - (Number(b.returnedWeight) || 0), 0);
-                  if (boxNet > 0 || batchQty === 0) batchQty = boxNet;
-                }
-
-                // Skip unfulfilled batches with 0 weight
-                if (batchQty <= 0) return;
-
-                // Rate assigned for batch or order
-                let effectiveRate = Number(batch.rate) || Number(batch.price) || orderRate;
-                const batchChallan = (batch.challanNumber || '').trim();
-                const receiveDate = (batch.receiveDate || orderDate || new Date().toISOString().split('T')[0]).split('T')[0];
-                const uniqueSyncKey = `order_${order.id || orderNumber}_batch_${batch.id || bIdx}_${batchChallan}`;
-                const deterministicId = 'PUR-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
-
-                validPurchaseSyncKeys.add(uniqueSyncKey);
-
-                // Skip if this record was deleted/tombstoned by user
-                if (ledgerDeletedKeys.has(deterministicId) || ledgerDeletedKeys.has(uniqueSyncKey) || (batchChallan && ledgerDeletedKeys.has(batchChallan))) {
-                  return;
-                }
-
-                // Fallback to stock list or quality master if rate not on order
-                if (effectiveRate === 0 && Array.isArray(rawStock)) {
-                  const matchedLot = rawStock.find(lot => 
-                    (batch.id && String(lot.batchId) === String(batch.id)) ||
-                    (batchChallan && String(lot.challanNo || lot.challanNumber).trim() === batchChallan) ||
-                    (batch.lotNumber && String(lot.lotNumber).trim() === String(batch.lotNumber).trim()) ||
-                    (String(lot.orderRef) === String(orderNumber) || String(lot.orderRef) === String(order.id))
-                  );
-                  if (matchedLot) {
-                    effectiveRate = Number(matchedLot.rate) || Number(matchedLot.price) || 0;
-                  }
-                }
-
-                if (effectiveRate === 0 && Array.isArray(rawQualities)) {
-                  const matchedQual = rawQualities.find(q => (q.quality || q.name || '').trim().toLowerCase() === qualityName.trim().toLowerCase());
-                  if (matchedQual) {
-                    effectiveRate = Number(matchedQual.rate) || Number(matchedQual.price) || 0;
-                  }
-                }
-
-                const subtotal = Number((batchQty * effectiveRate).toFixed(2));
-                const existingRow = ledgerData.purchase.find(r => r.id === deterministicId || r.syncKey === uniqueSyncKey || (r.challanNo === batchChallan && r.partyName === supplierName && batchChallan !== ''));
-
-                if (!existingRow) {
-                  // Add new purchase ledger row with deterministic ID for cross-PC identity
-                  const gstPercent = 5.0; // Standard 5% textile GST
-                  const gstAmount = Number(((subtotal * gstPercent) / 100).toFixed(2));
-                  const grandTotal = Number((subtotal + gstAmount).toFixed(2));
-                  const nowIso = new Date().toISOString();
-
-                  ledgerData.purchase.push({
-                    id: deterministicId,
-                    syncKey: uniqueSyncKey,
-                    orderId: order.id || '',
-                    orderNumber: orderNumber || '',
-                    batchId: batch.id || '',
-                    lotNumber: batch.lotNumber || '',
-                    source: 'yarn-rm-orders',
-                    date: receiveDate,
-                    challanNo: batchChallan || ('ORD-' + orderNumber),
-                    partyName: supplierName || 'Unknown Supplier',
-                    quality: qualityName + (batch.lotNumber ? ` (Lot: ${batch.lotNumber})` : ''),
-                    qty: batchQty,
-                    rate: effectiveRate,
-                    subtotal: subtotal,
-                    gstPercent: gstPercent,
-                    grandTotal: grandTotal,
-                    paidAmount: 0,
-                    paymentDate: '',
-                    creditDays: Number(order.creditDays) || defaultCreditDays,
-                    interestRate: defaultInterestRate,
-                    interestPaid: 0,
-                    remarks: `Auto-synced from Yarn RM Order #${orderNumber}`,
-                    isManual: false,
-                    created_at: nowIso,
-                    updated_at: nowIso
-                  });
-                  syncAdded++;
-                } else {
-                  // Update base fields & auto-heal rates while keeping user inputs
-                  const oldRate = existingRow.rate;
-                  const oldQty = existingRow.qty;
-                  if (!existingRow.id || existingRow.id.startsWith('PUR-1') || existingRow.id.length > 30) {
-                    existingRow.id = deterministicId;
-                  }
-                  existingRow.syncKey = uniqueSyncKey;
-                  existingRow.orderId = order.id || existingRow.orderId || '';
-                  existingRow.orderNumber = orderNumber || existingRow.orderNumber || '';
-                  existingRow.batchId = batch.id || existingRow.batchId || '';
-                  existingRow.lotNumber = batch.lotNumber || existingRow.lotNumber || '';
-                  existingRow.qty = batchQty;
-                  existingRow.rate = effectiveRate;
-                  existingRow.subtotal = subtotal;
-                  const gstAmt = Number(((existingRow.subtotal * (existingRow.gstPercent !== undefined ? existingRow.gstPercent : 5.0)) / 100).toFixed(2));
-                  existingRow.grandTotal = Number((existingRow.subtotal + gstAmt).toFixed(2));
-                  existingRow.source = 'yarn-rm-orders';
-                  existingRow.isManual = false;
-                  if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
-                  if (oldRate !== effectiveRate || oldQty !== batchQty) syncUpdated++;
-                }
-              });
-            }
-          });
-        }
-
-        // Purge unfulfilled orders safely ONLY if rawOrders was successfully loaded
-        if (Array.isArray(rawOrders) && rawOrders.length > 0) {
-          const prevPurchaseCount = ledgerData.purchase.length;
-          ledgerData.purchase = ledgerData.purchase.filter(r => {
-            if (r.source === 'yarn-rm-orders') {
-              return r.syncKey && validPurchaseSyncKeys.has(r.syncKey);
-            }
-            return true; // Retain custom manual ledger entries
-          });
-          if (ledgerData.purchase.length !== prevPurchaseCount) {
-            syncUpdated++;
-          }
-        }
-      } catch (err) {
-        console.error("Error syncing yarn-rm-orders:", err);
-      }
-
-      // 2. Sync Sales Ledger directly from yarn_*_sales_logs in Supabase
-      try {
-        for (const div of ['covering', 'tfo', 'doubler']) {
-          let rawSales = [];
-          if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
-            try {
-              rawSales = (await window.VishwaSupabase.get(`yarn_${div}_sales_logs`)) || [];
-            } catch(e) {}
-          }
-          if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
-            rawSales = window.VishwaSupabase.filterDeletedEntities(rawSales);
-          }
-
-          if (Array.isArray(rawSales)) {
-            rawSales.forEach(sale => {
-              if (!sale) return;
-              const challanNo = (sale.challanNo || sale.challanNumber || '').trim();
-              const customerName = (sale.customerName || sale.customer || 'Direct Sale').trim();
-              const saleDate = (sale.date || sale.saleDate || new Date().toISOString().split('T')[0]).split('T')[0];
-              const uniqueSyncKey = `sales_${div}_${sale.id || challanNo}`;
-              const deterministicId = 'SAL-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
-
-              // Skip if this record was deleted/tombstoned by user
-              if (ledgerDeletedKeys.has(deterministicId) || ledgerDeletedKeys.has(uniqueSyncKey) || (challanNo && ledgerDeletedKeys.has(challanNo))) {
-                return;
-              }
-
-              const existingRow = ledgerData.sales.find(r => r.id === deterministicId || r.syncKey === uniqueSyncKey || (r.challanNo === challanNo && challanNo !== ''));
-
-              if (!existingRow && challanNo) {
-                const qty = Number(sale.totalQty) || Number(sale.saleQty) || Number(sale.weight) || Number(sale.qty) || 0;
-                const rate = Number(sale.rate) || 0;
-                const subtotal = Number(sale.taxableAmount) || Number(sale.subtotalAmount) || Number(sale.subtotal) || Number((qty * rate).toFixed(2));
-                const gstAmount = Number(sale.gstAmount) || Number(sale.gst) || 0;
-                const grandTotal = Number(sale.totalAmount) || Number(sale.grandTotal) || Number(sale.amount) || Number((subtotal + gstAmount).toFixed(2));
-                const gstPercent = (sale.gstRate !== undefined && sale.gstRate !== null) ? Number(sale.gstRate) : (subtotal > 0 ? Number(((gstAmount / subtotal) * 100).toFixed(1)) : 0);
-                const nowIso = new Date().toISOString();
-
-                ledgerData.sales.push({
-                  id: deterministicId,
-                  syncKey: uniqueSyncKey,
-                  source: `yarn_${div}_sales`,
-                  date: saleDate,
-                  challanNo: challanNo,
-                  partyName: customerName,
-                  quality: sale.composition || sale.productName || sale.quality || `${div.toUpperCase()} Yarn`,
-                  qty: qty,
-                  rate: rate,
-                  subtotal: subtotal,
-                  gstPercent: gstPercent,
-                  grandTotal: grandTotal,
-                  paidAmount: Number(sale.receivedAmount) || 0,
-                  paymentDate: sale.paymentDate || '',
-                  creditDays: defaultCreditDays,
-                  interestRate: defaultInterestRate,
-                  interestPaid: 0,
-                  remarks: `Auto-synced from ${div.toUpperCase()} Sales`,
-                  isManual: false,
-                  created_at: nowIso,
-                  updated_at: nowIso
-                });
-                syncAdded++;
-              } else if (existingRow) {
-                if (!existingRow.id || existingRow.id.startsWith('SAL-1') || existingRow.id.length > 30) {
-                  existingRow.id = deterministicId;
-                }
-                existingRow.source = `yarn_${div}_sales`;
-                existingRow.isManual = false;
-                if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
-              }
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Error syncing yarn sales logs:", err);
-      }
-
-      if (syncAdded > 0 || syncUpdated > 0) {
-        saveLedgers();
-        if (showNotification) {
-          if (syncAdded > 0 && syncUpdated > 0) {
-            showToast(`Synced ${syncAdded} new and updated rates on ${syncUpdated} orders!`, 'success');
-          } else if (syncAdded > 0) {
-            showToast(`Synced ${syncAdded} new records from Orders & Sales!`, 'success');
-          } else {
-            showToast(`Updated rates on ${syncUpdated} purchase records from Yarn Orders!`, 'success');
-          }
-        }
-      } else if (showNotification) {
-        showToast('All orders & sales are up to date.', 'info');
       }
     }
 
