@@ -1702,6 +1702,24 @@
         }
       }, [orders, isEmbedded]);
 
+      // Real-time synchronization of open modal selectedOrder when orders list updates from cloud/peer PCs
+      useEffect(() => {
+        if (selectedOrder && Array.isArray(orders)) {
+          const fresh = orders.find(o => 
+            (selectedOrder.id && o.id && String(o.id) === String(selectedOrder.id)) ||
+            (selectedOrder.orderNumber && o.orderNumber && String(o.orderNumber) === String(selectedOrder.orderNumber))
+          );
+          if (fresh) {
+            const hasStatusChanged = fresh.status !== selectedOrder.status;
+            const hasUpdatedChanged = (fresh.updated_at || fresh.updatedAt) !== (selectedOrder.updated_at || selectedOrder.updatedAt);
+            const hasBatchesChanged = JSON.stringify(fresh.batches || []) !== JSON.stringify(selectedOrder.batches || []);
+            if (hasStatusChanged || hasUpdatedChanged || hasBatchesChanged) {
+              setSelectedOrder(fresh);
+            }
+          }
+        }
+      }, [orders]);
+
       // View URL sync
       useEffect(() => {
         const titles = {
@@ -2033,8 +2051,13 @@
           status: 'Active',
           batches: []
         };
-        setOrders(prev => [newOrder, ...prev]);
+        const updatedList = [newOrder, ...(orders || [])];
+        setOrders(updatedList);
         setShowOrderModal(false);
+
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+          window.VishwaSupabase.saveToSupabase(YARN_ORDERS_STORAGE_KEY, updatedList, true);
+        }
       };
 
       const updateOrder = (o) => {
@@ -2047,16 +2070,14 @@
           updated_at: nowIso,
           updatedAt: nowIso
         };
-        let updatedList = [];
-        setOrders(prev => {
-          updatedList = (prev || []).map(x => (
-            (x.id && o.id && String(x.id) === String(o.id)) ||
-            (x.orderNumber && o.orderNumber && String(x.orderNumber) === String(o.orderNumber)) ||
-            (x.id && o.orderNumber && String(x.id) === String(o.orderNumber)) ||
-            (x.orderNumber && o.id && String(x.orderNumber) === String(o.id))
-          ) ? processed : x);
-          return updatedList;
-        });
+        const updatedList = (orders || []).map(x => (
+          (x.id && o.id && String(x.id) === String(o.id)) ||
+          (x.orderNumber && o.orderNumber && String(x.orderNumber) === String(o.orderNumber)) ||
+          (x.id && o.orderNumber && String(x.id) === String(o.orderNumber)) ||
+          (x.orderNumber && o.id && String(x.orderNumber) === String(o.id))
+        ) ? processed : x);
+
+        setOrders(updatedList);
         setSelectedOrder(processed);
 
         if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
@@ -2069,16 +2090,14 @@
         const target = (orders || []).find(o => String(o.id) === String(id) || String(o.orderNumber) === String(id));
         recordSnapshot(`Complete Order ${target?.quality || ''}`);
         const nowIso = new Date().toISOString();
-        let updatedList = [];
-        setOrders(prev => {
-          updatedList = (prev || []).map(o => (String(o.id) === String(id) || String(o.orderNumber) === String(id)) ? { 
-            ...o, 
-            status: 'Completed', 
-            updated_at: nowIso, 
-            updatedAt: nowIso 
-          } : o);
-          return updatedList;
-        });
+        const updatedList = (orders || []).map(o => (String(o.id) === String(id) || String(o.orderNumber) === String(id)) ? { 
+          ...o, 
+          status: 'Completed', 
+          updated_at: nowIso, 
+          updatedAt: nowIso 
+        } : o);
+
+        setOrders(updatedList);
         setSelectedOrder(prev => (prev && (String(prev.id) === String(id) || String(prev.orderNumber) === String(id))) ? { 
           ...prev, 
           status: 'Completed', 
@@ -2096,16 +2115,14 @@
         const target = (orders || []).find(o => String(o.id) === String(id) || String(o.orderNumber) === String(id));
         recordSnapshot(`Reactivate Order ${target?.quality || ''}`);
         const nowIso = new Date().toISOString();
-        let updatedList = [];
-        setOrders(prev => {
-          updatedList = (prev || []).map(o => (String(o.id) === String(id) || String(o.orderNumber) === String(id)) ? { 
-            ...o, 
-            status: 'Active', 
-            updated_at: nowIso, 
-            updatedAt: nowIso 
-          } : o);
-          return updatedList;
-        });
+        const updatedList = (orders || []).map(o => (String(o.id) === String(id) || String(o.orderNumber) === String(id)) ? { 
+          ...o, 
+          status: 'Active', 
+          updated_at: nowIso, 
+          updatedAt: nowIso 
+        } : o);
+
+        setOrders(updatedList);
         setSelectedOrder(prev => (prev && (String(prev.id) === String(id) || String(prev.orderNumber) === String(id))) ? { 
           ...prev, 
           status: 'Active', 
@@ -2119,13 +2136,18 @@
       };
 
       const deleteOrder = (id) => {
-        const targetOrder = orders.find(o => o.id === id);
+        const targetOrder = (orders || []).find(o => o.id === id);
         if (!targetOrder) return;
         
         if (confirm(`Delete order for ${targetOrder.quality} (${targetOrder.supplier})? Associated inward lots will be removed from Yarn RM Stock Book.`)) {
           recordSnapshot(`Delete Order ${targetOrder.quality || ''}`);
-          setOrders(prev => prev.filter(o => o.id !== id));
+          const updatedList = (orders || []).filter(o => o.id !== id);
+          setOrders(updatedList);
           
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+            window.VishwaSupabase.saveToSupabase(YARN_ORDERS_STORAGE_KEY, updatedList, true);
+          }
+
           if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
             window.VishwaSupabase.recordDeletion('yarn-rm-orders', id);
           }
@@ -2143,7 +2165,7 @@
               stockList = stockList.filter(s => s.orderRef !== orderRef);
               localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
               if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
-                window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList);
+                window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList, true);
               }
             }
           } catch(e) {}
@@ -2982,16 +3004,11 @@
         if (e && e.preventDefault) e.preventDefault();
         if (e && e.stopPropagation) e.stopPropagation();
         
-        const nowIso = new Date().toISOString();
-        const updated = { 
-          ...order, 
-          status: 'Active',
-          updated_at: nowIso,
-          updatedAt: nowIso
-        };
-        onUpdate(updated);
         if (typeof onRevertActive === 'function') {
           onRevertActive(order.id || order.orderNumber || order);
+        } else {
+          const nowIso = new Date().toISOString();
+          onUpdate({ ...order, status: 'Active', updated_at: nowIso, updatedAt: nowIso });
         }
       };
 
@@ -2999,16 +3016,11 @@
         if (e && e.preventDefault) e.preventDefault();
         if (e && e.stopPropagation) e.stopPropagation();
         
-        const nowIso = new Date().toISOString();
-        const updated = { 
-          ...order, 
-          status: 'Completed',
-          updated_at: nowIso,
-          updatedAt: nowIso
-        };
-        onUpdate(updated);
         if (typeof onComplete === 'function') {
           onComplete(order.id || order.orderNumber || order);
+        } else {
+          const nowIso = new Date().toISOString();
+          onUpdate({ ...order, status: 'Completed', updated_at: nowIso, updatedAt: nowIso });
         }
       };
 

@@ -694,32 +694,53 @@
     const cleanLocal = filterDeletedEntities(localArr);
     const cleanRemote = filterDeletedEntities(remoteArr);
     const lastWrite = lastLocalWrites['yarn-rm-orders'] || 0;
-    const isLocallyActive = (Date.now() - lastWrite < 3000);
+    const isLocallyActive = (Date.now() - lastWrite < 1500);
 
     if (cleanRemote.length > 0 && cleanLocal.length === 0) {
       return cleanRemote;
     }
 
     const orderMap = new Map();
-    const getOrderKey = (ord) => ord ? String(ord.id || ord.orderNumber || '').trim() : '';
+    const keyToOrderMap = new Map();
+
+    const getOrderKeys = (ord) => {
+      const keys = [];
+      if (!ord) return keys;
+      if (ord.id) keys.push(String(ord.id).trim());
+      if (ord.orderNumber) keys.push(String(ord.orderNumber).trim());
+      return keys;
+    };
 
     cleanRemote.forEach(remOrd => {
-      const k = getOrderKey(remOrd);
-      if (k) orderMap.set(k, { ...remOrd });
+      const keys = getOrderKeys(remOrd);
+      const primaryKey = keys[0] || ('REM-' + Math.random());
+      orderMap.set(primaryKey, { ...remOrd });
+      keys.forEach(k => keyToOrderMap.set(k, primaryKey));
     });
 
     cleanLocal.forEach(locOrd => {
-      const k = getOrderKey(locOrd);
-      if (!k) return;
+      const keys = getOrderKeys(locOrd);
+      let matchedPrimaryKey = null;
+      for (const k of keys) {
+        if (keyToOrderMap.has(k)) {
+          matchedPrimaryKey = keyToOrderMap.get(k);
+          break;
+        }
+      }
 
-      if (!orderMap.has(k)) {
+      if (!matchedPrimaryKey) {
         if (isLocallyActive) {
-          orderMap.set(k, { ...locOrd });
+          const primaryKey = keys[0] || ('LOC-' + Math.random());
+          orderMap.set(primaryKey, { ...locOrd });
+          keys.forEach(k => keyToOrderMap.set(k, primaryKey));
         }
       } else {
+        const remOrd = orderMap.get(matchedPrimaryKey);
         const locTime = (locOrd.updated_at || locOrd.updatedAt || locOrd.createdAt) ? new Date(locOrd.updated_at || locOrd.updatedAt || locOrd.createdAt).getTime() : 0;
         const remTime = (remOrd.updated_at || remOrd.updatedAt || remOrd.createdAt) ? new Date(remOrd.updated_at || remOrd.updatedAt || remOrd.createdAt).getTime() : 0;
-        const baseOrd = (locTime >= remTime) ? locOrd : remOrd;
+        
+        // Remote is authoritative source of truth unless local edit is strictly active and newer
+        const baseOrd = (locTime > remTime && isLocallyActive) ? locOrd : remOrd;
 
         const batchMap = new Map();
         const getBatchKey = (b) => b ? String(b.id || `${b.lotNumber}__${b.challanNumber}`).trim() : '';
@@ -765,7 +786,7 @@
                 const remUpdated = remBx.updated_at ? new Date(remBx.updated_at).getTime() : 0;
 
                 if (locBx.status === 'issued' && remBx.status === 'issued') {
-                  const winner = (locUpdated >= remUpdated) ? locBx : remBx;
+                  const winner = (locUpdated > remUpdated) ? locBx : remBx;
                   bBoxMap.set(bxId, {
                     ...remBx,
                     ...locBx,
@@ -775,7 +796,7 @@
                     updated_at: winner.updated_at || locBx.updated_at || remBx.updated_at
                   });
                 } else if (locBx.status !== 'issued' && remBx.status !== 'issued') {
-                  const winner = (locUpdated >= remUpdated) ? locBx : remBx;
+                  const winner = (locUpdated > remUpdated) ? locBx : remBx;
                   bBoxMap.set(bxId, {
                     ...remBx,
                     ...locBx,
@@ -830,7 +851,7 @@
           }
         });
 
-        orderMap.set(k, {
+        orderMap.set(matchedPrimaryKey, {
           ...remOrd,
           ...baseOrd,
           batches: Array.from(batchMap.values())
@@ -2526,6 +2547,9 @@
         return {};
       }
     },
+    saveToSupabase(key, value, isImmediate = true) {
+      return this.set(key, value, isImmediate);
+    },
     // Debounced and Hash-Guarded Persistent Database Write (Zero Wasted POST Quota)
     set(key, value, isImmediate = false) {
       if (isLocalOnlyKey(key)) return false;
@@ -2536,16 +2560,20 @@
         const valStr = typeof value === 'string' ? value : JSON.stringify(value);
         const payloadHash = computeHash(valStr);
 
-        // Always clear pending debounced write timer for this key immediately
-        clearTimeout(debouncedWriteTimers[key]);
-
-        // Check if unchanged to avoid redundant database writes
-        if (lastSavedHashes[key] === payloadHash) {
-          return true;
-        }
+        // Always update in-memory cache and safe local storage synchronously for this client
+        cache[key] = valStr;
+        safeLocalStorageSet(key, valStr);
 
         // Broadcast immediately over Realtime WebSocket & BroadcastChannel (instant sub-50ms sync, 0 DB queries)
         broadcastRealtimeUpdate(key, value);
+
+        // Always clear pending debounced write timer for this key immediately
+        clearTimeout(debouncedWriteTimers[key]);
+
+        // Check if unchanged on remote DB to avoid redundant database writes
+        if (lastSavedHashes[key] === payloadHash) {
+          return true;
+        }
 
         const executeDbWrite = async () => {
           if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return;
@@ -4968,12 +4996,22 @@
                 const reconstructedOrders = dbOrders.map(o => {
                   const relBatches = batchesByOrder.get(o.id) || [];
                   let finalBatches = relBatches;
+                  let finalStatus = o.status || 'Active';
+                  let finalUpdatedAt = o.updated_at || o.updatedAt || null;
                   try {
                     const kvOrders = JSON.parse(kvMap[oKey] || cache[oKey] || '[]');
                     if (Array.isArray(kvOrders)) {
                       const kvOrder = kvOrders.find(x => x.id === o.id);
-                      if (kvOrder && Array.isArray(kvOrder.batches) && kvOrder.batches.length > finalBatches.length) {
-                        finalBatches = kvOrder.batches;
+                      if (kvOrder) {
+                        if (Array.isArray(kvOrder.batches) && kvOrder.batches.length > finalBatches.length) {
+                          finalBatches = kvOrder.batches;
+                        }
+                        const kvTime = (kvOrder.updated_at || kvOrder.updatedAt) ? new Date(kvOrder.updated_at || kvOrder.updatedAt).getTime() : 0;
+                        const dbTime = finalUpdatedAt ? new Date(finalUpdatedAt).getTime() : 0;
+                        if (kvTime > dbTime && kvOrder.status) {
+                          finalStatus = kvOrder.status;
+                          finalUpdatedAt = kvOrder.updated_at || kvOrder.updatedAt;
+                        }
                       }
                     }
                   } catch(e) {}
@@ -4990,9 +5028,11 @@
                     color: o.color || '',
                     orderedWeight: Number(o.ordered_weight) || 0,
                     price: Number(o.price) || 0,
-                    status: o.status || 'Active',
+                    status: finalStatus,
                     remarks: o.remarks || '',
-                    batches: finalBatches
+                    batches: finalBatches,
+                    updated_at: finalUpdatedAt,
+                    updatedAt: finalUpdatedAt
                   };
                 });
 
@@ -6372,7 +6412,9 @@
           price: Number(o.price) || 0,
           status: o.status || 'Active',
           remarks: o.remarks || '',
-          batches: batchesByOrder.get(o.id) || []
+          batches: batchesByOrder.get(o.id) || [],
+          updated_at: o.updated_at || o.updatedAt || null,
+          updatedAt: o.updated_at || o.updatedAt || null
         }));
       } catch (e) {
         console.error('fetchYarnOrdersRelational error:', e);

@@ -526,5 +526,78 @@ test('Multi-User Concurrency & Merge Validation', async (t) => {
     assert.ok(merged.some(p => p.boriNo === 'D-1002'));
     assert.ok(merged.some(p => p.boriNo === 'D-1003'));
   });
+
+  await t.test('Multi-PC Order Status Sync: PC 1 completes order, PC 2 receives remote update and reflects Completed status instantly', () => {
+    // PC 2 local state has order with status Active
+    const pc2LocalOrders = [
+      {
+        id: 'YRN-ORD-901',
+        orderNumber: 'YRN-901',
+        supplier: 'ABC Mills',
+        quality: '30/1 COTTON',
+        status: 'Active',
+        orderedWeight: 1000,
+        batches: [],
+        updated_at: '2026-09-04T10:00:00.000Z'
+      }
+    ];
+
+    // PC 1 marked it as Completed
+    const pc1RemoteOrders = [
+      {
+        id: 'YRN-ORD-901',
+        orderNumber: 'YRN-901',
+        supplier: 'ABC Mills',
+        quality: '30/1 COTTON',
+        status: 'Completed',
+        orderedWeight: 1000,
+        batches: [],
+        updated_at: '2026-09-04T10:05:00.000Z'
+      }
+    ];
+
+    const mergedOnPC2 = vSupabase.mergeDatasets('yarn-rm-orders', pc2LocalOrders, pc1RemoteOrders);
+    assert.strictEqual(mergedOnPC2.length, 1);
+    assert.strictEqual(mergedOnPC2[0].status, 'Completed', 'PC 2 must immediately show Completed status');
+  });
+
+  await t.test('Multi-PC Order Status Sync: PC 2 reverts Completed order to Active, PC 1 receives update and reflects Active status', () => {
+    // PC 1 had Completed order
+    const pc1LocalOrders = [
+      {
+        id: 'YRN-ORD-901',
+        orderNumber: 'YRN-901',
+        supplier: 'ABC Mills',
+        quality: '30/1 COTTON',
+        status: 'Completed',
+        orderedWeight: 1000,
+        batches: [],
+        updated_at: '2026-09-04T10:05:00.000Z'
+      }
+    ];
+
+    // PC 2 clicked "Revert to Active"
+    const pc2RemoteOrders = [
+      {
+        id: 'YRN-ORD-901',
+        orderNumber: 'YRN-901',
+        supplier: 'ABC Mills',
+        quality: '30/1 COTTON',
+        status: 'Active',
+        orderedWeight: 1000,
+        batches: [],
+        updated_at: '2026-09-04T10:10:00.000Z'
+      }
+    ];
+
+    const mergedOnPC1 = vSupabase.mergeDatasets('yarn-rm-orders', pc1LocalOrders, pc2RemoteOrders);
+    assert.strictEqual(mergedOnPC1.length, 1);
+    assert.strictEqual(mergedOnPC1[0].status, 'Active', 'PC 1 must immediately show Active status upon receiving revert');
+  });
+
+  await t.test('VishwaSupabase exposes saveToSupabase API method for instant sync', () => {
+    assert.ok(typeof vSupabase.saveToSupabase === 'function', 'saveToSupabase function is exposed on VishwaSupabase');
+  });
 });
+
 
