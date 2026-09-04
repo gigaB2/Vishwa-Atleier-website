@@ -5284,13 +5284,52 @@
         return;
       }
 
+      let baseProd = null;
+      const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
+      if (checkedBoxes.length > 0) {
+        baseProd = dataStore[activeDivision].production.find(p => p.id === checkedBoxes[0].value);
+      }
+
+      let anySkipped = false;
       checkboxes.forEach(cb => {
-        cb.checked = true;
+        const prod = dataStore[activeDivision].production.find(p => p.id === cb.value);
+        if (!prod) return;
+        if (!baseProd) {
+          baseProd = prod;
+          cb.checked = true;
+        } else {
+          const mismatch = getProductDetailsMismatch(baseProd, prod);
+          if (!mismatch) {
+            cb.checked = true;
+          } else {
+            cb.checked = false;
+            anySkipped = true;
+          }
+        }
       });
+
+      if (anySkipped) {
+        showToast('Only items with identical lot and details were selected.', 'info');
+      }
       updateBatchSellButtonState();
     };
 
     window.onProdCheckboxChange = function(cb) {
+      if (cb.checked) {
+        const otherChecked = Array.from(document.querySelectorAll('.prod-select-checkbox:checked')).filter(c => c !== cb);
+        if (otherChecked.length > 0) {
+          const firstProd = dataStore[activeDivision].production.find(p => p.id === otherChecked[0].value);
+          const currentProd = dataStore[activeDivision].production.find(p => p.id === cb.value);
+          if (firstProd && currentProd) {
+            const mismatch = getProductDetailsMismatch(firstProd, currentProd);
+            if (mismatch) {
+              cb.checked = false;
+              showToast(`Cannot select: ${mismatch}. All Boris/Boxes selected together must have identical lot & details.`, 'error');
+              return;
+            }
+          }
+        }
+      }
       updateBatchSellButtonState();
     };
 
