@@ -4082,14 +4082,11 @@
         `;
       }
 
-      const qrPayload = `UPI://PAY?PA=accounts@libertysilkmills.com&PN=${encodeURIComponent(companyName)}&AM=${grandTotalVal.toFixed(2)}&CU=INR&TN=INV-${invoiceNo}`;
-
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
           <title>Commercial Invoice - ${invoiceNo}</title>
-          <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
           <style>
             @page {
               size: A4 portrait;
@@ -4399,7 +4396,6 @@
           <div class="invoice-card">
             <div class="invoice-frame">
               <!-- Header with Centered Details -->
-              <div style="text-align: center; font-size: 8px; font-weight: bold; letter-spacing: 0.5px; margin-bottom: 2px;">|| Shree Ganeshaya Namah ||</div>
               <div class="tax-inv-badge">TAX INVOICE</div>
               <div class="header-grid">
                 <div class="company-info">
@@ -4411,7 +4407,6 @@
                     ${companyPhone ? 'Phone : ' + companyPhone : ''} ${companyEmail ? '&nbsp;|&nbsp; Email : ' + companyEmail : ''}
                   </div>
                 </div>
-                <div id="bill-header-qrcode" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 55px; height: 55px;"></div>
               </div>
 
               <!-- Banner -->
@@ -4599,19 +4594,6 @@
           </div>
 
           <scr` + `ipt>
-            try {
-              if (window.QRCode && document.getElementById('bill-header-qrcode')) {
-                new QRCode(document.getElementById('bill-header-qrcode'), {
-                  text: "${qrPayload}",
-                  width: 55,
-                  height: 55,
-                  colorDark : "#000000",
-                  colorLight : "#ffffff",
-                  correctLevel : QRCode.CorrectLevel.M
-                });
-              }
-            } catch(e) {}
-
             function triggerPrint() {
               window.focus();
               window.print();
