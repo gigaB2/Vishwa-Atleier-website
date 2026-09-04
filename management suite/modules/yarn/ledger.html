@@ -1847,8 +1847,14 @@
               <th style="width: 260px; min-width: 240px;" class="sortable" data-sort-key="quality" onclick="requestTableSort('quality', event)" title="Click to sort by Quality / Item">
                 <div class="th-content-wrap"><span>Quality / Item</span><span class="th-sort-indicator" id="sort-ind-quality">↕</span></div>
               </th>
-              <th style="width: 120px; min-width: 115px;" class="num-col sortable" data-sort-key="qty" onclick="requestTableSort('qty', event)" title="Click to sort by Quantity">
-                <div class="th-content-wrap"><span>Qty (Kg)</span><span class="th-sort-indicator" id="sort-ind-qty">↕</span></div>
+              <th style="width: 105px; min-width: 100px;" class="num-col sortable" data-sort-key="grossQty" onclick="requestTableSort('grossQty', event)" title="Click to sort by Gross Weight">
+                <div class="th-content-wrap"><span>Gross (Kg)</span><span class="th-sort-indicator" id="sort-ind-grossQty">↕</span></div>
+              </th>
+              <th style="width: 105px; min-width: 100px; background: rgba(249, 115, 22, 0.08);" class="num-col sortable" data-sort-key="grQty" onclick="requestTableSort('grQty', event)" title="Click to sort by Goods Return (GR) Deduction">
+                <div class="th-content-wrap"><span style="color: var(--accent3);">GR (Kg)</span><span class="th-sort-indicator" id="sort-ind-grQty">↕</span></div>
+              </th>
+              <th style="width: 110px; min-width: 105px;" class="num-col sortable" data-sort-key="qty" onclick="requestTableSort('qty', event)" title="Click to sort by Net Invoiced Quantity">
+                <div class="th-content-wrap"><span>Net (Kg)</span><span class="th-sort-indicator" id="sort-ind-qty">↕</span></div>
               </th>
               <th style="width: 115px; min-width: 110px;" class="num-col sortable" data-sort-key="rate" onclick="requestTableSort('rate', event)" title="Click to sort by Unit Rate">
                 <div class="th-content-wrap"><span>Rate (₹/Kg)</span><span class="th-sort-indicator" id="sort-ind-rate">↕</span></div>
@@ -1911,8 +1917,9 @@
       <div class="sheet-footer-bar">
         <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;">
           <div class="footer-stat">Rows: <span class="val" id="stat-row-count">0</span></div>
-          <div class="footer-stat">Net Weight: <span class="val" id="stat-total-weight">0.00 Kg</span></div>
-          <div class="footer-stat" id="stat-gr-wrapper" style="display: none; align-items: center; gap: 5px;">GR Returned: <span class="val" id="stat-total-gr" style="color: var(--accent3); font-weight: 700;">-0.00 Kg</span></div>
+          <div class="footer-stat">Gross: <span class="val" id="stat-total-gross">0.00 Kg</span></div>
+          <div class="footer-stat" id="stat-gr-wrapper" style="display: none; align-items: center; gap: 5px;">GR Deducted: <span class="val" id="stat-total-gr" style="color: var(--accent3); font-weight: 700;">-0.00 Kg</span></div>
+          <div class="footer-stat">Net Wt: <span class="val" id="stat-total-weight">0.00 Kg</span></div>
           <div class="footer-stat">Invoiced (Net): <span class="val" id="stat-total-invoiced">₹0.00</span></div>
         </div>
         <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
@@ -2028,15 +2035,17 @@
                 <th style="width: 115px; min-width: 115px;">Date</th>
                 <th style="width: 155px; min-width: 150px;">Bill / Challan No</th>
                 <th style="width: 260px; min-width: 240px;">Quality / Details</th>
-                <th class="num-col" style="width: 110px; min-width: 105px;">Qty (Kg)</th>
-                <th class="num-col" style="width: 100px; min-width: 95px;">Rate (₹)</th>
-                <th class="num-col" style="width: 140px; min-width: 135px;">Debit (Billed ₹)</th>
-                <th class="num-col" style="width: 140px; min-width: 135px;">Credit (Paid ₹)</th>
-                <th class="num-col" style="width: 145px; min-width: 140px;">Balance (₹)</th>
-                <th style="width: 120px; min-width: 115px;">Due Date</th>
-                <th class="num-col" style="width: 95px; min-width: 90px;">Late Days</th>
-                <th class="num-col" style="width: 130px; min-width: 125px;">Interest (₹)</th>
-                <th class="center-col" style="width: 110px; min-width: 105px;">Status</th>
+                <th class="num-col" style="width: 95px; min-width: 90px;">Gross (Kg)</th>
+                <th class="num-col" style="width: 95px; min-width: 90px; color: var(--accent3);">GR (Kg)</th>
+                <th class="num-col" style="width: 95px; min-width: 90px;">Net (Kg)</th>
+                <th class="num-col" style="width: 95px; min-width: 90px;">Rate (₹)</th>
+                <th class="num-col" style="width: 135px; min-width: 130px;">Debit (Billed ₹)</th>
+                <th class="num-col" style="width: 135px; min-width: 130px;">Credit (Paid ₹)</th>
+                <th class="num-col" style="width: 140px; min-width: 135px;">Balance (₹)</th>
+                <th style="width: 115px; min-width: 110px;">Due Date</th>
+                <th class="num-col" style="width: 90px; min-width: 85px;">Late Days</th>
+                <th class="num-col" style="width: 125px; min-width: 120px;">Interest (₹)</th>
+                <th class="center-col" style="width: 105px; min-width: 100px;">Status</th>
               </tr>
             </thead>
             <tbody id="modal-statement-table-body">
@@ -2185,7 +2194,16 @@
         const dir = sortItem.direction === 'desc' ? -1 : 1;
         let valA, valB;
 
-        if (key === 'dueDate' || key === 'principalOutstanding' || key === 'status' || key === 'overdueDays' || key === 'interestAmount' || key === 'interestOutstanding' || key === 'netOutstanding') {
+        if (key === 'grossQty') {
+          valA = a.grossQty !== undefined ? Number(a.grossQty) : (Number(a.qty || 0) + Number(a.grQty || 0));
+          valB = b.grossQty !== undefined ? Number(b.grossQty) : (Number(b.qty || 0) + Number(b.grQty || 0));
+        } else if (key === 'grQty') {
+          valA = Number(a.grQty) || 0;
+          valB = Number(b.grQty) || 0;
+        } else if (key === 'qty') {
+          valA = Number(a.qty) || 0;
+          valB = Number(b.qty) || 0;
+        } else if (key === 'dueDate' || key === 'principalOutstanding' || key === 'status' || key === 'overdueDays' || key === 'interestAmount' || key === 'interestOutstanding' || key === 'netOutstanding') {
           const compA = computeRowFinancials(a);
           const compB = computeRowFinancials(b);
           valA = compA[key];
@@ -2696,9 +2714,10 @@
         let syncAdded = 0;
         let syncUpdated = 0;
 
-        const ledgerDeletedKeys = (window.VishwaSupabase && typeof window.VishwaSupabase.getDeletedTombstones === 'function')
+        const rawLedgerDeletedKeys = (window.VishwaSupabase && typeof window.VishwaSupabase.getDeletedTombstones === 'function')
           ? window.VishwaSupabase.getDeletedTombstones('yarn_ledger_deleted_keys')
-          : new Set();
+          : [];
+        const ledgerDeletedKeys = new Set(Array.isArray(rawLedgerDeletedKeys) ? rawLedgerDeletedKeys.map(s => String(s).trim()) : (rawLedgerDeletedKeys instanceof Set ? rawLedgerDeletedKeys : []));
 
         // Sync Purchase Ledger from fulfilled delivery batches in yarn-rm-orders
         let rawOrders = dataMap['yarn-rm-orders'] || [];
@@ -3358,6 +3377,7 @@
       let totalInterestPaid = 0;
       let totalNetOutstanding = 0;
       let overdueCount = 0;
+      let totalGrossWeight = 0;
       let totalWeight = 0;
       let totalGrWeight = 0;
       let totalGrAmount = 0;
@@ -3370,6 +3390,8 @@
         totalInterest += computed.interestAmount;
         totalInterestPaid += computed.interestPaid;
         totalNetOutstanding += computed.netOutstanding;
+        const gw = Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))) || 0;
+        totalGrossWeight += gw;
         totalWeight += Number(row.qty) || 0;
         totalGrWeight += Number(row.grQty) || 0;
         totalGrAmount += Number(row.grAmount || (row.grQty * row.rate)) || 0;
@@ -3406,6 +3428,8 @@
       // Update Footer Stats
       const statRowCount = document.getElementById('stat-row-count');
       if (statRowCount) statRowCount.textContent = rows.length;
+      const statGross = document.getElementById('stat-total-gross');
+      if (statGross) statGross.textContent = `${totalGrossWeight.toFixed(2)} Kg`;
       const statWeight = document.getElementById('stat-total-weight');
       if (statWeight) statWeight.textContent = `${totalWeight.toFixed(2)} Kg`;
       
@@ -3414,7 +3438,7 @@
       if (statGrWrap && statGrVal) {
         if (totalGrWeight > 0) {
           statGrWrap.style.display = 'flex';
-          statGrVal.textContent = `-${totalGrWeight.toFixed(2)} Kg (-${formatCurrency(totalGrAmount)})`;
+          statGrVal.textContent = `-${totalGrWeight.toFixed(2)} Kg`;
         } else {
           statGrWrap.style.display = 'none';
         }
@@ -3709,7 +3733,7 @@
         const hasAnyFilters = !!(search || partyFilter !== 'all' || statusFilter !== 'all' || fromDate || toDate || activeKpiFilter);
         tbody.innerHTML = `
           <tr>
-            <td colspan="23" style="padding: 0;">
+            <td colspan="25" style="padding: 0;">
               <div class="table-empty-state-wrap">
                 <div class="table-empty-icon-circle">
                   <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -3787,27 +3811,27 @@
               }
             </td>
 
+            <!-- Gross Weight (Kg) -->
             <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
-                ? `<div class="cell-readonly num bold" style="flex-direction: column; align-items: flex-end; justify-content: center; gap: 2px;" title="Net Billed Quantity: ${Number(row.qty || 0).toFixed(2)} Kg">
-                     <div>${Number(row.qty || 0).toFixed(2)}</div>
-                     ${Number(row.grQty) > 0 
-                       ? `<div class="gr-badge-chip" title="Gross Received: ${Number(row.grossQty || (row.qty + row.grQty)).toFixed(2)} kg&#10;Goods Return (GR): -${Number(row.grQty).toFixed(2)} kg&#10;GR Deducted: -${formatCurrency(row.grAmount || (row.grQty * row.rate))}">
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                            <span>-${Number(row.grQty).toFixed(2)} kg GR</span>
-                          </div>` 
-                       : ''
-                     }
-                   </div>`
-                : `<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-                     <input type="number" step="0.01" data-field="qty" class="cell-input num-font" value="${row.qty || 0}" oninput="handleCellChange('${row.id}', 'qty', this.value, false)" onchange="handleCellChange('${row.id}', 'qty', this.value, true)" title="Net Quantity (Kg)">
-                     ${Number(row.grQty) > 0 
-                       ? `<div class="gr-badge-chip" title="Goods Return: -${Number(row.grQty).toFixed(2)} kg&#10;GR Deducted: -${formatCurrency(row.grAmount || (row.grQty * row.rate))}">
-                            <span>-${Number(row.grQty).toFixed(2)} kg GR</span>
-                          </div>` 
-                       : ''
-                     }
-                   </div>`
+                ? `<div class="cell-readonly num font-mono" title="Gross Received Weight: ${Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))).toFixed(2)} Kg">${Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))).toFixed(2)}</div>`
+                : `<input type="number" step="0.01" data-field="grossQty" class="cell-input num-font" value="${row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))}" oninput="handleCellChange('${row.id}', 'grossQty', this.value, false)" onchange="handleCellChange('${row.id}', 'grossQty', this.value, true)" title="Gross Weight (Kg)">`
+              }
+            </td>
+
+            <!-- Goods Return GR (Kg) -->
+            <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}" style="${Number(row.grQty) > 0 ? 'background: rgba(249, 115, 22, 0.08);' : ''}">
+              ${isLocked
+                ? `<div class="cell-readonly num font-mono" style="${Number(row.grQty) > 0 ? 'color: var(--accent3); font-weight: 700;' : 'color: var(--muted);'}" title="Goods Return: -${Number(row.grQty || 0).toFixed(2)} Kg&#10;GR Amount: -${formatCurrency(row.grAmount || (row.grQty * row.rate))}">${Number(row.grQty) > 0 ? `-${Number(row.grQty).toFixed(2)}` : '-'}</div>`
+                : `<input type="number" step="0.01" data-field="grQty" class="cell-input num-font" style="${Number(row.grQty) > 0 ? 'color: var(--accent3); font-weight: 700;' : ''}" value="${row.grQty || 0}" oninput="handleCellChange('${row.id}', 'grQty', this.value, false)" onchange="handleCellChange('${row.id}', 'grQty', this.value, true)" title="Goods Return (GR) Deduction (Kg)">`
+              }
+            </td>
+
+            <!-- Net Invoiced Quantity (Kg) -->
+            <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
+              ${isLocked
+                ? `<div class="cell-readonly num bold font-mono col-val-qty" title="Net Invoiced Quantity (Gross - GR): ${Number(row.qty || 0).toFixed(2)} Kg">${Number(row.qty || 0).toFixed(2)}</div>`
+                : `<input type="number" step="0.01" data-field="qty" class="cell-input num-font bold" value="${row.qty || 0}" oninput="handleCellChange('${row.id}', 'qty', this.value, false)" onchange="handleCellChange('${row.id}', 'qty', this.value, true)" title="Net Quantity (Kg)">`
               }
             </td>
 
@@ -4034,6 +4058,7 @@
       let totalInterest = 0;
       let totalInterestPaid = 0;
       let totalNetBal = 0;
+      let totalGrossWeight = 0;
       let totalWeight = 0;
       let totalGrWeight = 0;
       let totalGrAmount = 0;
@@ -4042,6 +4067,7 @@
         const comp = computeRowFinancials(row);
         const billed = Number(row.grandTotal) || 0;
         const paid = Number(row.paidAmount) || 0;
+        const grossQty = Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))) || 0;
         const qty = Number(row.qty) || 0;
         const grQty = Number(row.grQty) || 0;
         const grAmount = Number(row.grAmount || (grQty * row.rate)) || 0;
@@ -4052,6 +4078,7 @@
         totalInterest += comp.interestAmount;
         totalInterestPaid += comp.interestPaid;
         totalNetBal += comp.netOutstanding;
+        totalGrossWeight += grossQty;
         totalWeight += qty;
         totalGrWeight += grQty;
         totalGrAmount += grAmount;
@@ -4062,10 +4089,9 @@
             <td style="font-family: var(--font-mono); white-space: nowrap;">${formatDateDisplay(row.date)}</td>
             <td style="font-weight: 700; font-family: var(--font-mono); white-space: nowrap;">${escapeHtml(row.challanNo || '-')}</td>
             <td style="word-break: break-word; line-height: 1.4;">${escapeHtml(row.quality || '-')}</td>
-            <td class="num-col font-mono bold" style="white-space: nowrap;">
-              <div>${qty > 0 ? qty.toFixed(2) : (grQty > 0 ? '0.00' : '-')}</div>
-              ${grQty > 0 ? `<div style="font-size: 0.7rem; color: var(--accent3); font-weight: 700;" title="Goods Return Deducted: -${grQty.toFixed(2)} kg">(-${grQty.toFixed(2)} GR)</div>` : ''}
-            </td>
+            <td class="num-col font-mono" style="white-space: nowrap;">${grossQty > 0 ? grossQty.toFixed(2) : '-'}</td>
+            <td class="num-col font-mono" style="white-space: nowrap; ${grQty > 0 ? 'color: var(--accent3); font-weight: 700;' : 'color: var(--muted);'}">${grQty > 0 ? `-${grQty.toFixed(2)}` : '-'}</td>
+            <td class="num-col font-mono bold" style="white-space: nowrap;">${qty > 0 ? qty.toFixed(2) : (grQty > 0 ? '0.00' : '-')}</td>
             <td class="num-col font-mono">${row.rate > 0 ? Number(row.rate).toFixed(2) : '-'}</td>
             <td class="num-col font-mono bold">
               <div>${formatCurrency(billed)}</div>
@@ -4076,8 +4102,6 @@
             <td style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); white-space: nowrap;">${formatDateDisplay(comp.dueDate)}</td>
             <td class="num-col font-mono" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</td>
             <td class="num-col font-mono bold" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</td>
-            <td class="num-col font-mono" style="color: var(--warning); font-weight: 700;">${comp.interestPaid > 0 ? formatCurrency(comp.interestPaid) : '-'}</td>
-            <td class="num-col font-mono bold" style="color: ${comp.netOutstanding > 0 ? 'var(--accent)' : 'var(--success)'};">${formatCurrency(comp.netOutstanding)}</td>
             <td class="center-col">${renderStatusBadge(comp.status)}</td>
           </tr>
         `;
@@ -4087,10 +4111,9 @@
       tfoot.innerHTML = `
         <tr>
           <td colspan="4" style="text-align: right; text-transform: uppercase; letter-spacing: 0.05em;">GRAND TOTALS:</td>
-          <td class="num-col font-mono bold">
-            <div>${totalWeight.toFixed(2)} Kg</div>
-            ${totalGrWeight > 0 ? `<div style="font-size: 0.7rem; color: var(--accent3); font-weight: 700;">(-${totalGrWeight.toFixed(2)} GR)</div>` : ''}
-          </td>
+          <td class="num-col font-mono bold">${totalGrossWeight.toFixed(2)}</td>
+          <td class="num-col font-mono bold" style="color: var(--accent3);">${totalGrWeight > 0 ? `-${totalGrWeight.toFixed(2)}` : '-'}</td>
+          <td class="num-col font-mono bold">${totalWeight.toFixed(2)}</td>
           <td></td>
           <td class="num-col font-mono bold">
             <div>${formatCurrency(totalInvoiced)}</div>
@@ -4100,8 +4123,6 @@
           <td class="num-col font-mono bold" style="color: var(--error);">${formatCurrency(totalPrincipalBal)}</td>
           <td colspan="2"></td>
           <td class="num-col font-mono bold" style="color: var(--warning);">${formatCurrency(totalInterest)}</td>
-          <td class="num-col font-mono bold" style="color: var(--warning);">${formatCurrency(totalInterestPaid)}</td>
-          <td class="num-col font-mono bold" style="color: var(--accent);">${formatCurrency(totalNetBal)}</td>
           <td></td>
         </tr>
       `;
@@ -4402,22 +4423,28 @@
 
       const headers = [
         'Date', 'Bill/Challan No', activeTab === 'sales' ? 'Customer' : 'Supplier', 'Quality',
-        'Quantity (Kg)', 'Rate', 'Subtotal', 'GST %', 'Grand Total', 'Paid Principal Amount',
-        'Payment Date', 'Credit Days', 'Due Date', 'Principal Outstanding', 'Status',
-        'Interest Rate %', 'Overdue Days', 'Accrued Interest', 'Paid Interest', 'Interest Outstanding', 'Net Outstanding', 'Remarks'
+        'Gross Quantity (Kg)', 'GR Deducted (Kg)', 'Net Quantity (Kg)', 'Rate (₹/Kg)', 'GR Deducted Amount (₹)', 'Subtotal (₹)', 'GST %', 'Grand Total (₹)', 'Paid Principal Amount (₹)',
+        'Payment Date', 'Credit Days', 'Due Date', 'Principal Outstanding (₹)', 'Status',
+        'Interest Rate %', 'Overdue Days', 'Accrued Interest (₹)', 'Paid Interest (₹)', 'Interest Outstanding (₹)', 'Net Outstanding (₹)', 'Remarks'
       ];
 
       const csvRows = [headers.join(',')];
 
       rows.forEach(r => {
         const comp = computeRowFinancials(r);
+        const gross = r.grossQty !== undefined ? Number(r.grossQty) : (Number(r.qty || 0) + Number(r.grQty || 0));
+        const gr = Number(r.grQty) || 0;
+        const grAmt = Number(r.grAmount || (gr * (r.rate || 0)));
         const values = [
           `"${formatDateDisplay(r.date, '')}"`,
           `"${(r.challanNo || '').replace(/"/g, '""')}"`,
           `"${(r.partyName || '').replace(/"/g, '""')}"`,
           `"${(r.quality || '').replace(/"/g, '""')}"`,
+          gross,
+          gr,
           r.qty || 0,
           r.rate || 0,
+          grAmt,
           r.subtotal || 0,
           r.gstPercent || 0,
           r.grandTotal || 0,
