@@ -28,7 +28,7 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Sidebar Component -->
   <link rel="stylesheet" href="../../sidebar.css">
@@ -67,9 +67,10 @@
       --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.08);
       --primary-gradient: linear-gradient(135deg, #7c3aed, #ec4899);
       --card-gradient: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.75) 100%);
-      --cell-bg-hover: rgba(124, 58, 237, 0.03);
+      --cell-bg-hover: rgba(124, 58, 237, 0.04);
       --cell-focus-ring: #7c3aed;
-      --grid-line: #e8e7f1;
+      --grid-line: #e2e1ec;
+      --locked-bg: rgba(0, 0, 0, 0.025);
     }
 
     body.dark-mode, .dark-mode {
@@ -96,9 +97,10 @@
       --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.55);
       --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.7);
       --card-gradient: linear-gradient(180deg, rgba(20,20,24,0.95) 0%, rgba(10,10,12,0.85) 100%);
-      --cell-bg-hover: rgba(124, 58, 237, 0.08);
+      --cell-bg-hover: rgba(124, 58, 237, 0.1);
       --cell-focus-ring: #a78bfa;
       --grid-line: #27272a;
+      --locked-bg: rgba(255, 255, 255, 0.03);
     }
 
     * {
@@ -272,17 +274,6 @@
       border-color: var(--accent);
     }
 
-    .btn-success {
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--success);
-      border-color: rgba(16, 185, 129, 0.3);
-    }
-
-    .btn-success:hover {
-      background: var(--success);
-      color: #ffffff;
-    }
-
     .btn-icon {
       padding: 0.6rem;
       border-radius: 10px;
@@ -293,6 +284,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      transition: all 0.15s;
     }
 
     .btn-icon:hover {
@@ -336,7 +328,6 @@
 
     .tab-pill.active {
       background: var(--surface);
-      color: var(--fg);
       box-shadow: var(--shadow-sm);
       color: var(--accent);
     }
@@ -354,7 +345,7 @@
     /* KPI Summary Cards Grid */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
@@ -594,13 +585,13 @@
     }
 
     .sheet-scroll-container::-webkit-scrollbar {
-      height: 8px;
-      width: 8px;
+      height: 9px;
+      width: 9px;
     }
 
     .sheet-scroll-container::-webkit-scrollbar-thumb {
       background: var(--border);
-      border-radius: 4px;
+      border-radius: 5px;
     }
 
     .sheet-scroll-container::-webkit-scrollbar-thumb:hover {
@@ -610,10 +601,11 @@
     /* Excel Table Styling */
     .excel-table {
       width: 100%;
+      min-width: max-content;
       border-collapse: collapse;
-      font-size: 0.85rem;
-      white-space: nowrap;
+      font-size: 0.875rem;
       font-family: var(--font-body);
+      table-layout: auto;
     }
 
     .excel-table th {
@@ -624,13 +616,14 @@
       color: var(--muted);
       font-weight: 700;
       text-transform: uppercase;
-      font-size: 0.72rem;
-      letter-spacing: 0.06em;
-      padding: 0.75rem 0.65rem;
+      font-size: 0.74rem;
+      letter-spacing: 0.05em;
+      padding: 0.85rem 0.95rem;
       text-align: left;
       border-bottom: 2px solid var(--border);
       border-right: 1px solid var(--grid-line);
       user-select: none;
+      white-space: nowrap;
     }
 
     .excel-table th.num-col,
@@ -650,32 +643,38 @@
       background: var(--surface);
       color: var(--fg);
       position: relative;
+      vertical-align: middle;
     }
 
     .excel-table tr:hover td {
       background: var(--cell-bg-hover);
     }
 
+    .excel-table tr.is-locked td.cell-locked-bg {
+      background: var(--locked-bg);
+    }
+
     .excel-table tr.is-overdue td {
-      background: rgba(239, 68, 68, 0.02);
+      background: rgba(239, 68, 68, 0.025);
     }
 
     .excel-table tr.is-paid td {
-      background: rgba(16, 185, 129, 0.02);
+      background: rgba(16, 185, 129, 0.025);
     }
 
     /* In-Cell Direct Inputs */
     .cell-input {
       width: 100%;
-      height: 38px;
-      padding: 0.4rem 0.65rem;
+      height: 44px;
+      padding: 0.5rem 0.85rem;
       border: 1px solid transparent;
       background: transparent;
       color: var(--fg);
-      font-size: 0.85rem;
+      font-size: 0.875rem;
       font-family: var(--font-body);
       outline: none;
       transition: background 0.15s, border-color 0.15s;
+      box-sizing: border-box;
     }
 
     .cell-input:focus {
@@ -692,21 +691,56 @@
     }
 
     .cell-readonly {
-      padding: 0.4rem 0.65rem;
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
+      padding: 0.55rem 0.95rem;
+      font-family: var(--font-body);
+      font-size: 0.875rem;
       display: flex;
       align-items: center;
-      min-height: 38px;
+      min-height: 44px;
+      line-height: 1.4;
+      word-break: break-word;
+      white-space: normal;
+      box-sizing: border-box;
     }
 
     .cell-readonly.num {
       justify-content: flex-end;
+      font-family: var(--font-mono);
       font-weight: 600;
+      white-space: nowrap;
+      word-break: normal;
     }
 
     .cell-readonly.bold {
       font-weight: 700;
+    }
+
+    .cell-readonly.font-mono {
+      font-family: var(--font-mono);
+    }
+
+    .badge-lock {
+      font-size: 0.72rem;
+      opacity: 0.7;
+      margin-right: 5px;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .badge-synced {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: rgba(124, 58, 237, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(124, 58, 237, 0.25);
+      white-space: nowrap;
+      user-select: none;
     }
 
     /* Badges */
@@ -714,13 +748,14 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 3px 8px;
+      padding: 4px 10px;
       border-radius: 6px;
-      font-size: 0.72rem;
+      font-size: 0.74rem;
       font-weight: 700;
       letter-spacing: 0.03em;
       text-transform: uppercase;
       font-family: var(--font-mono);
+      white-space: nowrap;
     }
 
     .status-paid {
@@ -753,27 +788,17 @@
       50% { opacity: 0.8; }
     }
 
-    .badge-source {
-      font-size: 0.68rem;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(124, 58, 237, 0.08);
-      color: var(--accent);
-      border: 1px solid rgba(124, 58, 237, 0.2);
-      font-family: var(--font-mono);
-    }
-
     /* Footer Stats & Totals Bar */
     .sheet-footer-bar {
       background: var(--surface-subtle);
       border-top: 2px solid var(--border);
-      padding: 0.75rem 1.25rem;
+      padding: 0.95rem 1.45rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 1rem;
-      font-size: 0.85rem;
+      gap: 1.25rem;
+      font-size: 0.875rem;
       font-weight: 600;
     }
 
@@ -782,6 +807,7 @@
       align-items: center;
       gap: 6px;
       color: var(--muted);
+      white-space: nowrap;
     }
 
     .footer-stat span.val {
@@ -797,14 +823,14 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.65);
+      background: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
-      padding: 1rem;
+      padding: 1.25rem;
     }
 
     .modal-card {
@@ -813,8 +839,8 @@
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-lg);
       width: 100%;
-      max-width: 900px;
-      max-height: 90vh;
+      max-width: 1400px;
+      max-height: 94vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -827,30 +853,32 @@
     }
 
     .modal-header {
-      padding: 1.25rem 1.5rem;
+      padding: 1.25rem 1.75rem;
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: var(--surface);
     }
 
     .modal-title {
-      font-size: 1.25rem;
+      font-size: 1.3rem;
       font-family: var(--font-display);
       font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
 
     .modal-close-btn {
       background: none;
       border: none;
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       color: var(--muted);
       cursor: pointer;
       line-height: 1;
       padding: 4px;
+      transition: color 0.15s;
     }
 
     .modal-close-btn:hover {
@@ -858,13 +886,13 @@
     }
 
     .modal-body {
-      padding: 1.5rem;
+      padding: 1.5rem 1.75rem;
       overflow-y: auto;
       flex: 1;
     }
 
     .modal-footer {
-      padding: 1rem 1.5rem;
+      padding: 1rem 1.75rem;
       border-top: 1px solid var(--border);
       background: var(--surface-subtle);
       display: flex;
@@ -872,27 +900,233 @@
       gap: 0.75rem;
     }
 
-    /* Printable statement styling */
+    /* Dedicated Statement Table in Modal */
+    .statement-table-wrapper {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      max-height: calc(85vh - 240px);
+      overflow-y: auto;
+      margin-bottom: 1rem;
+      background: var(--surface);
+    }
+
+    .statement-table-wrapper::-webkit-scrollbar {
+      height: 8px;
+      width: 8px;
+    }
+
+    .statement-table-wrapper::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .statement-table {
+      width: 100%;
+      min-width: 1200px;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      font-family: var(--font-body);
+    }
+
+    .statement-table th {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--surface-subtle);
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.74rem;
+      letter-spacing: 0.05em;
+      padding: 0.75rem 0.9rem;
+      border-bottom: 2px solid var(--border);
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .statement-table td {
+      padding: 0.7rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      color: var(--fg);
+      vertical-align: middle;
+      line-height: 1.4;
+    }
+
+    .statement-table tr:hover td {
+      background: var(--cell-bg-hover);
+    }
+
+    .statement-table th.num-col,
+    .statement-table td.num-col {
+      text-align: right;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+
+    .statement-table th.center-col,
+    .statement-table td.center-col {
+      text-align: center;
+    }
+
+    .statement-table tfoot td {
+      padding: 0.85rem 0.9rem;
+      background: var(--surface-subtle);
+      font-weight: 800;
+      border-top: 2px solid var(--border);
+      font-size: 0.95rem;
+    }
+
+    /* Print Specific Styling */
     @media print {
-      body {
+      @page {
+        size: landscape;
+        margin: 8mm;
+      }
+
+      *, *:before, *:after {
+        background: transparent !important;
+        color: #000000 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+      }
+
+      html, body {
         background: #ffffff !important;
         color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-size: 8.5pt !important;
       }
-      .ambient-bg, .sheet-toolbar, .tab-nav-wrapper, .btn, .actions-col, #vf-sidebar {
+
+      /* Hide interactive chrome */
+      .ambient-bg, 
+      #vf-sidebar, 
+      .sheet-toolbar, 
+      .tab-nav-wrapper, 
+      .btn, 
+      .btn-icon,
+      .actions-col, 
+      .modal-footer, 
+      .modal-close-btn, 
+      .toast-container,
+      .switch,
+      .interest-toggle-wrap,
+      .no-print {
         display: none !important;
       }
-      .ledger-container {
+
+      /* If Party Statement Modal is Open, ONLY print Party Statement */
+      body.printing-statement .ledger-container,
+      body.printing-statement .page-header,
+      body.printing-statement .kpi-grid,
+      body.printing-statement .sheet-wrapper {
+        display: none !important;
+      }
+
+      body.printing-statement .modal-overlay {
+        position: static !important;
+        background: transparent !important;
         padding: 0 !important;
+        display: block !important;
+        z-index: auto !important;
+      }
+
+      body.printing-statement .modal-card {
         max-width: 100% !important;
-      }
-      .sheet-wrapper {
-        border: 1px solid #000 !important;
+        max-height: none !important;
+        border: none !important;
         box-shadow: none !important;
+        display: block !important;
       }
+
+      body.printing-statement .modal-header {
+        display: none !important;
+      }
+
+      body.printing-statement .modal-body {
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+
+      body.printing-statement .statement-table-wrapper {
+        border: 1px solid #000 !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
+
+      body.printing-statement #modal-statement-party-select {
+        display: none !important;
+      }
+
+      body.printing-statement .print-party-title {
+        display: block !important;
+      }
+
+      .print-header {
+        display: block !important;
+        margin-bottom: 12px;
+      }
+
+      .print-summary-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 8px !important;
+        margin-bottom: 14px !important;
+      }
+
+      .print-summary-box {
+        border: 1px solid #000 !important;
+        padding: 6px 10px !important;
+        background: #f9f9f9 !important;
+      }
+
+      .statement-table, .excel-table {
+        font-size: 8.5pt !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        border: 1px solid #000 !important;
+        border-collapse: collapse !important;
+      }
+
+      .statement-table th, .statement-table td,
       .excel-table th, .excel-table td {
-        border-color: #ccc !important;
+        border: 1px solid #444 !important;
+        padding: 4px 6px !important;
         color: #000 !important;
+        background: transparent !important;
+        page-break-inside: avoid !important;
       }
+
+      .statement-table th, .excel-table th {
+        background: #eee !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        font-size: 7.5pt !important;
+      }
+
+      .status-badge {
+        border: 1px solid #444 !important;
+        padding: 1px 4px !important;
+        font-size: 7.5pt !important;
+        color: #000 !important;
+        background: transparent !important;
+      }
+
+      .print-footer-sign {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-end !important;
+        margin-top: 35px !important;
+        page-break-inside: avoid !important;
+      }
+    }
+
+    .print-header,
+    .print-party-title,
+    .print-footer-sign {
+      display: none;
     }
 
     /* Toast Notification */
@@ -947,7 +1181,7 @@
         <h1 class="page-title">
           <span>Yarn Ledger</span>
         </h1>
-        <p class="page-desc">Excel-style sales &amp; purchase ledger with live outstanding balance tracking and late payment interest calculations.</p>
+        <p class="page-desc">Excel-style sales &amp; purchase ledger with auto-synced order data, live outstanding tracking, and late payment interest calculation.</p>
       </div>
 
       <div class="header-actions">
@@ -966,7 +1200,7 @@
           Export CSV
         </button>
 
-        <button class="btn btn-primary" onclick="addNewRow()" title="Add New Excel Row">
+        <button class="btn btn-primary" onclick="addNewRow()" title="Add New Custom Ledger Row">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           + Add Row
         </button>
@@ -995,7 +1229,7 @@
         <button class="btn btn-secondary btn-icon" onclick="triggerRedo()" title="Redo (Ctrl+Y)">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/></svg>
         </button>
-        <button class="btn btn-secondary btn-icon" onclick="syncSourceData()" title="Re-sync from Orders & Sales Logs">
+        <button class="btn btn-secondary btn-icon" onclick="syncSourceData(true)" title="Re-sync from Orders & Sales Logs">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </button>
       </div>
@@ -1054,7 +1288,7 @@
       <div class="toolbar-left">
         <div class="search-input-wrap">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="sheet-search" placeholder="Search Bill No, Party, Quality, Notes..." oninput="renderTable()">
+          <input type="text" id="sheet-search" placeholder="Search Bill No, Party, Quality, Remarks..." oninput="renderTable()">
         </div>
 
         <select class="filter-select" id="filter-party" onchange="renderTable()">
@@ -1097,28 +1331,28 @@
         <table class="excel-table" id="excel-grid">
           <thead>
             <tr>
-              <th style="width: 40px;" class="center-col">#</th>
-              <th style="width: 110px;">Date</th>
-              <th style="width: 130px;">Bill / Challan No</th>
-              <th style="width: 180px;" id="th-party-header">Customer Name</th>
-              <th style="width: 160px;">Quality / Item</th>
-              <th style="width: 90px;" class="num-col">Qty (Kg)</th>
-              <th style="width: 90px;" class="num-col">Rate (₹/Kg)</th>
-              <th style="width: 110px;" class="num-col">Subtotal (₹)</th>
-              <th style="width: 75px;" class="num-col">GST %</th>
-              <th style="width: 120px;" class="num-col">Grand Total (₹)</th>
-              <th style="width: 120px;" class="num-col" style="background: rgba(16, 185, 129, 0.08);">Paid / Recv (₹)</th>
-              <th style="width: 110px;">Payment Date</th>
-              <th style="width: 75px;" class="num-col">Cr. Days</th>
-              <th style="width: 100px;">Due Date</th>
-              <th style="width: 120px;" class="num-col" style="background: rgba(239, 68, 68, 0.08);">Outstanding (₹)</th>
-              <th style="width: 95px;" class="center-col">Status</th>
-              <th style="width: 80px;" class="num-col interest-col">Int. % p.a.</th>
-              <th style="width: 80px;" class="num-col interest-col">Late Days</th>
-              <th style="width: 110px;" class="num-col interest-col">Interest (₹)</th>
-              <th style="width: 130px;" class="num-col">Net Total (₹)</th>
-              <th style="width: 160px;">Remarks / Cheque No</th>
-              <th style="width: 65px;" class="center-col actions-col">Actions</th>
+              <th style="width: 48px; min-width: 48px;" class="center-col">#</th>
+              <th style="width: 135px; min-width: 135px;">Date</th>
+              <th style="width: 180px; min-width: 180px;">Bill / Challan No</th>
+              <th style="width: 280px; min-width: 260px;" id="th-party-header">Customer Name</th>
+              <th style="width: 260px; min-width: 240px;">Quality / Item</th>
+              <th style="width: 120px; min-width: 115px;" class="num-col">Qty (Kg)</th>
+              <th style="width: 115px; min-width: 110px;" class="num-col">Rate (₹/Kg)</th>
+              <th style="width: 145px; min-width: 140px;" class="num-col">Subtotal (₹)</th>
+              <th style="width: 90px; min-width: 85px;" class="num-col">GST %</th>
+              <th style="width: 160px; min-width: 155px;" class="num-col">Grand Total (₹)</th>
+              <th style="width: 160px; min-width: 155px;" class="num-col" style="background: rgba(16, 185, 129, 0.08);">Paid / Recv (₹)</th>
+              <th style="width: 145px; min-width: 140px;">Payment Date</th>
+              <th style="width: 95px; min-width: 90px;" class="num-col">Cr. Days</th>
+              <th style="width: 130px; min-width: 125px;">Due Date</th>
+              <th style="width: 160px; min-width: 155px;" class="num-col" style="background: rgba(239, 68, 68, 0.08);">Outstanding (₹)</th>
+              <th style="width: 120px; min-width: 115px;" class="center-col">Status</th>
+              <th style="width: 105px; min-width: 100px;" class="num-col interest-col">Int. % p.a.</th>
+              <th style="width: 100px; min-width: 95px;" class="num-col interest-col">Late Days</th>
+              <th style="width: 145px; min-width: 140px;" class="num-col interest-col">Interest (₹)</th>
+              <th style="width: 165px; min-width: 160px;" class="num-col">Net Total (₹)</th>
+              <th style="width: 280px; min-width: 260px;">Remarks / Cheque No</th>
+              <th style="width: 85px; min-width: 80px;" class="center-col actions-col">Actions</th>
             </tr>
           </thead>
           <tbody id="excel-table-body">
@@ -1130,15 +1364,15 @@
       <!-- Footer Totals Bar -->
       <div class="sheet-footer-bar">
         <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-          <div class="footer-stat">Rows Displayed: <span class="val" id="stat-row-count">0</span></div>
-          <div class="footer-stat">Total Weight: <span class="val" id="stat-total-weight">0.00 Kg</span></div>
-          <div class="footer-stat">Total Invoiced: <span class="val" id="stat-total-invoiced">₹0.00</span></div>
+          <div class="footer-stat">Rows: <span class="val" id="stat-row-count">0</span></div>
+          <div class="footer-stat">Weight: <span class="val" id="stat-total-weight">0.00 Kg</span></div>
+          <div class="footer-stat">Invoiced: <span class="val" id="stat-total-invoiced">₹0.00</span></div>
         </div>
         <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-          <div class="footer-stat">Total Paid: <span class="val" id="stat-total-paid" style="color: var(--success);">₹0.00</span></div>
+          <div class="footer-stat">Paid: <span class="val" id="stat-total-paid" style="color: var(--success);">₹0.00</span></div>
           <div class="footer-stat">Outstanding: <span class="val" id="stat-total-outstanding" style="color: var(--error);">₹0.00</span></div>
           <div class="footer-stat interest-col">Accrued Interest: <span class="val" id="stat-total-interest" style="color: var(--warning);">₹0.00</span></div>
-          <div class="footer-stat">Net Payable/Recv: <span class="val" id="stat-net-total" style="color: var(--accent);">₹0.00</span></div>
+          <div class="footer-stat">Net Total: <span class="val" id="stat-net-total" style="color: var(--accent);">₹0.00</span></div>
         </div>
       </div>
     </div>
@@ -1191,51 +1425,96 @@
         </div>
         <button class="modal-close-btn" onclick="closePartyStatementModal()">&times;</button>
       </div>
-      <div class="modal-body">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
-          <div style="flex: 1; min-width: 250px;">
-            <label style="font-size: 0.8rem; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px;">Select Customer / Supplier</label>
-            <select id="modal-statement-party-select" class="filter-select" onchange="renderPartyStatement()" style="width: 100%; font-size: 1rem; font-weight: 600;">
+      <div class="modal-body" id="party-statement-printable-area">
+        
+        <!-- Printable Official Company Header -->
+        <div class="print-header" style="border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h1 style="font-size: 1.6rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #000; margin: 0;">VISHWA FASHIONS</h1>
+              <div style="font-size: 0.95rem; font-weight: 700; color: #222; margin-top: 2px;">Yarn Manufacturing &amp; Processing Division</div>
+              <div style="font-size: 0.85rem; color: #555; margin-top: 2px;">Statement of Account &amp; Financial Ledger</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: #555;">Statement Date</div>
+              <div id="statement-print-date" style="font-size: 1rem; font-family: var(--font-mono); font-weight: 800; color: #000;"></div>
+              <div id="statement-print-type" style="font-size: 0.8rem; font-weight: 700; color: #444; margin-top: 3px;">Sales Customer Account</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+          <div style="flex: 1; min-width: 280px;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 6px;">Customer / Supplier Account</label>
+            <select id="modal-statement-party-select" class="filter-select" onchange="renderPartyStatement()" style="width: 100%; font-size: 1.05rem; font-weight: 700; padding: 0.65rem 0.85rem;">
               <!-- Populated dynamically -->
             </select>
+            <div class="print-party-title" id="statement-print-party-name" style="font-size: 1.2rem; font-weight: 800; text-transform: uppercase; margin-top: 4px;"></div>
           </div>
 
-          <div style="display: flex; gap: 1rem;">
-            <div style="background: var(--surface-subtle); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--border);">
-              <div style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase;">Total Balance</div>
+          <div class="print-summary-grid" style="display: flex; gap: 0.85rem; flex-wrap: wrap;">
+            <div class="print-summary-box" style="background: var(--surface-subtle); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--border); min-width: 140px;">
+              <div style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Total Invoiced</div>
+              <div id="statement-total-invoiced" style="font-family: var(--font-mono); font-weight: 700; font-size: 1.15rem; color: var(--fg);">₹0.00</div>
+            </div>
+            <div class="print-summary-box" style="background: var(--surface-subtle); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--border); min-width: 140px;">
+              <div style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Total Settled</div>
+              <div id="statement-total-settled" style="font-family: var(--font-mono); font-weight: 700; font-size: 1.15rem; color: var(--success);">₹0.00</div>
+            </div>
+            <div class="print-summary-box" style="background: var(--surface-subtle); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--border); min-width: 140px;">
+              <div style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Net Balance</div>
               <div id="statement-total-balance" style="font-family: var(--font-mono); font-weight: 700; font-size: 1.15rem; color: var(--error);">₹0.00</div>
             </div>
-            <div style="background: var(--surface-subtle); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--border);">
-              <div style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase;">Total Interest</div>
+            <div class="print-summary-box" style="background: var(--surface-subtle); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--border); min-width: 140px;">
+              <div style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Accrued Interest</div>
               <div id="statement-total-interest" style="font-family: var(--font-mono); font-weight: 700; font-size: 1.15rem; color: var(--warning);">₹0.00</div>
             </div>
           </div>
         </div>
 
-        <div style="border: 1px solid var(--border); border-radius: 8px; overflow-x: auto;">
-          <table class="excel-table" style="width: 100%;">
+        <!-- Scrollable & Padded Dedicated Statement Table -->
+        <div class="statement-table-wrapper">
+          <table class="statement-table">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Bill / Challan No</th>
-                <th>Quality / Specs</th>
-                <th class="num-col">Qty (Kg)</th>
-                <th class="num-col">Billed (Debit ₹)</th>
-                <th class="num-col">Paid (Credit ₹)</th>
-                <th class="num-col">Balance (₹)</th>
-                <th class="num-col">Overdue Days</th>
-                <th class="num-col">Interest (₹)</th>
-                <th class="center-col">Status</th>
+                <th style="width: 45px; min-width: 45px;" class="center-col">#</th>
+                <th style="width: 115px; min-width: 115px;">Date</th>
+                <th style="width: 155px; min-width: 150px;">Bill / Challan No</th>
+                <th style="width: 260px; min-width: 240px;">Quality / Details</th>
+                <th class="num-col" style="width: 110px; min-width: 105px;">Qty (Kg)</th>
+                <th class="num-col" style="width: 100px; min-width: 95px;">Rate (₹)</th>
+                <th class="num-col" style="width: 140px; min-width: 135px;">Debit (Billed ₹)</th>
+                <th class="num-col" style="width: 140px; min-width: 135px;">Credit (Paid ₹)</th>
+                <th class="num-col" style="width: 145px; min-width: 140px;">Balance (₹)</th>
+                <th style="width: 120px; min-width: 115px;">Due Date</th>
+                <th class="num-col" style="width: 95px; min-width: 90px;">Late Days</th>
+                <th class="num-col" style="width: 130px; min-width: 125px;">Interest (₹)</th>
+                <th class="center-col" style="width: 110px; min-width: 105px;">Status</th>
               </tr>
             </thead>
             <tbody id="modal-statement-table-body">
-              <!-- Dynamically populated -->
+              <!-- Dynamically populated with proper cell padding -->
             </tbody>
+            <tfoot id="modal-statement-table-foot">
+              <!-- Grand totals -->
+            </tfoot>
           </table>
         </div>
+
+        <!-- Printable Signatory Footer -->
+        <div class="print-footer-sign">
+          <div>
+            <div style="font-size: 0.8rem; color: #555;">* This is a computer generated ledger statement from Vishwa Fashions.</div>
+          </div>
+          <div style="text-align: center; border-top: 1px solid #000; padding-top: 6px; width: 220px;">
+            <div style="font-size: 0.85rem; font-weight: 800;">Authorized Signatory</div>
+            <div style="font-size: 0.75rem; color: #555;">Vishwa Fashions Yarn Division</div>
+          </div>
+        </div>
+
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="window.print()">
+        <button class="btn btn-secondary" onclick="printPartyStatement()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print Statement
         </button>
@@ -1265,6 +1544,9 @@
     let redoStack = [];
     const MAX_HISTORY = 30;
     let isHistoryAction = false;
+
+    // Allowed editable fields for auto-synced rows
+    const SYNCED_EDITABLE_FIELDS = ['paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'remarks'];
 
     // Toast Notification helper
     function showToast(message, type = 'info') {
@@ -1357,7 +1639,7 @@
         renderTable();
       });
 
-      // Keyboard Shortcuts for Undo/Redo & Add Row
+      // Keyboard Shortcuts for Undo/Redo
       window.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
           e.preventDefault();
@@ -1479,7 +1761,6 @@
                 batchQty = batch.boxes.reduce((acc, b) => acc + (Number(b.weight) || Number(b.grossWeight) || 0), 0);
               }
 
-              // Also check rate on batch or order
               const effectiveRate = Number(batch.rate) || orderRate;
               const batchChallan = (batch.challanNumber || '').trim();
               const receiveDate = (batch.receiveDate || orderDate || new Date().toISOString().split('T')[0]).split('T')[0];
@@ -1487,9 +1768,9 @@
 
               if (batchQty > 0 || effectiveRate > 0) {
                 // Check if already in purchase ledger
-                const existingIdx = ledgerData.purchase.findIndex(r => r.syncKey === uniqueSyncKey || (r.challanNo === batchChallan && r.partyName === supplierName && batchChallan !== ''));
+                const existingRow = ledgerData.purchase.find(r => r.syncKey === uniqueSyncKey || (r.challanNo === batchChallan && r.partyName === supplierName && batchChallan !== ''));
 
-                if (existingIdx === -1) {
+                if (!existingRow) {
                   // Add new purchase ledger row
                   const subtotal = Number((batchQty * effectiveRate).toFixed(2));
                   const gstPercent = 5.0; // Standard 5% textile GST
@@ -1517,6 +1798,15 @@
                     isManual: false
                   });
                   syncAdded++;
+                } else {
+                  // Update base fields if source of truth changed, keeping user payment edits intact
+                  existingRow.qty = batchQty;
+                  existingRow.rate = effectiveRate;
+                  existingRow.subtotal = Number((batchQty * effectiveRate).toFixed(2));
+                  const gstAmt = Number(((existingRow.subtotal * (existingRow.gstPercent !== undefined ? existingRow.gstPercent : 5.0)) / 100).toFixed(2));
+                  existingRow.grandTotal = Number((existingRow.subtotal + gstAmt).toFixed(2));
+                  existingRow.source = 'yarn-rm-orders';
+                  existingRow.isManual = false;
                 }
               }
             });
@@ -1542,9 +1832,9 @@
               const saleDate = (sale.date || sale.saleDate || new Date().toISOString().split('T')[0]).split('T')[0];
               const uniqueSyncKey = `sales_${div}_${sale.id || challanNo}`;
 
-              const existingIdx = ledgerData.sales.findIndex(r => r.syncKey === uniqueSyncKey || (r.challanNo === challanNo && challanNo !== ''));
+              const existingRow = ledgerData.sales.find(r => r.syncKey === uniqueSyncKey || (r.challanNo === challanNo && challanNo !== ''));
 
-              if (existingIdx === -1 && challanNo) {
+              if (!existingRow && challanNo) {
                 const qty = Number(sale.totalQty) || Number(sale.weight) || 0;
                 const rate = Number(sale.rate) || 0;
                 const subtotal = Number(sale.subtotal) || Number((qty * rate).toFixed(2));
@@ -1573,6 +1863,10 @@
                   isManual: false
                 });
                 syncAdded++;
+              } else if (existingRow) {
+                // Ensure synced flags are maintained
+                existingRow.source = `yarn_${div}_sales`;
+                existingRow.isManual = false;
               }
             });
           }
@@ -1679,7 +1973,7 @@
       saveLedgers();
       populatePartyFilter();
       renderTable();
-      showToast('New row added. Click cells to edit.', 'info');
+      showToast('New manual row added. Fill in cells.', 'info');
 
       // Focus first input
       setTimeout(() => {
@@ -1688,9 +1982,18 @@
       }, 50);
     }
 
-    // Delete a row
+    // Delete a row (Only manual rows can be deleted)
     function deleteRow(rowId) {
-      if (!confirm('Are you sure you want to delete this ledger entry?')) return;
+      const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
+      if (!row) return;
+
+      const isLocked = (row.source && row.source !== 'manual') && !row.isManual;
+      if (isLocked) {
+        showToast('Auto-synced records cannot be deleted directly. Modify source order/sales.', 'error');
+        return;
+      }
+
+      if (!confirm('Are you sure you want to delete this custom ledger entry?')) return;
       recordStateSnapshot();
       ledgerData[activeTab] = ledgerData[activeTab].filter(r => r.id !== rowId);
       saveLedgers();
@@ -1704,13 +2007,22 @@
       const row = ledgerData[activeTab].find(r => r.id === rowId);
       if (!row) return;
 
+      const isLocked = (row.source && row.source !== 'manual') && !row.isManual;
+
+      // Strictly guard locked auto-synced base data
+      if (isLocked && !SYNCED_EDITABLE_FIELDS.includes(field)) {
+        showToast('This field is auto-synced from Orders / Sales logs and cannot be modified directly.', 'error');
+        renderTable(false);
+        return;
+      }
+
       if (field === 'qty' || field === 'rate' || field === 'gstPercent' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate') {
         row[field] = Number(value) || 0;
       } else {
         row[field] = value;
       }
 
-      // Live Recalculate Subtotal & Grand Total
+      // Live Recalculate Subtotal & Grand Total for editable manual fields
       if (field === 'qty' || field === 'rate' || field === 'gstPercent') {
         const qty = Number(row.qty) || 0;
         const rate = Number(row.rate) || 0;
@@ -1722,7 +2034,7 @@
       }
 
       saveLedgers();
-      renderTable(false); // keep input focus where possible
+      renderTable(false);
     }
 
     // Date math: add days to a date string YYYY-MM-DD
@@ -1800,7 +2112,7 @@
       return '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    // Render Table & KPI Metrics
+    // Render Main Spreadsheet Table & KPI Metrics
     function renderTable(rebuildFocus = true) {
       const tbody = document.getElementById('excel-table-body');
       const search = (document.getElementById('sheet-search').value || '').toLowerCase().trim();
@@ -1894,9 +2206,9 @@
       if (rows.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="22" style="text-align: center; padding: 3rem 1rem; color: var(--muted);">
-              <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 6px;">No ledger entries found</div>
-              <div style="font-size: 0.85rem;">Click <strong>+ Add Row</strong> or <strong>Sync from Orders/Sales</strong> to insert entries.</div>
+            <td colspan="22" style="text-align: center; padding: 3.5rem 1rem; color: var(--muted);">
+              <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; color: var(--fg);">No ledger entries found</div>
+              <div style="font-size: 0.875rem;">Click <strong>+ Add Row</strong> to insert manual bills or click <strong>Re-sync</strong> to fetch latest orders/sales.</div>
             </td>
           </tr>
         `;
@@ -1905,96 +2217,126 @@
 
       tbody.innerHTML = rows.map((row, idx) => {
         const comp = computeRowFinancials(row);
+        const isLocked = (row.source && row.source !== 'manual') && !row.isManual;
         let statusBadge = `<span class="status-badge status-${comp.status}">${comp.status}</span>`;
 
         return `
-          <tr class="${comp.status === 'overdue' ? 'is-overdue' : (comp.status === 'paid' ? 'is-paid' : '')}">
-            <td class="center-col" style="font-family: var(--font-mono); color: var(--muted); font-size: 0.78rem;">${idx + 1}</td>
+          <tr class="${comp.status === 'overdue' ? 'is-overdue' : (comp.status === 'paid' ? 'is-paid' : '')} ${isLocked ? 'is-locked' : ''}">
+            <td class="center-col cell-locked-bg" style="font-family: var(--font-mono); color: var(--muted); font-size: 0.8rem;">${idx + 1}</td>
             
+            <td class="${isLocked ? 'cell-locked-bg' : ''}">
+              ${isLocked 
+                ? `<div class="cell-readonly font-mono" title="Auto-synced from Orders / Sales (Locked)">${row.date || '-'}</div>`
+                : `<input type="date" class="cell-input" value="${row.date || ''}" onchange="handleCellChange('${row.id}', 'date', this.value)">`
+              }
+            </td>
+
+            <td class="${isLocked ? 'cell-locked-bg' : ''}">
+              ${isLocked
+                ? `<div class="cell-readonly font-mono bold" title="Auto-synced from Orders / Sales (Locked)"><span class="badge-lock" title="Auto-synced Record">🔒</span>${escapeHtml(row.challanNo || '-')}</div>`
+                : `<input type="text" class="cell-input" value="${escapeHtml(row.challanNo || '')}" placeholder="Challan #" onchange="handleCellChange('${row.id}', 'challanNo', this.value)">`
+              }
+            </td>
+
+            <td class="${isLocked ? 'cell-locked-bg' : ''}">
+              ${isLocked
+                ? `<div class="cell-readonly bold" style="color: var(--fg);" title="Auto-synced Party Name (Locked)">${escapeHtml(row.partyName || '-')}</div>`
+                : `<input type="text" class="cell-input" value="${escapeHtml(row.partyName || '')}" placeholder="${activeTab === 'sales' ? 'Customer Name' : 'Supplier Name'}" onchange="handleCellChange('${row.id}', 'partyName', this.value)">`
+              }
+            </td>
+
+            <td class="${isLocked ? 'cell-locked-bg' : ''}">
+              ${isLocked
+                ? `<div class="cell-readonly" style="color: var(--muted);" title="Auto-synced Quality (Locked)">${escapeHtml(row.quality || '-')}</div>`
+                : `<input type="text" class="cell-input" value="${escapeHtml(row.quality || '')}" placeholder="Quality / Specs" onchange="handleCellChange('${row.id}', 'quality', this.value)">`
+              }
+            </td>
+
+            <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
+              ${isLocked
+                ? `<div class="cell-readonly num bold" title="Auto-synced Quantity (Locked)">${Number(row.qty || 0).toFixed(2)}</div>`
+                : `<input type="number" step="0.01" class="cell-input num-font" value="${row.qty || 0}" onchange="handleCellChange('${row.id}', 'qty', this.value)">`
+              }
+            </td>
+
+            <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
+              ${isLocked
+                ? `<div class="cell-readonly num font-mono" title="Auto-synced Rate (Locked)">${Number(row.rate || 0).toFixed(2)}</div>`
+                : `<input type="number" step="0.01" class="cell-input num-font" value="${row.rate || 0}" onchange="handleCellChange('${row.id}', 'rate', this.value)">`
+              }
+            </td>
+
+            <td class="num-col cell-locked-bg">
+              <div class="cell-readonly num font-mono" title="Calculated Subtotal">${formatCurrency(row.subtotal)}</div>
+            </td>
+
+            <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
+              ${isLocked
+                ? `<div class="cell-readonly num font-mono" title="Auto-synced GST % (Locked)">${Number(row.gstPercent !== undefined ? row.gstPercent : 5.0).toFixed(1)}%</div>`
+                : `<input type="number" step="0.1" class="cell-input num-font" style="width: 75px;" value="${row.gstPercent !== undefined ? row.gstPercent : 5.0}" onchange="handleCellChange('${row.id}', 'gstPercent', this.value)">`
+              }
+            </td>
+
+            <td class="num-col cell-locked-bg">
+              <div class="cell-readonly num bold font-mono" title="Calculated Grand Total">${formatCurrency(row.grandTotal)}</div>
+            </td>
+
+            <!-- Editable Paid / Received Amount -->
+            <td class="num-col" style="background: rgba(16, 185, 129, 0.05);">
+              <input type="number" step="0.01" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onchange="handleCellChange('${row.id}', 'paidAmount', this.value)" title="Enter received/paid amount">
+            </td>
+
+            <!-- Editable Payment Date -->
             <td>
-              <input type="date" class="cell-input" value="${row.date || ''}" onchange="handleCellChange('${row.id}', 'date', this.value)">
+              <input type="date" class="cell-input" value="${row.paymentDate || ''}" onchange="handleCellChange('${row.id}', 'paymentDate', this.value)" title="Payment date">
             </td>
 
-            <td>
-              <input type="text" class="cell-input" value="${escapeHtml(row.challanNo || '')}" placeholder="Challan #" onchange="handleCellChange('${row.id}', 'challanNo', this.value)">
-            </td>
-
-            <td>
-              <input type="text" class="cell-input" value="${escapeHtml(row.partyName || '')}" placeholder="${activeTab === 'sales' ? 'Customer Name' : 'Supplier Name'}" onchange="handleCellChange('${row.id}', 'partyName', this.value)">
-            </td>
-
-            <td>
-              <input type="text" class="cell-input" value="${escapeHtml(row.quality || '')}" placeholder="Quality / Specs" onchange="handleCellChange('${row.id}', 'quality', this.value)">
-            </td>
-
+            <!-- Editable Credit Days -->
             <td class="num-col">
-              <input type="number" step="0.01" class="cell-input num-font" value="${row.qty || 0}" onchange="handleCellChange('${row.id}', 'qty', this.value)">
+              <input type="number" step="1" class="cell-input num-font" style="width: 80px;" value="${row.creditDays || defaultCreditDays}" onchange="handleCellChange('${row.id}', 'creditDays', this.value)" title="Credit terms (Days)">
             </td>
 
-            <td class="num-col">
-              <input type="number" step="0.01" class="cell-input num-font" value="${row.rate || 0}" onchange="handleCellChange('${row.id}', 'rate', this.value)">
+            <td class="cell-locked-bg">
+              <div class="cell-readonly font-mono" style="font-size: 0.85rem; color: var(--muted);">${comp.dueDate || '-'}</div>
             </td>
 
-            <td class="num-col">
-              <div class="cell-readonly num">${formatCurrency(row.subtotal)}</div>
+            <td class="num-col cell-locked-bg" style="background: rgba(239, 68, 68, 0.05);">
+              <div class="cell-readonly num bold font-mono" style="color: ${comp.outstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.outstanding)}</div>
             </td>
 
-            <td class="num-col">
-              <input type="number" step="0.1" class="cell-input num-font" style="width: 70px;" value="${row.gstPercent !== undefined ? row.gstPercent : 5.0}" onchange="handleCellChange('${row.id}', 'gstPercent', this.value)">
+            <td class="center-col cell-locked-bg">
+              <div class="cell-readonly" style="justify-content: center;">${statusBadge}</div>
             </td>
 
-            <td class="num-col">
-              <div class="cell-readonly num bold">${formatCurrency(row.grandTotal)}</div>
-            </td>
-
-            <td class="num-col" style="background: rgba(16, 185, 129, 0.04);">
-              <input type="number" step="0.01" class="cell-input num-font" style="color: var(--success);" value="${row.paidAmount || 0}" onchange="handleCellChange('${row.id}', 'paidAmount', this.value)">
-            </td>
-
-            <td>
-              <input type="date" class="cell-input" value="${row.paymentDate || ''}" onchange="handleCellChange('${row.id}', 'paymentDate', this.value)">
-            </td>
-
-            <td class="num-col">
-              <input type="number" step="1" class="cell-input num-font" style="width: 65px;" value="${row.creditDays || defaultCreditDays}" onchange="handleCellChange('${row.id}', 'creditDays', this.value)">
-            </td>
-
-            <td>
-              <div class="cell-readonly" style="font-size: 0.78rem; color: var(--muted);">${comp.dueDate || '-'}</div>
-            </td>
-
-            <td class="num-col" style="background: rgba(239, 68, 68, 0.04);">
-              <div class="cell-readonly num bold" style="color: ${comp.outstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.outstanding)}</div>
-            </td>
-
-            <td class="center-col">
-              ${statusBadge}
-            </td>
-
+            <!-- Editable Interest Rate -->
             <td class="num-col interest-col" style="${calculateInterest ? '' : 'display:none;'}">
-              <input type="number" step="0.1" class="cell-input num-font" style="width: 70px;" value="${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}" onchange="handleCellChange('${row.id}', 'interestRate', this.value)">
+              <input type="number" step="0.1" class="cell-input num-font" style="width: 85px;" value="${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}" onchange="handleCellChange('${row.id}', 'interestRate', this.value)" title="Annual late interest %">
             </td>
 
-            <td class="num-col interest-col" style="${calculateInterest ? '' : 'display:none;'}">
-              <div class="cell-readonly num" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</div>
+            <td class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
+              <div class="cell-readonly num font-mono" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</div>
             </td>
 
-            <td class="num-col interest-col" style="${calculateInterest ? '' : 'display:none;'}">
-              <div class="cell-readonly num bold" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</div>
+            <td class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
+              <div class="cell-readonly num bold font-mono" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</div>
             </td>
 
-            <td class="num-col">
-              <div class="cell-readonly num bold" style="color: var(--accent);">${formatCurrency(comp.netTotal)}</div>
+            <td class="num-col cell-locked-bg">
+              <div class="cell-readonly num bold font-mono" style="color: var(--accent);">${formatCurrency(comp.netTotal)}</div>
             </td>
 
+            <!-- Editable Remarks -->
             <td>
-              <input type="text" class="cell-input" value="${escapeHtml(row.remarks || '')}" placeholder="Notes..." onchange="handleCellChange('${row.id}', 'remarks', this.value)">
+              <input type="text" class="cell-input" value="${escapeHtml(row.remarks || '')}" placeholder="Payment notes / Cheque #" onchange="handleCellChange('${row.id}', 'remarks', this.value)">
             </td>
 
-            <td class="center-col actions-col">
-              <button class="btn-icon" style="padding: 4px; border: none; background: transparent; color: var(--muted);" onclick="deleteRow('${row.id}')" title="Delete Row">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-              </button>
+            <td class="center-col actions-col cell-locked-bg">
+              ${isLocked 
+                ? `<span class="badge-synced" title="Auto-synced from orders/sales. Base records are protected.">🔒 Synced</span>`
+                : `<button class="btn-icon" style="padding: 5px; border: none; background: transparent; color: var(--muted);" onclick="deleteRow('${row.id}')" title="Delete Custom Row">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                   </button>`
+              }
             </td>
           </tr>
         `;
@@ -2063,6 +2405,12 @@
         select.value = parties[0];
       }
 
+      document.getElementById('statement-print-date').textContent = new Date().toLocaleDateString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      });
+
+      document.getElementById('statement-print-type').textContent = activeTab === 'sales' ? 'Sales Customer Account' : 'Supplier RM Account';
+
       renderPartyStatement();
       modal.style.display = 'flex';
     }
@@ -2074,8 +2422,16 @@
     function renderPartyStatement() {
       const party = document.getElementById('modal-statement-party-select').value;
       const tbody = document.getElementById('modal-statement-table-body');
+      const tfoot = document.getElementById('modal-statement-table-foot');
+      const printPartyName = document.getElementById('statement-print-party-name');
+
+      printPartyName.textContent = party ? `PARTY: ${party}` : '';
+
       if (!party) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 2rem;">Please select a party</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 1rem; font-weight: 600;">Please select a customer or supplier party from the dropdown above</td></tr>';
+        tfoot.innerHTML = '';
+        document.getElementById('statement-total-invoiced').textContent = '₹0.00';
+        document.getElementById('statement-total-settled').textContent = '₹0.00';
         document.getElementById('statement-total-balance').textContent = '₹0.00';
         document.getElementById('statement-total-interest').textContent = '₹0.00';
         return;
@@ -2084,34 +2440,76 @@
       const partyRows = (ledgerData[activeTab] || []).filter(r => (r.partyName || '').trim() === party);
       partyRows.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
 
+      let totalInvoiced = 0;
+      let totalPaid = 0;
       let runningBalance = 0;
       let totalInterest = 0;
+      let totalWeight = 0;
 
-      tbody.innerHTML = partyRows.map(row => {
+      tbody.innerHTML = partyRows.map((row, idx) => {
         const comp = computeRowFinancials(row);
         const billed = Number(row.grandTotal) || 0;
         const paid = Number(row.paidAmount) || 0;
+        const qty = Number(row.qty) || 0;
+        totalInvoiced += billed;
+        totalPaid += paid;
         runningBalance += (billed - paid);
         totalInterest += comp.interestAmount;
+        totalWeight += qty;
 
         return `
           <tr>
-            <td>${row.date || '-'}</td>
-            <td style="font-weight: 600;">${escapeHtml(row.challanNo || '-')}</td>
-            <td>${escapeHtml(row.quality || '-')}</td>
-            <td class="num-col">${row.qty || 0}</td>
-            <td class="num-col font-mono">${formatCurrency(billed)}</td>
-            <td class="num-col font-mono" style="color: var(--success);">${formatCurrency(paid)}</td>
+            <td class="center-col" style="font-family: var(--font-mono); color: var(--muted); font-size: 0.8rem;">${idx + 1}</td>
+            <td style="font-family: var(--font-mono); white-space: nowrap;">${row.date || '-'}</td>
+            <td style="font-weight: 700; font-family: var(--font-mono); white-space: nowrap;">${escapeHtml(row.challanNo || '-')}</td>
+            <td style="word-break: break-word; line-height: 1.4;">${escapeHtml(row.quality || '-')}</td>
+            <td class="num-col font-mono bold">${qty > 0 ? qty.toFixed(2) : '-'}</td>
+            <td class="num-col font-mono">${row.rate > 0 ? Number(row.rate).toFixed(2) : '-'}</td>
+            <td class="num-col font-mono bold">${formatCurrency(billed)}</td>
+            <td class="num-col font-mono" style="color: var(--success); font-weight: 700;">${paid > 0 ? formatCurrency(paid) : '-'}</td>
             <td class="num-col font-mono bold" style="color: ${runningBalance > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(runningBalance)}</td>
-            <td class="num-col">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</td>
-            <td class="num-col font-mono" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</td>
+            <td style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); white-space: nowrap;">${comp.dueDate || '-'}</td>
+            <td class="num-col font-mono" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</td>
+            <td class="num-col font-mono bold" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</td>
             <td class="center-col"><span class="status-badge status-${comp.status}">${comp.status}</span></td>
           </tr>
         `;
       }).join('');
 
+      // Render Grand Totals Footer in Statement
+      tfoot.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align: right; text-transform: uppercase; letter-spacing: 0.05em;">GRAND TOTALS:</td>
+          <td class="num-col font-mono bold">${totalWeight.toFixed(2)} Kg</td>
+          <td></td>
+          <td class="num-col font-mono bold">${formatCurrency(totalInvoiced)}</td>
+          <td class="num-col font-mono bold" style="color: var(--success);">${formatCurrency(totalPaid)}</td>
+          <td class="num-col font-mono bold" style="color: var(--error);">${formatCurrency(runningBalance)}</td>
+          <td colspan="2"></td>
+          <td class="num-col font-mono bold" style="color: var(--warning);">${formatCurrency(totalInterest)}</td>
+          <td></td>
+        </tr>
+      `;
+
+      document.getElementById('statement-total-invoiced').textContent = formatCurrency(totalInvoiced);
+      document.getElementById('statement-total-settled').textContent = formatCurrency(totalPaid);
       document.getElementById('statement-total-balance').textContent = formatCurrency(runningBalance);
       document.getElementById('statement-total-interest').textContent = formatCurrency(totalInterest);
+    }
+
+    // Dedicated Clean Party Statement Printing
+    function printPartyStatement() {
+      const party = document.getElementById('modal-statement-party-select').value;
+      if (!party) {
+        showToast('Please select a party first', 'error');
+        return;
+      }
+      
+      document.body.classList.add('printing-statement');
+      window.print();
+      setTimeout(() => {
+        document.body.classList.remove('printing-statement');
+      }, 500);
     }
 
     // Export Current Table to CSV
