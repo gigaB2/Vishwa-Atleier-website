@@ -3114,12 +3114,7 @@
     }
 
     function syncInvoiceNoWithChallan() {
-      const chInput = document.getElementById('modal-sales-challan');
-      const invInput = document.getElementById('modal-sales-invoice-no');
-      if (chInput && invInput && (!invInput.value || invInput.dataset.autoFilled === 'true')) {
-        invInput.value = chInput.value;
-        invInput.dataset.autoFilled = 'true';
-      }
+      // Kept for backward compatibility
     }
 
     function autoSyncBuyerToConsignee() {
@@ -3316,12 +3311,6 @@
       const nextChallan = generateNextChallanNumber(activeDivision, salesDate);
       document.getElementById('modal-sales-challan').value = nextChallan;
 
-      const invInput = document.getElementById('modal-sales-invoice-no');
-      if (invInput) {
-        invInput.value = nextChallan;
-        invInput.dataset.autoFilled = 'true';
-      }
-
       const contractInput = document.getElementById('modal-sales-contract');
       if (contractInput) contractInput.value = '';
 
@@ -3504,10 +3493,7 @@
       if (sellerCompEl) sellerCompEl.innerText = companyInfo.sellerName;
 
       document.getElementById('details-modal-title').innerText = `Sale Details (Challan: ${sale.challanNo}) - ${activeDivision.toUpperCase()}`;
-      document.getElementById('details-sales-challan').innerText = sale.challanNo;
-      
-      const invEl = document.getElementById('details-sales-invoice');
-      if (invEl) invEl.innerText = sale.invoiceNo || sale.challanNo;
+      document.getElementById('details-sales-challan').innerText = sale.challanNo || sale.invoiceNo || '-';
 
       document.getElementById('details-sales-lot').innerText = resolveSaleLotNo(sale);
       const hsnEl = document.getElementById('details-sales-hsn');
@@ -4147,12 +4133,8 @@
               <div class="meta-consignee-box">
                 <table class="inv-table">
                   <tr>
-                    <td style="width: 50%;">Invoice No. &nbsp;<strong>${invoiceNo}</strong></td>
+                    <td style="width: 50%;">Invoice / Challan No. &nbsp;<strong>${invoiceNo}</strong></td>
                     <td style="width: 50%; text-align: right;">Date &nbsp;<strong>${invoiceDate}</strong></td>
-                  </tr>
-                  <tr>
-                    <td>Challan No. &nbsp;<strong>${challanNo}</strong></td>
-                    <td style="text-align: right;">Date &nbsp;<strong>${challanDate}</strong></td>
                   </tr>
                 </table>
                 <div class="consignee-inner">
@@ -5414,7 +5396,7 @@
 
       const editId = document.getElementById('modal-sales-edit-id').value;
       const challanNo = document.getElementById('modal-sales-challan').value.trim();
-      const invoiceNo = (document.getElementById('modal-sales-invoice-no') ? document.getElementById('modal-sales-invoice-no').value.trim() : '') || challanNo;
+      const invoiceNo = challanNo;
       const date = document.getElementById('modal-sales-date').value;
       const salesContractNo = document.getElementById('modal-sales-contract') ? document.getElementById('modal-sales-contract').value.trim() : '';
       const broker = document.getElementById('modal-sales-agent') ? document.getElementById('modal-sales-agent').value.trim() : 'DIRECT';
@@ -6721,10 +6703,7 @@
       if (!sale) return;
 
       document.getElementById('modal-sales-edit-id').value = sale.id;
-      document.getElementById('modal-sales-challan').value = sale.challanNo;
-      
-      const invInput = document.getElementById('modal-sales-invoice-no');
-      if (invInput) invInput.value = sale.invoiceNo || sale.challanNo;
+      document.getElementById('modal-sales-challan').value = sale.challanNo || sale.invoiceNo || '';
 
       document.getElementById('modal-sales-date').value = sale.date;
 
@@ -7176,13 +7155,9 @@
                 <!-- Populated dynamically -->
               </select>
             </div>
-            <div class="form-group" style="flex: 1 1 120px;">
-              <label for="modal-sales-challan">Challan No</label>
-              <input type="text" id="modal-sales-challan" placeholder="Challan No" oninput="syncInvoiceNoWithChallan()" style="background: rgba(255,255,255,0.05); font-weight: 600;" required>
-            </div>
-            <div class="form-group" style="flex: 1 1 120px;">
-              <label for="modal-sales-invoice-no"><span style="color: var(--accent);">Invoice No</span></label>
-              <input type="text" id="modal-sales-invoice-no" placeholder="Invoice No" style="font-weight: 600;" required>
+            <div class="form-group" style="flex: 1.5 1 150px;">
+              <label for="modal-sales-challan"><span style="color: var(--accent);">Challan / Invoice No</span></label>
+              <input type="text" id="modal-sales-challan" placeholder="Challan / Invoice No" style="background: rgba(255,255,255,0.05); font-weight: 600;" required>
             </div>
             <div class="form-group" style="flex: 1 1 130px;">
               <label for="modal-sales-date">Sale / Inv Date</label>
@@ -7388,12 +7363,8 @@
             <strong id="details-sales-company" style="font-size: 0.95rem; color: var(--accent);"></strong>
           </div>
           <div>
-            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Challan No</span>
-            <strong id="details-sales-challan" style="font-size: 0.95rem;"></strong>
-          </div>
-          <div>
-            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Invoice No</span>
-            <strong id="details-sales-invoice" style="font-size: 0.95rem; color: var(--accent);">-</strong>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Challan / Invoice No</span>
+            <strong id="details-sales-challan" style="font-size: 0.95rem; color: var(--accent);"></strong>
           </div>
           <div>
             <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Sale Date</span>

@@ -3164,11 +3164,7 @@
     };
 
     window.syncInvoiceNoWithChallan = function() {
-      const challanEl = document.getElementById('modal-sales-challan');
-      const invEl = document.getElementById('modal-sales-invoice-no');
-      if (challanEl && invEl && (!invEl.value || invEl.getAttribute('data-manual') !== 'true')) {
-        invEl.value = challanEl.value;
-      }
+      // Kept for backward compatibility
     };
 
     window.onSellerCompanyChanged = function() {
@@ -3337,10 +3333,6 @@
       const salesDate = document.getElementById('modal-sales-date').value;
       const nextChallan = generateNextChallanNumber(activeDivision, salesDate);
       document.getElementById('modal-sales-challan').value = nextChallan;
-      if (document.getElementById('modal-sales-invoice-no')) {
-        document.getElementById('modal-sales-invoice-no').value = nextChallan;
-        document.getElementById('modal-sales-invoice-no').removeAttribute('data-manual');
-      }
 
       // Reset customer, agent, contract, terms, hsn and address
       document.getElementById('modal-sales-customer').value = '';
@@ -3609,9 +3601,7 @@
       const gstRateVal = getSaleGstRate(sale);
 
       document.getElementById('details-modal-title').innerText = `Sale & Invoice Details - ${activeDivision.toUpperCase()}`;
-      document.getElementById('details-sales-challan').innerText = sale.challanNo;
-      const invEl = document.getElementById('details-sales-invoice');
-      if (invEl) invEl.innerText = sale.invoiceNo || sale.challanNo;
+      document.getElementById('details-sales-challan').innerText = sale.challanNo || sale.invoiceNo || '-';
       document.getElementById('details-sales-lot').innerText = resolveSaleLotNo(sale);
       const hsnEl = document.getElementById('details-sales-hsn');
       if (hsnEl) hsnEl.innerText = sale.hsnCode || '54033100';
@@ -4313,16 +4303,12 @@
                 <!-- Right: Invoice Info & Consignee -->
                 <div class="party-col">
                   <div class="info-row">
-                    <div class="info-lbl-wide">Invoice No :</div>
+                    <div class="info-lbl-wide">Invoice / Challan No :</div>
                     <div class="info-val" style="font-weight: 800;">${invoiceNo}</div>
                   </div>
                   <div class="info-row">
                     <div class="info-lbl-wide">Invoice Date :</div>
                     <div class="info-val"><strong>${invoiceDate}</strong></div>
-                  </div>
-                  <div class="info-row">
-                    <div class="info-lbl-wide">Challan No & Dt. :</div>
-                    <div class="info-val"><strong>${challanNo}</strong> &nbsp; (${challanDate})</div>
                   </div>
                   <div style="border-top: 1px dashed #999; margin: 3px 0 2px 0;"></div>
                   <div class="party-heading" style="font-size: 8.5px;">Details of Consignee (Shipped to)</div>
@@ -5596,7 +5582,7 @@
 
       const editId = document.getElementById('modal-sales-edit-id').value;
       const challanNo = document.getElementById('modal-sales-challan').value.trim();
-      const invoiceNo = (document.getElementById('modal-sales-invoice-no') ? document.getElementById('modal-sales-invoice-no').value.trim() : '') || challanNo;
+      const invoiceNo = challanNo;
       const date = document.getElementById('modal-sales-date').value;
       const salesContractNo = document.getElementById('modal-sales-contract') ? document.getElementById('modal-sales-contract').value.trim() : '';
       const broker = document.getElementById('modal-sales-agent') ? document.getElementById('modal-sales-agent').value.trim() : 'DIRECT';
@@ -7055,10 +7041,7 @@
       if (!sale) return;
 
       document.getElementById('modal-sales-edit-id').value = sale.id;
-      document.getElementById('modal-sales-challan').value = sale.challanNo;
-      
-      const invInput = document.getElementById('modal-sales-invoice-no');
-      if (invInput) invInput.value = sale.invoiceNo || sale.challanNo;
+      document.getElementById('modal-sales-challan').value = sale.challanNo || sale.invoiceNo || '';
 
       document.getElementById('modal-sales-date').value = sale.date;
 
@@ -7212,9 +7195,6 @@
       const salesDate = document.getElementById('modal-sales-date').value;
       const nextChallan = incrementStringNumber(sale.challanNo) || generateNextChallanNumber(activeDivision, salesDate);
       document.getElementById('modal-sales-challan').value = nextChallan;
-      
-      const invInput = document.getElementById('modal-sales-invoice-no');
-      if (invInput) invInput.value = nextChallan;
 
       const contractInput = document.getElementById('modal-sales-contract');
       if (contractInput) contractInput.value = sale.salesContractNo || '';
@@ -7569,13 +7549,9 @@
                 <!-- Populated dynamically -->
               </select>
             </div>
-            <div class="form-group" style="flex: 1 1 120px;">
-              <label for="modal-sales-challan">Challan No</label>
-              <input type="text" id="modal-sales-challan" placeholder="Challan No" oninput="syncInvoiceNoWithChallan()" style="background: rgba(255,255,255,0.05); font-weight: 600;" required>
-            </div>
-            <div class="form-group" style="flex: 1 1 120px;">
-              <label for="modal-sales-invoice-no"><span style="color: var(--accent);">Invoice No</span></label>
-              <input type="text" id="modal-sales-invoice-no" placeholder="Invoice No" style="font-weight: 600;" required>
+            <div class="form-group" style="flex: 1.5 1 150px;">
+              <label for="modal-sales-challan"><span style="color: var(--accent);">Challan / Invoice No</span></label>
+              <input type="text" id="modal-sales-challan" placeholder="Challan / Invoice No" style="background: rgba(255,255,255,0.05); font-weight: 600;" required>
             </div>
             <div class="form-group" style="flex: 1 1 130px;">
               <label for="modal-sales-date">Sale / Inv Date</label>
@@ -7781,12 +7757,8 @@
             <strong id="details-sales-company" style="font-size: 0.95rem; color: var(--accent);"></strong>
           </div>
           <div>
-            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Challan No</span>
-            <strong id="details-sales-challan" style="font-size: 0.95rem;"></strong>
-          </div>
-          <div>
-            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Invoice No</span>
-            <strong id="details-sales-invoice" style="font-size: 0.95rem; color: var(--accent);">-</strong>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Challan / Invoice No</span>
+            <strong id="details-sales-challan" style="font-size: 0.95rem; color: var(--accent);"></strong>
           </div>
           <div>
             <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Sale Date</span>
