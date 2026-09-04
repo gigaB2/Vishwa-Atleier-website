@@ -2048,6 +2048,18 @@
         const target = (orders || []).find(o => o.id === id);
         recordSnapshot(`Complete Order ${target?.quality || ''}`);
         setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Completed' } : o));
+        if (selectedOrder?.id === id) {
+          setSelectedOrder(prev => prev ? { ...prev, status: 'Completed' } : null);
+        }
+      };
+
+      const reactivateOrder = (id) => {
+        const target = (orders || []).find(o => o.id === id);
+        recordSnapshot(`Reactivate Order ${target?.quality || ''}`);
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Active' } : o));
+        if (selectedOrder?.id === id) {
+          setSelectedOrder(prev => prev ? { ...prev, status: 'Active' } : null);
+        }
       };
 
       const deleteOrder = (id) => {
@@ -2524,6 +2536,13 @@
                   window.parent.postMessage({ type: 'YARN_ORDER_UPDATED', order: completed }, '*');
                 }
               }}
+              onRevertActive={(revertId) => {
+                reactivateOrder(revertId);
+                if (window.parent && window.parent !== window) {
+                  const updatedOrd = (orders || []).find(o => o.id === revertId);
+                  window.parent.postMessage({ type: 'YARN_ORDER_UPDATED', order: updatedOrd ? { ...updatedOrd, status: 'Active' } : null }, '*');
+                }
+              }}
               qualities={qualities}
               suppliers={suppliers}
               geminiApiKey={geminiApiKey}
@@ -2748,7 +2767,7 @@
     };
 
     // Component: Order Details Modal (Exact replica of order-book.html with editable specifications & rate)
-    const OrderDetailsModal = ({ order, onClose, onUpdate, onComplete, qualities, suppliers, geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
+    const OrderDetailsModal = ({ order, onClose, onUpdate, onComplete, onRevertActive, qualities, suppliers, geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
       const [showBatchForm, setShowBatchForm] = useState(false);
       const [editingBatch, setEditingBatch] = useState(null);
       const [orderSavedToast, setOrderSavedToast] = useState(false);
@@ -3073,9 +3092,52 @@
                   </div>
                 </div>
               )}
-              <div className="card" style={{padding: '1.25rem'}}>
-                <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Status</h3>
-                <div className="value" style={{fontSize: '1.5rem', color: 'var(--success)', fontWeight: '700'}}>{order.status || 'Active'}</div>
+              <div className="card" style={{padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between'}}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                    <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Status</h3>
+                    <span className={`badge badge-${(order.status || 'Active').toLowerCase()}`} style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>
+                      {order.status || 'Active'}
+                    </span>
+                  </div>
+                  <div className="value" style={{fontSize: '1.4rem', color: isCompleted ? 'var(--muted)' : 'var(--success)', fontWeight: '700'}}>
+                    {order.status || 'Active'}
+                  </div>
+                </div>
+                {isCompleted && (
+                  <button 
+                    type="button" 
+                    className="btn btn-outline" 
+                    style={{
+                      marginTop: '0.6rem', 
+                      padding: '0.35rem 0.6rem', 
+                      fontSize: '0.75rem', 
+                      borderColor: 'var(--success)', 
+                      color: 'var(--success)', 
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.35rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      background: 'rgba(16, 185, 129, 0.05)',
+                      transition: 'all var(--transition-fast)'
+                    }}
+                    onClick={() => {
+                      if (confirm('Revert this Yarn RM order back to Active?')) {
+                        if (onRevertActive) {
+                          onRevertActive(order.id);
+                        } else {
+                          onUpdate({ ...order, status: 'Active' });
+                        }
+                      }
+                    }}
+                    title="Revert order back to Active status"
+                  >
+                    <span>↩</span> Revert to Active
+                  </button>
+                )}
               </div>
             </div>
 
@@ -3269,11 +3331,12 @@
               </div>
             </div>
 
-            {order.status === 'Active' && (
-              <div style={{marginTop: '2rem', textAlign: 'right'}}>
+            <div style={{marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem'}}>
+              {order.status === 'Active' ? (
                 <button 
+                  type="button"
                   className="btn btn-primary" 
-                  style={{background: 'var(--success)'}} 
+                  style={{background: 'var(--success)', borderColor: 'var(--success)'}} 
                   onClick={() => { 
                     if(confirm('Mark this Yarn RM order as Completed?')) { 
                       onComplete(order.id); 
@@ -3283,8 +3346,33 @@
                 >
                   Mark as Completed
                 </button>
-              </div>
-            )}
+              ) : (
+                <button 
+                  type="button"
+                  className="btn btn-outline" 
+                  style={{
+                    borderColor: 'var(--success)', 
+                    color: 'var(--success)', 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '0.4rem', 
+                    fontWeight: '600',
+                    background: 'rgba(16, 185, 129, 0.05)'
+                  }} 
+                  onClick={() => { 
+                    if(confirm('Revert this Yarn RM order back to Active?')) { 
+                      if (onRevertActive) {
+                        onRevertActive(order.id);
+                      } else {
+                        onUpdate({ ...order, status: 'Active' });
+                      }
+                    } 
+                  }}
+                >
+                  <span>↩</span> Revert to Active
+                </button>
+              )}
+            </div>
           </div>
         </div>
       );
