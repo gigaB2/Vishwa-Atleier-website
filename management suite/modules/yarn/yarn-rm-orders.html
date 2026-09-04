@@ -2038,28 +2038,32 @@
       };
 
       const updateOrder = (o) => {
+        if (!o) return;
         recordSnapshot(`Update Order ${o.quality || ''}`);
         const processed = { ...o, orderDate: addTimestampToDate(o.orderDate) };
-        setOrders(prev => prev.map(x => x.id === o.id ? processed : x));
-        if (selectedOrder?.id === o.id) setSelectedOrder(processed);
+        setOrders(prev => (prev || []).map(x => (
+          (x.id && o.id && String(x.id) === String(o.id)) ||
+          (x.orderNumber && o.orderNumber && String(x.orderNumber) === String(o.orderNumber)) ||
+          (x.id && o.orderNumber && String(x.id) === String(o.orderNumber)) ||
+          (x.orderNumber && o.id && String(x.orderNumber) === String(o.id))
+        ) ? processed : x));
+        setSelectedOrder(processed);
       };
 
-      const completeOrder = (id) => {
-        const target = (orders || []).find(o => o.id === id);
+      const completeOrder = (idOrOrder) => {
+        const id = typeof idOrOrder === 'object' && idOrOrder ? (idOrOrder.id || idOrOrder.orderNumber) : idOrOrder;
+        const target = (orders || []).find(o => String(o.id) === String(id) || String(o.orderNumber) === String(id));
         recordSnapshot(`Complete Order ${target?.quality || ''}`);
-        setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Completed' } : o));
-        if (selectedOrder?.id === id) {
-          setSelectedOrder(prev => prev ? { ...prev, status: 'Completed' } : null);
-        }
+        setOrders(prev => (prev || []).map(o => (String(o.id) === String(id) || String(o.orderNumber) === String(id)) ? { ...o, status: 'Completed' } : o));
+        setSelectedOrder(prev => (prev && (String(prev.id) === String(id) || String(prev.orderNumber) === String(id))) ? { ...prev, status: 'Completed' } : prev);
       };
 
-      const reactivateOrder = (id) => {
-        const target = (orders || []).find(o => o.id === id);
+      const reactivateOrder = (idOrOrder) => {
+        const id = typeof idOrOrder === 'object' && idOrOrder ? (idOrOrder.id || idOrOrder.orderNumber) : idOrOrder;
+        const target = (orders || []).find(o => String(o.id) === String(id) || String(o.orderNumber) === String(id));
         recordSnapshot(`Reactivate Order ${target?.quality || ''}`);
-        setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Active' } : o));
-        if (selectedOrder?.id === id) {
-          setSelectedOrder(prev => prev ? { ...prev, status: 'Active' } : null);
-        }
+        setOrders(prev => (prev || []).map(o => (String(o.id) === String(id) || String(o.orderNumber) === String(id)) ? { ...o, status: 'Active' } : o));
+        setSelectedOrder(prev => (prev && (String(prev.id) === String(id) || String(prev.orderNumber) === String(id))) ? { ...prev, status: 'Active' } : prev);
       };
 
       const deleteOrder = (id) => {
@@ -2922,6 +2926,28 @@
         setTimeout(() => setOrderSavedToast(false), 3000);
       };
 
+      const handleRevertToActive = (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
+        
+        const updated = { ...order, status: 'Active' };
+        onUpdate(updated);
+        if (typeof onRevertActive === 'function') {
+          onRevertActive(order.id || order.orderNumber || order);
+        }
+      };
+
+      const handleMarkCompleted = (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
+        
+        const updated = { ...order, status: 'Completed' };
+        onUpdate(updated);
+        if (typeof onComplete === 'function') {
+          onComplete(order.id || order.orderNumber || order);
+        }
+      };
+
       const received = (order.batches || []).reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
       const gr = (order.batches || []).reduce((acc, batch) => acc + (batch.boxes || []).reduce((boxAcc, box) => boxAcc + (Number(box.returnedWeight) || 0), 0), 0);
       const grossReceived = received + gr;
@@ -3124,15 +3150,7 @@
                       background: 'rgba(16, 185, 129, 0.05)',
                       transition: 'all var(--transition-fast)'
                     }}
-                    onClick={() => {
-                      if (confirm('Revert this Yarn RM order back to Active?')) {
-                        if (onRevertActive) {
-                          onRevertActive(order.id);
-                        } else {
-                          onUpdate({ ...order, status: 'Active' });
-                        }
-                      }
-                    }}
+                    onClick={handleRevertToActive}
                     title="Revert order back to Active status"
                   >
                     <span>↩</span> Revert to Active
@@ -3337,12 +3355,7 @@
                   type="button"
                   className="btn btn-primary" 
                   style={{background: 'var(--success)', borderColor: 'var(--success)'}} 
-                  onClick={() => { 
-                    if(confirm('Mark this Yarn RM order as Completed?')) { 
-                      onComplete(order.id); 
-                      onClose(); 
-                    } 
-                  }}
+                  onClick={handleMarkCompleted}
                 >
                   Mark as Completed
                 </button>
@@ -3359,15 +3372,7 @@
                     fontWeight: '600',
                     background: 'rgba(16, 185, 129, 0.05)'
                   }} 
-                  onClick={() => { 
-                    if(confirm('Revert this Yarn RM order back to Active?')) { 
-                      if (onRevertActive) {
-                        onRevertActive(order.id);
-                      } else {
-                        onUpdate({ ...order, status: 'Active' });
-                      }
-                    } 
-                  }}
+                  onClick={handleRevertToActive}
                 >
                   <span>↩</span> Revert to Active
                 </button>
