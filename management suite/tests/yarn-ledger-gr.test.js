@@ -713,6 +713,207 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(stockList.length, 0);
     assert.strictEqual(purchaseLedger.length, 0);
   });
+
+  await t.test('multi-division sales ledger sync: Covering, TFO, and Doubler qualities sync cleanly without challan collision', () => {
+    // Helper function matching ledger.html extractSaleQuality
+    function extractSaleQuality(sale, div, dataMap) {
+      if (!sale) return `${(div || 'YARN').toUpperCase()} Yarn`;
+
+      if (sale.composition && String(sale.composition).trim() && String(sale.composition).trim() !== '-') {
+        return String(sale.composition).trim();
+      }
+      if (sale.productName && String(sale.productName).trim() && String(sale.productName).trim() !== '-') {
+        return String(sale.productName).trim();
+      }
+      if (sale.quality && String(sale.quality).trim() && String(sale.quality).trim() !== '-') {
+        return String(sale.quality).trim();
+      }
+
+      let items = sale.items;
+      if (Array.isArray(items) && items.length > 0) {
+        const comps = items
+          .map(it => (it ? (it.composition || it.productName || it.quality || '') : '').trim())
+          .filter(c => c && c !== '-');
+        const uniqueComps = Array.from(new Set(comps));
+        if (uniqueComps.length > 0) {
+          return uniqueComps.join(' / ');
+        }
+      }
+
+      return `${(div || 'YARN').toUpperCase()} Yarn`;
+    }
+
+    // Mock dataMap with sales logs for all 3 divisions sharing the same challan number "#001"
+    const mockDataMap = {
+      yarn_covering_sales_logs: [
+        {
+          id: 'COV-SALE-1',
+          challanNo: 'CH-001',
+          customerName: 'Covering Buyer Ltd',
+          date: '2026-09-01',
+          totalQty: 100,
+          rate: 350,
+          composition: '40D/34F SPANDEX COVERED',
+          items: [
+            { composition: '40D/34F SPANDEX COVERED', saleQty: 100, rate: 350 }
+          ]
+        }
+      ],
+      yarn_tfo_sales_logs: [
+        {
+          id: 'TFO-SALE-1',
+          challanNo: 'CH-001',
+          customerName: 'TFO Buyer Corp',
+          date: '2026-09-02',
+          totalQty: 150,
+          rate: 280,
+          items: [
+            { composition: '80D/72F TFO TWISTED 350 TPM', saleQty: 150, rate: 280 }
+          ]
+        }
+      ],
+      yarn_doubler_sales_logs: [
+        {
+          id: 'DBL-SALE-1',
+          challanNo: 'CH-001',
+          customerName: 'Doubler Client Inc',
+          date: '2026-09-03',
+          totalQty: 200,
+          rate: 220,
+          productName: '150D/48F DOUBLER YARN',
+          items: [
+            { productName: '150D/48F DOUBLER YARN', saleQty: 200, rate: 220 }
+          ]
+        }
+      ]
+    };
+
+    const salesLedger = [];
+    const ledgerDeletedKeys = new Set();
+
+    // Replicate pure sync loop
+    for (const div of ['covering', 'tfo', 'doubler']) {
+      const rawSales = mockDataMap[`yarn_${div}_sales_logs`] || [];
+      rawSales.forEach(sale => {
+        const challanNo = (sale.challanNo || '').trim();
+        const customerName = (sale.customerName || 'Direct Sale').trim();
+        const uniqueSyncKey = `sales_${div}_${sale.id || challanNo}`;
+        const deterministicId = 'SAL-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+        const existingRow = salesLedger.find(r => 
+          r.id === deterministicId || 
+          r.syncKey === uniqueSyncKey || 
+          (r.source === `yarn_${div}_sales` && r.challanNo === challanNo && (r.partyName === customerName || !r.partyName || !customerName))
+        );
+
+        const qualityStr = extractSaleQuality(sale, div, mockDataMap);
+        const qty = Number(sale.totalQty) || 0;
+        const rate = Number(sale.rate) || 0;
+        const subtotal = Number((qty * rate).toFixed(2));
+        const grandTotal = Number((subtotal * 1.05).toFixed(2));
+
+        if (!existingRow && challanNo) {
+          salesLedger.push({
+            id: deterministicId,
+            syncKey: uniqueSyncKey,
+            source: `yarn_${div}_sales`,
+            challanNo: challanNo,
+            partyName: customerName,
+            quality: qualityStr,
+            qty: qty,
+            rate: rate,
+            subtotal: subtotal,
+            grandTotal: grandTotal
+          });
+        }
+      });
+    }
+
+    // Verify all 3 divisions are preserved with their exact qualities and parties
+    assert.strictEqual(salesLedger.length, 3, 'All 3 divisions must have distinct rows even when challanNo is identical');
+
+    const covRow = salesLedger.find(r => r.source === 'yarn_covering_sales');
+    assert.ok(covRow, 'Covering sale must exist');
+    assert.strictEqual(covRow.quality, '40D/34F SPANDEX COVERED');
+    assert.strictEqual(covRow.partyName, 'Covering Buyer Ltd');
+    assert.strictEqual(covRow.qty, 100);
+
+    const tfoRow = salesLedger.find(r => r.source === 'yarn_tfo_sales');
+    assert.ok(tfoRow, 'TFO sale must exist');
+    assert.strictEqual(tfoRow.quality, '80D/72F TFO TWISTED 350 TPM');
+    assert.strictEqual(tfoRow.partyName, 'TFO Buyer Corp');
+    assert.strictEqual(tfoRow.qty, 150);
+
+    const dblRow = salesLedger.find(r => r.source === 'yarn_doubler_sales');
+    assert.ok(dblRow, 'Doubler sale must exist');
+    assert.strictEqual(dblRow.quality, '150D/48F DOUBLER YARN');
+    assert.strictEqual(dblRow.partyName, 'Doubler Client Inc');
+    assert.strictEqual(dblRow.qty, 200);
+  });
+
+  await t.test('multi-division FP quality datalist aggregates all Covering, TFO, and Doubler qualities without duplicates', () => {
+    const mockDataMap = {
+      'yarn-fp-qualities': [
+        { id: 'FP-1', division: 'covering', name: '40/34 SPANDEX COVER' },
+        { id: 'FP-2', division: 'tfo', name: '80/72 TFO 350 TPM' }
+      ],
+      'costing-covering-products-v1': [
+        { id: 'C-1', name: '40/34 SPANDEX COVER' },
+        { id: 'C-2', name: '20/1 SPANDEX AIR COVER' }
+      ],
+      'costing-tfo-products-v1': [
+        { id: 'T-1', name: '80/72 TFO 350 TPM' },
+        { id: 'T-2', name: '150/48 TFO 400 TPM' }
+      ],
+      'costing-doubler-products-v1': [
+        { id: 'D-1', name: '150/48 MX DOUBLER' }
+      ],
+      'yarn_covering_production_logs': [
+        { productName: '20/1 SPANDEX AIR COVER' }
+      ],
+      'yarn_tfo_production_logs': [
+        { productName: '80/72 TFO 350 TPM' }
+      ],
+      'yarn_doubler_production_logs': [
+        { productName: '150/48 MX DOUBLER' }
+      ]
+    };
+
+    const qualitySet = new Set();
+
+    // 1. FP Qualities
+    (mockDataMap['yarn-fp-qualities'] || []).forEach(q => {
+      const name = (q.name || '').trim();
+      if (name) qualitySet.add(name);
+    });
+
+    // 2. Costing Products
+    ['costing-covering-products-v1', 'costing-tfo-products-v1', 'costing-doubler-products-v1'].forEach(k => {
+      (mockDataMap[k] || []).forEach(p => {
+        const name = (p.name || '').trim();
+        if (name) qualitySet.add(name);
+      });
+    });
+
+    // 3. Production logs
+    ['covering', 'tfo', 'doubler'].forEach(div => {
+      (mockDataMap[`yarn_${div}_production_logs`] || []).forEach(p => {
+        const name = (p.productName || '').trim();
+        if (name) qualitySet.add(name);
+      });
+    });
+
+    const sortedQualities = Array.from(qualitySet).sort();
+
+    assert.strictEqual(sortedQualities.length, 5, 'Should deduplicate across sheets into 5 distinct qualities across Covering, TFO, and Doubler');
+    assert.deepStrictEqual(sortedQualities, [
+      '150/48 MX DOUBLER',
+      '150/48 TFO 400 TPM',
+      '20/1 SPANDEX AIR COVER',
+      '40/34 SPANDEX COVER',
+      '80/72 TFO 350 TPM'
+    ]);
+  });
 });
 
 

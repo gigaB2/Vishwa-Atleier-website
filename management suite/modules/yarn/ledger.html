@@ -1924,6 +1924,10 @@
           <option value="all">-- All Parties --</option>
         </select>
 
+        <select class="filter-select" id="filter-quality" onchange="renderTable()">
+          <option value="all">-- All Qualities --</option>
+        </select>
+
         <select class="filter-select" id="filter-status" onchange="renderTable()">
           <option value="all">All Statuses</option>
           <option value="overdue">🔴 Overdue</option>
@@ -1957,6 +1961,9 @@
 
     <!-- Active Filter Chips Bar -->
     <div class="active-filter-chips-bar" id="active-filter-chips" style="display: none;"></div>
+
+    <!-- Dynamic Quality Autocomplete Datalist -->
+    <datalist id="ledger-qualities-datalist"></datalist>
 
     <!-- Excel Spreadsheet Table Grid -->
     <div class="sheet-wrapper">
@@ -2459,6 +2466,7 @@
 
       const search = (document.getElementById('sheet-search')?.value || '').trim();
       const party = document.getElementById('filter-party')?.value || 'all';
+      const quality = document.getElementById('filter-quality')?.value || 'all';
       const status = document.getElementById('filter-status')?.value || 'all';
       const fromDate = document.getElementById('filter-from-date')?.value || '';
       const toDate = document.getElementById('filter-to-date')?.value || '';
@@ -2480,6 +2488,15 @@
           label: activeTab === 'sales' ? 'Customer' : 'Supplier',
           val: party,
           onRemove: "document.getElementById('filter-party').value='all'; renderTable();"
+        });
+      }
+
+      if (quality !== 'all') {
+        chips.push({
+          id: 'quality',
+          label: 'Quality',
+          val: quality,
+          onRemove: "document.getElementById('filter-quality').value='all'; renderTable();"
         });
       }
 
@@ -2566,6 +2583,26 @@
       `;
     }
 
+    // Clear all active filters and restore default view
+    function clearFilters() {
+      const searchEl = document.getElementById('sheet-search');
+      if (searchEl) searchEl.value = '';
+      const partyEl = document.getElementById('filter-party');
+      if (partyEl) partyEl.value = 'all';
+      const qualEl = document.getElementById('filter-quality');
+      if (qualEl) qualEl.value = 'all';
+      const statusEl = document.getElementById('filter-status');
+      if (statusEl) statusEl.value = 'all';
+      const fromEl = document.getElementById('filter-from-date');
+      if (fromEl) fromEl.value = '';
+      const toEl = document.getElementById('filter-to-date');
+      if (toEl) toEl.value = '';
+      activeKpiFilter = null;
+      tableSort = [{ key: 'date', direction: 'desc' }];
+      updateKpiCardStyles();
+      renderTable();
+    }
+
     // Toast Notification helper
     function showToast(message, type = 'info') {
       const container = document.getElementById('toast-container');
@@ -2646,6 +2683,8 @@
       // Render UI
       updateTabUI();
       populatePartyFilter();
+      populateQualityFilter();
+      populateQualityDatalist();
       renderTable();
 
       // Cloud & Real-time Event Listeners
@@ -2655,7 +2694,7 @@
           if (e.detail.isRemote === false) return; // Skip non-remote events
           if (e.detail.key) {
             const k = e.detail.key;
-            if (!k.startsWith('yarn') && k !== 'yarn-rm-orders' && k !== 'yarn_ledger_deleted_keys' && k !== 'vf_deleted_entity_ids') {
+            if (!k.startsWith('yarn') && !k.startsWith('costing-') && k !== 'yarn-rm-orders' && k !== 'yarn_ledger_deleted_keys' && k !== 'vf_deleted_entity_ids') {
               return;
             }
           }
@@ -2669,12 +2708,14 @@
         if (isUserActivelyEditing()) return;
 
         populatePartyFilter();
+        populateQualityFilter();
+        populateQualityDatalist();
         renderTable(false);
       };
 
       window.addEventListener('storage', async (e) => {
         if (isUserActivelyEditing()) return;
-        if (!e.key || e.key.startsWith('yarn') || e.key === 'yarn-rm-orders' || e.key === 'yarn_ledger_deleted_keys' || e.key === 'vf_deleted_entity_ids') {
+        if (!e.key || e.key.startsWith('yarn') || e.key.startsWith('costing-') || e.key === 'yarn-rm-orders' || e.key === 'yarn_ledger_deleted_keys' || e.key === 'vf_deleted_entity_ids') {
           handleRemoteSync(e);
         }
       });
@@ -2689,6 +2730,8 @@
           await loadAndSyncFromCloud(false);
           if (isUserActivelyEditing()) return;
           populatePartyFilter();
+          populateQualityFilter();
+          populateQualityDatalist();
           renderTable(false);
         }
       });
@@ -2752,9 +2795,12 @@
           if (remRow.syncKey) keyMap.set(remRow.syncKey, rId);
           if (remRow.challanNo) {
             const chKey = String(remRow.challanNo).trim().toLowerCase();
-            keyMap.set(`ch_${chKey}`, rId);
-            if (remRow.partyName) {
-              keyMap.set(`ch_${chKey}__${String(remRow.partyName).trim().toLowerCase()}`, rId);
+            const src = remRow.source || 'manual';
+            const party = remRow.partyName ? String(remRow.partyName).trim().toLowerCase() : '';
+            keyMap.set(`src_${src}__ch_${chKey}`, rId);
+            if (party) {
+              keyMap.set(`src_${src}__ch_${chKey}__${party}`, rId);
+              keyMap.set(`party_${party}__ch_${chKey}`, rId);
             }
           }
         });
@@ -2764,13 +2810,18 @@
           const locId = String(locRow.id || (locRow.syncKey ? 'LEDGER-' + locRow.syncKey : ''));
           if (!locId) return;
 
+          const src = locRow.source || 'manual';
+          const party = locRow.partyName ? String(locRow.partyName).trim().toLowerCase() : '';
+          const chKey = locRow.challanNo ? String(locRow.challanNo).trim().toLowerCase() : '';
+
           let matchedId = rowMap.has(locId) ? locId : (locRow.syncKey && keyMap.has(locRow.syncKey) ? keyMap.get(locRow.syncKey) : null);
-          if (!matchedId && locRow.challanNo) {
-            const chKey = String(locRow.challanNo).trim().toLowerCase();
-            if (locRow.partyName && keyMap.has(`ch_${chKey}__${String(locRow.partyName).trim().toLowerCase()}`)) {
-              matchedId = keyMap.get(`ch_${chKey}__${String(locRow.partyName).trim().toLowerCase()}`);
-            } else if (keyMap.has(`ch_${chKey}`)) {
-              matchedId = keyMap.get(`ch_${chKey}`);
+          if (!matchedId && chKey) {
+            if (party && keyMap.has(`src_${src}__ch_${chKey}__${party}`)) {
+              matchedId = keyMap.get(`src_${src}__ch_${chKey}__${party}`);
+            } else if (keyMap.has(`src_${src}__ch_${chKey}`)) {
+              matchedId = keyMap.get(`src_${src}__ch_${chKey}`);
+            } else if (party && keyMap.has(`party_${party}__ch_${chKey}`)) {
+              matchedId = keyMap.get(`party_${party}__ch_${chKey}`);
             }
           }
 
@@ -2800,6 +2851,14 @@
       'yarn-rm-orders',
       'vishwa_yarn_rm_stock_data',
       'yarn-qualities',
+      'yarn-fp-qualities',
+      'costing-covering-products-v1',
+      'costing-tfo-products-v1',
+      'costing-doubler-products-v1',
+      'costing-products-v4',
+      'yarn_covering_production_logs',
+      'yarn_tfo_production_logs',
+      'yarn_doubler_production_logs',
       'yarn_covering_sales_logs',
       'yarn_tfo_sales_logs',
       'yarn_doubler_sales_logs',
@@ -2829,10 +2888,72 @@
       return {};
     }
 
+    // Global cached cloud data map for dynamic autocomplete and qualities
+    let cachedCloudDataMap = {};
+
+    // Helper to robustly extract quality description from sales logs across Covering, TFO, and Doubler
+    function extractSaleQuality(sale, div, dataMap) {
+      if (!sale) return `${(div || 'YARN').toUpperCase()} Yarn`;
+
+      // 1. Direct explicit composition / productName / quality
+      if (sale.composition && String(sale.composition).trim() && String(sale.composition).trim() !== '-') {
+        return String(sale.composition).trim();
+      }
+      if (sale.productName && String(sale.productName).trim() && String(sale.productName).trim() !== '-') {
+        return String(sale.productName).trim();
+      }
+      if (sale.quality && String(sale.quality).trim() && String(sale.quality).trim() !== '-') {
+        return String(sale.quality).trim();
+      }
+      if (sale.product_name && String(sale.product_name).trim() && String(sale.product_name).trim() !== '-') {
+        return String(sale.product_name).trim();
+      }
+
+      // 2. Extract from items array or raw_data
+      let items = sale.items;
+      if (!items && sale.raw_data) {
+        try {
+          const raw = typeof sale.raw_data === 'string' ? JSON.parse(sale.raw_data) : sale.raw_data;
+          if (raw && Array.isArray(raw.items)) items = raw.items;
+          if (!items && raw) {
+            if (raw.composition) return String(raw.composition).trim();
+            if (raw.productName) return String(raw.productName).trim();
+            if (raw.quality) return String(raw.quality).trim();
+          }
+        } catch (e) {}
+      }
+
+      if (Array.isArray(items) && items.length > 0) {
+        const comps = items
+          .map(it => (it ? (it.composition || it.productName || it.quality || '') : '').trim())
+          .filter(c => c && c !== '-');
+        const uniqueComps = Array.from(new Set(comps));
+        if (uniqueComps.length > 0) {
+          return uniqueComps.join(' / ');
+        }
+      }
+
+      // 3. Match from production logs by boriNo or lotNo if available
+      const bori = sale.boriNo || sale.bori_no || (items && items[0] && items[0].boriNo);
+      const lot = sale.lotNo || sale.lot_no || (items && items[0] && items[0].lotNo);
+      if (dataMap && (bori || lot)) {
+        const prodLogs = dataMap[`yarn_${div}_production_logs`] || [];
+        if (Array.isArray(prodLogs)) {
+          const matchedProd = prodLogs.find(p => (bori && String(p.boriNo) === String(bori)) || (lot && String(p.lotNo) === String(lot)));
+          if (matchedProd && (matchedProd.productName || matchedProd.composition)) {
+            return (matchedProd.productName || matchedProd.composition).trim();
+          }
+        }
+      }
+
+      return `${(div || 'YARN').toUpperCase()} Yarn`;
+    }
+
     // Unified Pure Cloud Loader & Synchronizer (Zero LocalStorage — runs in ~150ms)
     async function loadAndSyncFromCloud(showNotification = false) {
       try {
         const dataMap = await fetchAllCloudLedgerData();
+        cachedCloudDataMap = dataMap || {};
 
         // 1. Settings
         const settings = dataMap['yarn_ledger_settings'];
@@ -3058,6 +3179,13 @@
         // Sync Sales Ledger directly from yarn_*_sales_logs in Supabase Cloud
         for (const div of ['covering', 'tfo', 'doubler']) {
           let rawSales = dataMap[`yarn_${div}_sales_logs`] || [];
+          if (!rawSales || rawSales.length === 0) {
+            try {
+              const localSales = JSON.parse(localStorage.getItem(`yarn_${div}_sales_logs`) || '[]');
+              if (Array.isArray(localSales) && localSales.length > 0) rawSales = localSales;
+            } catch (e) {}
+          }
+
           if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
             rawSales = window.VishwaSupabase.filterDeletedEntities(rawSales);
           }
@@ -3075,15 +3203,22 @@
                 return;
               }
 
-              const existingRow = ledgerData.sales.find(r => r.id === deterministicId || r.syncKey === uniqueSyncKey || (r.challanNo === challanNo && challanNo !== ''));
+              // Match existing row specifically by deterministic ID, uniqueSyncKey, or (same division source + challanNo + matching party)
+              const existingRow = ledgerData.sales.find(r => 
+                r.id === deterministicId || 
+                r.syncKey === uniqueSyncKey || 
+                (r.source === `yarn_${div}_sales` && r.challanNo === challanNo && (r.partyName === customerName || !r.partyName || !customerName))
+              );
+
+              const qualityStr = extractSaleQuality(sale, div, dataMap);
+              const qty = Number(sale.totalQty) || Number(sale.saleQty) || Number(sale.weight) || Number(sale.qty) || 0;
+              const rate = Number(sale.rate) || 0;
+              const subtotal = Number(sale.taxableAmount) || Number(sale.subtotalAmount) || Number(sale.subtotal) || Number((qty * rate).toFixed(2));
+              const gstAmount = Number(sale.gstAmount) || Number(sale.gst) || 0;
+              const grandTotal = Number(sale.totalAmount) || Number(sale.grandTotal) || Number(sale.amount) || Number((subtotal + gstAmount).toFixed(2));
+              const gstPercent = (sale.gstRate !== undefined && sale.gstRate !== null) ? Number(sale.gstRate) : (subtotal > 0 ? Number(((gstAmount / subtotal) * 100).toFixed(1)) : 0);
 
               if (!existingRow && challanNo) {
-                const qty = Number(sale.totalQty) || Number(sale.saleQty) || Number(sale.weight) || Number(sale.qty) || 0;
-                const rate = Number(sale.rate) || 0;
-                const subtotal = Number(sale.taxableAmount) || Number(sale.subtotalAmount) || Number(sale.subtotal) || Number((qty * rate).toFixed(2));
-                const gstAmount = Number(sale.gstAmount) || Number(sale.gst) || 0;
-                const grandTotal = Number(sale.totalAmount) || Number(sale.grandTotal) || Number(sale.amount) || Number((subtotal + gstAmount).toFixed(2));
-                const gstPercent = (sale.gstRate !== undefined && sale.gstRate !== null) ? Number(sale.gstRate) : (subtotal > 0 ? Number(((gstAmount / subtotal) * 100).toFixed(1)) : 0);
                 const nowIso = new Date().toISOString();
 
                 ledgerData.sales.push({
@@ -3093,7 +3228,7 @@
                   date: saleDate,
                   challanNo: challanNo,
                   partyName: customerName,
-                  quality: sale.composition || sale.productName || sale.quality || `${div.toUpperCase()} Yarn`,
+                  quality: qualityStr,
                   qty: qty,
                   rate: rate,
                   subtotal: subtotal,
@@ -3114,13 +3249,32 @@
                 if (!existingRow.id || existingRow.id.startsWith('SAL-1') || existingRow.id.length > 30) {
                   existingRow.id = deterministicId;
                 }
+                existingRow.syncKey = uniqueSyncKey;
                 existingRow.source = `yarn_${div}_sales`;
                 existingRow.isManual = false;
                 if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
+
+                // Update quality if existing was generic or blank
+                const isGenericQuality = !existingRow.quality || 
+                  existingRow.quality === '-' || 
+                  existingRow.quality === 'COVERING Yarn' || 
+                  existingRow.quality === 'TFO Yarn' || 
+                  existingRow.quality === 'DOUBLER Yarn' || 
+                  existingRow.quality === 'Yarn';
+
+                if (isGenericQuality && qualityStr && qualityStr !== `${div.toUpperCase()} Yarn`) {
+                  existingRow.quality = qualityStr;
+                  syncUpdated++;
+                } else if (!existingRow.quality) {
+                  existingRow.quality = qualityStr;
+                }
               }
             });
           }
         }
+
+        populateQualityDatalist(dataMap);
+        populateQualityFilter();
 
         if (syncAdded > 0 || syncUpdated > 0) {
           saveLedgers(false, false);
@@ -3235,6 +3389,8 @@
 
       updateTabUI();
       populatePartyFilter();
+      populateQualityFilter();
+      populateQualityDatalist();
       renderTable();
     }
 
@@ -3269,10 +3425,11 @@
     // Populate party filter dropdown
     function populatePartyFilter() {
       const select = document.getElementById('filter-party');
+      if (!select) return;
       const currentVal = select.value;
       const currentList = ledgerData[activeTab] || [];
       
-      const parties = Array.from(new Set(currentList.map(r => (r.partyName || '').trim()).filter(Boolean))).sort();
+      const parties = Array.from(new Set(currentList.map(r => (r.partyName || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
       select.innerHTML = '<option value="all">-- All Parties --</option>';
       parties.forEach(p => {
@@ -3285,6 +3442,176 @@
       if (parties.includes(currentVal)) {
         select.value = currentVal;
       }
+    }
+
+    // Populate quality filter dropdown from active ledger rows
+    function populateQualityFilter() {
+      const select = document.getElementById('filter-quality');
+      if (!select) return;
+      const currentVal = select.value;
+      const currentList = ledgerData[activeTab] || [];
+
+      const qualities = Array.from(new Set(currentList.map(r => (r.quality || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+      select.innerHTML = '<option value="all">-- All Qualities --</option>';
+      qualities.forEach(q => {
+        const opt = document.createElement('option');
+        opt.value = q;
+        opt.textContent = q;
+        select.appendChild(opt);
+      });
+
+      if (qualities.includes(currentVal)) {
+        select.value = currentVal;
+      }
+    }
+
+    // Populate dynamic quality autocomplete datalist across Covering, TFO, and Doubler
+    function populateQualityDatalist(passedDataMap) {
+      const datalist = document.getElementById('ledger-qualities-datalist');
+      if (!datalist) return;
+
+      const dataMap = passedDataMap || cachedCloudDataMap || {};
+      const qualitySet = new Set();
+
+      if (activeTab === 'sales') {
+        // 1. Manage FP Qualities (yarn-fp-qualities)
+        let fpQualities = dataMap['yarn-fp-qualities'] || [];
+        if (!Array.isArray(fpQualities) || fpQualities.length === 0) {
+          try {
+            fpQualities = JSON.parse(localStorage.getItem('yarn-fp-qualities') || '[]');
+          } catch (e) {}
+        }
+        if (Array.isArray(fpQualities)) {
+          fpQualities.forEach(q => {
+            if (!q) return;
+            const name = (q.name || q.quality || q.composition || '').trim();
+            if (name && name !== '-') qualitySet.add(name);
+          });
+        }
+
+        // 2. Division Costing Products (Covering, TFO, Doubler, Costing v4)
+        ['costing-covering-products-v1', 'costing-tfo-products-v1', 'costing-doubler-products-v1', 'costing-products-v4'].forEach(k => {
+          let prods = dataMap[k] || [];
+          if (!Array.isArray(prods) || prods.length === 0) {
+            try {
+              prods = JSON.parse(localStorage.getItem(k) || '[]');
+            } catch (e) {}
+          }
+          if (Array.isArray(prods)) {
+            prods.forEach(p => {
+              if (!p) return;
+              const name = (p.name || p.productName || p.quality || '').trim();
+              if (name && name !== '-') qualitySet.add(name);
+            });
+          }
+        });
+
+        // 3. Production Logs (Covering, TFO, Doubler)
+        ['covering', 'tfo', 'doubler'].forEach(div => {
+          let prodLogs = dataMap[`yarn_${div}_production_logs`] || [];
+          if (!Array.isArray(prodLogs) || prodLogs.length === 0) {
+            try {
+              prodLogs = JSON.parse(localStorage.getItem(`yarn_${div}_production_logs`) || '[]');
+            } catch (e) {}
+          }
+          if (Array.isArray(prodLogs)) {
+            prodLogs.forEach(p => {
+              if (!p) return;
+              const name = (p.productName || p.composition || p.quality || '').trim();
+              if (name && name !== '-') qualitySet.add(name);
+            });
+          }
+        });
+
+        // 4. Sales Logs (Covering, TFO, Doubler)
+        ['covering', 'tfo', 'doubler'].forEach(div => {
+          let salesLogs = dataMap[`yarn_${div}_sales_logs`] || [];
+          if (!Array.isArray(salesLogs) || salesLogs.length === 0) {
+            try {
+              salesLogs = JSON.parse(localStorage.getItem(`yarn_${div}_sales_logs`) || '[]');
+            } catch (e) {}
+          }
+          if (Array.isArray(salesLogs)) {
+            salesLogs.forEach(s => {
+              if (!s) return;
+              const q = extractSaleQuality(s, div, dataMap);
+              if (q && q !== '-' && !q.endsWith('Yarn')) qualitySet.add(q);
+              if (s.composition && String(s.composition).trim() && String(s.composition).trim() !== '-') qualitySet.add(String(s.composition).trim());
+              if (s.productName && String(s.productName).trim() && String(s.productName).trim() !== '-') qualitySet.add(String(s.productName).trim());
+              if (Array.isArray(s.items)) {
+                s.items.forEach(it => {
+                  const itComp = (it ? (it.composition || it.productName || it.quality || '') : '').trim();
+                  if (itComp && itComp !== '-') qualitySet.add(itComp);
+                });
+              }
+            });
+          }
+        });
+
+        // 5. Existing Sales Ledger rows
+        (ledgerData.sales || []).forEach(r => {
+          const q = (r.quality || '').trim();
+          if (q && q !== '-') qualitySet.add(q);
+        });
+
+      } else {
+        // Purchase Ledger (RM Qualities)
+        // 1. Raw Material Qualities (yarn-qualities)
+        let rmQualities = dataMap['yarn-qualities'] || [];
+        if (!Array.isArray(rmQualities) || rmQualities.length === 0) {
+          try {
+            rmQualities = JSON.parse(localStorage.getItem('yarn-qualities') || '[]');
+          } catch (e) {}
+        }
+        if (Array.isArray(rmQualities)) {
+          rmQualities.forEach(q => {
+            if (!q) return;
+            const name = (q.quality || q.name || '').trim();
+            if (name && name !== '-') qualitySet.add(name);
+          });
+        }
+
+        // 2. RM Stock Data
+        let rawStock = dataMap['vishwa_yarn_rm_stock_data'] || [];
+        if (!Array.isArray(rawStock) || rawStock.length === 0) {
+          try {
+            rawStock = JSON.parse(localStorage.getItem('vishwa_yarn_rm_stock_data') || '[]');
+          } catch (e) {}
+        }
+        if (Array.isArray(rawStock)) {
+          rawStock.forEach(s => {
+            if (!s) return;
+            const q = (s.quality || s.yarnQuality || '').trim();
+            if (q && q !== '-') qualitySet.add(q);
+          });
+        }
+
+        // 3. RM Orders
+        let rawOrders = dataMap['yarn-rm-orders'] || [];
+        if (!Array.isArray(rawOrders) || rawOrders.length === 0) {
+          try {
+            rawOrders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
+          } catch (e) {}
+        }
+        if (Array.isArray(rawOrders)) {
+          rawOrders.forEach(o => {
+            if (!o) return;
+            const q = (o.quality || o.qualityName || '').trim();
+            if (q && q !== '-') qualitySet.add(q);
+          });
+        }
+
+        // 4. Existing Purchase Ledger rows
+        (ledgerData.purchase || []).forEach(r => {
+          const q = (r.quality || '').trim();
+          if (q && q !== '-') qualitySet.add(q);
+        });
+      }
+
+      const sorted = Array.from(qualitySet).filter(Boolean).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+      datalist.innerHTML = sorted.map(q => `<option value="${escapeHtml(q)}"></option>`).join('');
     }
 
     // Add a new manual row to the current ledger
@@ -3497,6 +3824,7 @@
     function updateFooterAndKPISummaries() {
       const search = (document.getElementById('sheet-search')?.value || '').toLowerCase().trim();
       const partyFilter = document.getElementById('filter-party')?.value || 'all';
+      const qualityFilter = document.getElementById('filter-quality')?.value || 'all';
       const statusFilter = document.getElementById('filter-status')?.value || 'all';
       const fromDate = document.getElementById('filter-from-date')?.value || '';
       const toDate = document.getElementById('filter-to-date')?.value || '';
@@ -3508,6 +3836,7 @@
           if (!matchString.includes(search)) return false;
         }
         if (partyFilter !== 'all' && (row.partyName || '').trim() !== partyFilter) return false;
+        if (qualityFilter !== 'all' && (row.quality || '').trim() !== qualityFilter) return false;
         if (fromDate && row.date && row.date < fromDate) return false;
         if (toDate && row.date && row.date > toDate) return false;
         
@@ -3725,6 +4054,7 @@
 
       const search = (document.getElementById('sheet-search')?.value || '').toLowerCase().trim();
       const partyFilter = document.getElementById('filter-party')?.value || 'all';
+      const qualityFilter = document.getElementById('filter-quality')?.value || 'all';
       const statusFilter = document.getElementById('filter-status')?.value || 'all';
       const fromDate = document.getElementById('filter-from-date')?.value || '';
       const toDate = document.getElementById('filter-to-date')?.value || '';
@@ -3760,6 +4090,11 @@
 
         // Party filter
         if (partyFilter !== 'all' && (row.partyName || '').trim() !== partyFilter) {
+          return false;
+        }
+
+        // Quality filter
+        if (qualityFilter !== 'all' && (row.quality || '').trim() !== qualityFilter) {
           return false;
         }
 
@@ -3962,7 +4297,7 @@
             <td class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly" style="color: var(--muted);" title="Quality / Specs">${escapeHtml(row.quality || '-')}</div>`
-                : `<input type="text" data-field="quality" class="cell-input" value="${escapeHtml(row.quality || '')}" placeholder="Quality / Specs" oninput="handleCellChange('${row.id}', 'quality', this.value, false)" onchange="handleCellChange('${row.id}', 'quality', this.value, true)">`
+                : `<input type="text" list="ledger-qualities-datalist" data-field="quality" class="cell-input" value="${escapeHtml(row.quality || '')}" placeholder="Quality / Specs" oninput="handleCellChange('${row.id}', 'quality', this.value, false)" onchange="handleCellChange('${row.id}', 'quality', this.value, true)">`
               }
             </td>
 
