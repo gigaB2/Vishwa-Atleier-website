@@ -5850,11 +5850,20 @@
         const idx = dataStore[activeDivision].sales.findIndex(s => s.id === editId);
         if (idx !== -1) {
           dataStore[activeDivision].sales[idx] = data;
+        } else {
+          dataStore[activeDivision].sales.push(data);
         }
         showToast('Sale record updated successfully', 'success');
       } else {
         dataStore[activeDivision].sales.push(data);
         showToast('Sale recorded successfully', 'success');
+      }
+
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.unrecordDeletion === 'function') {
+        window.VishwaSupabase.unrecordDeletion(`yarn_${activeDivision}_sales_logs`, data.id);
+        if (data.challanNo) {
+          window.VishwaSupabase.unrecordDeletion(`yarn_${activeDivision}_sales_logs`, data.challanNo);
+        }
       }
 
       saveLogs('sales');
@@ -7566,9 +7575,6 @@
           dataStore[activeDivision].sales = dataStore[activeDivision].sales.filter(s => s.id !== id);
           if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
             window.VishwaSupabase.recordDeletion(`yarn_${activeDivision}_sales_logs`, id);
-            if (sale && sale.challanNo) {
-              window.VishwaSupabase.recordDeletion(`yarn_${activeDivision}_sales_logs`, sale.challanNo);
-            }
           }
           saveLogs('sales');
           showToast('Sale record deleted and stock restored', 'info');

@@ -259,7 +259,12 @@
         }
       } catch(e) {}
     });
-    return Array.from(new Set(deleted.map(s => String(s).trim()).filter(Boolean)));
+    return Array.from(new Set(deleted.map(s => String(s).trim()).filter(s => {
+      if (!s) return false;
+      // Filter out pure short sequence digits (e.g. "1", "2", "01") from global tombstones as they are document sequence numbers, not permanent entity IDs
+      if (/^\d{1,4}$/.test(s)) return false;
+      return true;
+    })));
   }
 
   function filterDeletedEntities(a, b) {
@@ -292,13 +297,6 @@
         if (item.dayWorker && tombstoneSet.has(String(item.dayWorker).trim().toLowerCase())) return false;
         if (item.nightWorker && tombstoneSet.has(String(item.nightWorker).trim().toLowerCase())) return false;
         if (item.machineName && tombstoneSet.has(String(item.machineName).trim().toLowerCase())) return false;
-        if (item.code && tombstoneSet.has(String(item.code).trim().toLowerCase())) return false;
-        if (item.quality && tombstoneSet.has(String(item.quality).trim().toLowerCase())) return false;
-        if (item.supplier && tombstoneSet.has(String(item.supplier).trim().toLowerCase())) return false;
-        if (item.boriNo && tombstoneSet.has(String(item.boriNo).trim().toLowerCase())) return false;
-        if (item.beamNumber && tombstoneSet.has(String(item.beamNumber).trim().toLowerCase())) return false;
-        if (item.takaSerial && tombstoneSet.has(String(item.takaSerial).trim().toLowerCase())) return false;
-        if (item.challanNo && tombstoneSet.has(String(item.challanNo).trim().toLowerCase())) return false;
       } catch(e) {}
       return true;
     });
@@ -381,14 +379,15 @@
     const getSaleKeys = (sale) => {
       if (!sale) return [];
       const keys = [];
-      if (sale.id) keys.push(String(sale.id).trim());
-      if (sale.challanNo) {
+      if (sale.id && String(sale.id).trim()) keys.push(String(sale.id).trim());
+      if (sale.challanNo && String(sale.challanNo).trim()) {
         const cClean = String(sale.challanNo).trim().toLowerCase();
-        keys.push(`challan_${cClean}`);
         if (division) keys.push(`sale_${division}_${cClean}`);
+        keys.push(`challan_${cClean}`);
       }
-      if (sale.invoiceNo) {
+      if (sale.invoiceNo && String(sale.invoiceNo).trim()) {
         const invClean = String(sale.invoiceNo).trim().toLowerCase();
+        if (division) keys.push(`sale_inv_${division}_${invClean}`);
         keys.push(`inv_${invClean}`);
       }
       return keys;
@@ -399,7 +398,7 @@
 
     cleanRemote.forEach(remSale => {
       if (!remSale) return;
-      const pKey = String(remSale.id || (remSale.challanNo ? `challan_${remSale.challanNo}` : `rem_${Math.random()}`));
+      const pKey = String(remSale.id || (remSale.challanNo ? (division ? `sale_${division}_${remSale.challanNo}` : `challan_${remSale.challanNo}`) : `rem_${Math.random()}`));
       saleMap.set(pKey, { ...remSale });
       getSaleKeys(remSale).forEach(k => keyToPrimaryMap.set(k, pKey));
     });
@@ -429,7 +428,7 @@
           });
         }
       } else {
-        const locPKey = String(locSale.id || (locSale.challanNo ? `challan_${locSale.challanNo}` : `loc_${Math.random()}`));
+        const locPKey = String(locSale.id || (locSale.challanNo ? (division ? `sale_${division}_${locSale.challanNo}` : `challan_${locSale.challanNo}`) : `loc_${Math.random()}`));
         saleMap.set(locPKey, { ...locSale });
         locKeys.forEach(k => keyToPrimaryMap.set(k, locPKey));
       }
@@ -4165,26 +4164,40 @@
     async recordCostingDeletion(key, itemId) {
       return this.recordDeletion(key, itemId);
     },
-    // Explicit Universal Item Undeletion / Restore Tracking (for Ctrl+Z Undo)
+    // Explicit Universal Item Undeletion / Restore Tracking (for Ctrl+Z Undo and New Item Creation)
     async unrecordDeletion(key, itemId, itemData = null) {
       try {
-        const idStr = String(itemId);
-        let deletedIds = [];
-        try {
-          const raw = cache['vf_deleted_entity_ids'] || cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_entity_ids') || nativeLocalStorage.getItem('vf_deleted_costing_ids');
-          if (raw) deletedIds = JSON.parse(raw);
-        } catch (e) {}
-        deletedIds = Array.isArray(deletedIds) ? deletedIds.map(String) : [];
-
-        if (deletedIds.includes(idStr)) {
-          deletedIds = deletedIds.filter(id => id !== idStr);
-          const valStr = JSON.stringify(deletedIds);
-          cache['vf_deleted_entity_ids'] = valStr;
-          cache['vf_deleted_costing_ids'] = valStr;
-          safeLocalStorageSet('vf_deleted_entity_ids', valStr);
-          safeLocalStorageSet('vf_deleted_costing_ids', valStr);
-          this.set('vf_deleted_entity_ids', deletedIds, true);
+        let targetIds = [];
+        if (Array.isArray(itemId)) {
+          targetIds = itemId.map(String).map(s => s.trim()).filter(Boolean);
+        } else if (itemId && typeof itemId === 'object') {
+          ['id', '_id', 'uuid', 'syncKey'].forEach(p => {
+            if (itemId[p]) targetIds.push(String(itemId[p]).trim());
+          });
+        } else if (itemId !== undefined && itemId !== null) {
+          targetIds = [String(itemId).trim()].filter(Boolean);
         }
+
+        if (targetIds.length === 0) return;
+
+        const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids', 'yarn_ledger_deleted_keys', 'vf_deleted_yarn_orders'];
+        tombstoneKeys.forEach(tKey => {
+          let deletedIds = [];
+          try {
+            const raw = cache[tKey] || nativeLocalStorage.getItem(tKey);
+            if (raw) deletedIds = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          } catch (e) {}
+          if (Array.isArray(deletedIds)) {
+            const beforeLen = deletedIds.length;
+            deletedIds = deletedIds.filter(id => !targetIds.includes(String(id).trim()));
+            if (deletedIds.length !== beforeLen) {
+              const valStr = JSON.stringify(deletedIds);
+              cache[tKey] = valStr;
+              safeLocalStorageSet(tKey, valStr);
+              this.set(tKey, deletedIds, true);
+            }
+          }
+        });
 
         // Immediate re-insertion to dedicated Supabase table if itemData exists
         let table = null;
@@ -4194,6 +4207,7 @@
         else if (key === 'costing-covering-products-v1') table = 'vf_costing_covering_products';
 
         if (table && activeConfig.isConfigured && SUPABASE_URL && itemData) {
+          const firstId = targetIds[0] || String(itemId);
           fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=id`, {
             method: 'POST',
             headers: {
@@ -4203,7 +4217,7 @@
               'Prefer': 'resolution=merge-duplicates'
             },
             body: JSON.stringify([{
-              id: idStr,
+              id: firstId,
               data: itemData,
               updated_at: new Date().toISOString()
             }])

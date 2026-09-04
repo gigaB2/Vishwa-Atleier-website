@@ -3358,9 +3358,6 @@
           window.VishwaSupabase.recordDeletion(storageKey, row.syncKey);
           window.VishwaSupabase.recordDeletion('yarn_ledger_deleted_keys', row.syncKey);
         }
-        if (row.challanNo) {
-          window.VishwaSupabase.recordDeletion('yarn_ledger_deleted_keys', String(row.challanNo).trim());
-        }
       }
 
       saveLedgers(false, true);

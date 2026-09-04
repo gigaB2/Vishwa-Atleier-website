@@ -509,6 +509,94 @@ test('Multi-User Concurrency & Merge Validation', async (t) => {
     assert.strictEqual(merged[0].totalAmount, 16500);
   });
 
+  await t.test('Yarn Sales: Creating Challan 2 then Challan 1 never vanishes or overwrites', async () => {
+    // Simulate creating Challan 2
+    const sale2 = {
+      id: 's_' + Date.now() + '_challan2',
+      challanNo: '2',
+      invoiceNo: '2',
+      date: '2026-09-05',
+      customerName: 'Customer B',
+      totalQty: 100,
+      totalAmount: 15000,
+      updated_at: new Date().toISOString()
+    };
+
+    let salesList = [sale2];
+    let filtered1 = vSupabase.filterDeletedEntities(salesList);
+    assert.strictEqual(filtered1.length, 1);
+    assert.strictEqual(filtered1[0].challanNo, '2');
+
+    // Simulate creating Challan 1 next
+    const sale1 = {
+      id: 's_' + (Date.now() + 100) + '_challan1',
+      challanNo: '1',
+      invoiceNo: '1',
+      date: '2026-09-05',
+      customerName: 'Customer A',
+      totalQty: 50,
+      totalAmount: 7500,
+      updated_at: new Date().toISOString()
+    };
+
+    salesList.push(sale1);
+
+    // Filter and merge datasets
+    let filtered2 = vSupabase.filterDeletedEntities(salesList);
+    assert.strictEqual(filtered2.length, 2, 'Both Challan 2 and Challan 1 must be present after filterDeletedEntities');
+    assert.ok(filtered2.some(s => s.challanNo === '2'), 'Challan 2 must exist');
+    assert.ok(filtered2.some(s => s.challanNo === '1'), 'Challan 1 must exist');
+
+    // Remote sync merge simulation
+    const remoteSales = [sale2];
+    const mergedSales = vSupabase.mergeDatasets('yarn_doubler_sales_logs', salesList, remoteSales);
+    assert.strictEqual(mergedSales.length, 2, 'Merged sales must contain both Challan 2 and Challan 1');
+    assert.ok(mergedSales.some(s => s.challanNo === '2'));
+    assert.ok(mergedSales.some(s => s.challanNo === '1'));
+  });
+
+  await t.test('Yarn Sales: Stale or legacy tombstones do not delete active Challans', async () => {
+    // Suppose legacy tombstones contain raw digits '1' or '2'
+    sandbox.localStorage.setItem('vf_deleted_entity_ids', JSON.stringify(['1', '2', 'CH-0001', 's_old_deleted_id']));
+
+    const activeSale1 = {
+      id: 's_' + Date.now() + '_active1',
+      challanNo: '1',
+      invoiceNo: '1',
+      date: '2026-09-05',
+      customerName: 'Customer A',
+      totalQty: 50,
+      totalAmount: 7500,
+      updated_at: new Date().toISOString()
+    };
+
+    const activeSale2 = {
+      id: 's_' + (Date.now() + 50) + '_active2',
+      challanNo: '2',
+      invoiceNo: '2',
+      date: '2026-09-05',
+      customerName: 'Customer B',
+      totalQty: 100,
+      totalAmount: 15000,
+      updated_at: new Date().toISOString()
+    };
+
+    const deletedSale = {
+      id: 's_old_deleted_id',
+      challanNo: '99',
+      date: '2026-09-01',
+      totalAmount: 1000
+    };
+
+    const allSales = [activeSale1, activeSale2, deletedSale];
+    const filtered = vSupabase.filterDeletedEntities(allSales);
+
+    assert.strictEqual(filtered.length, 2, 'Must keep activeSale1 and activeSale2 while filtering out deletedSale');
+    assert.ok(filtered.some(s => s.challanNo === '1'), 'Active Challan 1 must not be deleted by legacy tombstone');
+    assert.ok(filtered.some(s => s.challanNo === '2'), 'Active Challan 2 must not be deleted by legacy tombstone');
+    assert.ok(!filtered.some(s => s.id === 's_old_deleted_id'), 'Deleted sale must be filtered');
+  });
+
   await t.test('Yarn Production: Multiple PCs producing Boris in Doubler/MX and TFO merge seamlessly', () => {
     const pc1Prod = [
       { id: 'p_d_1', boriNo: 'D-1001', productName: 'Doubler 2Core', qty: 25.5, rolls: 20, date: '2026-09-04' },
