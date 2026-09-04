@@ -28,9 +28,49 @@ function getItemIdentifier(item) {
   return null;
 }
 
+function filterDeletedEntities(a, b, customTombstones = []) {
+  let arr = Array.isArray(a) ? a : (Array.isArray(b) ? b : null);
+  if (!arr) return Array.isArray(a) ? a : (Array.isArray(b) ? b : a);
+  const tombstones = Array.isArray(customTombstones) ? customTombstones : [];
+  if (tombstones.length === 0) return arr;
+  const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()).filter(Boolean));
+  return arr.filter(item => {
+    if (!item) return false;
+    try {
+      if (typeof item === 'string' || typeof item === 'number') {
+        if (tombstoneSet.has(String(item).trim().toLowerCase())) return false;
+        return true;
+      }
+      const id = getItemIdentifier(item);
+      if (id && tombstoneSet.has(String(id).trim().toLowerCase())) return false;
+      if (item.id && tombstoneSet.has(String(item.id).trim().toLowerCase())) return false;
+      if (item._id && tombstoneSet.has(String(item._id).trim().toLowerCase())) return false;
+      if (item.uuid && tombstoneSet.has(String(item.uuid).trim().toLowerCase())) return false;
+      if (item.loanId && tombstoneSet.has(String(item.loanId).trim().toLowerCase())) return false;
+      if (item.empId && tombstoneSet.has(String(item.empId).trim().toLowerCase())) return false;
+      if (item.employeeId && tombstoneSet.has(String(item.employeeId).trim().toLowerCase())) return false;
+      if (item.employee_id && tombstoneSet.has(String(item.employee_id).trim().toLowerCase())) return false;
+      if (item.name && tombstoneSet.has(String(item.name).trim().toLowerCase())) return false;
+      if (item.employeeName && tombstoneSet.has(String(item.employeeName).trim().toLowerCase())) return false;
+      if (item.staffName && tombstoneSet.has(String(item.staffName).trim().toLowerCase())) return false;
+      if (item.worker && tombstoneSet.has(String(item.worker).trim().toLowerCase())) return false;
+      if (item.dayWorker && tombstoneSet.has(String(item.dayWorker).trim().toLowerCase())) return false;
+      if (item.nightWorker && tombstoneSet.has(String(item.nightWorker).trim().toLowerCase())) return false;
+      if (item.machineName && tombstoneSet.has(String(item.machineName).trim().toLowerCase())) return false;
+      if (item.code && tombstoneSet.has(String(item.code).trim().toLowerCase())) return false;
+      if (item.quality && tombstoneSet.has(String(item.quality).trim().toLowerCase())) return false;
+      if (item.supplier && tombstoneSet.has(String(item.supplier).trim().toLowerCase())) return false;
+      if (item.boriNo && tombstoneSet.has(String(item.boriNo).trim().toLowerCase())) return false;
+      if (item.beamNumber && tombstoneSet.has(String(item.beamNumber).trim().toLowerCase())) return false;
+      if (item.takaSerial && tombstoneSet.has(String(item.takaSerial).trim().toLowerCase())) return false;
+    } catch(e) {}
+    return true;
+  });
+}
+
 function mergeDatasets(localVal, remoteVal, tombstones = []) {
-  if (localVal === undefined || localVal === null) return remoteVal;
-  if (remoteVal === undefined || remoteVal === null) return localVal;
+  if (localVal === undefined || localVal === null) return filterDeletedEntities(remoteVal, null, tombstones);
+  if (remoteVal === undefined || remoteVal === null) return filterDeletedEntities(localVal, null, tombstones);
 
   let parsedLocal = localVal;
   let parsedRemote = remoteVal;
@@ -49,37 +89,35 @@ function mergeDatasets(localVal, remoteVal, tombstones = []) {
 
   // Case 1: Both are Arrays -> Item-level Deduplicated Union Merge
   if (Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
+    const cleanLocal = filterDeletedEntities(parsedLocal, null, tombstones);
+    const cleanRemote = filterDeletedEntities(parsedRemote, null, tombstones);
     const mergedMap = new Map();
     const unkeyedRemoteItems = [];
 
     // 1. Index remote items (authoritative server snapshot)
-    parsedRemote.forEach(item => {
+    cleanRemote.forEach(item => {
       const id = getItemIdentifier(item);
       if (id) {
-        if (!tombstones.includes(id)) {
-          mergedMap.set(id, item);
-        }
+        mergedMap.set(id, item);
       } else {
         unkeyedRemoteItems.push(item);
       }
     });
 
     // 2. Merge local items
-    parsedLocal.forEach(localItem => {
+    cleanLocal.forEach(localItem => {
       const id = getItemIdentifier(localItem);
       if (id) {
-        if (!tombstones.includes(id)) {
-          if (!mergedMap.has(id)) {
-            // New local item added offline
-            mergedMap.set(id, localItem);
-          } else {
-            // Item exists in both -> compare timestamps
-            const remoteItem = mergedMap.get(id);
-            const localTs = new Date(localItem.updated_at || localItem.timestamp || localItem.date || 0).getTime();
-            const remoteTs = new Date(remoteItem.updated_at || remoteItem.timestamp || remoteItem.date || 0).getTime();
-            if (localTs >= remoteTs) {
-              mergedMap.set(id, Object.assign({}, remoteItem, localItem));
-            }
+        if (!mergedMap.has(id)) {
+          // New local item added offline
+          mergedMap.set(id, localItem);
+        } else {
+          // Item exists in both -> compare timestamps
+          const remoteItem = mergedMap.get(id);
+          const localTs = new Date(localItem.updated_at || localItem.timestamp || localItem.date || 0).getTime();
+          const remoteTs = new Date(remoteItem.updated_at || remoteItem.timestamp || remoteItem.date || 0).getTime();
+          if (localTs >= remoteTs) {
+            mergedMap.set(id, Object.assign({}, remoteItem, localItem));
           }
         }
       } else {
@@ -274,4 +312,65 @@ test('SyncEngine — mergeDatasets', async (t) => {
     assert.equal(emp2.salaryAmount, 900);
     assert.deepEqual(emp2.machines, ['Waterjet Loom 2']);
   });
+
+  await t.test('multi-alias tombstones prevent employee resurrection across PCs and evict related loans/records', () => {
+    // Computer A deletes employee "Ramesh Patel" (ID: "emp-007", Name: "Ramesh Patel")
+    const deletedAliases = ['emp-007', 'Ramesh Patel', 'emp_007'];
+
+    // Computer B was offline and still has stale local staff state containing Ramesh and his loan
+    const computerBEmployees = [
+      { id: 'emp-007', name: 'Ramesh Patel', role: 'Karigar', salaryAmount: 900 },
+      { id: 'emp-008', name: 'Gopal Verma', role: 'Master', salaryAmount: 1200 }
+    ];
+
+    const computerBLoans = [
+      { id: 'loan-1', employeeId: 'emp-007', employeeName: 'Ramesh Patel', amount: 5000, status: 'Active' },
+      { id: 'loan-2', employeeId: 'emp-008', employeeName: 'Gopal Verma', amount: 2000, status: 'Active' }
+    ];
+
+    // Verify filterDeletedEntities filters by both ID and Name
+    const filteredEmployees = filterDeletedEntities('aethertasks_db_state_v7', computerBEmployees, deletedAliases);
+    assert.equal(filteredEmployees.length, 1);
+    assert.equal(filteredEmployees[0].name, 'Gopal Verma');
+
+    // Verify filterDeletedEntities evicts loans referencing tombstoned employeeName or employeeId
+    const filteredLoans = filterDeletedEntities('aethertasks_db_state_v7', computerBLoans, deletedAliases);
+    assert.equal(filteredLoans.length, 1);
+    assert.equal(filteredLoans[0].employeeName, 'Gopal Verma');
+  });
+
+  await t.test('filterDeletedEntities supports both (arr) and (key, arr) signatures and filters primitive strings', () => {
+    const tombstones = ['mach-4', 'Quality-Silk-A'];
+    
+    // Test (arr) signature with primitive strings
+    const machinesList = ['mach-1', 'mach-2', 'mach-4', 'mach-5'];
+    const filteredMachines = filterDeletedEntities(machinesList, null, tombstones);
+    assert.deepEqual(filteredMachines, ['mach-1', 'mach-2', 'mach-5']);
+
+    // Test (key, arr) signature with objects
+    const qualitiesList = [
+      { id: 'q-1', quality: 'Quality-Cotton' },
+      { id: 'q-2', quality: 'Quality-Silk-A' }
+    ];
+    const filteredQualities = filterDeletedEntities('yarn-qualities', qualitiesList, tombstones);
+    assert.equal(filteredQualities.length, 1);
+    assert.equal(filteredQualities[0].id, 'q-1');
+  });
+
+  await t.test('mergeDatasets refuses to resurrect tombstoned items even if local timestamps are newer', () => {
+    const tombstones = ['ord-1001'];
+    const serverOrders = [
+      { id: 'ord-1002', orderNumber: 'ORD-1002', quality: 'Chiffon' }
+    ];
+    const staleLocalOrders = [
+      { id: 'ord-1001', orderNumber: 'ORD-1001', quality: 'Deleted Georgette', updated_at: '2099-01-01T00:00:00Z' },
+      { id: 'ord-1002', orderNumber: 'ORD-1002', quality: 'Chiffon' }
+    ];
+
+    const merged = mergeDatasets(staleLocalOrders, serverOrders, tombstones);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].id, 'ord-1002');
+    assert.ok(!merged.some(o => o.id === 'ord-1001'));
+  });
 });
+

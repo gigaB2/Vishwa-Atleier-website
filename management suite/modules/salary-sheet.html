@@ -7409,6 +7409,15 @@
                     state = { ...defaultData };
                 }
 
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+                    if (state && Array.isArray(state.employees)) {
+                        state.employees = window.VishwaSupabase.filterDeletedEntities(STATE_KEY, state.employees);
+                    }
+                    if (state && Array.isArray(state.loans)) {
+                        state.loans = window.VishwaSupabase.filterDeletedEntities(STATE_KEY, state.loans);
+                    }
+                }
+
                 if (state && !state.salaryPayments) {
                     state.salaryPayments = {};
                 }
@@ -11633,6 +11642,7 @@
 
         function getBeamLoadings() {
             const stored = localStorage.getItem('warp-beam-loadings');
+            let result = sampleBeamLoadings;
             if (stored) {
                 try {
                     const parsed = JSON.parse(stored);
@@ -11640,15 +11650,19 @@
                         const hasOldData = parsed.some(item => item.machineNumber && String(item.machineNumber).includes('PW/'));
                         if (hasOldData) {
                             localStorage.setItem('warp-beam-loadings', JSON.stringify(sampleBeamLoadings));
-                            return sampleBeamLoadings;
+                            result = sampleBeamLoadings;
+                        } else {
+                            result = parsed;
                         }
-                        return parsed;
                     }
                 } catch (e) {
                     console.error(e);
                 }
             }
-            return sampleBeamLoadings;
+            if (Array.isArray(result) && window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+                result = window.VishwaSupabase.filterDeletedEntities('warp-beam-loadings', result);
+            }
+            return result;
         }
 
         function saveBeamLoadings(data) {
@@ -12455,6 +12469,9 @@
         function deleteBeamLoadingEntry(id) {
             if (!confirm("Are you sure you want to delete this Beam Loading record?")) return;
             pushUndoState();
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+                window.VishwaSupabase.recordDeletion('warp-beam-loadings', id);
+            }
             const list = getBeamLoadings().filter(item => item.id !== id);
             saveBeamLoadings(list);
             renderBeamLoadingTab();
@@ -13834,6 +13851,11 @@
 
         window.deleteLoan = function (loanId) {
             if (!confirm('Are you sure you want to delete this loan record?')) return;
+            const targetLoan = (state.loans || []).find(l => l.id === loanId);
+            const loanAliases = [loanId, targetLoan && targetLoan.id, targetLoan && targetLoan.loanId].filter(Boolean);
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+                window.VishwaSupabase.recordDeletion(STATE_KEY, loanAliases.length ? loanAliases : loanId);
+            }
             state.loans = (state.loans || []).filter(l => l.id !== loanId);
             saveState();
             showToast('Loan record deleted.', 'success');
@@ -15268,33 +15290,25 @@
 
 
             if (confirm(`Are you sure you want to permanently delete employee "${emp.name}"? This will clean up their tasks as well.`)) {
-
                 pushUndoState();
+                const deleteIdentifiers = [emp.id, emp.name, emp.empId, emp.employeeId, targetId].filter(Boolean);
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+                    window.VishwaSupabase.recordDeletion(STATE_KEY, deleteIdentifiers);
+                }
 
                 state.employees = state.employees.filter(e => e.id !== emp.id && e.name !== emp.name);
-
-                state.tasks = state.tasks.filter(t => t.assignedTo !== emp.id && t.assignedBy !== emp.id);
-
-
+                state.tasks = (state.tasks || []).filter(t => t.assignedTo !== emp.id && t.assignedBy !== emp.id);
+                state.loans = (state.loans || []).filter(l => l.employeeId !== emp.id && l.empId !== emp.id && l.employeeName !== emp.name && l.name !== emp.name);
 
                 state.logs.push({
-
                     id: `log-${Date.now()}`,
-
                     timestamp: new Date().toISOString(),
-
                     text: `CEO permanently deleted employee roster member: ${emp.name}`
-
                 });
 
-
-
                 saveState();
-
                 showToast(`Employee "${emp.name}" deleted permanently`, "error");
-
                 refreshData();
-
             }
 
         }

@@ -3304,18 +3304,27 @@
   function loadInitialState(key, fallback) {
     const stored = localStorage.getItem(key);
     const isCleared = localStorage.getItem('vishwa_fashions_factory_reset_active') === 'true';
-    if (!stored) return fallback || [];
-    try {
-      const parsed = JSON.parse(stored);
-      if (!isCleared) {
-        if (Array.isArray(parsed) && parsed.length === 0 && Array.isArray(fallback) && fallback.length > 0) {
-          return fallback;
+    let result = fallback || [];
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (!isCleared) {
+          if (Array.isArray(parsed) && parsed.length === 0 && Array.isArray(fallback) && fallback.length > 0) {
+            result = fallback;
+          } else {
+            result = Array.isArray(parsed) ? parsed : (fallback || []);
+          }
+        } else {
+          result = Array.isArray(parsed) ? parsed : (fallback || []);
         }
+      } catch(e) {
+        result = fallback || [];
       }
-      return Array.isArray(parsed) ? parsed : fallback;
-    } catch(e) {
-      return fallback || [];
     }
+    if (Array.isArray(result) && window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+      result = window.VishwaSupabase.filterDeletedEntities(key, result);
+    }
+    return result;
   }
 
   
@@ -3356,7 +3365,11 @@
     try {
       const parsed = JSON.parse(stored);
       if (!parsed || !Array.isArray(parsed.employees)) return [];
-      return parsed.employees.map(emp => {
+      let emps = parsed.employees;
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+        emps = window.VishwaSupabase.filterDeletedEntities(emps);
+      }
+      return emps.map(emp => {
         if (!emp || typeof emp !== 'object') return null;
         const machines = Array.isArray(emp.machines) ? emp.machines : (Array.isArray(emp.assignedMachines) ? emp.assignedMachines : (emp.machine ? [emp.machine] : []));
         const salaryAmt = (emp.salaryAmount !== undefined && emp.salaryAmount !== null && emp.salaryAmount !== '') ? emp.salaryAmount : (emp.baseSalary !== undefined ? emp.baseSalary : (emp.salaryRate || 0));
@@ -3386,7 +3399,11 @@
     if (!stored) return [];
     try {
       const parsed = JSON.parse(stored);
-      return (parsed && Array.isArray(parsed.loans)) ? parsed.loans : [];
+      let loans = (parsed && Array.isArray(parsed.loans)) ? parsed.loans : [];
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+        loans = window.VishwaSupabase.filterDeletedEntities(loans);
+      }
+      return loans;
     } catch(e) {
       return [];
     }
@@ -4373,11 +4390,13 @@ function removeEmployee(empId) {
 
             if (confirm(`Are you sure you want to permanently delete employee "${emp.name}"? This will clean up their tasks as well.`)) {
                 pushUndoState();
+                const deleteIdentifiers = [emp.id, emp.name, emp.empId, emp.employeeId].filter(Boolean);
                 if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-                    window.VishwaSupabase.recordDeletion(STATE_KEY, emp.id || emp.name);
+                    window.VishwaSupabase.recordDeletion(STATE_KEY, deleteIdentifiers);
                 }
                 state.employees = state.employees.filter(e => e.id !== emp.id && e.name !== emp.name);
-                if (state.tasks) { state.tasks = state.tasks.filter(t => t.assignedTo !== emp.id && t.assignedBy !== emp.id); } else { state.tasks = []; }
+                if (state.tasks) { state.tasks = state.tasks.filter(t => t.assignedTo !== emp.id && t.assignedBy !== emp.id && t.assignedTo !== emp.name && t.assignedBy !== emp.name); } else { state.tasks = []; }
+                if (state.loans) { state.loans = state.loans.filter(l => l.empId !== emp.id && l.employeeName !== emp.name && l.empId !== emp.name); }
                 
                 state.logs.push({
                     id: `log-${Date.now()}`,
@@ -6544,8 +6563,10 @@ function showToast(message, type = 'info') {
   function deleteQuality(id) {
     if (confirm('Are you sure you want to delete this quality?')) {
       pushToUndo();
+      const target = (rawMaterialQualities || []).find(q => q.id === id);
+      const qualityAliases = [id, target && target.quality, target && target.name, target && target.code].filter(Boolean);
       if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-        window.VishwaSupabase.recordDeletion('yarn-qualities', id);
+        window.VishwaSupabase.recordDeletion('yarn-qualities', qualityAliases.length ? qualityAliases : id);
       }
       if (editingQualityId === id) {
         cancelQualityEdit();
@@ -7022,8 +7043,10 @@ function showToast(message, type = 'info') {
   function deleteFpQuality(id) {
     if (confirm('Are you sure you want to delete this FP Quality?')) {
       pushToUndo();
+      const target = (rawMaterialFpQualities || []).find(q => q.id === id);
+      const fpAliases = [id, target && target.quality, target && target.name, target && target.code].filter(Boolean);
       if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-        window.VishwaSupabase.recordDeletion('yarn-fp-qualities', id);
+        window.VishwaSupabase.recordDeletion('yarn-fp-qualities', fpAliases.length ? fpAliases : id);
       }
       if (editingFpQualityId === id) {
         cancelFpQualityEdit();
@@ -7201,8 +7224,9 @@ function showToast(message, type = 'info') {
     }
 
     pushToUndo();
+    const supplierAliases = [s.id, s.name, s.supplier, s.code].filter(Boolean);
     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-      window.VishwaSupabase.recordDeletion('yarn-suppliers', id);
+      window.VishwaSupabase.recordDeletion('yarn-suppliers', supplierAliases.length ? supplierAliases : id);
     }
     if (editingSupplierId === id) {
       cancelSupplierEdit();
@@ -7408,8 +7432,10 @@ function showToast(message, type = 'info') {
 
   window.deleteLoan = function(loanId) {
     if (!confirm('Are you sure you want to delete this loan record?')) return;
+    const targetLoan = (state.loans || []).find(l => l.id === loanId);
+    const loanAliases = [loanId, targetLoan && targetLoan.id, targetLoan && targetLoan.loanId].filter(Boolean);
     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-      window.VishwaSupabase.recordDeletion(STATE_KEY, loanId);
+      window.VishwaSupabase.recordDeletion(STATE_KEY, loanAliases.length ? loanAliases : loanId);
     }
     state.loans = (state.loans || []).filter(l => l.id !== loanId);
     if (window.VishwaSupabase && typeof window.VishwaSupabase.broadcastFormClear === 'function') {
@@ -7522,8 +7548,9 @@ function showToast(message, type = 'info') {
     }
 
     pushToUndo();
+    const loomAliases = [loom.id, loom.name, loom.code].filter(Boolean);
     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-      window.VishwaSupabase.recordDeletion('manage-looms', id);
+      window.VishwaSupabase.recordDeletion('manage-looms', loomAliases.length ? loomAliases : id);
     }
     if (editingLoomId === id) {
       cancelLoomEdit();
@@ -7647,8 +7674,9 @@ function showToast(message, type = 'info') {
     }
 
     pushToUndo();
+    const jacquardAliases = [jacquard.id, jacquard.name, jacquard.code].filter(Boolean);
     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-      window.VishwaSupabase.recordDeletion('manage-jacquards', id);
+      window.VishwaSupabase.recordDeletion('manage-jacquards', jacquardAliases.length ? jacquardAliases : id);
     }
     if (editingJacquardId === id) {
       cancelJacquardEdit();
@@ -8932,8 +8960,9 @@ function showToast(message, type = 'info') {
     }
 
     pushToUndo();
+    const jalaAliases = [jala.id, jala.name, jala.code].filter(Boolean);
     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-      window.VishwaSupabase.recordDeletion('manage-jalas', id);
+      window.VishwaSupabase.recordDeletion('manage-jalas', jalaAliases.length ? jalaAliases : id);
     }
     if (editingJalaId === id) {
       cancelJalaEdit();
@@ -9115,8 +9144,9 @@ function showToast(message, type = 'info') {
     }
 
     pushToUndo();
+    const faniAliases = [fani.id, fani.name, fani.code].filter(Boolean);
     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-      window.VishwaSupabase.recordDeletion('manage-fanis', id);
+      window.VishwaSupabase.recordDeletion('manage-fanis', faniAliases.length ? faniAliases : id);
     }
     if (editingFaniId === id) {
       cancelFaniEdit();
@@ -9428,8 +9458,9 @@ function showToast(message, type = 'info') {
     }
     
     pushToUndo();
+    const machineAliases = [machine.id, machine.name, machine.code, machine.machineNumber].filter(Boolean);
     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-      window.VishwaSupabase.recordDeletion('machines', id);
+      window.VishwaSupabase.recordDeletion('machines', machineAliases.length ? machineAliases : id);
     }
     if (editingMachineId === id) {
       cancelMachineEdit();

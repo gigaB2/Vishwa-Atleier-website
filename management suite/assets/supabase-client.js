@@ -251,14 +251,19 @@
     return Array.isArray(deleted) ? deleted.map(String) : [];
   }
 
-  function filterDeletedEntities(arr) {
-    if (!Array.isArray(arr)) return arr;
+  function filterDeletedEntities(a, b) {
+    let arr = Array.isArray(a) ? a : (Array.isArray(b) ? b : null);
+    if (!arr) return Array.isArray(a) ? a : (Array.isArray(b) ? b : a);
     const tombstones = getDeletedTombstones();
     if (tombstones.length === 0) return arr;
     const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()).filter(Boolean));
     return arr.filter(item => {
       if (!item) return false;
       try {
+        if (typeof item === 'string' || typeof item === 'number') {
+          if (tombstoneSet.has(String(item).trim().toLowerCase())) return false;
+          return true;
+        }
         const id = getItemIdentifier(item);
         if (id && tombstoneSet.has(String(id).trim().toLowerCase())) return false;
         if (item.id && tombstoneSet.has(String(item.id).trim().toLowerCase())) return false;
@@ -266,6 +271,18 @@
         if (item.uuid && tombstoneSet.has(String(item.uuid).trim().toLowerCase())) return false;
         if (item.loanId && tombstoneSet.has(String(item.loanId).trim().toLowerCase())) return false;
         if (item.empId && tombstoneSet.has(String(item.empId).trim().toLowerCase())) return false;
+        if (item.employeeId && tombstoneSet.has(String(item.employeeId).trim().toLowerCase())) return false;
+        if (item.employee_id && tombstoneSet.has(String(item.employee_id).trim().toLowerCase())) return false;
+        if (item.name && tombstoneSet.has(String(item.name).trim().toLowerCase())) return false;
+        if (item.employeeName && tombstoneSet.has(String(item.employeeName).trim().toLowerCase())) return false;
+        if (item.staffName && tombstoneSet.has(String(item.staffName).trim().toLowerCase())) return false;
+        if (item.worker && tombstoneSet.has(String(item.worker).trim().toLowerCase())) return false;
+        if (item.dayWorker && tombstoneSet.has(String(item.dayWorker).trim().toLowerCase())) return false;
+        if (item.nightWorker && tombstoneSet.has(String(item.nightWorker).trim().toLowerCase())) return false;
+        if (item.machineName && tombstoneSet.has(String(item.machineName).trim().toLowerCase())) return false;
+        if (item.code && tombstoneSet.has(String(item.code).trim().toLowerCase())) return false;
+        if (item.quality && tombstoneSet.has(String(item.quality).trim().toLowerCase())) return false;
+        if (item.supplier && tombstoneSet.has(String(item.supplier).trim().toLowerCase())) return false;
         if (item.boriNo && tombstoneSet.has(String(item.boriNo).trim().toLowerCase())) return false;
         if (item.beamNumber && tombstoneSet.has(String(item.beamNumber).trim().toLowerCase())) return false;
         if (item.takaSerial && tombstoneSet.has(String(item.takaSerial).trim().toLowerCase())) return false;
@@ -637,6 +654,7 @@
           return {
             ...parsedRemote,
             employees: Array.isArray(parsedRemote.employees) ? filterDeletedEntities(parsedRemote.employees) : (parsedRemote.employees || []),
+            machines: Array.isArray(parsedRemote.machines) ? filterDeletedEntities(parsedRemote.machines) : (parsedRemote.machines || []),
             loans: Array.isArray(parsedRemote.loans) ? filterDeletedEntities(parsedRemote.loans) : (parsedRemote.loans || []),
             attendance: (parsedRemote.attendance && typeof parsedRemote.attendance === 'object') ? parsedRemote.attendance : {},
             salaryPayments: (parsedRemote.salaryPayments && typeof parsedRemote.salaryPayments === 'object') ? parsedRemote.salaryPayments : {}
@@ -669,11 +687,32 @@
             };
             empMap.set(eKey, mergedEmp);
           } else {
-            empMap.set(eKey, lEmp);
+            // Only preserve fresh local addition created in the last 60s or if remote had 0 employees
+            const isFresh = lEmp.createdAt && (Date.now() - new Date(lEmp.createdAt).getTime() < 60000);
+            if (isFresh || remoteEmps.length === 0) {
+              empMap.set(eKey, lEmp);
+            }
           }
         });
 
         const mergedEmployees = filterDeletedEntities(Array.from(empMap.values()));
+
+        // Merge machines
+        const localMachines = Array.isArray(parsedLocal.machines) ? filterDeletedEntities(parsedLocal.machines) : [];
+        const remoteMachines = Array.isArray(parsedRemote.machines) ? filterDeletedEntities(parsedRemote.machines) : [];
+        const machineMap = new Map();
+        remoteMachines.forEach(m => { if (m && (m.id || m.name)) machineMap.set(String(m.id || m.name), m); });
+        localMachines.forEach(lM => {
+          if (lM && (lM.id || lM.name)) {
+            const mKey = String(lM.id || lM.name);
+            if (!machineMap.has(mKey)) {
+              if (remoteMachines.length === 0) machineMap.set(mKey, lM);
+            } else {
+              machineMap.set(mKey, { ...machineMap.get(mKey), ...lM });
+            }
+          }
+        });
+        const mergedMachines = filterDeletedEntities(Array.from(machineMap.values()));
 
         // Merge loans
         const localLoans = Array.isArray(parsedLocal.loans) ? filterDeletedEntities(parsedLocal.loans) : [];
@@ -683,7 +722,7 @@
         localLoans.forEach(ln => {
           if (ln && ln.id) {
             if (!loanMap.has(String(ln.id))) {
-              loanMap.set(String(ln.id), ln);
+              if (remoteLoans.length === 0) loanMap.set(String(ln.id), ln);
             } else {
               loanMap.set(String(ln.id), { ...loanMap.get(String(ln.id)), ...ln });
             }
@@ -713,6 +752,7 @@
           ...parsedRemote,
           ...parsedLocal,
           employees: mergedEmployees,
+          machines: mergedMachines,
           loans: mergedLoans,
           attendance: mergedAttendance,
           salaryPayments: mergedSalaryPayments
@@ -1787,22 +1827,37 @@
   function handleIncomingItemDeleted(payload) {
     if (!payload || payload.senderId === CLIENT_ID) return;
     try {
-      const { key, itemId } = payload;
-      if (itemId) {
-        const idStr = String(itemId).trim();
+      const { key, itemId, itemIds, aliases } = payload;
+      const allTargetIds = [
+        ...(Array.isArray(itemIds) ? itemIds : []),
+        ...(Array.isArray(aliases) ? aliases : []),
+        ...(itemId ? [itemId] : [])
+      ].map(String).map(s => s.trim()).filter(Boolean);
+
+      if (allTargetIds.length > 0) {
         let deletedIds = getDeletedTombstones();
-        if (!deletedIds.includes(idStr)) {
-          deletedIds.push(idStr);
-          cache['vf_deleted_entity_ids'] = JSON.stringify(deletedIds);
-          safeLocalStorageSet('vf_deleted_entity_ids', JSON.stringify(deletedIds));
+        let changed = false;
+        allTargetIds.forEach(idStr => {
+          if (!deletedIds.includes(idStr)) {
+            deletedIds.push(idStr);
+            changed = true;
+          }
+        });
+        if (changed) {
+          if (deletedIds.length > 5000) deletedIds = deletedIds.slice(-5000);
+          const valStr = JSON.stringify(deletedIds);
+          cache['vf_deleted_entity_ids'] = valStr;
+          cache['vf_deleted_costing_ids'] = valStr;
+          safeLocalStorageSet('vf_deleted_entity_ids', valStr);
+          safeLocalStorageSet('vf_deleted_costing_ids', valStr);
         }
 
         // Clean from all known entity keys in cache immediately
         const entityKeys = [
-          'yarn-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines',
+          'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines',
           'yarn_covering_production_logs', 'yarn_tfo_production_logs', 'yarn_doubler_production_logs',
           'yarn_covering_sales_logs', 'yarn_tfo_sales_logs', 'yarn_doubler_sales_logs',
-          'warp-beams', 'warp-issues', 'yarn-issues', 'yarn-rm-orders'
+          'warp-beams', 'warp-issues', 'yarn-issues', 'yarn-rm-orders', 'warp-beam-loadings'
         ];
         if (key && !entityKeys.includes(key)) entityKeys.push(key);
 
@@ -1823,20 +1878,39 @@
           }
         });
 
-        // Clean from state object (e.g. aethertasks_db_state_v7)
-        if (cache['aethertasks_db_state_v7']) {
-          try {
-            const parsed = JSON.parse(cache['aethertasks_db_state_v7']);
-            if (parsed && typeof parsed === 'object') {
-              if (Array.isArray(parsed.employees)) parsed.employees = filterDeletedEntities(parsed.employees);
-              if (Array.isArray(parsed.machines)) parsed.machines = filterDeletedEntities(parsed.machines);
-              if (Array.isArray(parsed.loans)) parsed.loans = filterDeletedEntities(parsed.loans);
-              const newStr = JSON.stringify(parsed);
-              cache['aethertasks_db_state_v7'] = newStr;
-              safeLocalStorageSet('aethertasks_db_state_v7', newStr);
-            }
-          } catch(e) {}
-        }
+        // Clean from state objects (e.g. aethertasks_db_state_v7, staff-salary-state)
+        ['aethertasks_db_state_v7', 'staff-salary-state'].forEach(sKey => {
+          const raw = cache[sKey] || nativeLocalStorage.getItem(sKey);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed && typeof parsed === 'object') {
+                let stateChanged = false;
+                if (Array.isArray(parsed.employees)) {
+                  const origLen = parsed.employees.length;
+                  parsed.employees = filterDeletedEntities(parsed.employees);
+                  if (parsed.employees.length !== origLen) stateChanged = true;
+                }
+                if (Array.isArray(parsed.machines)) {
+                  const origLen = parsed.machines.length;
+                  parsed.machines = filterDeletedEntities(parsed.machines);
+                  if (parsed.machines.length !== origLen) stateChanged = true;
+                }
+                if (Array.isArray(parsed.loans)) {
+                  const origLen = parsed.loans.length;
+                  parsed.loans = filterDeletedEntities(parsed.loans);
+                  if (parsed.loans.length !== origLen) stateChanged = true;
+                }
+                if (stateChanged) {
+                  const newStr = JSON.stringify(parsed);
+                  cache[sKey] = newStr;
+                  safeLocalStorageSet(sKey, newStr);
+                  window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: sKey, value: newStr, isRemote: true } }));
+                }
+              }
+            } catch(e) {}
+          }
+        });
       }
       window.dispatchEvent(new CustomEvent('supabase-item-deleted', { detail: payload }));
       window.dispatchEvent(new Event('storage'));
@@ -3424,7 +3498,21 @@
     // Explicit Universal Item Deletion Tombstone Tracking
     async recordDeletion(key, itemId) {
       try {
-        const idStr = String(itemId).trim();
+        let targetIds = [];
+        if (Array.isArray(itemId)) {
+          targetIds = itemId.map(String).map(s => s.trim()).filter(Boolean);
+        } else if (itemId && typeof itemId === 'object') {
+          ['id', '_id', 'uuid', 'empId', 'employeeId', 'employee_id', 'name', 'employeeName', 'staffName', 'loanId', 'code', 'machineName', 'quality', 'supplier'].forEach(p => {
+            if (itemId[p]) targetIds.push(String(itemId[p]).trim());
+          });
+          const customId = getItemIdentifier(itemId);
+          if (customId) targetIds.push(String(customId).trim());
+        } else if (itemId !== undefined && itemId !== null) {
+          targetIds = [String(itemId).trim()].filter(Boolean);
+        }
+
+        if (targetIds.length === 0) return;
+
         let deletedIds = [];
         try {
           const raw = cache['vf_deleted_entity_ids'] || cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_entity_ids') || nativeLocalStorage.getItem('vf_deleted_costing_ids');
@@ -3432,8 +3520,15 @@
         } catch (e) {}
         deletedIds = Array.isArray(deletedIds) ? deletedIds.map(String) : [];
 
-        if (!deletedIds.includes(idStr)) {
-          deletedIds.push(idStr);
+        let tombstoneChanged = false;
+        targetIds.forEach(idStr => {
+          if (!deletedIds.includes(idStr)) {
+            deletedIds.push(idStr);
+            tombstoneChanged = true;
+          }
+        });
+
+        if (tombstoneChanged) {
           // Prune tombstone array to most recent 5000 items to avoid memory leaks
           if (deletedIds.length > 5000) {
             deletedIds = deletedIds.slice(-5000);
@@ -3450,7 +3545,9 @@
           type: 'item_deleted',
           senderId: CLIENT_ID,
           key: key,
-          itemId: idStr,
+          itemId: targetIds[0] || '',
+          itemIds: targetIds,
+          aliases: targetIds,
           timestamp: Date.now()
         };
 
@@ -3481,10 +3578,10 @@
 
         // Clean from all known entity keys in cache and localStorage immediately
         const entityKeys = [
-          'yarn-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines',
+          'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines',
           'yarn_covering_production_logs', 'yarn_tfo_production_logs', 'yarn_doubler_production_logs',
           'yarn_covering_sales_logs', 'yarn_tfo_sales_logs', 'yarn_doubler_sales_logs',
-          'warp-beams', 'warp-issues', 'yarn-issues', 'yarn-rm-orders'
+          'warp-beams', 'warp-issues', 'yarn-issues', 'yarn-rm-orders', 'warp-beam-loadings'
         ];
         if (key && !entityKeys.includes(key)) entityKeys.push(key);
 
@@ -3506,49 +3603,100 @@
           }
         });
 
-        // Clean from state object (e.g. aethertasks_db_state_v7)
-        if (cache['aethertasks_db_state_v7']) {
-          try {
-            const parsed = JSON.parse(cache['aethertasks_db_state_v7']);
-            if (parsed && typeof parsed === 'object') {
-              if (Array.isArray(parsed.employees)) parsed.employees = filterDeletedEntities(parsed.employees);
-              if (Array.isArray(parsed.machines)) parsed.machines = filterDeletedEntities(parsed.machines);
-              if (Array.isArray(parsed.loans)) parsed.loans = filterDeletedEntities(parsed.loans);
-              const newStr = JSON.stringify(parsed);
-              if (cache['aethertasks_db_state_v7'] !== newStr) {
-                cache['aethertasks_db_state_v7'] = newStr;
-                safeLocalStorageSet('aethertasks_db_state_v7', newStr);
-                this.set('aethertasks_db_state_v7', parsed, true);
+        // Clean from state objects (e.g. aethertasks_db_state_v7, staff-salary-state)
+        ['aethertasks_db_state_v7', 'staff-salary-state'].forEach(sKey => {
+          const raw = cache[sKey] || nativeLocalStorage.getItem(sKey);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed && typeof parsed === 'object') {
+                let stateChanged = false;
+                if (Array.isArray(parsed.employees)) {
+                  const origLen = parsed.employees.length;
+                  parsed.employees = filterDeletedEntities(parsed.employees);
+                  if (parsed.employees.length !== origLen) stateChanged = true;
+                }
+                if (Array.isArray(parsed.machines)) {
+                  const origLen = parsed.machines.length;
+                  parsed.machines = filterDeletedEntities(parsed.machines);
+                  if (parsed.machines.length !== origLen) stateChanged = true;
+                }
+                if (Array.isArray(parsed.loans)) {
+                  const origLen = parsed.loans.length;
+                  parsed.loans = filterDeletedEntities(parsed.loans);
+                  if (parsed.loans.length !== origLen) stateChanged = true;
+                }
+                if (stateChanged) {
+                  const newStr = JSON.stringify(parsed);
+                  cache[sKey] = newStr;
+                  safeLocalStorageSet(sKey, newStr);
+                  this.set(sKey, parsed, true);
+                  window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: sKey, value: newStr, isRemote: false } }));
+                }
               }
-            }
-          } catch(e) {}
-        }
+            } catch(e) {}
+          }
+        });
 
         try {
           window.dispatchEvent(new CustomEvent('supabase-item-deleted', { detail: deletePayload }));
           window.dispatchEvent(new Event('storage'));
         } catch(e) {}
 
-        // Delete from dedicated table if costing, yarn, qualities, or supplier key
-        let table = null;
-        if (key === 'costing-products-v4') table = 'vf_costing_products';
-        else if (key === 'costing-tfo-products-v1') table = 'vf_costing_tfo_products';
-        else if (key === 'costing-doubler-products-v1') table = 'vf_costing_doubler_products';
-        else if (key === 'costing-covering-products-v1') table = 'vf_costing_covering_products';
-        else if (key === 'yarn-qualities') table = 'vf_rm_qualities';
-        else if (key === 'yarn-fp-qualities') table = 'vf_fp_qualities';
-        else if (key === 'yarn-suppliers') table = 'vf_rm_suppliers';
-        else if (key && key.startsWith('yarn_') && key.endsWith('_production_logs')) table = 'vf_yarn_production_logs';
-        else if (key && key.startsWith('yarn_') && key.endsWith('_sales_logs')) table = 'vf_yarn_sales_logs';
+        // Dispatch REST DELETE to all relevant Supabase tables
+        if (activeConfig.isConfigured && SUPABASE_URL) {
+          const restHeaders = {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          };
 
-        if (table && activeConfig.isConfigured && SUPABASE_URL) {
-          fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(idStr)}`, {
-            method: 'DELETE',
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          targetIds.forEach(idStr => {
+            const encId = encodeURIComponent(idStr);
+
+            // Costing tables
+            if (key === 'costing-products-v4') fetch(`${SUPABASE_URL}/rest/v1/vf_costing_products?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+            else if (key === 'costing-tfo-products-v1') fetch(`${SUPABASE_URL}/rest/v1/vf_costing_tfo_products?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+            else if (key === 'costing-doubler-products-v1') fetch(`${SUPABASE_URL}/rest/v1/vf_costing_doubler_products?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+            else if (key === 'costing-covering-products-v1') fetch(`${SUPABASE_URL}/rest/v1/vf_costing_covering_products?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+            
+            // Qualities & Suppliers
+            else if (key === 'yarn-qualities') {
+              fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+              fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities?quality=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
             }
-          }).catch(() => {});
+            else if (key === 'yarn-fp-qualities') {
+              fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+              fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities?name=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+            }
+            else if (key === 'yarn-suppliers') {
+              fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+              fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers?name=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+            }
+            
+            // Yarn Production & Sales Logs
+            else if (key && key.startsWith('yarn_') && key.endsWith('_production_logs')) {
+              fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+            }
+            else if (key && key.startsWith('yarn_') && key.endsWith('_sales_logs')) {
+              fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_sales_logs?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+            }
+
+            // Beam Loadings
+            else if (key === 'warp-beam-loadings') {
+              fetch(`${SUPABASE_URL}/rest/v1/vf_warp_beam_loadings?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+            }
+
+            // Staff & Salary (vf_employees, vf_employee_loans, vf_attendance_records)
+            if (key === 'aethertasks_db_state_v7' || key === 'manage-staff' || key === 'employees' || key === 'staff-salary-state') {
+              fetch(`${SUPABASE_URL}/rest/v1/vf_employees?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+              fetch(`${SUPABASE_URL}/rest/v1/vf_employees?name=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+              fetch(`${SUPABASE_URL}/rest/v1/vf_employee_loans?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+              fetch(`${SUPABASE_URL}/rest/v1/vf_employee_loans?employee_id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+              fetch(`${SUPABASE_URL}/rest/v1/vf_employee_loans?employee_name=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+              fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records?employee_id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+              fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records?employee_name=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+            }
+          });
         }
       } catch (e) {}
     },
@@ -4852,6 +5000,40 @@
                   if (rawStaff) existingStaffState = JSON.parse(rawStaff);
                 } catch(e) {}
 
+                const tombstones = getDeletedTombstones();
+                const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()).filter(Boolean));
+
+                // Background permanent purge of tombstoned records still on Postgres tables
+                if (activeConfig.isConfigured && SUPABASE_URL) {
+                  const restHeaders = {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                  };
+                  if (Array.isArray(dbEmployees)) {
+                    const tombstonedEmps = dbEmployees.filter(emp => {
+                      const id = String(emp.id || '').trim().toLowerCase();
+                      const name = String(emp.name || '').trim().toLowerCase();
+                      return (id && tombstoneSet.has(id)) || (name && tombstoneSet.has(name));
+                    });
+                    tombstonedEmps.forEach(tEmp => {
+                      if (tEmp.id) fetch(`${SUPABASE_URL}/rest/v1/vf_employees?id=eq.${encodeURIComponent(tEmp.id)}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+                      if (tEmp.name) fetch(`${SUPABASE_URL}/rest/v1/vf_employees?name=eq.${encodeURIComponent(tEmp.name)}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+                      if (tEmp.id) fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records?employee_id=eq.${encodeURIComponent(tEmp.id)}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+                      if (tEmp.name) fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records?employee_name=eq.${encodeURIComponent(tEmp.name)}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+                    });
+                  }
+                  if (Array.isArray(dbLoans)) {
+                    const tombstonedLoans = dbLoans.filter(ln => {
+                      const id = String(ln.id || '').trim().toLowerCase();
+                      const empId = String(ln.employee_id || '').trim().toLowerCase();
+                      return (id && tombstoneSet.has(id)) || (empId && tombstoneSet.has(empId));
+                    });
+                    tombstonedLoans.forEach(tLn => {
+                      if (tLn.id) fetch(`${SUPABASE_URL}/rest/v1/vf_employee_loans?id=eq.${encodeURIComponent(tLn.id)}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
+                    });
+                  }
+                }
+
                 const reconstructedEmployees = dbEmployees.map(emp => {
                   const meta = (emp.metadata && typeof emp.metadata === 'object') ? emp.metadata : {};
                   const machines = Array.isArray(emp.assigned_machines) && emp.assigned_machines.length > 0
@@ -4893,8 +5075,10 @@
                   };
                 });
 
+                const cleanReconstructedEmployees = filterDeletedEntities(reconstructedEmployees);
+
                 const empIdToNameMap = new Map();
-                reconstructedEmployees.forEach(e => {
+                cleanReconstructedEmployees.forEach(e => {
                   if (e && e.id && e.name) {
                     empIdToNameMap.set(String(e.id).trim(), e.name);
                   }
@@ -4906,10 +5090,12 @@
                     const date = att.attendance_date;
                     const empId = att.employee_id ? String(att.employee_id).trim() : '';
                     if (!date || !empId) return;
+                    if (tombstoneSet.has(empId.toLowerCase())) return;
                     if (!reconstructedAttendance[date]) reconstructedAttendance[date] = {};
 
                     const meta = (att.metadata && typeof att.metadata === 'object') ? att.metadata : {};
                     const empName = meta.empName || empIdToNameMap.get(empId) || empId;
+                    if (empName && tombstoneSet.has(String(empName).trim().toLowerCase())) return;
                     const statusVal = att.status || 'present';
                     const shiftsVal = (meta.shifts !== undefined && meta.shifts !== null) 
                       ? Number(meta.shifts) 
@@ -4951,12 +5137,15 @@
                   cleared: Boolean(ln.cleared)
                 })) : [];
 
+                const cleanReconstructedLoans = filterDeletedEntities(reconstructedLoans);
+
                 const reconstructedSettlements = {};
                 if (Array.isArray(dbSettlements)) {
                   dbSettlements.forEach(st => {
                     const m = st.month_year;
                     const empId = st.employee_id;
                     if (!m || !empId) return;
+                    if (tombstoneSet.has(String(empId).trim().toLowerCase())) return;
                     if (!reconstructedSettlements[m]) reconstructedSettlements[m] = {};
                     reconstructedSettlements[m][empId] = {
                       paidAmount: Number(st.paid_amount) || 0,
@@ -4974,11 +5163,22 @@
                   ? existingStaffState.attendance
                   : reconstructedAttendance;
 
+                const existingCleanEmps = (existingStaffState && Array.isArray(existingStaffState.employees))
+                  ? filterDeletedEntities(existingStaffState.employees)
+                  : [];
+                const existingCleanLoans = (existingStaffState && Array.isArray(existingStaffState.loans))
+                  ? filterDeletedEntities(existingStaffState.loans)
+                  : [];
+                const existingCleanMachines = (existingStaffState && Array.isArray(existingStaffState.machines))
+                  ? filterDeletedEntities(existingStaffState.machines)
+                  : (existingStaffState.machines || []);
+
                 const mergedStaffState = {
                   ...existingStaffState,
-                  employees: reconstructedEmployees.length > 0 ? reconstructedEmployees : (existingStaffState.employees || []),
+                  employees: cleanReconstructedEmployees.length > 0 ? cleanReconstructedEmployees : existingCleanEmps,
+                  machines: existingCleanMachines,
                   attendance: finalAttendance,
-                  loans: reconstructedLoans.length > 0 ? reconstructedLoans : (existingStaffState.loans || []),
+                  loans: cleanReconstructedLoans.length > 0 ? cleanReconstructedLoans : existingCleanLoans,
                   salaryPayments: Object.keys(reconstructedSettlements).length > 0 ? reconstructedSettlements : (existingStaffState.salaryPayments || {})
                 };
 
@@ -5047,9 +5247,27 @@
           });
           if (valRes.ok) {
             const rows = await valRes.json();
+            // Process tombstone keys first so mergeDatasets benefits immediately
+            rows.sort((a, b) => {
+              const aT = a && (a.key === 'vf_deleted_entity_ids' || a.key === 'vf_deleted_costing_ids');
+              const bT = b && (b.key === 'vf_deleted_entity_ids' || b.key === 'vf_deleted_costing_ids');
+              return aT ? -1 : (bT ? 1 : 0);
+            });
             rows.forEach(row => {
               if (!row || !row.key || isLocalOnlyKey(row.key)) return;
               try {
+                if (row.key === 'vf_deleted_entity_ids' || row.key === 'vf_deleted_costing_ids') {
+                  try {
+                    const remoteTombstones = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+                    if (Array.isArray(remoteTombstones)) {
+                      let localTombstones = getDeletedTombstones();
+                      const combined = Array.from(new Set([...localTombstones, ...remoteTombstones.map(String)]));
+                      const valStr = JSON.stringify(combined);
+                      cache[row.key] = valStr;
+                      safeLocalStorageSet(row.key, valStr);
+                    }
+                  } catch(e) {}
+                }
                 if (row.updated_at) lastKnownTimestamps[row.key] = row.updated_at;
                 const strValue = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
                 const localVal = cache[row.key] || nativeLocalStorage.getItem(row.key);

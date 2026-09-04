@@ -2586,6 +2586,10 @@
                 
                 if (confirm(warningMsg)) {
                     recordSnapshot(`Delete Order ${targetOrder.quality || ''}`);
+                    if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+                        const orderAliases = [id, targetOrder.orderNumber, targetOrder.id].filter(Boolean);
+                        window.VishwaSupabase.recordDeletion('yarn-rm-orders', orderAliases.length ? orderAliases : id);
+                    }
                     setOrders(orders.filter(o => o.id !== id));
                     
                     try {
