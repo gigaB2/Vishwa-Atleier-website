@@ -3556,94 +3556,7 @@
       });
     }
 
-    // Helpers for Multi-Company & Settings resolution
-    function getAvailableCompanies() {
-      let companies = [];
-      try {
-        const raw = localStorage.getItem('vf_companies');
-        if (raw) companies = JSON.parse(raw) || [];
-      } catch(e) {}
 
-      if (Array.isArray(companies) && companies.length > 0) {
-        return companies;
-      }
-
-      let legacyName = "Vishwa Fashions";
-      let legacyGst = "24AAAFV1234A1Z5";
-      let legacyPhone = "+91 98251 12345";
-      let legacyEmail = "sales@vishwafashions.com";
-      let legacyAddress = "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221";
-
-      try {
-        const stored = localStorage.getItem('vishwa_fashions_settings');
-        if (stored) {
-          const s = JSON.parse(stored);
-          if (s.sellerName) legacyName = s.sellerName;
-          if (s.sellerGstin) legacyGst = s.sellerGstin;
-          if (s.sellerPhone) legacyPhone = s.sellerPhone;
-          if (s.sellerEmail) legacyEmail = s.sellerEmail;
-          if (s.sellerAddress) legacyAddress = s.sellerAddress;
-        }
-      } catch(e) {}
-
-      const c = localStorage.getItem('vf_company_name');
-      if (c && c.trim()) legacyName = c.trim();
-
-      return [{
-        id: 'comp-1',
-        sellerName: legacyName,
-        sellerGstin: legacyGst,
-        sellerPhone: legacyPhone,
-        sellerEmail: legacyEmail,
-        sellerAddress: legacyAddress,
-        isDefault: true
-      }];
-    }
-
-    function getSellerCompanyInfo(sale) {
-      const companies = getAvailableCompanies();
-      if (sale && sale.sellerCompanyId) {
-        const found = companies.find(c => c.id === sale.sellerCompanyId);
-        if (found) return found;
-      }
-      if (sale && sale.sellerName) {
-        const foundByName = companies.find(c => (c.sellerName || '').trim().toLowerCase() === (sale.sellerName || '').trim().toLowerCase());
-        if (foundByName) return foundByName;
-        return {
-          sellerName: sale.sellerName,
-          sellerGstin: sale.sellerGstin || "24AAAFV1234A1Z5",
-          sellerPhone: sale.sellerPhone || "+91 98251 12345",
-          sellerEmail: sale.sellerEmail || "sales@vishwafashions.com",
-          sellerAddress: sale.sellerAddress || "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221"
-        };
-      }
-      const def = companies.find(c => c.isDefault) || companies[0];
-      return def || {
-        sellerName: "Vishwa Fashions",
-        sellerGstin: "24AAAFV1234A1Z5",
-        sellerPhone: "+91 98251 12345",
-        sellerEmail: "sales@vishwafashions.com",
-        sellerAddress: "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221"
-      };
-    }
-
-    function populateCompanyDropdown(selectedCompanyId) {
-      const compSelect = document.getElementById('modal-sales-company');
-      if (!compSelect) return;
-      const companies = getAvailableCompanies();
-      compSelect.innerHTML = '';
-      companies.forEach(comp => {
-        const opt = document.createElement('option');
-        opt.value = comp.id || comp.sellerName;
-        opt.textContent = comp.sellerName + (comp.isDefault ? ' (Default)' : '');
-        if (selectedCompanyId && (comp.id === selectedCompanyId || comp.sellerName === selectedCompanyId)) {
-          opt.selected = true;
-        } else if (!selectedCompanyId && comp.isDefault) {
-          opt.selected = true;
-        }
-        compSelect.appendChild(opt);
-      });
-    }
 
     function getProductDetailsMismatch(prodA, prodB) {
       if (!prodA || !prodB) return null;
@@ -3744,9 +3657,9 @@
           sellerName: c.sellerName || c.name || "REAGHAN FASHIONS PVT LTD",
           divisionName: c.divisionName || "YARN DIVISION",
           cinNo: c.cinNo || "U17120GJ2009PTC058296",
-          bankName: c.bankName || (c.bank_details && c.bank_details.bank_name) || "YES BANK",
-          bankAccountNo: c.bankAccountNo || (c.bank_details && c.bank_details.account_no) || "OCC : 001181300000676",
-          bankIfsc: c.bankIfsc || (c.bank_details && c.bank_details.ifsc) || "YESB0000011"
+          bankName: c.bankName || (c.bank_details && c.bank_details.bank_name) || "",
+          bankAccountNo: c.bankAccountNo || (c.bank_details && c.bank_details.account_no) || "",
+          bankIfsc: c.bankIfsc || (c.bank_details && c.bank_details.ifsc) || ""
         }));
       }
 
@@ -3756,9 +3669,9 @@
       let legacyPhone = "9924400076";
       let legacyEmail = "accounts@libertysilkmills.com";
       let legacyAddress = "PLOT NO 527/2, ROAD NO 5, ,SACHIN GIDC,SURAT,";
-      let legacyBank = "YES BANK";
-      let legacyAcc = "OCC : 001181300000676";
-      let legacyIfsc = "YESB0000011";
+      let legacyBank = "";
+      let legacyAcc = "";
+      let legacyIfsc = "";
 
       try {
         const stored = localStorage.getItem('vishwa_fashions_settings');
@@ -3812,9 +3725,9 @@
           sellerPhone: sale.sellerPhone || "9924400076",
           sellerEmail: sale.sellerEmail || "accounts@libertysilkmills.com",
           sellerAddress: sale.sellerAddress || "PLOT NO 527/2, ROAD NO 5, ,SACHIN GIDC,SURAT,",
-          bankName: sale.bankName || "YES BANK",
-          bankAccountNo: sale.bankAccountNo || "OCC : 001181300000676",
-          bankIfsc: sale.bankIfsc || "YESB0000011"
+          bankName: sale.bankName || "",
+          bankAccountNo: sale.bankAccountNo || "",
+          bankIfsc: sale.bankIfsc || ""
         };
       }
       const def = companies.find(c => c.isDefault) || companies[0];
@@ -3826,9 +3739,9 @@
         sellerPhone: "9924400076",
         sellerEmail: "accounts@libertysilkmills.com",
         sellerAddress: "PLOT NO 527/2, ROAD NO 5, ,SACHIN GIDC,SURAT,",
-        bankName: "YES BANK",
-        bankAccountNo: "OCC : 001181300000676",
-        bankIfsc: "YESB0000011"
+        bankName: "",
+        bankAccountNo: "",
+        bankIfsc: ""
       };
     }
 
@@ -3861,15 +3774,15 @@
         const bAcc = document.getElementById('modal-sales-bank-acc');
         const bIfsc = document.getElementById('modal-sales-bank-ifsc');
         if (bName && (!bName.value || bName.dataset.autoFilled === 'true')) {
-          bName.value = comp.bankName || 'YES BANK';
+          bName.value = comp.bankName || '';
           bName.dataset.autoFilled = 'true';
         }
         if (bAcc && (!bAcc.value || bAcc.dataset.autoFilled === 'true')) {
-          bAcc.value = comp.bankAccountNo || 'OCC : 001181300000676';
+          bAcc.value = comp.bankAccountNo || '';
           bAcc.dataset.autoFilled = 'true';
         }
         if (bIfsc && (!bIfsc.value || bIfsc.dataset.autoFilled === 'true')) {
-          bIfsc.value = comp.bankIfsc || 'YESB0000011';
+          bIfsc.value = comp.bankIfsc || '';
           bIfsc.dataset.autoFilled = 'true';
         }
       }
@@ -3927,6 +3840,37 @@
       if (consAddr && (!consAddr.value || consAddr.dataset.autoFilled === 'true')) {
         consAddr.value = buyerAddr;
         consAddr.dataset.autoFilled = 'true';
+      }
+
+      // Auto-suggest/auto-populate GSTIN, Phone, Address from customer history if user entered them previously
+      if (buyerName && buyerName.trim().length >= 2) {
+        const trimmed = buyerName.trim().toLowerCase();
+        let matched = null;
+        if (typeof dataStore !== 'undefined') {
+          for (const div of Object.keys(dataStore)) {
+            if (dataStore[div] && Array.isArray(dataStore[div].sales)) {
+              const found = dataStore[div].sales.find(s => s.customerName && s.customerName.trim().toLowerCase() === trimmed && (s.buyerGstin || s.buyerGst || s.gstin || s.buyerPhone || s.customerAddress));
+              if (found) { matched = found; break; }
+            }
+          }
+        }
+        if (matched) {
+          const gstinInput = document.getElementById('modal-sales-buyer-gstin');
+          const phoneInput = document.getElementById('modal-sales-buyer-phone');
+          const addrInput = document.getElementById('modal-sales-address');
+          if (gstinInput && !gstinInput.value) {
+            gstinInput.value = matched.buyerGstin || matched.buyerGst || matched.gstin || '';
+          }
+          if (phoneInput && !phoneInput.value && matched.buyerPhone) {
+            phoneInput.value = matched.buyerPhone;
+          }
+          if (addrInput && !addrInput.value && matched.customerAddress) {
+            addrInput.value = matched.customerAddress;
+            if (consAddr && (!consAddr.value || consAddr.dataset.autoFilled === 'true')) {
+              consAddr.value = matched.customerAddress;
+            }
+          }
+        }
       }
     }
 
@@ -4212,7 +4156,19 @@
       if (phoneEl) phoneEl.innerText = sale.buyerPhone || '-';
 
       const gstinEl = document.getElementById('details-sales-buyer-gstin');
-      if (gstinEl) gstinEl.innerText = sale.buyerGstin || '-';
+      if (gstinEl) {
+        let dispGst = sale.buyerGstin || sale.buyerGst || sale.gstin || sale.gstNo || sale.customerGstin || sale.customerGst || '';
+        if (!dispGst && sale.customerName && typeof dataStore !== 'undefined') {
+          const trimmedCust = sale.customerName.trim().toLowerCase();
+          for (const div of Object.keys(dataStore)) {
+            if (dataStore[div] && Array.isArray(dataStore[div].sales)) {
+              const prev = dataStore[div].sales.find(s => s.customerName && s.customerName.trim().toLowerCase() === trimmedCust && (s.buyerGstin || s.buyerGst || s.gstin));
+              if (prev) { dispGst = prev.buyerGstin || prev.buyerGst || prev.gstin || ''; break; }
+            }
+          }
+        }
+        gstinEl.innerText = dispGst || '-';
+      }
 
       const agentEl = document.getElementById('details-sales-agent');
       if (agentEl) agentEl.innerText = sale.broker || sale.agentName || sale.agent || 'DIRECT';
@@ -4361,78 +4317,87 @@
       const totalBoris = items.length;
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
-      const subtotalVal = sale.subtotalAmount || sale.amount || 0;
+      const subtotalVal = (sale.items && sale.items.length > 0) ? sale.items.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0) : (sale.subtotalAmount || sale.amount || 0);
       const discountAmount = sale.discountAmount || 0;
-      const taxableVal = sale.taxableAmount !== undefined ? sale.taxableAmount : (subtotalVal - discountAmount);
+      const taxableVal = sale.taxableAmount !== undefined ? parseFloat(sale.taxableAmount) : Math.max(0, subtotalVal - discountAmount);
       const gstRate = parseFloat(sale.gstRate) || 5;
-      const gstVal = sale.gstAmount !== undefined ? sale.gstAmount : (taxableVal * (gstRate / 100));
+      const gstVal = sale.gstAmount !== undefined ? parseFloat(sale.gstAmount) : (taxableVal * (gstRate / 100));
       const grandTotalVal = sale.totalAmount || (taxableVal + gstVal);
       const lotNo = resolveSaleLotNo(sale);
 
       const company = getSellerCompanyInfo(sale);
       const companyName = company.sellerName || "REAGHAN FASHIONS PVT LTD";
-      const divisionName = company.divisionName || "YARN DIVISION";
+      const divisionName = company.divisionName || (activeDivision ? activeDivision.toUpperCase() + ' DIVISION' : "YARN DIVISION");
       const companyAddress = company.sellerAddress || "PLOT NO 527/2, ROAD NO 5, ,SACHIN GIDC,SURAT,";
-      const companyGst = company.sellerGstin || "24AAECR5066N1Z0";
-      const companyCin = company.cinNo || "U17120GJ2009PTC058296";
       const companyPhone = company.sellerPhone || "9924400076";
       const companyEmail = company.sellerEmail || "accounts@libertysilkmills.com";
+      const companyGst = company.sellerGstin || "24AAECR5066N1Z0";
+      const companyCin = company.cinNo || "U17120GJ2009PTC058296";
+      const bankName = sale.bankName || company.bankName || "";
+      const bankAccountNo = sale.bankAccountNo || company.bankAccountNo || "";
+      const bankIfsc = sale.bankIfsc || company.bankIfsc || "";
 
-      const bankName = sale.bankName || company.bankName || "YES BANK";
-      const bankAcc = sale.bankAccountNo || company.bankAccountNo || "OCC : 001181300000676";
-      const bankIfsc = sale.bankIfsc || company.bankIfsc || "YESB0000011";
+      const invoiceNo = sale.invoiceNo || sale.challanNo || 'CH-0001/B/24-25';
+      const invoiceDate = formatDateDisplay(sale.invoiceDate || sale.date);
+      const challanNo = sale.challanNo || invoiceNo;
+      const challanDate = formatDateDisplay(sale.date);
+      const salesContractNo = sale.salesContractNo || '-';
+      const brokerName = sale.broker || sale.agentName || sale.agent || 'DIRECT';
+      const creditDays = sale.creditDays !== undefined ? sale.creditDays : 30;
+      const dueDate = formatDateDisplay(sale.dueDate || calculateDueDate(sale.date, creditDays));
+      const hsnCode = sale.hsnCode || '54033100';
 
-      const buyerName = sale.customerName || "VISHWA FAB-WEAVE PRIVATE LIMITED";
-      const buyerAddress = sale.customerAddress || "PLOT NO. 6711, OPP. NEW GEB, GIDC SACHIN, SACHIN,";
-      const buyerPhone = sale.buyerPhone || "9974750009";
-      const buyerGstin = sale.buyerGstin || "24AAACV7937J2ZZ";
+      const buyerName = sale.customerName || 'CLIENT NAME';
+      const buyerAddress = sale.customerAddress || 'Surat, Gujarat, India';
+      const buyerPhone = sale.buyerPhone || '';
+      let buyerGst = sale.buyerGstin || sale.buyerGst || sale.gstin || sale.gstNo || sale.customerGstin || sale.customerGst || '';
+      if (!buyerGst && sale.customerName) {
+        const trimmedCust = sale.customerName.trim().toLowerCase();
+        if (typeof dataStore !== 'undefined') {
+          for (const div of Object.keys(dataStore)) {
+            if (dataStore[div] && Array.isArray(dataStore[div].sales)) {
+              const prev = dataStore[div].sales.find(s => s.customerName && s.customerName.trim().toLowerCase() === trimmedCust && (s.buyerGstin || s.buyerGst || s.gstin));
+              if (prev) {
+                buyerGst = prev.buyerGstin || prev.buyerGst || prev.gstin || '';
+                break;
+              }
+            }
+          }
+        }
+      }
 
       const consigneeName = sale.consigneeName || buyerName;
       const consigneeAddress = sale.consigneeAddress || buyerAddress;
 
-      const invoiceNo = sale.invoiceNo || sale.challanNo;
-      const challanNo = sale.challanNo;
-      const invoiceDate = formatDateDisplay(sale.invoiceDate || sale.date);
-      const challanDate = formatDateDisplay(sale.date);
+      const ewayBillNo = sale.ewayBillNo || '';
+      const ackNo = sale.ackNo || '';
+      const ackDate = formatDateDisplay(sale.ackDate || sale.date);
+      const preparedBy = sale.preparedBy || 'Admin';
+      const remarks = sale.remarks || '';
 
-      const contractNo = sale.salesContractNo || "I1701126";
-      const broker = sale.broker || sale.agentName || "DIRECT";
-      const creditDays = sale.creditDays !== undefined ? sale.creditDays : 30;
+      const isGujarat = !buyerGst || buyerGst.startsWith('24') || buyerAddress.toLowerCase().includes('gujarat') || buyerAddress.toLowerCase().includes('surat');
+      let cgstRate = 0, sgstRate = 0, igstRate = 0;
+      let cgstAmt = 0, sgstAmt = 0, igstAmt = 0;
 
-      // Calculate Due Date if missing
-      let dueDateStr = sale.dueDate ? formatDateDisplay(sale.dueDate) : '';
-      if (!dueDateStr && sale.date) {
-        const parts = String(sale.date).split('-');
-        if (parts.length === 3) {
-          const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-          d.setDate(d.getDate() + creditDays);
-          dueDateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-        }
+      if (isGujarat) {
+        cgstRate = gstRate / 2;
+        sgstRate = gstRate / 2;
+        cgstAmt = taxableVal * (cgstRate / 100);
+        sgstAmt = taxableVal * (sgstRate / 100);
+      } else {
+        igstRate = gstRate;
+        igstAmt = gstVal;
       }
 
-      const ewayBillNo = sale.ewayBillNo || "642175604148";
-      const ackNo = sale.ackNo || "162625832180851";
-      const ackDt = formatDateDisplay(sale.ackDate || sale.date);
-      const preparedBy = sale.preparedBy || "Admin";
-      const remarks = sale.remarks || "";
-
-      // Tax split: CGST + SGST (half and half) or IGST
-      const cgstRate = (gstRate / 2).toFixed(2);
-      const sgstRate = (gstRate / 2).toFixed(2);
-      const cgstAmt = (gstVal / 2).toFixed(2);
-      const sgstAmt = (gstVal / 2).toFixed(2);
-
-      // Amount in words
+      const totalTaxAmt = cgstAmt + sgstAmt + igstAmt;
       const amountInWords = numberToWordsIN(grandTotalVal);
 
-      // Determine default description of goods
-      let goodsDesc = sale.goodsDescription;
-      if (!goodsDesc) {
-        const firstComp = items.length > 0 ? cleanYarnQualityName(items[0].composition) : "VISCOSE FILAMENT YARN";
-        goodsDesc = `100% ${firstComp.toUpperCase()} RAW WHITE CONES`;
+      const printWindow = window.open('', '_blank', 'width=1000,height=800');
+      if (!printWindow) {
+        showToast('Popup blocked! Please allow popups for this site to print bills.', 'error');
+        return;
       }
 
-      // Aggregate invoice items or build table rows
       const aggregatedMap = new Map();
       items.forEach(item => {
         const comp = cleanYarnQualityName(item.composition);
@@ -4445,8 +4410,7 @@
         if (!aggregatedMap.has(groupKey)) {
           aggregatedMap.set(groupKey, {
             composition: comp,
-            boxes: 0,
-            totalRolls: 0,
+            totalBoxes: 0,
             totalWeight: 0,
             rate: rate,
             totalAmount: 0
@@ -4454,323 +4418,349 @@
         }
 
         const group = aggregatedMap.get(groupKey);
-        group.boxes += 1;
-        group.totalRolls += rolls;
+        group.totalBoxes += 1;
         group.totalWeight += weight;
         group.totalAmount += amt;
       });
 
       const aggregatedItems = Array.from(aggregatedMap.values());
-      const hsnCode = sale.hsnCode || "54033100";
 
-      const itemsHtml = aggregatedItems.map((item, idx) => {
-        return `
-          <tr style="border-bottom: 1px solid #000;">
-            <td style="padding: 4px 6px; border-right: 1px solid #000; text-align: center;">${idx + 1}</td>
-            <td style="padding: 4px 6px; border-right: 1px solid #000; font-weight: 700; font-size: 10px;">${goodsDesc}<br><span style="font-size: 9px; font-weight: normal; color: #333;">(${item.composition})</span></td>
-            <td style="padding: 4px 6px; border-right: 1px solid #000; text-align: center; font-size: 10px;">${hsnCode}</td>
-            <td style="padding: 4px 6px; border-right: 1px solid #000; text-align: right; font-weight: 700; font-size: 10px;">${(item.totalWeight || 0).toFixed(3)}</td>
-            <td style="padding: 4px 6px; border-right: 1px solid #000; text-align: center; font-size: 10px;">${item.boxes}</td>
-            <td style="padding: 4px 6px; border-right: 1px solid #000; text-align: right; font-size: 10px;">${(item.rate || 0).toFixed(2)}</td>
-            <td style="padding: 4px 6px; text-align: right; font-weight: 700; font-size: 10px;">${(item.totalAmount || 0).toFixed(2)}</td>
+      let tableRowsHtml = '';
+      aggregatedItems.forEach((item, index) => {
+        const itemLot = item.lotNo || lotNo || '-';
+        const itemName = (aggregatedItems.length === 1 && sale.goodsDescription) ? sale.goodsDescription : `${item.composition} RAW WHITE CONES`;
+        tableRowsHtml += `
+          <tr>
+            <td style="text-align: center; border-right: 1px solid #000;">${index + 1}</td>
+            <td style="border-right: 1px solid #000; padding: 3px 6px;">
+              <div style="font-weight: 700; font-size: 9.5px; line-height: 1.25;">${itemName}</div>
+              <div style="font-size: 8.5px; font-weight: normal; color: #333; margin-top: 1px;">LOT NO: ${itemLot}</div>
+            </td>
+            <td style="text-align: center; border-right: 1px solid #000;">${hsnCode}</td>
+            <td style="text-align: right; border-right: 1px solid #000; font-weight: 700;">${item.totalWeight.toFixed(3)}</td>
+            <td style="text-align: center; border-right: 1px solid #000;">${item.totalBoxes}</td>
+            <td style="text-align: right; border-right: 1px solid #000;">${item.rate.toFixed(2)}</td>
+            <td style="text-align: right; font-weight: 700;">${item.totalAmount.toFixed(2)}</td>
           </tr>
         `;
-      }).join('');
+      });
 
-      // Extra empty rows to match full page height
-      const extraRowsNeeded = Math.max(0, 3 - aggregatedItems.length);
-      let extraRowsHtml = '';
-      for (let r = 0; r < extraRowsNeeded; r++) {
-        extraRowsHtml += `
-          <tr style="height: 22px; border-bottom: 1px solid #000;">
-            <td style="border-right: 1px solid #000;"></td>
-            <td style="border-right: 1px solid #000;"></td>
-            <td style="border-right: 1px solid #000;"></td>
-            <td style="border-right: 1px solid #000;"></td>
-            <td style="border-right: 1px solid #000;"></td>
-            <td style="border-right: 1px solid #000;"></td>
-            <td></td>
+      const padCount = Math.max(0, 3 - aggregatedItems.length);
+      for (let p = 0; p < padCount; p++) {
+        tableRowsHtml += `
+          <tr>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td>&nbsp;</td>
           </tr>
         `;
-      }
-
-      // QR Code payload (UPI / Tax Invoice data payload)
-      const qrPayload = `UPI://PAY?PA=${companyEmail}&PN=${encodeURIComponent(companyName)}&AM=${grandTotalVal.toFixed(2)}&TR=${invoiceNo}&CU=INR`;
-
-      // Create print window
-      const printWindow = window.open('', '_blank', 'width=950,height=900');
-      if (!printWindow) {
-        showToast('Popup blocked! Please allow popups for this site to print bills.', 'error');
-        return;
       }
 
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>TAX INVOICE - ${invoiceNo} - ${companyName}</title>
-          <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+          <title>Commercial Invoice - ${invoiceNo}</title>
           <style>
-            @media print {
-              @page {
-                size: A4 portrait;
-                margin: 6mm 8mm 6mm 8mm;
-              }
-              body {
-                padding: 0 !important;
-                margin: 0 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              .no-print {
-                display: none !important;
-              }
+            @page {
+              size: A4 portrait;
+              margin: 6mm 8mm;
             }
             * {
-              box-sizing: border-box;
               margin: 0;
               padding: 0;
+              box-sizing: border-box;
             }
             body {
               font-family: Arial, Helvetica, sans-serif;
               color: #000000;
-              background: #ffffff;
+              background-color: #ffffff;
               font-size: 9.5px;
               line-height: 1.25;
-              padding: 10px 14px;
             }
-            .invoice-wrapper {
-              width: 100%;
-              max-width: 820px;
-              margin: 0 auto;
-              border: 1.5px solid #000000;
-              background: #ffffff;
+            @media print {
+              .no-print {
+                display: none !important;
+              }
+              body {
+                padding: 0 !important;
+                background: #ffffff !important;
+              }
+            }
+            @media screen {
+              body {
+                background: #e2e8f0;
+                padding: 20px;
+              }
+              .invoice-card {
+                background: #ffffff;
+                width: 210mm;
+                min-height: 290mm;
+                margin: 0 auto 30px auto;
+                padding: 6mm 8mm;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+              }
             }
             .no-print-bar {
-              margin-bottom: 12px;
+              width: 210mm;
+              margin: 0 auto 15px auto;
               display: flex;
               gap: 10px;
               justify-content: flex-end;
-              padding: 8px 14px;
-              background: #f1f5f9;
-              border-radius: 6px;
+              padding: 10px 14px;
+              background: #ffffff;
+              border-radius: 8px;
               border: 1px solid #cbd5e1;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             }
             .no-print-btn {
-              padding: 6px 16px;
-              border-radius: 4px;
-              font-size: 12px;
-              font-weight: 700;
+              padding: 8px 18px;
+              border-radius: 6px;
+              font-size: 13px;
+              font-weight: 600;
               cursor: pointer;
               border: none;
+              transition: opacity 0.2s;
             }
             .btn-print {
-              background: #7c3aed;
+              background: #2563eb;
               color: #ffffff;
             }
             .btn-close {
-              background: #e2e8f0;
-              color: #1e293b;
+              background: #f1f5f9;
+              color: #334155;
             }
-            .top-invocation {
-              text-align: center;
-              font-size: 8.5px;
-              padding: 2px 0;
-              font-weight: 600;
-              letter-spacing: 0.5px;
+
+            .invoice-frame {
+              border: 1.5px solid #000000;
+              width: 100%;
+              background: #ffffff;
             }
-            .tax-inv-title {
+
+            .tax-inv-badge {
               text-align: center;
-              font-size: 11px;
+              font-size: 12px;
+              font-weight: 900;
+              letter-spacing: 1.5px;
+              padding: 5px 0 3px 0;
+            }
+
+            .header-grid {
+              display: flex;
+              flex-direction: column;
+              border-top: 1px solid #000;
+              border-bottom: 1.5px solid #000;
+              padding: 6px 12px 6px 12px;
+              align-items: center;
+              text-align: center;
+            }
+            .company-info {
+              width: 100%;
+              text-align: center;
+            }
+            .company-title {
+              font-size: 18px;
+              font-weight: 900;
+              letter-spacing: 0.8px;
+              text-transform: uppercase;
+              line-height: 1.15;
+            }
+            .company-division {
+              font-size: 11.5px;
               font-weight: 800;
               letter-spacing: 1px;
-              padding-bottom: 2px;
+              margin-top: 2px;
             }
-            .header-strip {
-              display: flex;
-              border-top: 1px solid #000;
-              border-bottom: 1px solid #000;
-              padding: 4px 6px;
-              align-items: center;
-              justify-content: space-between;
+            .company-address {
+              font-size: 9px;
+              margin-top: 2px;
             }
-            .seller-logo-box {
-              width: 50px;
-              height: 50px;
-              border: 1.5px solid #000;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 26px;
-              font-weight: 900;
-              font-family: 'Times New Roman', serif;
-              flex-shrink: 0;
-              margin-right: 8px;
+            .company-tax-ids {
+              font-size: 8.5px;
+              font-weight: bold;
+              margin-top: 2px;
             }
-            .seller-details {
-              flex: 1;
+
+            .banner-strip {
+              background: #ffffff;
               text-align: center;
-              padding: 0 4px;
-            }
-            .seller-name {
-              font-size: 15px;
+              font-size: 11px;
               font-weight: 900;
-              letter-spacing: 0.5px;
+              letter-spacing: 1.2px;
+              padding: 3px 0;
+              border-bottom: 1px solid #000;
               text-transform: uppercase;
             }
-            .seller-division {
-              font-size: 9.5px;
-              font-weight: 800;
-              letter-spacing: 0.5px;
-            }
-            .seller-address {
-              font-size: 8.5px;
-              margin-top: 1px;
-            }
-            .seller-tax-info {
-              font-size: 8.5px;
-              margin-top: 1px;
-            }
-            .qr-container {
-              width: 65px;
-              height: 65px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              flex-shrink: 0;
-              margin-left: 6px;
-            }
-            .banner-strip {
-              text-align: center;
-              font-weight: 900;
-              font-size: 11px;
-              letter-spacing: 1px;
-              padding: 2px 0;
-              border-bottom: 1px solid #000;
-              background: #f8fafc;
-            }
+
             .party-grid {
-              display: grid;
-              grid-template-columns: 1.15fr 1fr;
-              border-bottom: 1px solid #000;
-            }
-            .party-col-left {
-              border-right: 1px solid #000;
-              padding: 4px 6px;
-            }
-            .party-col-right {
-              padding: 0;
-            }
-            .party-sub-row {
               display: grid;
               grid-template-columns: 1fr 1fr;
               border-bottom: 1px solid #000;
-              padding: 3px 6px;
             }
-            .party-sub-row-full {
-              padding: 3px 6px;
-              border-bottom: 1px solid #000;
+            .party-col {
+              padding: 4px 8px;
             }
-            .party-sub-row-last {
-              padding: 3px 6px;
+            .party-col:first-child {
+              border-right: 1px solid #000;
             }
-            .contract-strip {
+            .party-heading {
+              font-weight: 800;
+              text-decoration: underline;
+              font-size: 9px;
+              margin-bottom: 3px;
+              text-transform: uppercase;
+            }
+            .info-row {
+              display: flex;
+              margin-bottom: 1.5px;
+              line-height: 1.25;
+            }
+            .info-lbl {
+              width: 60px;
+              font-weight: bold;
+              flex-shrink: 0;
+            }
+            .info-lbl-wide {
+              width: 130px;
+              font-weight: bold;
+              flex-shrink: 0;
+            }
+            .info-val {
+              flex: 1;
+              word-break: break-word;
+            }
+
+            .sub-strip {
               display: grid;
-              grid-template-columns: 1.15fr 1fr;
+              grid-template-columns: 1fr 1fr;
               border-bottom: 1px solid #000;
-              font-weight: 700;
               background: #ffffff;
             }
-            .contract-strip > div {
-              padding: 3px 6px;
+            .sub-strip-cell {
+              padding: 3px 8px;
+              font-size: 9px;
             }
-            .contract-strip > div:first-child {
+            .sub-strip-cell:first-child {
               border-right: 1px solid #000;
             }
-            table.goods-table {
+
+            .goods-table {
               width: 100%;
               border-collapse: collapse;
+              border-bottom: 1px solid #000;
             }
-            table.goods-table th {
+            .goods-table th {
               border-bottom: 1px solid #000;
               border-right: 1px solid #000;
-              padding: 4px 6px;
-              font-size: 9px;
+              padding: 4px 4px;
+              font-size: 8.5px;
               font-weight: 800;
               text-align: center;
               background: #f8fafc;
             }
-            table.goods-table th:last-child {
+            .goods-table th:last-child {
               border-right: none;
             }
-            .remarks-row {
-              border-bottom: 1px solid #000;
+            .goods-table td {
+              padding: 3px 4px;
+              font-size: 9px;
+              vertical-align: top;
+            }
+            .goods-table td:last-child {
+              border-right: none;
+            }
+            .remarks-row td {
+              border-top: 1px solid #000;
               padding: 3px 6px;
-              font-weight: 700;
-              font-size: 9.5px;
+              font-size: 8.5px;
             }
-            .lower-grid {
+
+            .lower-mid-grid {
               display: grid;
-              grid-template-columns: 1.25fr 1fr;
+              grid-template-columns: 1fr 1fr;
               border-bottom: 1px solid #000;
             }
-            .lower-left {
+            .lower-left-box {
+              padding: 5px 8px;
               border-right: 1px solid #000;
-              padding: 4px 6px;
               display: flex;
               flex-direction: column;
               justify-content: space-between;
             }
-            .lower-right {
+            .lower-right-box {
               padding: 0;
             }
-            table.tax-calc-table {
+            .tax-table {
               width: 100%;
               border-collapse: collapse;
             }
-            table.tax-calc-table td {
-              padding: 2.5px 6px;
-              font-size: 9.5px;
+            .tax-table td {
+              padding: 2.5px 8px;
+              font-size: 9px;
             }
-            table.tax-calc-table tr {
+            .tax-table .lbl-td {
+              text-align: right;
+              font-weight: 700;
+              border-right: 1px solid #000;
               border-bottom: 1px solid #000;
+              width: 60%;
             }
-            table.tax-calc-table tr:last-child {
+            .tax-table .val-td {
+              text-align: right;
+              font-weight: 800;
+              border-bottom: 1px solid #000;
+              width: 40%;
+            }
+            .tax-table .net-row td {
+              font-size: 11px;
+              font-weight: 900;
+              background: #f8fafc;
               border-bottom: none;
             }
-            .terms-sign-grid {
+
+            .terms-sig-grid {
               display: grid;
-              grid-template-columns: 1.25fr 1fr;
+              grid-template-columns: 1fr 1fr;
               border-bottom: 1px solid #000;
-              min-height: 110px;
             }
             .terms-col {
+              padding: 4px 8px;
               border-right: 1px solid #000;
-              padding: 4px 6px;
-              font-size: 8px;
-              line-height: 1.2;
+              font-size: 7.5px;
+              line-height: 1.35;
+              color: #222;
             }
-            .sign-col {
-              padding: 4px 6px;
+            .terms-title {
+              font-weight: 800;
+              text-decoration: underline;
+              font-size: 8px;
+              margin-bottom: 2px;
+            }
+            .sig-col {
+              padding: 4px 8px;
               display: flex;
               flex-direction: column;
               justify-content: space-between;
               text-align: right;
             }
-            .footer-strip {
+
+            .bottom-declaration {
               display: flex;
               justify-content: space-between;
-              padding: 3px 6px;
-              font-size: 8.5px;
-              font-weight: 700;
+              padding: 3px 8px;
+              font-size: 8px;
+              font-weight: bold;
               border-bottom: 1px solid #000;
             }
-            .declaration-text {
-              padding: 2px 6px;
-              font-size: 7.5px;
+            .footer-strip {
               text-align: center;
-              color: #222;
+              font-size: 7.5px;
+              padding: 2px 4px;
+              line-height: 1.2;
             }
           </style>
         </head>
@@ -4780,204 +4770,197 @@
             <button type="button" class="no-print-btn btn-close" onclick="window.close()">Close</button>
           </div>
 
-          <div class="invoice-wrapper">
-            <!-- Top Invocations -->
-            <div class="top-invocation">|| Shree Ganeshaya Namah ||</div>
-            <div class="tax-inv-title">TAX INVOICE</div>
-
-            <!-- Seller Header -->
-            <div class="header-strip">
-              <div class="seller-logo-box">
-                ${companyName.charAt(0)}
-              </div>
-              <div class="seller-details">
-                <div class="seller-name">${companyName}</div>
-                <div class="seller-division">${divisionName}</div>
-                <div class="seller-address">${companyAddress}</div>
-                <div class="seller-tax-info">
-                  <strong>G.S.T. No. : ${companyGst}</strong> &nbsp;|&nbsp; <strong>C.I.N No. : ${companyCin}</strong><br>
-                  ${companyPhone ? 'Phone : ' + companyPhone : ''} ${companyEmail ? ' | E-mail : ' + companyEmail : ''}
-                </div>
-              </div>
-              <div class="qr-container" id="qrcode"></div>
-            </div>
-
-            <!-- Commercial Invoice Banner -->
-            <div class="banner-strip">COMMERCIAL INVOICE</div>
-
-            <!-- Buyer & Consignee 2-Column Details -->
-            <div class="party-grid">
-              <!-- Left: Buyer Details -->
-              <div class="party-col-left">
-                <div style="font-size: 8.5px; font-weight: 800; text-transform: uppercase;">BUYER</div>
-                <div style="font-size: 10.5px; font-weight: 800; margin: 1px 0;">${buyerName}</div>
-                <div style="font-size: 8.5px; line-height: 1.25;">
-                  ${buyerAddress}<br>
-                  Phone No : ${buyerPhone}<br>
-                  <strong>GSTIN / UIN : ${buyerGstin}</strong>
-                </div>
-              </div>
-
-              <!-- Right: Invoice & Consignee Metadata -->
-              <div class="party-col-right">
-                <div class="party-sub-row">
-                  <div><strong>Invoice / Challan No. :</strong> ${invoiceNo}</div>
-                  <div><strong>Dated :</strong> ${invoiceDate}</div>
-                </div>
-                <div class="party-sub-row-last">
-                  <div style="font-size: 8px; font-weight: 800;">CONSIGNEE</div>
-                  <div style="font-size: 9.5px; font-weight: 700;">${consigneeName}</div>
-                  <div style="font-size: 8px;">${consigneeAddress}</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Sales Contract & Broker Strip -->
-            <div class="contract-strip">
-              <div>Sales Contract No. : <span style="font-weight: 800;">${contractNo}</span></div>
-              <div>Broker : <span style="font-weight: 800;">${broker}</span></div>
-            </div>
-
-            <!-- Table of Goods -->
-            <table class="goods-table">
-              <thead>
-                <tr>
-                  <th style="width: 5%;">Sr. No.</th>
-                  <th style="width: 38%;">Description of Goods</th>
-                  <th style="width: 11%;">HSN</th>
-                  <th style="width: 14%;">Quantity (KGS)</th>
-                  <th style="width: 8%;">BOX</th>
-                  <th style="width: 11%;">Rate</th>
-                  <th style="width: 13%;">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${itemsHtml}
-                ${extraRowsHtml}
-                <!-- Total Table Row -->
-                <tr style="border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; font-weight: 800; background: #fafafa;">
-                  <td style="padding: 4px 6px; border-right: 1px solid #000; text-align: center;"></td>
-                  <td style="padding: 4px 6px; border-right: 1px solid #000; font-size: 10px;">TOTAL</td>
-                  <td style="padding: 4px 6px; border-right: 1px solid #000; text-align: center;"></td>
-                  <td style="padding: 4px 6px; border-right: 1px solid #000; text-align: right; font-size: 10px;">${totalWeight.toFixed(3)}</td>
-                  <td style="padding: 4px 6px; border-right: 1px solid #000; text-align: center; font-size: 10px;">${totalBoris}</td>
-                  <td style="padding: 4px 6px; border-right: 1px solid #000; text-align: right;"></td>
-                  <td style="padding: 4px 6px; text-align: right; font-size: 10px;">${taxableVal.toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <!-- Remarks Strip -->
-            <div class="remarks-row">
-              Remarks : <span style="font-weight: normal;">${remarks || 'NIL'}</span>
-            </div>
-
-            <!-- Lower Section: Credit Days, Bank Details, Words, Tax Breakdown -->
-            <div class="lower-grid">
-              <!-- Lower Left -->
-              <div class="lower-left">
-                <div>
-                  <div style="margin-bottom: 3px;">
-                    <strong>Credit Days :</strong> ${creditDays} &nbsp;&nbsp;&nbsp;&nbsp; <strong>Due Date :</strong> ${dueDateStr}
-                  </div>
-                  <div style="font-size: 8px; color: #222; margin-bottom: 4px;">
-                    Note: In case of payment through RTGS/NEFT online please send confirmation to ${companyEmail}
-                  </div>
-                  <div style="font-size: 8.5px; border: 1px dashed #444; padding: 3px 5px; border-radius: 3px; background: #fafafa; margin-bottom: 4px;">
-                    <strong>Bank Name :</strong> ${bankName}<br>
-                    <strong>A/C No. :</strong> ${bankAcc}<br>
-                    <strong>RTGS/NEFT IFSC :</strong> ${bankIfsc}
-                  </div>
-                </div>
-                <div style="margin-top: 4px; border-top: 1px solid #ccc; padding-top: 3px;">
-                  <div style="font-size: 8px; font-weight: 700;">INR IN WORDS</div>
-                  <div style="font-size: 9px; font-weight: 800;">${amountInWords}</div>
-                </div>
-              </div>
-
-              <!-- Lower Right (Tax Summary) -->
-              <div class="lower-right">
-                <table class="tax-calc-table">
-                  <tr>
-                    <td style="width: 60%; font-weight: 700;">CGST (${cgstRate}%)</td>
-                    <td style="width: 40%; text-align: right; font-weight: 700;">${cgstAmt}</td>
-                  </tr>
-                  <tr>
-                    <td style="font-weight: 700;">SGST (${sgstRate}%)</td>
-                    <td style="text-align: right; font-weight: 700;">${sgstAmt}</td>
-                  </tr>
-                  <tr>
-                    <td style="font-weight: 700;">IGST (0.00%)</td>
-                    <td style="text-align: right; font-weight: 700;">0.00</td>
-                  </tr>
-                  <tr>
-                    <td style="font-weight: 700;">TOTAL TAX</td>
-                    <td style="text-align: right; font-weight: 700;">${gstVal.toFixed(2)}</td>
-                  </tr>
-                  <tr style="background: #f1f5f9; font-size: 11px;">
-                    <td style="font-weight: 900;">NET VALUE (INR)</td>
-                    <td style="text-align: right; font-weight: 900; font-size: 11px;">${grandTotalVal.toFixed(2)}</td>
-                  </tr>
-                </table>
-              </div>
-            </div>
-
-            <!-- Terms & Conditions + Signatures -->
-            <div class="terms-sign-grid">
-              <!-- Left: Terms & Conditions -->
-              <div class="terms-col">
-                <div style="font-weight: 800; text-decoration: underline; margin-bottom: 2px;">Terms & Conditions :</div>
-                1. We are not responsible for any damage or loss during transit.<br>
-                2. Goods once sold will not be accepted back or replaced.<br>
-                3. The payment is to be made by crossed A/C payee cheque or draft or RTGS.<br>
-                4. Interest @ 18% p.a. will be charged if bill is not paid within the credit days.<br>
-                5. Any discrepancy in this invoice must be notified in writing within 24 hours.<br>
-                6. Subject to SURAT Jurisdiction.
-              </div>
-
-              <!-- Right: E-Way Bill + Signatory Box -->
-              <div class="sign-col">
-                <div style="text-align: left; font-size: 8px;">
-                  <strong>EWAY BILL NO :</strong> ${ewayBillNo}<br>
-                  <strong>Ack No. :</strong> ${ackNo} &nbsp;&nbsp; <strong>Ack Dt. :</strong> ${ackDt}
-                </div>
-                <div style="margin-top: 14px;">
-                  <div style="font-size: 9px; font-weight: 800; text-transform: uppercase;">For ${companyName}</div>
-                  <div style="font-size: 8px; font-weight: 700; margin-bottom: 22px;">${divisionName}</div>
-                  <div style="font-size: 8.5px; font-weight: 800; border-top: 1px solid #000; display: inline-block; padding-top: 2px; width: 140px; text-align: center;">
-                    Authorised Signatory
+          <div class="invoice-card">
+            <div class="invoice-frame">
+              <!-- Header with Centered Details -->
+              <div class="tax-inv-badge">TAX INVOICE</div>
+              <div class="header-grid">
+                <div class="company-info">
+                  <div class="company-title">${companyName}</div>
+                  <div class="company-division">${divisionName}</div>
+                  <div class="company-address">${companyAddress}</div>
+                  <div class="company-tax-ids">
+                    G.S.T. No. : ${companyGst} &nbsp;|&nbsp; C.I.N No. : ${companyCin}<br>
+                    ${companyPhone ? 'Phone : ' + companyPhone : ''} ${companyEmail ? '&nbsp;|&nbsp; Email : ' + companyEmail : ''}
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Footer Strip -->
-            <div class="footer-strip">
-              <div>E.&O.E Receiver' Signatory : ___________________</div>
-              <div>PREPARED BY : ${preparedBy.toUpperCase()}</div>
-            </div>
+              <!-- Banner -->
+              <div class="banner-strip">COMMERCIAL INVOICE</div>
 
-            <!-- Declaration -->
-            <div class="declaration-text">
-              We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+              <!-- Party / Bill To vs Invoice / Ship To Grid -->
+              <div class="party-grid">
+                <!-- Left: Buyer Details -->
+                <div class="party-col">
+                  <div class="party-heading">Details of Receiver (Billed to)</div>
+                  <div class="info-row">
+                    <div class="info-lbl">Name :</div>
+                    <div class="info-val" style="font-weight: 800; font-size: 10px;">${buyerName}</div>
+                  </div>
+                  <div class="info-row">
+                    <div class="info-lbl">Address :</div>
+                    <div class="info-val">${buyerAddress}</div>
+                  </div>
+                  ${buyerPhone ? `
+                  <div class="info-row">
+                    <div class="info-lbl">Phone :</div>
+                    <div class="info-val">${buyerPhone}</div>
+                  </div>` : ''}
+                  <div class="info-row" style="margin-top: 3px;">
+                    <div class="info-lbl">G.S.T. NO. :</div>
+                    <div class="info-val" style="font-weight: 800;" contenteditable="true" title="Click to edit GSTIN">${buyerGst || '-'}</div>
+                  </div>
+                </div>
+
+                <!-- Right: Invoice Info & Consignee -->
+                <div class="party-col">
+                  <div class="info-row">
+                    <div class="info-lbl-wide">Invoice / Challan No :</div>
+                    <div class="info-val" style="font-weight: 800;">${invoiceNo}</div>
+                  </div>
+                  <div class="info-row">
+                    <div class="info-lbl-wide">Invoice Date :</div>
+                    <div class="info-val"><strong>${invoiceDate}</strong></div>
+                  </div>
+                  <div style="border-top: 1px dashed #999; margin: 3px 0 2px 0;"></div>
+                  <div class="party-heading" style="font-size: 8.5px;">Details of Consignee (Shipped to)</div>
+                  <div class="info-row">
+                    <div class="info-lbl">Name :</div>
+                    <div class="info-val" style="font-weight: 700;">${consigneeName}</div>
+                  </div>
+                  <div class="info-row">
+                    <div class="info-lbl">Address :</div>
+                    <div class="info-val">${consigneeAddress}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contract & Broker Strip -->
+              <div class="sub-strip">
+                <div class="sub-strip-cell">Sales Contract No. : &nbsp; <strong>${salesContractNo}</strong></div>
+                <div class="sub-strip-cell">Broker : &nbsp; <strong>${brokerName}</strong></div>
+              </div>
+
+              <!-- Items Table -->
+              <table class="goods-table">
+                <thead>
+                  <tr>
+                    <th style="width: 5%;">Sr. No.</th>
+                    <th style="width: 38%;">Description of Goods</th>
+                    <th style="width: 11%;">HSN</th>
+                    <th style="width: 14%;">Quantity (KGS)</th>
+                    <th style="width: 9%;">BOX (Nos.)</th>
+                    <th style="width: 11%;">Unit Rate (INR)</th>
+                    <th style="width: 12%;">Amount (In INR)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${tableRowsHtml}
+                  <tr class="remarks-row">
+                    <td colspan="3">
+                      <strong>Remarks:</strong> ${remarks ? remarks : (discountAmount > 0 ? `Discount Applied: ₹${discountAmount.toFixed(2)}` : 'DISPATCHED AS PER ORDER')}
+                    </td>
+                    <td style="text-align: right; border-right: 1px solid #000; font-weight: 900;">${totalWeight.toFixed(3)}</td>
+                    <td style="text-align: center; border-right: 1px solid #000; font-weight: 900;">${totalBoris}</td>
+                    <td style="border-right: 1px solid #000;">&nbsp;</td>
+                    <td style="text-align: right; font-weight: 900;">₹${taxableVal.toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- Lower Mid Section: Bank & Terms on Left, Tax Breakdown on Right -->
+              <div class="lower-mid-grid">
+                <div class="lower-left-box">
+                  <div>
+                    <div style="font-weight: bold; margin-bottom: 2px;">
+                      Credit Days : <strong>${creditDays}</strong> &nbsp;|&nbsp; Due Date : <strong>${dueDate}</strong>
+                    </div>
+                    <div style="font-size: 8px; color: #333; margin-bottom: 4px;">
+                      Please make online payment on or before due date.
+                    </div>
+                    <div style="border: 1px solid #000; padding: 4px 6px; border-radius: 3px; font-size: 8.5px; background: #fafafa;" contenteditable="true" title="Click to edit Bank Details before printing">
+                      <div style="font-weight: 800; text-decoration: underline; margin-bottom: 2px;">BANK DETAILS :</div>
+                      <div>Bank Name : <strong id="bill-bank-name">${bankName || ''}</strong></div>
+                      <div>A/c No : <strong id="bill-bank-acc">${bankAccountNo || ''}</strong></div>
+                      <div>IFSC Code : <strong id="bill-bank-ifsc">${bankIfsc || ''}</strong></div>
+                    </div>
+                  </div>
+                  <div style="margin-top: 6px; font-size: 9px; font-weight: bold;">
+                    INR in words : <span style="font-weight: normal; font-style: italic;">${amountInWords}</span>
+                  </div>
+                </div>
+
+                <div class="lower-right-box">
+                  <table class="tax-table">
+                    <tr>
+                      <td class="lbl-td">Taxable Value :</td>
+                      <td class="val-td">₹${taxableVal.toFixed(2)}</td>
+                    </tr>
+                    ${isGujarat ? `
+                    <tr>
+                      <td class="lbl-td">CGST (${cgstRate.toFixed(1)}%) :</td>
+                      <td class="val-td">₹${cgstAmt.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td class="lbl-td">SGST (${sgstRate.toFixed(1)}%) :</td>
+                      <td class="val-td">₹${sgstAmt.toFixed(2)}</td>
+                    </tr>
+                    ` : `
+                    <tr>
+                      <td class="lbl-td">IGST (${igstRate.toFixed(1)}%) :</td>
+                      <td class="val-td">₹${igstAmt.toFixed(2)}</td>
+                    </tr>
+                    `}
+                    <tr>
+                      <td class="lbl-td">Total Tax Amount :</td>
+                      <td class="val-td">₹${totalTaxAmt.toFixed(2)}</td>
+                    </tr>
+                    <tr class="net-row">
+                      <td class="lbl-td">Net Invoice Value :</td>
+                      <td class="val-td">₹${grandTotalVal.toFixed(2)}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Terms & Signatures -->
+              <div class="terms-sig-grid">
+                <div class="terms-col">
+                  <div class="terms-title">Terms & Conditions:</div>
+                  1. Goods once sold will not be taken back.<br>
+                  2. Interest @ 18% per annum will be charged if payment is not made within the due date.<br>
+                  3. Our responsibility ceases immediately after goods leave our factory/godown.<br>
+                  4. Strictly do not mix different yarn lot numbers during warping, weaving or processing.<br>
+                  5. No complaints will be entertained once the yarn is consumed or warped.<br>
+                  6. Subject to Surat jurisdiction only.
+                </div>
+                <div class="sig-col">
+                  <div>
+                    ${ewayBillNo ? `<div style="font-size: 8.5px; font-weight: bold;">EWAY BILL NO : ${ewayBillNo}</div>` : ''}
+                    ${ackNo ? `<div style="font-size: 8px; color: #333;">Ack No : ${ackNo} &nbsp;|&nbsp; Dt : ${ackDate}</div>` : ''}
+                  </div>
+                  <div>
+                    <div style="font-size: 9.5px; font-weight: 800; text-transform: uppercase;">For, ${companyName}</div>
+                    <div style="font-size: 8.5px; font-weight: 700; margin-bottom: 30px;">${divisionName}</div>
+                    <div style="font-weight: 800; font-size: 9px;">Authorised Signatory</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Footer Declaration -->
+              <div class="bottom-declaration">
+                <div>E.&O.E Receiver' Signatory : ____________________</div>
+                <div>PREPARED BY : ${preparedBy}</div>
+              </div>
+
+              <div class="footer-strip">
+                Certified that the particulars given above are true and correct and the amount indicated represents the price actually charged and that there is no flow of additional consideration directly or indirectly from the buyer.
+              </div>
             </div>
           </div>
 
           <scr` + `ipt>
-            // Generate Vector QR Code
-            try {
-              new QRCode(document.getElementById("qrcode"), {
-                text: "${qrPayload}",
-                width: 60,
-                height: 60,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.M
-              });
-            } catch(e) {
-              console.error("QR Code Error:", e);
-            }
-
             function triggerPrint() {
               window.focus();
               window.print();
@@ -6275,11 +6258,32 @@
 
       const editId = document.getElementById('modal-sales-edit-id').value;
       const challanNo = document.getElementById('modal-sales-challan').value.trim();
+      const invoiceNo = challanNo;
       const date = document.getElementById('modal-sales-date').value;
-      const hsnCode = document.getElementById('modal-sales-hsn') ? document.getElementById('modal-sales-hsn').value.trim() : '5402';
-      const customerName = document.getElementById('modal-sales-customer').value.trim();
+      const salesContractNo = document.getElementById('modal-sales-contract') ? document.getElementById('modal-sales-contract').value.trim() : '';
       const agentName = document.getElementById('modal-sales-agent') ? document.getElementById('modal-sales-agent').value.trim() : '';
-      const customerAddress = document.getElementById('modal-sales-address') ? document.getElementById('modal-sales-address').value.trim() : 'Industrial Area, Surat, Gujarat, India';
+      const creditDays = parseInt(document.getElementById('modal-sales-credit-days') ? document.getElementById('modal-sales-credit-days').value : 30) || 30;
+      const dueDate = document.getElementById('modal-sales-due-date') ? document.getElementById('modal-sales-due-date').value : '';
+      const hsnCode = document.getElementById('modal-sales-hsn') ? document.getElementById('modal-sales-hsn').value.trim() : '54033100';
+      const customerName = document.getElementById('modal-sales-customer').value.trim();
+      const buyerPhone = document.getElementById('modal-sales-buyer-phone') ? document.getElementById('modal-sales-buyer-phone').value.trim() : '';
+      const buyerGstin = document.getElementById('modal-sales-buyer-gstin') ? document.getElementById('modal-sales-buyer-gstin').value.trim() : '';
+      const customerAddress = (document.getElementById('modal-sales-address') ? document.getElementById('modal-sales-address').value.trim() : '') || 'Industrial Area, Surat, Gujarat, India';
+
+      const consigneeName = (document.getElementById('modal-sales-consignee-name') ? document.getElementById('modal-sales-consignee-name').value.trim() : '') || customerName;
+      const consigneeAddress = (document.getElementById('modal-sales-consignee-address') ? document.getElementById('modal-sales-consignee-address').value.trim() : '') || customerAddress;
+      const goodsDescription = document.getElementById('modal-sales-goods-desc') ? document.getElementById('modal-sales-goods-desc').value.trim() : '';
+
+      const ewayBillNo = document.getElementById('modal-sales-eway') ? document.getElementById('modal-sales-eway').value.trim() : '';
+      const ackNo = document.getElementById('modal-sales-ack-no') ? document.getElementById('modal-sales-ack-no').value.trim() : '';
+      const ackDate = (document.getElementById('modal-sales-ack-date') ? document.getElementById('modal-sales-ack-date').value : '') || date;
+      const preparedBy = (document.getElementById('modal-sales-prepared-by') ? document.getElementById('modal-sales-prepared-by').value.trim() : '') || 'Admin';
+      const remarks = document.getElementById('modal-sales-remarks') ? document.getElementById('modal-sales-remarks').value.trim() : '';
+
+      const bankName = document.getElementById('modal-sales-bank-name') ? document.getElementById('modal-sales-bank-name').value.trim() : '';
+      const bankAccountNo = document.getElementById('modal-sales-bank-acc') ? document.getElementById('modal-sales-bank-acc').value.trim() : '';
+      const bankIfsc = document.getElementById('modal-sales-bank-ifsc') ? document.getElementById('modal-sales-bank-ifsc').value.trim() : '';
+
       const companyVal = document.getElementById('modal-sales-company') ? document.getElementById('modal-sales-company').value : '';
       const sellerCompany = getSellerCompanyInfo({ sellerCompanyId: companyVal, sellerName: companyVal });
       
@@ -6308,17 +6312,38 @@
       const data = {
         id: editId || 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         challanNo: challanNo,
+        invoiceNo: invoiceNo,
         date: date,
-        hsnCode: hsnCode || '5402',
+        invoiceDate: date,
+        salesContractNo: salesContractNo,
+        broker: agentName,
+        agentName: agentName,
+        creditDays: creditDays,
+        dueDate: dueDate,
+        hsnCode: hsnCode || '54033100',
         sellerCompanyId: sellerCompany.id || '',
-        sellerName: sellerCompany.sellerName || 'Vishwa Fashions',
-        sellerGstin: sellerCompany.sellerGstin || '',
+        sellerName: sellerCompany.sellerName || 'REAGHAN FASHIONS PVT LTD',
+        divisionName: sellerCompany.divisionName || (activeDivision ? activeDivision.toUpperCase() + ' DIVISION' : 'YARN DIVISION'),
+        sellerGstin: sellerCompany.sellerGstin || '24AAECR5066N1Z0',
+        cinNo: sellerCompany.cinNo || 'U17120GJ2009PTC058296',
         sellerPhone: sellerCompany.sellerPhone || '',
         sellerEmail: sellerCompany.sellerEmail || '',
         sellerAddress: sellerCompany.sellerAddress || '',
         customerName: customerName,
-        agentName: agentName,
+        buyerPhone: buyerPhone,
+        buyerGstin: buyerGstin,
         customerAddress: customerAddress,
+        consigneeName: consigneeName,
+        consigneeAddress: consigneeAddress,
+        goodsDescription: goodsDescription,
+        ewayBillNo: ewayBillNo,
+        ackNo: ackNo,
+        ackDate: ackDate,
+        preparedBy: preparedBy,
+        remarks: remarks,
+        bankName: bankName || (sellerCompany ? (sellerCompany.bankName || '') : ''),
+        bankAccountNo: bankAccountNo || (sellerCompany ? (sellerCompany.bankAccountNo || '') : ''),
+        bankIfsc: bankIfsc || (sellerCompany ? (sellerCompany.bankIfsc || '') : ''),
         discountType: discType,
         discountValue: rawDiscVal,
         discountAmount: discountAmount,
@@ -8828,7 +8853,7 @@
                 </div>
                 <div class="form-group" style="flex: 1.5 1 160px;">
                   <label for="modal-sales-bank-acc">Account No / Type</label>
-                  <input type="text" id="modal-sales-bank-acc" placeholder="e.g. OCC : 001181300000676">
+                  <input type="text" id="modal-sales-bank-acc" placeholder="e.g. C/A : 50200012345678">
                 </div>
                 <div class="form-group" style="flex: 1 1 120px;">
                   <label for="modal-sales-bank-ifsc">IFSC Code</label>

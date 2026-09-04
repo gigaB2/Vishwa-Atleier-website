@@ -681,6 +681,18 @@
             <label for="modal-comp-address">Billing &amp; Business Address</label>
             <textarea id="modal-comp-address" rows="3" placeholder="Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221"></textarea>
           </div>
+          <div class="input-group">
+            <label for="modal-comp-bank-name">Bank Name</label>
+            <input type="text" id="modal-comp-bank-name" placeholder="e.g. HDFC BANK">
+          </div>
+          <div class="input-group">
+            <label for="modal-comp-bank-acc">Account No / Type</label>
+            <input type="text" id="modal-comp-bank-acc" placeholder="e.g. C/A : 50200012345678">
+          </div>
+          <div class="input-group">
+            <label for="modal-comp-bank-ifsc">IFSC Code</label>
+            <input type="text" id="modal-comp-bank-ifsc" placeholder="e.g. HDFC0001234" style="text-transform: uppercase;">
+          </div>
           <div class="input-group full-width" style="margin-top: 0.25rem;">
             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
               <input type="checkbox" id="modal-comp-default"> Set as Default Quotation Company Header
@@ -2139,7 +2151,10 @@
         sellerGstin: defaultComp.sellerGstin,
         sellerPhone: defaultComp.sellerPhone,
         sellerEmail: defaultComp.sellerEmail,
-        sellerAddress: defaultComp.sellerAddress
+        sellerAddress: defaultComp.sellerAddress,
+        bankName: defaultComp.bankName || '',
+        bankAccountNo: defaultComp.bankAccountNo || '',
+        bankIfsc: defaultComp.bankIfsc || ''
       };
       localStorage.setItem('vishwa_fashions_settings', JSON.stringify(legacySettings));
     }
@@ -2181,6 +2196,7 @@
           <div><strong style="color: var(--fg);">Phone:</strong> ${escapeHtml(comp.sellerPhone || 'N/A')}</div>
           <div><strong style="color: var(--fg);">Email:</strong> ${escapeHtml(comp.sellerEmail || 'N/A')}</div>
           <div style="grid-column: 1 / -1;"><strong style="color: var(--fg);">Address:</strong> ${escapeHtml(comp.sellerAddress || 'N/A')}</div>
+          ${(comp.bankName || comp.bankAccountNo) ? `<div style="grid-column: 1 / -1; color: var(--accent);"><strong style="color: var(--fg);">Bank:</strong> ${escapeHtml(comp.bankName || '')} ${comp.bankAccountNo ? '| A/c: ' + escapeHtml(comp.bankAccountNo) : ''} ${comp.bankIfsc ? '| IFSC: ' + escapeHtml(comp.bankIfsc) : ''}</div>` : ''}
         </div>
       `;
       listContainer.appendChild(row);
@@ -2207,6 +2223,9 @@
         document.getElementById('modal-comp-phone').value = comp.sellerPhone || '';
         document.getElementById('modal-comp-email').value = comp.sellerEmail || '';
         document.getElementById('modal-comp-address').value = comp.sellerAddress || '';
+        if (document.getElementById('modal-comp-bank-name')) document.getElementById('modal-comp-bank-name').value = comp.bankName || '';
+        if (document.getElementById('modal-comp-bank-acc')) document.getElementById('modal-comp-bank-acc').value = comp.bankAccountNo || '';
+        if (document.getElementById('modal-comp-bank-ifsc')) document.getElementById('modal-comp-bank-ifsc').value = comp.bankIfsc || '';
         document.getElementById('modal-comp-default').checked = !!comp.isDefault;
       }
     } else {
@@ -2216,6 +2235,9 @@
       document.getElementById('modal-comp-phone').value = '';
       document.getElementById('modal-comp-email').value = '';
       document.getElementById('modal-comp-address').value = '';
+      if (document.getElementById('modal-comp-bank-name')) document.getElementById('modal-comp-bank-name').value = '';
+      if (document.getElementById('modal-comp-bank-acc')) document.getElementById('modal-comp-bank-acc').value = '';
+      if (document.getElementById('modal-comp-bank-ifsc')) document.getElementById('modal-comp-bank-ifsc').value = '';
       const companies = getStoredCompanies();
       document.getElementById('modal-comp-default').checked = (companies.length === 0);
     }
@@ -2235,6 +2257,9 @@
     const phone = document.getElementById('modal-comp-phone').value.trim();
     const email = document.getElementById('modal-comp-email').value.trim();
     const address = document.getElementById('modal-comp-address').value.trim();
+    const bankName = document.getElementById('modal-comp-bank-name') ? document.getElementById('modal-comp-bank-name').value.trim() : '';
+    const bankAcc = document.getElementById('modal-comp-bank-acc') ? document.getElementById('modal-comp-bank-acc').value.trim() : '';
+    const bankIfsc = document.getElementById('modal-comp-bank-ifsc') ? document.getElementById('modal-comp-bank-ifsc').value.trim().toUpperCase() : '';
     const makeDefault = document.getElementById('modal-comp-default').checked;
 
     if (!name) {
@@ -2263,6 +2288,9 @@
           sellerPhone: phone,
           sellerEmail: email,
           sellerAddress: address,
+          bankName: bankName,
+          bankAccountNo: bankAcc,
+          bankIfsc: bankIfsc,
           isDefault: makeDefault || companies[idx].isDefault
         };
       }
@@ -2274,6 +2302,9 @@
         sellerPhone: phone,
         sellerEmail: email,
         sellerAddress: address,
+        bankName: bankName,
+        bankAccountNo: bankAcc,
+        bankIfsc: bankIfsc,
         isDefault: makeDefault || (companies.length === 0)
       };
       companies.push(newComp);
