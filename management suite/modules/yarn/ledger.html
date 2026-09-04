@@ -1385,27 +1385,27 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       overflow-x: auto;
-      max-height: calc(85vh - 240px);
+      max-height: calc(85vh - 220px);
       overflow-y: auto;
       margin-bottom: 1rem;
       background: var(--surface);
     }
 
     .statement-table-wrapper::-webkit-scrollbar {
-      height: 8px;
-      width: 8px;
+      height: 6px;
+      width: 6px;
     }
 
     .statement-table-wrapper::-webkit-scrollbar-thumb {
       background: var(--border);
-      border-radius: 4px;
+      border-radius: 3px;
     }
 
     .statement-table {
       width: 100%;
-      min-width: 1200px;
+      min-width: 100%;
       border-collapse: collapse;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-family: var(--font-body);
     }
 
@@ -1417,21 +1417,21 @@
       color: var(--muted);
       font-weight: 700;
       text-transform: uppercase;
-      font-size: 0.74rem;
-      letter-spacing: 0.05em;
-      padding: 0.75rem 0.9rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      padding: 0.6rem 0.65rem;
       border-bottom: 2px solid var(--border);
       border-right: 1px solid var(--border);
       white-space: nowrap;
     }
 
     .statement-table td {
-      padding: 0.7rem 0.9rem;
+      padding: 0.48rem 0.65rem;
       border-bottom: 1px solid var(--border);
       border-right: 1px solid var(--border);
       color: var(--fg);
       vertical-align: middle;
-      line-height: 1.4;
+      line-height: 1.35;
     }
 
     .statement-table tr:hover td {
@@ -1451,11 +1451,11 @@
     }
 
     .statement-table tfoot td {
-      padding: 0.85rem 0.9rem;
+      padding: 0.75rem 0.65rem;
       background: var(--surface-subtle);
       font-weight: 800;
       border-top: 2px solid var(--border);
-      font-size: 0.95rem;
+      font-size: 0.875rem;
     }
 
     /* Goods Return (GR) Styling */
@@ -1532,7 +1532,7 @@
     @media print {
       @page {
         size: landscape;
-        margin: 8mm;
+        margin: 5mm 6mm;
       }
 
       *, *:before, *:after {
@@ -1540,6 +1540,7 @@
         color: #000000 !important;
         box-shadow: none !important;
         text-shadow: none !important;
+        box-sizing: border-box !important;
       }
 
       html, body {
@@ -1547,7 +1548,11 @@
         color: #000000 !important;
         padding: 0 !important;
         margin: 0 !important;
-        font-size: 8.5pt !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        font-size: 7.5pt !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
 
       /* Hide interactive chrome */
@@ -1584,17 +1589,26 @@
         position: static !important;
         background: transparent !important;
         padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
         display: block !important;
         z-index: auto !important;
+        box-shadow: none !important;
       }
 
       body.printing-statement .modal-card,
       body.printing-challan .modal-card {
+        width: 100% !important;
         max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
         max-height: none !important;
         border: none !important;
         box-shadow: none !important;
         display: block !important;
+        overflow: visible !important;
+        background: #ffffff !important;
       }
 
       body.printing-statement .modal-header,
@@ -1605,6 +1619,9 @@
       body.printing-statement .modal-body,
       body.printing-challan .modal-body {
         padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
         overflow: visible !important;
       }
 
@@ -1612,6 +1629,10 @@
         border: 1px solid #000 !important;
         max-height: none !important;
         overflow: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 0 10px 0 !important;
+        box-sizing: border-box !important;
       }
 
       body.printing-statement #modal-statement-party-select {
@@ -1620,54 +1641,93 @@
 
       body.printing-statement .print-party-title {
         display: block !important;
+        font-size: 10pt !important;
+        font-weight: 800 !important;
+        margin: 4px 0 6px 0 !important;
+        color: #000 !important;
       }
 
       .print-header {
         display: block !important;
-        margin-bottom: 12px;
+        margin-bottom: 8px !important;
+        padding-bottom: 6px !important;
+        border-bottom: 2px solid #000 !important;
+      }
+
+      .print-header h1 {
+        font-size: 13pt !important;
+        font-weight: 900 !important;
+        margin: 0 !important;
       }
 
       .print-summary-grid {
         display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
-        gap: 8px !important;
-        margin-bottom: 14px !important;
+        gap: 6px !important;
+        margin-bottom: 8px !important;
+        width: 100% !important;
       }
 
       .print-summary-box {
         border: 1px solid #000 !important;
-        padding: 6px 10px !important;
+        padding: 3px 6px !important;
         background: #f9f9f9 !important;
       }
 
-      .statement-table, .excel-table {
+      .print-summary-box div:first-child {
+        font-size: 6pt !important;
+        text-transform: uppercase !important;
+        font-weight: 700 !important;
+      }
+
+      .print-summary-box div:last-child {
         font-size: 8.5pt !important;
+        font-weight: 800 !important;
+        font-family: var(--font-mono) !important;
+      }
+
+      .statement-table, .excel-table {
+        font-size: 6.8pt !important;
         width: 100% !important;
         min-width: 100% !important;
+        max-width: 100% !important;
         border: 1px solid #000 !important;
         border-collapse: collapse !important;
+        table-layout: auto !important;
       }
 
       .statement-table th, .statement-table td,
       .excel-table th, .excel-table td {
-        border: 1px solid #444 !important;
-        padding: 4px 6px !important;
+        border: 1px solid #333 !important;
+        padding: 2.5px 3px !important;
         color: #000 !important;
         background: transparent !important;
         page-break-inside: avoid !important;
+        min-width: 0 !important;
+        font-size: 6.8pt !important;
+        box-sizing: border-box !important;
       }
 
       .statement-table th, .excel-table th {
-        background: #eee !important;
+        background: #f0f0f0 !important;
         font-weight: 800 !important;
         text-transform: uppercase !important;
-        font-size: 7.5pt !important;
+        font-size: 6.5pt !important;
+        letter-spacing: 0 !important;
+        white-space: nowrap !important;
+      }
+
+      .statement-table tfoot td {
+        background: #f5f5f5 !important;
+        font-weight: 800 !important;
+        font-size: 6.8pt !important;
+        border-top: 1.5px solid #000 !important;
       }
 
       .status-badge {
         border: 1px solid #444 !important;
-        padding: 1px 4px !important;
-        font-size: 7.5pt !important;
+        padding: 1px 3px !important;
+        font-size: 6.2pt !important;
         color: #000 !important;
         background: transparent !important;
       }
@@ -1676,7 +1736,7 @@
         display: flex !important;
         justify-content: space-between !important;
         align-items: flex-end !important;
-        margin-top: 35px !important;
+        margin-top: 16px !important;
         page-break-inside: avoid !important;
       }
     }
@@ -2041,7 +2101,7 @@
 
   <!-- Party Statement / Ledger Modal -->
   <div class="modal-overlay" id="modal-party-statement" style="display: none;">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width: 1380px; width: 96vw;">
       <div class="modal-header">
         <div class="modal-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -2101,21 +2161,20 @@
           <table class="statement-table">
             <thead>
               <tr>
-                <th style="width: 45px; min-width: 45px;" class="center-col">#</th>
-                <th style="width: 115px; min-width: 115px;">Date</th>
-                <th style="width: 155px; min-width: 150px;">Bill / Challan No</th>
-                <th style="width: 260px; min-width: 240px;">Quality / Details</th>
-                <th class="num-col" style="width: 95px; min-width: 90px;">Gross (Kg)</th>
-                <th class="num-col" style="width: 95px; min-width: 90px; color: var(--accent3);">GR (Kg)</th>
-                <th class="num-col" style="width: 95px; min-width: 90px;">Net (Kg)</th>
-                <th class="num-col" style="width: 95px; min-width: 90px;">Rate (₹)</th>
-                <th class="num-col" style="width: 135px; min-width: 130px;">Debit (Billed ₹)</th>
-                <th class="num-col" style="width: 135px; min-width: 130px;">Credit (Paid ₹)</th>
-                <th class="num-col" style="width: 140px; min-width: 135px;">Balance (₹)</th>
-                <th style="width: 115px; min-width: 110px;">Due Date</th>
-                <th class="num-col" style="width: 90px; min-width: 85px;">Late Days</th>
-                <th class="num-col" style="width: 125px; min-width: 120px;">Interest (₹)</th>
-                <th class="center-col" style="width: 105px; min-width: 100px;">Status</th>
+                <th class="center-col" style="width: 35px;">#</th>
+                <th style="width: 85px;">Date</th>
+                <th style="width: 110px;">Bill / Challan No</th>
+                <th class="num-col" style="width: 75px;">Gross (Kg)</th>
+                <th class="num-col" style="width: 70px; color: var(--accent3);">GR (Kg)</th>
+                <th class="num-col" style="width: 75px;">Net (Kg)</th>
+                <th class="num-col" style="width: 65px;">Rate (₹)</th>
+                <th class="num-col" style="width: 115px;">Debit (Billed ₹)</th>
+                <th class="num-col" style="width: 105px;">Credit (Paid ₹)</th>
+                <th class="num-col" style="width: 105px;">Balance (₹)</th>
+                <th style="width: 85px;">Due Date</th>
+                <th class="num-col" style="width: 60px;">Late</th>
+                <th class="num-col" style="width: 90px;">Interest (₹)</th>
+                <th class="center-col" style="width: 75px;">Status</th>
               </tr>
             </thead>
             <tbody id="modal-statement-table-body">
@@ -4147,7 +4206,7 @@
       printPartyName.textContent = party ? `PARTY: ${party}` : '';
 
       if (!party) {
-        tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 1rem; font-weight: 600;">Please select a customer or supplier party from the dropdown above</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 1rem; font-weight: 600;">Please select a customer or supplier party from the dropdown above</td></tr>';
         tfoot.innerHTML = '';
         document.getElementById('statement-total-invoiced').textContent = '₹0.00';
         document.getElementById('statement-total-settled').textContent = '₹0.00';
@@ -4195,7 +4254,6 @@
             <td class="center-col" style="font-family: var(--font-mono); color: var(--muted); font-size: 0.8rem;">${idx + 1}</td>
             <td style="font-family: var(--font-mono); white-space: nowrap;">${formatDateDisplay(row.date)}</td>
             <td style="font-weight: 700; font-family: var(--font-mono); white-space: nowrap;">${escapeHtml(row.challanNo || '-')}</td>
-            <td style="word-break: break-word; line-height: 1.4;">${escapeHtml(row.quality || '-')}</td>
             <td class="num-col font-mono" style="white-space: nowrap;">${grossQty > 0 ? grossQty.toFixed(2) : '-'}</td>
             <td class="num-col font-mono" style="white-space: nowrap; ${grQty > 0 ? 'color: var(--accent3); font-weight: 700;' : 'color: var(--muted);'}">${grQty > 0 ? `-${grQty.toFixed(2)}` : '-'}</td>
             <td class="num-col font-mono bold" style="white-space: nowrap;">${qty > 0 ? qty.toFixed(2) : (grQty > 0 ? '0.00' : '-')}</td>
@@ -4217,7 +4275,7 @@
       // Render Grand Totals Footer in Statement
       tfoot.innerHTML = `
         <tr>
-          <td colspan="4" style="text-align: right; text-transform: uppercase; letter-spacing: 0.05em;">GRAND TOTALS:</td>
+          <td colspan="3" style="text-align: right; text-transform: uppercase; letter-spacing: 0.05em;">GRAND TOTALS:</td>
           <td class="num-col font-mono bold">${totalGrossWeight.toFixed(2)}</td>
           <td class="num-col font-mono bold" style="color: var(--accent3);">${totalGrWeight > 0 ? `-${totalGrWeight.toFixed(2)}` : '-'}</td>
           <td class="num-col font-mono bold">${totalWeight.toFixed(2)}</td>
