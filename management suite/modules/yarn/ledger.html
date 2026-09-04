@@ -1734,82 +1734,163 @@
     // Sync Data from Yarn Orders & Sales Logs
     function syncSourceData(showNotification = true) {
       let syncAdded = 0;
+      let syncUpdated = 0;
 
       // 1. Sync Purchase Ledger from yarn-rm-orders
       try {
         let rawOrders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
+        let rawStock = [];
+        let rawQualities = [];
+        try {
+          rawStock = JSON.parse(localStorage.getItem('vishwa_yarn_rm_stock_data') || '[]');
+          rawQualities = JSON.parse(localStorage.getItem('yarn-qualities') || '[]');
+        } catch (e) {}
+
         if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
           rawOrders = window.VishwaSupabase.filterDeletedEntities(rawOrders);
+          if (Array.isArray(rawStock)) rawStock = window.VishwaSupabase.filterDeletedEntities(rawStock);
         }
 
         if (Array.isArray(rawOrders)) {
           rawOrders.forEach(order => {
             if (!order) return;
-            const orderRate = Number(order.rate) || 0;
+            // The rate assigned for an order in yarn-rm-orders is stored in order.price
+            const orderRate = Number(order.price) || Number(order.rate) || Number(order.yarnRate) || Number(order.unitPrice) || 0;
             const supplierName = (order.supplier || '').trim();
             const orderDate = (order.orderDate || '').split('T')[0];
             const orderNumber = order.orderNumber || order.id || '';
             const qualityName = order.quality || order.qualityName || 'Yarn';
+            const batches = Array.isArray(order.batches) ? order.batches : [];
 
-            // Check each batch received in this order
-            (order.batches || []).forEach((batch, bIdx) => {
-              if (!batch) return;
-              
-              // Calculate received weight
-              let batchQty = Number(batch.receivedQty) || 0;
-              if (batchQty === 0 && Array.isArray(batch.boxes)) {
-                batchQty = batch.boxes.reduce((acc, b) => acc + (Number(b.weight) || Number(b.grossWeight) || 0), 0);
-              }
-
-              const effectiveRate = Number(batch.rate) || orderRate;
-              const batchChallan = (batch.challanNumber || '').trim();
-              const receiveDate = (batch.receiveDate || orderDate || new Date().toISOString().split('T')[0]).split('T')[0];
-              const uniqueSyncKey = `order_${order.id || orderNumber}_batch_${batch.id || bIdx}_${batchChallan}`;
-
-              if (batchQty > 0 || effectiveRate > 0) {
-                // Check if already in purchase ledger
-                const existingRow = ledgerData.purchase.find(r => r.syncKey === uniqueSyncKey || (r.challanNo === batchChallan && r.partyName === supplierName && batchChallan !== ''));
-
-                if (!existingRow) {
-                  // Add new purchase ledger row
-                  const subtotal = Number((batchQty * effectiveRate).toFixed(2));
-                  const gstPercent = 5.0; // Standard 5% textile GST
-                  const gstAmount = Number(((subtotal * gstPercent) / 100).toFixed(2));
-                  const grandTotal = Number((subtotal + gstAmount).toFixed(2));
-
-                  ledgerData.purchase.push({
-                    id: 'PUR-' + Date.now() + '-' + Math.floor(Math.random()*1000),
-                    syncKey: uniqueSyncKey,
-                    source: 'yarn-rm-orders',
-                    date: receiveDate,
-                    challanNo: batchChallan || ('ORD-' + orderNumber),
-                    partyName: supplierName || 'Unknown Supplier',
-                    quality: qualityName + (batch.lotNumber ? ` (Lot: ${batch.lotNumber})` : ''),
-                    qty: batchQty,
-                    rate: effectiveRate,
-                    subtotal: subtotal,
-                    gstPercent: gstPercent,
-                    grandTotal: grandTotal,
-                    paidAmount: 0,
-                    paymentDate: '',
-                    creditDays: Number(order.creditDays) || defaultCreditDays,
-                    interestRate: defaultInterestRate,
-                    remarks: `Auto-synced from Yarn RM Order #${orderNumber}`,
-                    isManual: false
-                  });
-                  syncAdded++;
-                } else {
-                  // Update base fields if source of truth changed, keeping user payment edits intact
-                  existingRow.qty = batchQty;
-                  existingRow.rate = effectiveRate;
-                  existingRow.subtotal = Number((batchQty * effectiveRate).toFixed(2));
-                  const gstAmt = Number(((existingRow.subtotal * (existingRow.gstPercent !== undefined ? existingRow.gstPercent : 5.0)) / 100).toFixed(2));
-                  existingRow.grandTotal = Number((existingRow.subtotal + gstAmt).toFixed(2));
-                  existingRow.source = 'yarn-rm-orders';
-                  existingRow.isManual = false;
+            if (batches.length > 0) {
+              // Process each received delivery batch in this order
+              batches.forEach((batch, bIdx) => {
+                if (!batch) return;
+                
+                // Calculate received weight from boxes or batch totals
+                let batchQty = Number(batch.totalWeight) || Number(batch.receivedQty) || 0;
+                if (Array.isArray(batch.boxes) && batch.boxes.length > 0) {
+                  const boxNet = batch.boxes.reduce((acc, b) => acc + (Number(b.weight) || Number(b.grossWeight) || 0) - (Number(b.returnedWeight) || 0), 0);
+                  if (boxNet > 0 || batchQty === 0) batchQty = boxNet;
                 }
+
+                // Rate assigned for batch or order
+                let effectiveRate = Number(batch.rate) || Number(batch.price) || orderRate;
+                const batchChallan = (batch.challanNumber || '').trim();
+                const receiveDate = (batch.receiveDate || orderDate || new Date().toISOString().split('T')[0]).split('T')[0];
+                const uniqueSyncKey = `order_${order.id || orderNumber}_batch_${batch.id || bIdx}_${batchChallan}`;
+
+                // Fallback to stock list or quality master if rate not on order
+                if (effectiveRate === 0 && Array.isArray(rawStock)) {
+                  const matchedLot = rawStock.find(lot => 
+                    (batch.id && String(lot.batchId) === String(batch.id)) ||
+                    (batchChallan && String(lot.challanNo || lot.challanNumber).trim() === batchChallan) ||
+                    (batch.lotNumber && String(lot.lotNumber).trim() === String(batch.lotNumber).trim()) ||
+                    (String(lot.orderRef) === String(orderNumber) || String(lot.orderRef) === String(order.id))
+                  );
+                  if (matchedLot) {
+                    effectiveRate = Number(matchedLot.rate) || Number(matchedLot.price) || 0;
+                  }
+                }
+
+                if (effectiveRate === 0 && Array.isArray(rawQualities)) {
+                  const matchedQual = rawQualities.find(q => (q.quality || q.name || '').trim().toLowerCase() === qualityName.trim().toLowerCase());
+                  if (matchedQual) {
+                    effectiveRate = Number(matchedQual.rate) || Number(matchedQual.price) || 0;
+                  }
+                }
+
+                if (batchQty > 0 || effectiveRate > 0) {
+                  const existingRow = ledgerData.purchase.find(r => r.syncKey === uniqueSyncKey || (r.challanNo === batchChallan && r.partyName === supplierName && batchChallan !== ''));
+
+                  if (!existingRow) {
+                    // Add new purchase ledger row
+                    const subtotal = Number((batchQty * effectiveRate).toFixed(2));
+                    const gstPercent = 5.0; // Standard 5% textile GST
+                    const gstAmount = Number(((subtotal * gstPercent) / 100).toFixed(2));
+                    const grandTotal = Number((subtotal + gstAmount).toFixed(2));
+
+                    ledgerData.purchase.push({
+                      id: 'PUR-' + Date.now() + '-' + Math.floor(Math.random()*1000),
+                      syncKey: uniqueSyncKey,
+                      source: 'yarn-rm-orders',
+                      date: receiveDate,
+                      challanNo: batchChallan || ('ORD-' + orderNumber),
+                      partyName: supplierName || 'Unknown Supplier',
+                      quality: qualityName + (batch.lotNumber ? ` (Lot: ${batch.lotNumber})` : ''),
+                      qty: batchQty,
+                      rate: effectiveRate,
+                      subtotal: subtotal,
+                      gstPercent: gstPercent,
+                      grandTotal: grandTotal,
+                      paidAmount: 0,
+                      paymentDate: '',
+                      creditDays: Number(order.creditDays) || defaultCreditDays,
+                      interestRate: defaultInterestRate,
+                      remarks: `Auto-synced from Yarn RM Order #${orderNumber}`,
+                      isManual: false
+                    });
+                    syncAdded++;
+                  } else {
+                    // Update base fields & auto-heal 0 rates from order
+                    const oldRate = existingRow.rate;
+                    existingRow.qty = batchQty;
+                    existingRow.rate = effectiveRate;
+                    existingRow.subtotal = Number((batchQty * effectiveRate).toFixed(2));
+                    const gstAmt = Number(((existingRow.subtotal * (existingRow.gstPercent !== undefined ? existingRow.gstPercent : 5.0)) / 100).toFixed(2));
+                    existingRow.grandTotal = Number((existingRow.subtotal + gstAmt).toFixed(2));
+                    existingRow.source = 'yarn-rm-orders';
+                    existingRow.isManual = false;
+                    if (oldRate !== effectiveRate) syncUpdated++;
+                  }
+                }
+              });
+            } else if (Number(order.orderedWeight) > 0 || orderRate > 0) {
+              // If order is placed without split batches yet
+              const uniqueSyncKey = `order_${order.id || orderNumber}`;
+              const orderedQty = Number(order.orderedWeight) || 0;
+              const effectiveRate = orderRate;
+              const existingRow = ledgerData.purchase.find(r => r.syncKey === uniqueSyncKey || (r.challanNo === ('ORD-' + orderNumber) && r.partyName === supplierName));
+
+              if (!existingRow) {
+                const subtotal = Number((orderedQty * effectiveRate).toFixed(2));
+                const gstPercent = 5.0;
+                const gstAmount = Number(((subtotal * gstPercent) / 100).toFixed(2));
+                const grandTotal = Number((subtotal + gstAmount).toFixed(2));
+
+                ledgerData.purchase.push({
+                  id: 'PUR-' + Date.now() + '-' + Math.floor(Math.random()*1000),
+                  syncKey: uniqueSyncKey,
+                  source: 'yarn-rm-orders',
+                  date: orderDate || new Date().toISOString().split('T')[0],
+                  challanNo: 'ORD-' + orderNumber,
+                  partyName: supplierName || 'Unknown Supplier',
+                  quality: qualityName + (order.color ? ` (${order.color})` : ''),
+                  qty: orderedQty,
+                  rate: effectiveRate,
+                  subtotal: subtotal,
+                  gstPercent: gstPercent,
+                  grandTotal: grandTotal,
+                  paidAmount: 0,
+                  paymentDate: '',
+                  creditDays: Number(order.creditDays) || defaultCreditDays,
+                  interestRate: defaultInterestRate,
+                  remarks: `Auto-synced from Yarn RM Order #${orderNumber} (Pending Delivery)`,
+                  isManual: false
+                });
+                syncAdded++;
+              } else {
+                const oldRate = existingRow.rate;
+                existingRow.qty = orderedQty;
+                existingRow.rate = effectiveRate;
+                existingRow.subtotal = Number((orderedQty * effectiveRate).toFixed(2));
+                const gstAmt = Number(((existingRow.subtotal * (existingRow.gstPercent !== undefined ? existingRow.gstPercent : 5.0)) / 100).toFixed(2));
+                existingRow.grandTotal = Number((existingRow.subtotal + gstAmt).toFixed(2));
+                existingRow.source = 'yarn-rm-orders';
+                existingRow.isManual = false;
+                if (oldRate !== effectiveRate) syncUpdated++;
               }
-            });
+            }
           });
         }
       } catch (err) {
@@ -1875,9 +1956,17 @@
         console.error("Error syncing yarn sales logs:", err);
       }
 
-      if (syncAdded > 0) {
+      if (syncAdded > 0 || syncUpdated > 0) {
         saveLedgers();
-        if (showNotification) showToast(`Synced ${syncAdded} new records from Orders & Sales!`, 'success');
+        if (showNotification) {
+          if (syncAdded > 0 && syncUpdated > 0) {
+            showToast(`Synced ${syncAdded} new and updated rates on ${syncUpdated} orders!`, 'success');
+          } else if (syncAdded > 0) {
+            showToast(`Synced ${syncAdded} new records from Orders & Sales!`, 'success');
+          } else {
+            showToast(`Updated rates on ${syncUpdated} purchase records from Yarn Orders!`, 'success');
+          }
+        }
       } else if (showNotification) {
         showToast('All orders & sales are up to date.', 'info');
       }
