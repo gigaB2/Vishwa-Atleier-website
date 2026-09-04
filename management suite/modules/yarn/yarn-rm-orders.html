@@ -2949,19 +2949,24 @@
             orderRef: order.orderNumber || order.id,
             boxes: (batchData.boxes || []).map((bx, idx) => {
               const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
+              const grossWt = Number(bx.weight) || 0;
               const retWt = Number(bx.returnedWeight) || 0;
-              const isGr = retWt > 0;
+              const remWt = Math.max(0, grossWt - retWt);
+              const isFullyGr = retWt >= grossWt && grossWt > 0;
+              const isPartialGr = retWt > 0 && !isFullyGr;
               return {
                 id: bId,
                 boxNumber: bId,
                 cones: Number(bx.cones) || 0,
-                weight: Number(bx.weight) || 0,
-                status: isGr ? 'gr' : 'available',
+                grossWeight: grossWt,
+                remainingWeight: remWt,
+                weight: isFullyGr ? grossWt : remWt,
+                status: isFullyGr ? 'gr' : 'available',
                 issueDate: null,
                 issuedTo: null,
                 grWeight: retWt,
                 grDate: bx.returnedDate ? bx.returnedDate.split('T')[0] : '',
-                grRemarks: isGr ? 'Returned in Challan GR' : null
+                grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(2)} kg)` : null)
               };
             })
           };
@@ -2972,7 +2977,8 @@
             const existingBoxMap = new Map(existingLot.boxes.map(b => [String(b.id || b.boxNumber), b]));
             stockLot.boxes = stockLot.boxes.map(b => {
               const oldB = existingBoxMap.get(String(b.id));
-              if (oldB && oldB.status === 'issued') {
+              const isFullyGr = (b.grWeight || 0) >= (b.grossWeight || b.weight) && (b.grossWeight || b.weight) > 0;
+              if (oldB && oldB.status === 'issued' && !isFullyGr) {
                 return {
                   ...b,
                   status: 'issued',

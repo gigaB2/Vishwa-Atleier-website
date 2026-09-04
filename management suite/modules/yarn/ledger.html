@@ -1458,6 +1458,76 @@
       font-size: 0.95rem;
     }
 
+    /* Goods Return (GR) Styling */
+    .btn-issue-gr-inline {
+      background: rgba(249, 115, 22, 0.12);
+      border: 1px solid rgba(249, 115, 22, 0.35);
+      color: var(--accent3);
+      border-radius: 6px;
+      padding: 3px 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .btn-issue-gr-inline:hover {
+      background: var(--accent3);
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(249, 115, 22, 0.3);
+    }
+
+    .badge-gr-pill {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent3);
+      font-size: 0.85rem;
+    }
+
+    .gr-preset-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .gr-preset-badge:hover, .gr-preset-badge.active {
+      background: rgba(249, 115, 22, 0.15);
+      border-color: rgba(249, 115, 22, 0.4);
+      color: var(--accent3);
+    }
+
+    .gr-box-row-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px 8px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--fg);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .gr-box-row-input:focus {
+      border-color: var(--accent3);
+      box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+    }
+
     /* Print Specific Styling */
     @media print {
       @page {
@@ -2121,6 +2191,29 @@
     </div>
   </div>
 
+  <!-- Goods Return (GR) Issuance Modal -->
+  <div class="modal-overlay" id="modal-issue-gr" style="display: none; z-index: 2650;" onclick="if(event.target === this) closeIssueGrModal();">
+    <div class="modal-card" style="max-width: 840px;">
+      <div class="modal-header">
+        <div class="modal-title" style="color: var(--accent3);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <span id="gr-modal-title">Issue Goods Return (GR)</span>
+        </div>
+        <button class="modal-close-btn" onclick="closeIssueGrModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="gr-modal-body">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="modal-footer" id="gr-modal-footer">
+        <button class="btn btn-secondary" onclick="closeIssueGrModal()">Cancel</button>
+        <button class="btn btn-primary" id="btn-submit-gr" onclick="submitIssueGrForm()" style="background: var(--accent3); border-color: var(--accent3); color: #ffffff;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Apply GR &amp; Sync RM Orders / Stock
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
 
@@ -2165,7 +2258,7 @@
     let isHistoryAction = false;
 
     // Allowed editable fields for auto-synced rows
-    const SYNCED_EDITABLE_FIELDS = ['paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
+    const SYNCED_EDITABLE_FIELDS = ['grQty', 'grossQty', 'paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
 
     // Semantic Status Badge Renderer with SVG Icons
     function renderStatusBadge(status) {
@@ -3278,10 +3371,16 @@
       if (isImmediate) {
         clearTimeout(liveSaveTimer);
         saveLedgers(false, true);
+        if (field === 'grQty') {
+          syncGRToOrdersAndStock(row, Number(row.grQty) || 0);
+        }
       } else {
         clearTimeout(liveSaveTimer);
         liveSaveTimer = setTimeout(() => {
           saveLedgers(false, false);
+          if (field === 'grQty') {
+            syncGRToOrdersAndStock(row, Number(row.grQty) || 0);
+          }
         }, 600);
       }
     }
@@ -3821,10 +3920,12 @@
 
             <!-- Goods Return GR (Kg) -->
             <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}" style="${Number(row.grQty) > 0 ? 'background: rgba(249, 115, 22, 0.08);' : ''}">
-              ${isLocked
-                ? `<div class="cell-readonly num font-mono" style="${Number(row.grQty) > 0 ? 'color: var(--accent3); font-weight: 700;' : 'color: var(--muted);'}" title="Goods Return: -${Number(row.grQty || 0).toFixed(2)} Kg&#10;GR Amount: -${formatCurrency(row.grAmount || (row.grQty * row.rate))}">${Number(row.grQty) > 0 ? `-${Number(row.grQty).toFixed(2)}` : '-'}</div>`
-                : `<input type="number" step="0.01" data-field="grQty" class="cell-input num-font" style="${Number(row.grQty) > 0 ? 'color: var(--accent3); font-weight: 700;' : ''}" value="${row.grQty || 0}" oninput="handleCellChange('${row.id}', 'grQty', this.value, false)" onchange="handleCellChange('${row.id}', 'grQty', this.value, true)" title="Goods Return (GR) Deduction (Kg)">`
-              }
+              <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                <input type="number" step="0.01" data-field="grQty" class="cell-input num-font" style="width: 70px; text-align: right; ${Number(row.grQty) > 0 ? 'color: var(--accent3); font-weight: 700;' : ''}" value="${row.grQty || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'grQty', this.value, false)" onchange="handleCellChange('${row.id}', 'grQty', this.value, true)" title="Goods Return (GR) Deduction in Kg">
+                <button type="button" class="btn-issue-gr-inline" onclick="openIssueGrModal('${row.id}')" title="Issue / Edit Goods Return (GR) Breakdown Modal">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                </button>
+              </div>
             </td>
 
             <!-- Net Invoiced Quantity (Kg) -->
@@ -3920,10 +4021,16 @@
             <td class="center-col actions-col cell-locked-bg">
               <div class="actions-cell-wrap">
                 ${isLocked 
-                  ? `<button class="btn-action-icon btn-view-row" onclick="openChallanModal('${row.id}')" title="View Bill / Challan Details">
+                  ? `<button class="btn-action-icon btn-view-row" onclick="openIssueGrModal('${row.id}')" title="Issue Goods Return (GR) for this Challan" style="color: var(--accent3);">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                     </button>
+                     <button class="btn-action-icon btn-view-row" onclick="openChallanModal('${row.id}')" title="View Bill / Challan Details">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                      </button>`
-                  : `<button class="btn-action-icon btn-delete-row" onclick="deleteRow('${row.id}')" title="Delete custom row">
+                  : `<button class="btn-action-icon btn-view-row" onclick="openIssueGrModal('${row.id}')" title="Issue Goods Return (GR)" style="color: var(--accent3);">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                     </button>
+                     <button class="btn-action-icon btn-delete-row" onclick="deleteRow('${row.id}')" title="Delete custom row">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                      </button>`
                 }
@@ -4223,8 +4330,15 @@
       title.textContent = `${isSales ? 'Sales Invoice' : 'Purchase Challan'}: ${row.challanNo || 'Entry Details'}`;
 
       if (sourceWrap) {
+        const grBtn = `
+          <button class="btn btn-secondary" onclick="closeChallanDetailsModal(); openIssueGrModal('${row.id}');" style="color: var(--accent3); border-color: rgba(249, 115, 22, 0.4); display: inline-flex; align-items: center; gap: 6px;" title="Issue / Edit Goods Return (GR)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span>Issue GR</span>
+          </button>
+        `;
         if (row.source === 'yarn-rm-orders') {
           sourceWrap.innerHTML = `
+            ${grBtn}
             <a href="yarn-rm-orders.html" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;" title="View in Yarn RM Orders">
               <span>Open RM Orders</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -4232,13 +4346,14 @@
           `;
         } else if (row.source && row.source.includes('sales')) {
           sourceWrap.innerHTML = `
+            ${grBtn}
             <a href="yarn-sales.html" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;" title="View in Yarn Sales Book">
               <span>Open Sales Book</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </a>
           `;
         } else {
-          sourceWrap.innerHTML = '';
+          sourceWrap.innerHTML = grBtn;
         }
       }
 
@@ -4311,7 +4426,7 @@
                   <div style="display: flex; flex-direction: column; gap: 4px; max-height: 140px; overflow-y: auto;">
                     ${row.grBoxes.map(b => `
                       <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); font-size: 0.8rem;">
-                        <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="display: align-items: center; gap: 6px;">
                           <span style="font-family: var(--font-mono); font-weight: 700;">Box #${escapeHtml(b.boxNumber || '-')}</span>
                           ${b.cones ? `<span style="color: var(--muted);">(${b.cones} cones)</span>` : ''}
                           ${b.remarks ? `<span style="color: var(--muted); font-style: italic;">— ${escapeHtml(b.remarks)}</span>` : ''}
@@ -4397,6 +4512,579 @@
       setTimeout(() => {
         document.body.classList.remove('printing-challan');
       }, 500);
+    }
+
+    // Goods Return (GR) Modal State & Handlers
+    let currentGrRowId = null;
+
+    async function openIssueGrModal(rowId) {
+      currentGrRowId = rowId;
+      const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
+      if (!row) return;
+
+      const modal = document.getElementById('modal-issue-gr');
+      const body = document.getElementById('gr-modal-body');
+      const title = document.getElementById('gr-modal-title');
+      if (!modal || !body) return;
+
+      const gross = row.grossQty !== undefined ? Number(row.grossQty) : (Number(row.qty || 0) + Number(row.grQty || 0));
+      const currentGr = Number(row.grQty) || 0;
+      const rate = Number(row.rate) || 0;
+      const netQty = Math.max(0, Number((gross - currentGr).toFixed(2)));
+
+      title.textContent = `Issue Goods Return (GR) — ${row.challanNo || row.partyName || 'Transaction'}`;
+
+      // Try to fetch box details from live yarn-rm-orders or stock
+      let batchBoxes = [];
+      if (Array.isArray(row.grBoxes) && row.grBoxes.length > 0) {
+        batchBoxes = row.grBoxes;
+      }
+
+      try {
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+          const orders = (await window.VishwaSupabase.get('yarn-rm-orders')) || [];
+          const targetOrderId = String(row.orderId || row.orderNumber || '').trim();
+          const targetBatchId = String(row.batchId || '').trim();
+          const targetChallan = String(row.challanNo || '').trim();
+          const targetLot = String(row.lotNumber || '').trim();
+
+          for (const ord of orders) {
+            if (!ord || !Array.isArray(ord.batches)) continue;
+            for (const b of ord.batches) {
+              if (!b) continue;
+              if ((targetBatchId && String(b.id) === targetBatchId) ||
+                  (targetChallan && String(b.challanNumber).trim() === targetChallan) ||
+                  (targetLot && String(b.lotNumber).trim() === targetLot) ||
+                  (targetOrderId && (String(ord.id) === targetOrderId || String(ord.orderNumber) === targetOrderId) && String(b.challanNumber).trim() === targetChallan)) {
+                if (Array.isArray(b.boxes) && b.boxes.length > 0) {
+                  batchBoxes = b.boxes.map((bx, idx) => ({
+                    boxNumber: bx.boxNumber || bx.id || `B${idx + 1}`,
+                    cones: Number(bx.cones) || 0,
+                    weight: Number(bx.grossWeight) || Number(bx.weight) || 0,
+                    returnedWeight: Number(bx.returnedWeight) || Number(bx.grWeight) || 0,
+                    date: bx.returnedDate || bx.grDate || '',
+                    remarks: bx.returnedRemarks || bx.grRemarks || '',
+                    status: bx.status || 'available'
+                  }));
+                }
+                break;
+              }
+            }
+            if (batchBoxes.length > 0) break;
+          }
+        }
+      } catch (e) {
+        console.warn('Could not fetch batch boxes from orders:', e);
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+
+      body.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+          <!-- Top Challan Summary Card -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">${activeTab === 'sales' ? 'Customer Account' : 'Supplier / Mill'}</div>
+              <div style="font-size: 1.25rem; font-weight: 800; color: var(--fg);">${escapeHtml(row.partyName || '-')}</div>
+              <div style="font-size: 0.85rem; color: var(--muted); margin-top: 2px;">${escapeHtml(row.quality || '-')}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Challan / Bill No</div>
+              <div style="font-family: var(--font-mono); font-size: 1.2rem; font-weight: 800; color: var(--accent);">${escapeHtml(row.challanNo || '-')}</div>
+              <div style="font-size: 0.8rem; color: var(--muted); font-family: var(--font-mono);">${formatDateDisplay(row.date)}</div>
+            </div>
+          </div>
+
+          <!-- Weights and Financials Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
+            <div style="background: var(--surface-subtle); padding: 0.75rem 0.9rem; border-radius: 10px; border: 1px solid var(--border);">
+              <div style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 700;">Gross Received Weight</div>
+              <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 800; color: var(--fg);" id="gr-summary-gross">${gross.toFixed(2)} Kg</div>
+            </div>
+            <div style="background: rgba(249, 115, 22, 0.08); padding: 0.75rem 0.9rem; border-radius: 10px; border: 1px solid rgba(249, 115, 22, 0.25);">
+              <div style="font-size: 0.72rem; color: var(--accent3); text-transform: uppercase; font-weight: 700;">Total GR Deducted</div>
+              <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 800; color: var(--accent3);" id="gr-summary-gr-qty">-${currentGr.toFixed(2)} Kg</div>
+            </div>
+            <div style="background: rgba(16, 185, 129, 0.08); padding: 0.75rem 0.9rem; border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.25);">
+              <div style="font-size: 0.72rem; color: var(--success); text-transform: uppercase; font-weight: 700;">Net Billable Weight</div>
+              <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 800; color: var(--success);" id="gr-summary-net-qty">${netQty.toFixed(2)} Kg</div>
+            </div>
+            <div style="background: var(--surface-subtle); padding: 0.75rem 0.9rem; border-radius: 10px; border: 1px solid var(--border);">
+              <div style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 700;">Unit Rate</div>
+              <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 800; color: var(--fg);">₹${rate.toFixed(2)}</div>
+            </div>
+          </div>
+
+          <!-- Return Date and Reason Form -->
+          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px;">Return Date</label>
+              <input type="date" id="gr-modal-date" class="cell-input date-picker-input" value="${today}" style="width: 100%; padding: 8px 12px; font-size: 0.9rem; border-radius: 8px; border: 1px solid var(--border); cursor: pointer;" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px;">Return Reason / Remarks</label>
+              <input type="text" id="gr-modal-remarks" class="cell-input" value="${escapeHtml(row.remarks && row.remarks.includes('GR') ? row.remarks : '')}" placeholder="e.g. Quality defect / count variation / excess cones" style="width: 100%; padding: 8px 12px; font-size: 0.9rem; border-radius: 8px; border: 1px solid var(--border);">
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                <span class="gr-preset-badge" onclick="selectGrPresetReason('Quality Defect')">Quality Defect</span>
+                <span class="gr-preset-badge" onclick="selectGrPresetReason('Count Variation')">Count Variation</span>
+                <span class="gr-preset-badge" onclick="selectGrPresetReason('Damaged Cones')">Damaged Cones</span>
+                <span class="gr-preset-badge" onclick="selectGrPresetReason('Excess Cones')">Excess Cones</span>
+                <span class="gr-preset-badge" onclick="selectGrPresetReason('Color / Shade Issue')">Shade Issue</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total GR Quantity Input Bar -->
+          <div style="background: rgba(249, 115, 22, 0.06); padding: 1rem; border-radius: 12px; border: 1px solid rgba(249, 115, 22, 0.25); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <div style="font-weight: 800; font-size: 1rem; color: var(--accent3); display: flex; align-items: center; gap: 6px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                Total Goods Return (GR) Weight
+              </div>
+              <div style="font-size: 0.78rem; color: var(--muted); margin-top: 2px;">Enter total weight to return across all boxes, or specify box-by-box below.</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="number" step="0.01" id="gr-modal-total-qty" value="${currentGr || ''}" placeholder="0.00" oninput="onGrTotalInput('${row.id}')" style="font-family: var(--font-mono); font-size: 1.25rem; font-weight: 800; color: var(--accent3); width: 140px; text-align: right; padding: 6px 12px; border-radius: 8px; border: 2px solid var(--accent3); background: var(--surface); outline: none;">
+              <span style="font-family: var(--font-mono); font-weight: 700; color: var(--muted);">Kg</span>
+            </div>
+          </div>
+
+          <!-- Box-by-Box Breakdown Table -->
+          ${batchBoxes.length > 0 ? `
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Box Breakdown (${batchBoxes.length} boxes)</span>
+                <span style="font-size: 0.75rem; color: var(--muted);">Cones marked for GR will show as GR in Stockbook</span>
+              </div>
+              <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                  <thead>
+                    <tr style="background: var(--surface-subtle); border-bottom: 1px solid var(--border); text-align: left; font-size: 0.72rem; color: var(--muted); text-transform: uppercase;">
+                      <th style="padding: 6px 10px;">Box #</th>
+                      <th style="padding: 6px 10px;">Cones</th>
+                      <th style="padding: 6px 10px; text-align: right;">Gross (Kg)</th>
+                      <th style="padding: 6px 10px; text-align: right;">Returned GR (Kg)</th>
+                      <th style="padding: 6px 10px; text-align: center;">Full Return</th>
+                      <th style="padding: 6px 10px;">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="gr-modal-boxes-tbody">
+                    ${batchBoxes.map((bx, idx) => {
+                      const bNum = bx.boxNumber || bx.id || `B${idx + 1}`;
+                      const bGross = Number(bx.weight) || 0;
+                      const bRet = Number(bx.returnedWeight) || 0;
+                      const isFull = bRet >= bGross && bGross > 0;
+                      return `
+                        <tr class="gr-modal-box-row" data-box-num="${escapeHtml(bNum)}" data-gross="${bGross}" style="border-bottom: 1px solid var(--border);">
+                          <td style="padding: 6px 10px; font-family: var(--font-mono); font-weight: 700;">${escapeHtml(bNum)}</td>
+                          <td style="padding: 6px 10px; color: var(--muted);">${bx.cones ? `${bx.cones} c` : '-'}</td>
+                          <td style="padding: 6px 10px; text-align: right; font-family: var(--font-mono);">${bGross.toFixed(2)}</td>
+                          <td style="padding: 6px 10px; text-align: right;">
+                            <input type="number" step="0.01" max="${bGross}" class="gr-box-row-input gr-box-ret-input" data-box-num="${escapeHtml(bNum)}" data-gross="${bGross}" value="${bRet > 0 ? bRet.toFixed(2) : ''}" placeholder="0.00" oninput="onGrBoxInput('${row.id}')" style="width: 90px; text-align: right; font-weight: 700; ${bRet > 0 ? 'color: var(--accent3);' : ''}">
+                          </td>
+                          <td style="padding: 6px 10px; text-align: center;">
+                            <input type="checkbox" class="gr-box-full-toggle" data-box-num="${escapeHtml(bNum)}" ${isFull ? 'checked' : ''} onchange="onGrBoxFullReturnToggle('${row.id}', '${escapeHtml(bNum)}', this.checked, ${bGross})" title="Return 100% of this box" style="cursor: pointer; transform: scale(1.15);">
+                          </td>
+                          <td style="padding: 6px 10px;">
+                            <input type="text" class="gr-box-row-input gr-box-notes-input" data-box-num="${escapeHtml(bNum)}" value="${escapeHtml(bx.remarks || '')}" placeholder="Reason..." style="font-size: 0.78rem;">
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Live Deductions Total Impact -->
+          <div style="background: var(--surface-subtle); padding: 0.85rem 1.1rem; border-radius: 10px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 700;">GR Deduction Impact on Bill</div>
+              <div style="font-family: var(--font-mono); font-weight: 800; font-size: 1.1rem; color: var(--accent3);" id="gr-impact-deduction">-₹${Number((currentGr * rate).toFixed(2)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 700;">New Invoiced Grand Total</div>
+              <div style="font-family: var(--font-mono); font-weight: 800; font-size: 1.25rem; color: var(--accent);" id="gr-impact-new-grand-total">₹${Number((netQty * rate * 1.05).toFixed(2)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      modal.style.display = 'flex';
+    }
+
+    function closeIssueGrModal() {
+      const modal = document.getElementById('modal-issue-gr');
+      if (modal) modal.style.display = 'none';
+      currentGrRowId = null;
+    }
+
+    function selectGrPresetReason(reason) {
+      const input = document.getElementById('gr-modal-remarks');
+      if (input) {
+        input.value = reason;
+      }
+    }
+
+    function onGrBoxInput(rowId) {
+      const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
+      if (!row) return;
+
+      const gross = row.grossQty !== undefined ? Number(row.grossQty) : (Number(row.qty || 0) + Number(row.grQty || 0));
+      const rate = Number(row.rate) || 0;
+      const gstPct = Number(row.gstPercent !== undefined ? row.gstPercent : 5.0);
+
+      const boxInputs = document.querySelectorAll('#gr-modal-boxes-tbody .gr-box-ret-input');
+      let totalGr = 0;
+
+      boxInputs.forEach(inp => {
+        const val = parseFloat(inp.value) || 0;
+        const bGross = parseFloat(inp.dataset.gross) || 0;
+        const bNum = inp.dataset.boxNum;
+        totalGr += val;
+
+        const toggle = document.querySelector(`.gr-box-full-toggle[data-box-num="${bNum}"]`);
+        if (toggle) {
+          toggle.checked = (val >= bGross && bGross > 0);
+        }
+      });
+
+      totalGr = Number(totalGr.toFixed(2));
+      const totalInp = document.getElementById('gr-modal-total-qty');
+      if (totalInp) totalInp.value = totalGr > 0 ? totalGr : '';
+
+      updateGrModalDeductionDisplays(gross, totalGr, rate, gstPct);
+    }
+
+    function onGrBoxFullReturnToggle(rowId, bNum, isChecked, grossWt) {
+      const inp = document.querySelector(`.gr-box-ret-input[data-box-num="${bNum}"]`);
+      if (inp) {
+        inp.value = isChecked ? Number(grossWt).toFixed(2) : '';
+      }
+      onGrBoxInput(rowId);
+    }
+
+    function onGrTotalInput(rowId) {
+      const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
+      if (!row) return;
+
+      const gross = row.grossQty !== undefined ? Number(row.grossQty) : (Number(row.qty || 0) + Number(row.grQty || 0));
+      const rate = Number(row.rate) || 0;
+      const gstPct = Number(row.gstPercent !== undefined ? row.gstPercent : 5.0);
+
+      const totalVal = parseFloat(document.getElementById('gr-modal-total-qty')?.value) || 0;
+      const boxRows = document.querySelectorAll('#gr-modal-boxes-tbody .gr-modal-box-row');
+
+      if (boxRows.length > 0) {
+        let remainingToDistribute = totalVal;
+        boxRows.forEach(rowEl => {
+          const bGross = parseFloat(rowEl.dataset.gross) || 0;
+          const bNum = rowEl.dataset.boxNum;
+          const retInp = rowEl.querySelector('.gr-box-ret-input');
+          const toggle = rowEl.querySelector('.gr-box-full-toggle');
+
+          let forThis = 0;
+          if (remainingToDistribute > 0) {
+            forThis = Math.min(bGross, remainingToDistribute);
+            remainingToDistribute = Math.max(0, Number((remainingToDistribute - forThis).toFixed(2)));
+          }
+
+          if (retInp) retInp.value = forThis > 0 ? forThis.toFixed(2) : '';
+          if (toggle) toggle.checked = (forThis >= bGross && bGross > 0);
+        });
+      }
+
+      updateGrModalDeductionDisplays(gross, totalVal, rate, gstPct);
+    }
+
+    function updateGrModalDeductionDisplays(gross, totalGr, rate, gstPct) {
+      const net = Math.max(0, Number((gross - totalGr).toFixed(2)));
+      const grAmt = Number((totalGr * rate).toFixed(2));
+      const subtotal = Number((net * rate).toFixed(2));
+      const gstAmt = Number(((subtotal * gstPct) / 100).toFixed(2));
+      const grandTotal = Number((subtotal + gstAmt).toFixed(2));
+
+      const elGrQty = document.getElementById('gr-summary-gr-qty');
+      if (elGrQty) elGrQty.textContent = `-${totalGr.toFixed(2)} Kg`;
+
+      const elNetQty = document.getElementById('gr-summary-net-qty');
+      if (elNetQty) elNetQty.textContent = `${net.toFixed(2)} Kg`;
+
+      const elDeduct = document.getElementById('gr-impact-deduction');
+      if (elDeduct) elDeduct.textContent = `-₹${grAmt.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+
+      const elGrand = document.getElementById('gr-impact-new-grand-total');
+      if (elGrand) elGrand.textContent = `₹${grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+    }
+
+    async function syncGRToOrdersAndStock(row, newGrQty, grDate = '', grRemarks = '', boxAllocations = null) {
+      if (!row) return;
+      const effectiveGrDate = grDate || new Date().toISOString().split('T')[0];
+      const effectiveGrRemarks = grRemarks || (newGrQty > 0 ? `GR issued from Yarn Ledger (-${newGrQty.toFixed(2)} Kg)` : '');
+
+      let orders = [];
+      let stock = [];
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.getMultiple === 'function') {
+        const multi = await window.VishwaSupabase.getMultiple(['yarn-rm-orders', 'vishwa_yarn_rm_stock_data']);
+        orders = multi['yarn-rm-orders'] || [];
+        stock = multi['vishwa_yarn_rm_stock_data'] || [];
+      } else if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+        orders = (await window.VishwaSupabase.get('yarn-rm-orders')) || [];
+        stock = (await window.VishwaSupabase.get('vishwa_yarn_rm_stock_data')) || [];
+      }
+
+      if (!Array.isArray(orders)) orders = [];
+      if (!Array.isArray(stock)) stock = [];
+
+      let ordersChanged = false;
+      let stockChanged = false;
+
+      const targetOrderId = String(row.orderId || row.orderNumber || '').trim();
+      const targetBatchId = String(row.batchId || '').trim();
+      const targetChallan = String(row.challanNo || '').trim();
+      const targetLot = String(row.lotNumber || '').trim();
+      const targetSupplier = String(row.partyName || '').trim().toLowerCase();
+
+      let matchedBatch = null;
+
+      for (const ord of orders) {
+        if (!ord) continue;
+        const ordId = String(ord.id || ord.orderNumber || '').trim();
+        const ordSupplier = String(ord.supplier || '').trim().toLowerCase();
+
+        const batches = Array.isArray(ord.batches) ? ord.batches : [];
+        for (const b of batches) {
+          if (!b) continue;
+          const bId = String(b.id || '').trim();
+          const bChallan = String(b.challanNumber || '').trim();
+          const bLot = String(b.lotNumber || '').trim();
+
+          const isMatch = (targetBatchId && bId === targetBatchId) ||
+                          (targetChallan && bChallan === targetChallan && (targetSupplier === '' || ordSupplier === targetSupplier)) ||
+                          (targetLot && bLot === targetLot && (targetChallan === '' || bChallan === targetChallan)) ||
+                          (targetOrderId && (ordId === targetOrderId || ord.id === targetOrderId) && (targetChallan === '' || bChallan === targetChallan));
+
+          if (isMatch) {
+            matchedBatch = b;
+            break;
+          }
+        }
+        if (matchedBatch) break;
+      }
+
+      let grBoxesResult = [];
+      if (matchedBatch) {
+        matchedBatch.returnedWeight = Number(newGrQty.toFixed(2));
+        matchedBatch.updated_at = new Date().toISOString();
+
+        if (Array.isArray(matchedBatch.boxes) && matchedBatch.boxes.length > 0) {
+          if (Array.isArray(boxAllocations) && boxAllocations.length > 0) {
+            boxAllocations.forEach(alloc => {
+              const bNum = String(alloc.boxNumber || alloc.id || '').trim();
+              const targetBox = matchedBatch.boxes.find(bx => String(bx.boxNumber || bx.id || '').trim() === bNum);
+              if (targetBox) {
+                const ret = Number(alloc.returnedWeight) || 0;
+                const gross = Number(targetBox.grossWeight) || Number(targetBox.weight) || 0;
+                targetBox.returnedWeight = ret;
+                targetBox.returnedDate = ret > 0 ? (alloc.date || effectiveGrDate) : null;
+                targetBox.returnedRemarks = ret > 0 ? (alloc.remarks || effectiveGrRemarks) : null;
+                targetBox.updated_at = new Date().toISOString();
+
+                if (ret >= gross && gross > 0) {
+                  targetBox.status = 'gr';
+                  targetBox.issueDate = null;
+                  targetBox.issuedTo = null;
+                } else if (targetBox.status === 'gr' && ret < gross) {
+                  targetBox.status = (targetBox.issuedTo || targetBox.issueDate) ? 'issued' : 'available';
+                }
+
+                if (ret > 0) {
+                  grBoxesResult.push({
+                    boxNumber: bNum,
+                    cones: Number(targetBox.cones) || 0,
+                    weight: gross,
+                    returnedWeight: ret,
+                    date: targetBox.returnedDate,
+                    remarks: targetBox.returnedRemarks
+                  });
+                }
+              }
+            });
+          } else {
+            let remainingGrToDistribute = Number(newGrQty);
+            matchedBatch.boxes.forEach((bx, idx) => {
+              const gross = Number(bx.grossWeight) || Number(bx.weight) || 0;
+              let retForThisBox = 0;
+              if (remainingGrToDistribute > 0) {
+                retForThisBox = Math.min(gross, remainingGrToDistribute);
+                remainingGrToDistribute = Math.max(0, Number((remainingGrToDistribute - retForThisBox).toFixed(2)));
+              }
+              bx.returnedWeight = Number(retForThisBox.toFixed(2));
+              bx.returnedDate = retForThisBox > 0 ? effectiveGrDate : null;
+              bx.returnedRemarks = retForThisBox > 0 ? effectiveGrRemarks : null;
+              bx.updated_at = new Date().toISOString();
+
+              if (retForThisBox >= gross && gross > 0) {
+                bx.status = 'gr';
+                bx.issueDate = null;
+                bx.issuedTo = null;
+              } else if (bx.status === 'gr' && retForThisBox < gross) {
+                bx.status = (bx.issuedTo || bx.issueDate) ? 'issued' : 'available';
+              }
+
+              if (retForThisBox > 0) {
+                grBoxesResult.push({
+                  boxNumber: bx.boxNumber || bx.id || `B${idx + 1}`,
+                  cones: Number(bx.cones) || 0,
+                  weight: gross,
+                  returnedWeight: retForThisBox,
+                  date: effectiveGrDate,
+                  remarks: effectiveGrRemarks
+                });
+              }
+            });
+          }
+        }
+        ordersChanged = true;
+      }
+
+      const matchedStockLot = stock.find(lot => 
+        (targetBatchId && String(lot.batchId) === targetBatchId) ||
+        (targetChallan && String(lot.challanNo || lot.challanNumber).trim() === targetChallan) ||
+        (targetLot && String(lot.lotNumber).trim() === targetLot) ||
+        (targetOrderId && (String(lot.orderRef) === targetOrderId))
+      );
+
+      if (matchedStockLot && Array.isArray(matchedStockLot.boxes)) {
+        const boxAllocMap = new Map();
+        grBoxesResult.forEach(b => {
+          boxAllocMap.set(String(b.boxNumber).trim(), b);
+        });
+
+        let remGrToDist = Number(newGrQty);
+        matchedStockLot.boxes.forEach((bx, idx) => {
+          const bNum = String(bx.boxNumber || bx.id || '').trim();
+          const gross = Number(bx.grossWeight) || (Number(bx.weight || 0) + Number(bx.grWeight || 0));
+          let ret = 0;
+          let rDate = effectiveGrDate;
+          let rRemarks = effectiveGrRemarks;
+
+          if (boxAllocMap.has(bNum)) {
+            const alloc = boxAllocMap.get(bNum);
+            ret = Number(alloc.returnedWeight) || 0;
+            rDate = alloc.date || effectiveGrDate;
+            rRemarks = alloc.remarks || effectiveGrRemarks;
+          } else if (grBoxesResult.length === 0 && remGrToDist > 0) {
+            ret = Math.min(gross, remGrToDist);
+            remGrToDist = Math.max(0, Number((remGrToDist - ret).toFixed(2)));
+          }
+
+          bx.grossWeight = gross;
+          bx.grWeight = Number(ret.toFixed(2));
+          bx.remainingWeight = Math.max(0, Number((gross - ret).toFixed(2)));
+          bx.grDate = ret > 0 ? rDate : null;
+          bx.grRemarks = ret > 0 ? rRemarks : null;
+          bx.updated_at = new Date().toISOString();
+
+          if (ret >= gross && gross > 0) {
+            bx.status = 'gr';
+            bx.weight = gross;
+            bx.issueDate = null;
+            bx.issuedTo = null;
+          } else {
+            bx.weight = bx.remainingWeight;
+            // For partial returns: if the box was already issued, remaining weight remains issued and is not brought to available
+            if (bx.status === 'issued' || bx.issuedTo || bx.issueDate) {
+              bx.status = 'issued';
+            } else if (bx.status === 'gr' && ret < gross) {
+              bx.status = 'available';
+            }
+          }
+        });
+
+        matchedStockLot.updated_at = new Date().toISOString();
+        stockChanged = true;
+      }
+
+      if (ordersChanged && window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+        window.VishwaSupabase.set('yarn-rm-orders', orders, true);
+      }
+      if (stockChanged && window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+        window.VishwaSupabase.set('vishwa_yarn_rm_stock_data', stock, true);
+      }
+
+      row.grQty = Number(newGrQty.toFixed(2));
+      const gross = row.grossQty !== undefined ? Number(row.grossQty) : (Number(row.qty || 0) + Number(row.grQty || 0));
+      row.grossQty = gross;
+      row.qty = Math.max(0, Number((gross - row.grQty).toFixed(2)));
+      const rate = Number(row.rate) || 0;
+      const gstPct = Number(row.gstPercent !== undefined ? row.gstPercent : 5.0);
+      row.grAmount = Number((row.grQty * rate).toFixed(2));
+      row.grossAmount = Number((row.grossQty * rate).toFixed(2));
+      row.subtotal = Number((row.qty * rate).toFixed(2));
+      const gstAmt = Number(((row.subtotal * gstPct) / 100).toFixed(2));
+      row.grandTotal = Number((row.subtotal + gstAmt).toFixed(2));
+      if (grBoxesResult.length > 0) {
+        row.grBoxes = grBoxesResult;
+      }
+      row.updated_at = new Date().toISOString();
+
+      saveLedgers(false, true);
+
+      try {
+        window.dispatchEvent(new CustomEvent('yarn-order-updated', { detail: { orders } }));
+        window.dispatchEvent(new CustomEvent('yarn-stock-updated', { detail: { stock } }));
+        window.postMessage({ type: 'YARN_ORDER_UPDATED', orders }, '*');
+        window.postMessage({ type: 'YARN_STOCK_UPDATED', stock }, '*');
+      } catch(e) {}
+    }
+
+    async function submitIssueGrForm() {
+      if (!currentGrRowId) return;
+      const row = (ledgerData[activeTab] || []).find(r => r.id === currentGrRowId);
+      if (!row) return;
+
+      const totalGr = parseFloat(document.getElementById('gr-modal-total-qty')?.value) || 0;
+      const returnDate = document.getElementById('gr-modal-date')?.value || new Date().toISOString().split('T')[0];
+      const remarks = document.getElementById('gr-modal-remarks')?.value.trim() || (totalGr > 0 ? `Goods Return (-${totalGr.toFixed(2)} Kg)` : '');
+
+      const boxAllocations = [];
+      const boxRows = document.querySelectorAll('#gr-modal-boxes-tbody .gr-modal-box-row');
+      boxRows.forEach(rowEl => {
+        const bNum = rowEl.dataset.boxNum;
+        const bGross = parseFloat(rowEl.dataset.gross) || 0;
+        const retVal = parseFloat(rowEl.querySelector('.gr-box-ret-input')?.value) || 0;
+        const notes = rowEl.querySelector('.gr-box-notes-input')?.value.trim() || remarks;
+
+        boxAllocations.push({
+          boxNumber: bNum,
+          returnedWeight: retVal,
+          date: returnDate,
+          remarks: notes
+        });
+      });
+
+      const btn = document.getElementById('btn-submit-gr');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Synchronizing...';
+      }
+
+      try {
+        await syncGRToOrdersAndStock(row, totalGr, returnDate, remarks, boxAllocations);
+        closeIssueGrModal();
+        renderTable(false);
+        showToast(`Goods Return of ${totalGr.toFixed(2)} Kg synced to RM Orders & Stock!`, 'success');
+      } catch (err) {
+        console.error('Error syncing GR:', err);
+        showToast('Error syncing GR to orders/stock', 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Apply GR &amp; Sync RM Orders / Stock`;
+        }
+      }
     }
 
     // Listen for messages from embedded Yarn RM Orders iframe

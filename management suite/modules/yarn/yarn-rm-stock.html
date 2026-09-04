@@ -3160,7 +3160,7 @@
           const filteredBoxes = lot.boxes.filter(b => {
             if (statusFilter === 'available' && b.status !== 'available') return false;
             if (statusFilter === 'issued' && b.status !== 'issued') return false;
-            if (statusFilter === 'gr' && b.status !== 'gr') return false;
+            if (statusFilter === 'gr' && b.status !== 'gr' && !(b.grWeight > 0)) return false;
 
             if (dateFilter) {
               const matchesLotReceiveDate = (lot.receiveDate === dateFilter);
@@ -3528,8 +3528,13 @@
               qualityMap[groupKey].grKg += gr;
             }
           } else if (status === 'issued') {
-            totalIssuedWeight += gross;
-            qualityMap[groupKey].usedKg += gross;
+            const safeIssued = Math.max(0, rem);
+            totalIssuedWeight += safeIssued;
+            qualityMap[groupKey].usedKg += safeIssued;
+            if (gr > 0) {
+              totalGrWeight += gr;
+              qualityMap[groupKey].grKg += gr;
+            }
           } else if (status === 'gr') {
             const safeGr = gr > 0 ? gr : gross;
             totalGrWeight += safeGr;

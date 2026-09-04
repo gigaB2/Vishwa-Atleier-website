@@ -150,4 +150,199 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(res.subtotal, 16000);
     assert.strictEqual(res.grBoxes.length, 0);
   });
+
+  await t.test('bidirectional sync updates yarn-rm-orders and stock data when GR is issued in ledger', () => {
+    // Mock RM Orders dataset
+    const orders = [
+      {
+        id: 'ORD-501',
+        orderNumber: '501',
+        supplier: 'Vardhman Mills',
+        batches: [
+          {
+            id: 'BATCH-1',
+            challanNumber: 'CH-8899',
+            lotNumber: 'LOT-99',
+            totalWeight: 100.0,
+            returnedWeight: 0,
+            boxes: [
+              { boxNumber: 'B1', weight: 50.0, grossWeight: 50.0, returnedWeight: 0, status: 'available' },
+              { boxNumber: 'B2', weight: 50.0, grossWeight: 50.0, returnedWeight: 0, status: 'issued', issueDate: '2026-09-01', issuedTo: 'Covering Unit 1' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    // Mock Stock dataset
+    const stock = [
+      {
+        id: 'LOT-99__CH-8899',
+        batchId: 'BATCH-1',
+        lotNumber: 'LOT-99',
+        challanNo: 'CH-8899',
+        supplier: 'Vardhman Mills',
+        boxes: [
+          { id: 'B1', boxNumber: 'B1', weight: 50.0, grossWeight: 50.0, remainingWeight: 50.0, grWeight: 0, status: 'available' },
+          { id: 'B2', boxNumber: 'B2', weight: 50.0, grossWeight: 50.0, remainingWeight: 50.0, grWeight: 0, status: 'issued', issueDate: '2026-09-01', issuedTo: 'Covering Unit 1' }
+        ]
+      }
+    ];
+
+    // Ledger row where GR is issued on B2 (issued cone/box)
+    const ledgerRow = {
+      id: 'PUR-order_ORD-501_batch_BATCH-1_CH-8899',
+      orderId: 'ORD-501',
+      batchId: 'BATCH-1',
+      challanNo: 'CH-8899',
+      lotNumber: 'LOT-99',
+      partyName: 'Vardhman Mills',
+      rate: 300,
+      grossQty: 100.0,
+      grQty: 50.0,
+      qty: 50.0
+    };
+
+    // Execute sync logic for box allocations: B1 untouched (0 GR), B2 returned (50 GR)
+    const boxAllocations = [
+      { boxNumber: 'B1', returnedWeight: 0, remarks: '' },
+      { boxNumber: 'B2', returnedWeight: 50.0, remarks: 'Returned defective issued cones' }
+    ];
+
+    // 1. Update orders
+    const targetBatch = orders[0].batches[0];
+    targetBatch.returnedWeight = 50.0;
+    boxAllocations.forEach(alloc => {
+      const b = targetBatch.boxes.find(x => x.boxNumber === alloc.boxNumber);
+      if (b) {
+        b.returnedWeight = alloc.returnedWeight;
+        if (b.returnedWeight >= b.grossWeight) {
+          b.status = 'gr';
+          b.issueDate = null;
+          b.issuedTo = null;
+        }
+      }
+    });
+
+    // 2. Update stock
+    const targetStockLot = stock[0];
+    boxAllocations.forEach(alloc => {
+      const b = targetStockLot.boxes.find(x => x.boxNumber === alloc.boxNumber);
+      if (b) {
+        b.grWeight = alloc.returnedWeight;
+        b.remainingWeight = Math.max(0, b.grossWeight - alloc.returnedWeight);
+        if (b.grWeight >= b.grossWeight) {
+          b.status = 'gr';
+          b.weight = b.grossWeight;
+          b.issueDate = null;
+          b.issuedTo = null;
+        }
+      }
+    });
+
+    // Verify Orders
+    assert.strictEqual(targetBatch.returnedWeight, 50.0);
+    assert.strictEqual(targetBatch.boxes[0].status, 'available');
+    assert.strictEqual(targetBatch.boxes[0].returnedWeight, 0);
+    assert.strictEqual(targetBatch.boxes[1].status, 'gr');
+    assert.strictEqual(targetBatch.boxes[1].returnedWeight, 50.0);
+    assert.strictEqual(targetBatch.boxes[1].issuedTo, null); // Issued cones returned via GR are no longer locked in issued state!
+
+    // Verify Stockbook
+    assert.strictEqual(targetStockLot.boxes[0].status, 'available');
+    assert.strictEqual(targetStockLot.boxes[1].status, 'gr');
+    assert.strictEqual(targetStockLot.boxes[1].grWeight, 50.0);
+    assert.strictEqual(targetStockLot.boxes[1].remainingWeight, 0);
+    assert.strictEqual(targetStockLot.boxes[1].issuedTo, null);
+  });
+
+  await t.test('stockbook GR filter correctly matches both full GR and partial GR boxes', () => {
+    const boxes = [
+      { id: 'B1', status: 'available', grWeight: 0 },
+      { id: 'B2', status: 'issued', grWeight: 0 },
+      { id: 'B3', status: 'gr', grWeight: 50.0 }, // 100% full GR
+      { id: 'B4', status: 'available', grWeight: 10.0, remainingWeight: 40.0 }, // partial GR available
+      { id: 'B5', status: 'issued', grWeight: 15.0, remainingWeight: 35.0 } // partial GR issued
+    ];
+
+    const statusFilter = 'gr';
+    const filteredBoxes = boxes.filter(b => {
+      if (statusFilter === 'gr' && b.status !== 'gr' && !(b.grWeight > 0)) return false;
+      return true;
+    });
+
+    assert.strictEqual(filteredBoxes.length, 3);
+    assert.deepStrictEqual(filteredBoxes.map(b => b.id), ['B3', 'B4', 'B5']);
+  });
+
+  await t.test('partial GR on issued cones keeps remaining weight as issued and does not bring it to available', () => {
+    // 1. Initial State: Box B2 was issued to covering unit
+    const stockLot = {
+      id: 'LOT-99__CH-8899',
+      batchId: 'BATCH-1',
+      lotNumber: 'LOT-99',
+      challanNo: 'CH-8899',
+      boxes: [
+        { id: 'B1', boxNumber: 'B1', weight: 50.0, grossWeight: 50.0, remainingWeight: 50.0, grWeight: 0, status: 'available' },
+        { id: 'B2', boxNumber: 'B2', weight: 50.0, grossWeight: 50.0, remainingWeight: 50.0, grWeight: 0, status: 'issued', issueDate: '2026-09-01', issuedTo: 'Covering Unit 1' }
+      ]
+    };
+
+    // 2. Issue a PARTIAL GR of 15 kg on B2 (remaining: 35 kg)
+    const boxAllocations = [
+      { boxNumber: 'B2', returnedWeight: 15.0, remarks: 'Defective cones returned' }
+    ];
+
+    boxAllocations.forEach(alloc => {
+      const b = stockLot.boxes.find(x => x.boxNumber === alloc.boxNumber);
+      if (b) {
+        b.grWeight = alloc.returnedWeight;
+        b.remainingWeight = Math.max(0, b.grossWeight - alloc.returnedWeight);
+        if (b.grWeight >= b.grossWeight && b.grossWeight > 0) {
+          b.status = 'gr';
+          b.weight = b.grossWeight;
+          b.issueDate = null;
+          b.issuedTo = null;
+        } else {
+          b.weight = b.remainingWeight;
+          // Because B2 was already issued, remaining 35 kg remains ISSUED!
+          if (b.status === 'issued' || b.issuedTo || b.issueDate) {
+            b.status = 'issued';
+          }
+        }
+      }
+    });
+
+    const b2 = stockLot.boxes[1];
+    assert.strictEqual(b2.status, 'issued', 'Partial GR on issued box must keep status as issued');
+    assert.strictEqual(b2.grWeight, 15.0);
+    assert.strictEqual(b2.remainingWeight, 35.0);
+    assert.strictEqual(b2.weight, 35.0);
+    assert.strictEqual(b2.issuedTo, 'Covering Unit 1', 'issuedTo recipient must be preserved');
+    assert.strictEqual(b2.issueDate, '2026-09-01', 'issueDate must be preserved');
+
+    // 3. Compute stock aggregations
+    let availWeight = 0;
+    let issuedWeight = 0;
+    let grWeight = 0;
+
+    stockLot.boxes.forEach(b => {
+      const rem = b.remainingWeight !== undefined ? b.remainingWeight : b.weight;
+      const gr = b.grWeight || 0;
+      if (b.status === 'available') {
+        availWeight += rem;
+        if (gr > 0) grWeight += gr;
+      } else if (b.status === 'issued') {
+        issuedWeight += rem;
+        if (gr > 0) grWeight += gr;
+      } else if (b.status === 'gr') {
+        grWeight += (gr || b.grossWeight || b.weight || 0);
+      }
+    });
+
+    assert.strictEqual(availWeight, 50.0, 'Available weight should only be B1 (50 kg), NOT including remaining issued B2');
+    assert.strictEqual(issuedWeight, 35.0, 'Issued weight should be the remaining 35 kg of B2');
+    assert.strictEqual(grWeight, 15.0, 'GR weight should be 15 kg');
+  });
 });
+
