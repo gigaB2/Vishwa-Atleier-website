@@ -1909,10 +1909,41 @@
                                (batchLot ? existingBoxMap.get(`${batchLot}__${bId}`) : null) ||
                                (existingLot && Array.isArray(existingLot.boxes) ? existingLot.boxes.find(x => String(x.id || x.boxNumber).trim() === bId) : null);
 
-                  const isIssued = (oldB && oldB.status === 'issued') || (bx.status === 'issued');
-                  const issueDate = isIssued ? (oldB?.issueDate || bx.issueDate || null) : null;
-                  const issuedTo = isIssued ? (oldB?.issuedTo || bx.issuedTo || null) : null;
-                  const updatedAt = isIssued ? (oldB?.updated_at || bx.updated_at || null) : (oldB?.updated_at || null);
+                  let isIssued = false;
+                  let issueDate = null;
+                  let issuedTo = null;
+                  let updatedAt = oldB?.updated_at || bx.updated_at || null;
+                  let unissuedAt = oldB?.unissued_at || bx.unissued_at || null;
+
+                  if (oldB && oldB.status === 'issued' && bx.status === 'issued') {
+                    isIssued = true;
+                    issueDate = oldB.issueDate || bx.issueDate || null;
+                    issuedTo = oldB.issuedTo || bx.issuedTo || null;
+                  } else if (oldB && oldB.status === 'issued' && bx.status !== 'issued') {
+                    const oldBTime = Math.max(oldB.updated_at ? new Date(oldB.updated_at).getTime() : 0, oldB.issueDate ? new Date(oldB.issueDate).getTime() : 0);
+                    const bxAvailTime = Math.max(bx.unissued_at ? new Date(bx.unissued_at).getTime() : 0, bx.updated_at ? new Date(bx.updated_at).getTime() : 0);
+                    if (bxAvailTime >= oldBTime && bxAvailTime > 0) {
+                      isIssued = false;
+                    } else {
+                      isIssued = true;
+                      issueDate = oldB.issueDate || null;
+                      issuedTo = oldB.issuedTo || null;
+                    }
+                  } else if (bx.status === 'issued' && (!oldB || oldB.status !== 'issued')) {
+                    const bxIssueTime = Math.max(bx.updated_at ? new Date(bx.updated_at).getTime() : 0, bx.issueDate ? new Date(bx.issueDate).getTime() : 0);
+                    const oldBAvailTime = Math.max(oldB?.unissued_at ? new Date(oldB.unissued_at).getTime() : 0, oldB?.updated_at ? new Date(oldB.updated_at).getTime() : 0);
+                    if (oldBAvailTime >= bxIssueTime && oldBAvailTime > 0) {
+                      isIssued = false;
+                    } else if (!oldB || !oldB.status) {
+                      isIssued = true;
+                      issueDate = bx.issueDate || null;
+                      issuedTo = bx.issuedTo || null;
+                    } else {
+                      isIssued = false;
+                    }
+                  } else {
+                    isIssued = false;
+                  }
 
                   return {
                     id: bId,
@@ -1925,6 +1956,7 @@
                     issueDate: isFullyGr ? null : (isIssued ? issueDate : null),
                     issuedTo: isFullyGr ? null : (isIssued ? issuedTo : null),
                     updated_at: updatedAt,
+                    unissued_at: isIssued ? null : unissuedAt,
                     grWeight: retWt,
                     grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
                     grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(2)} kg)` : null)
@@ -1983,6 +2015,9 @@
 
     function saveStockData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stockData));
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+        window.VishwaSupabase.set(STORAGE_KEY, stockData);
+      }
     }
 
     let boxRowCount = 0;

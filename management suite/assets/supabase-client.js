@@ -423,44 +423,19 @@
 
           // 1. Goods Return (GR) takes precedence
           if (incBox.status === 'gr' || (incBox.grWeight > 0 && incBox.grWeight >= (incBox.grossWeight || incBox.weight || 1))) {
-            boxMap.set(bId, { ...curBox, ...incBox });
+            boxMap.set(bId, { ...curBox, ...incBox, status: 'gr' });
             return;
           }
           if (curBox.status === 'gr' || (curBox.grWeight > 0 && curBox.grWeight >= (curBox.grossWeight || curBox.weight || 1))) {
+            boxMap.set(bId, { ...incBox, ...curBox, status: 'gr' });
             return;
           }
 
-          const curTime = curBox.updated_at ? new Date(curBox.updated_at).getTime() : 0;
-          const incTime = incBox.updated_at ? new Date(incBox.updated_at).getTime() : 0;
+          const curUpdated = curBox.updated_at ? new Date(curBox.updated_at).getTime() : 0;
+          const incUpdated = incBox.updated_at ? new Date(incBox.updated_at).getTime() : 0;
 
-          // If one is issued and the other is available:
-          if (curBox.status === 'issued' && incBox.status !== 'issued') {
-            if (incBox.unissued_at && new Date(incBox.unissued_at).getTime() > curTime) {
-              boxMap.set(bId, { ...curBox, ...incBox });
-            } else {
-              boxMap.set(bId, {
-                ...incBox,
-                status: 'issued',
-                issueDate: curBox.issueDate || incBox.issueDate || null,
-                issuedTo: curBox.issuedTo || incBox.issuedTo || null,
-                updated_at: curBox.updated_at || incBox.updated_at
-              });
-            }
-          } else if (incBox.status === 'issued' && curBox.status !== 'issued') {
-            if (curBox.unissued_at && new Date(curBox.unissued_at).getTime() > incTime) {
-              // Keep unissued
-            } else {
-              boxMap.set(bId, {
-                ...curBox,
-                ...incBox,
-                status: 'issued',
-                issueDate: incBox.issueDate || curBox.issueDate || null,
-                issuedTo: incBox.issuedTo || curBox.issuedTo || null,
-                updated_at: incBox.updated_at || curBox.updated_at
-              });
-            }
-          } else if (curBox.status === 'issued' && incBox.status === 'issued') {
-            const winner = (incTime >= curTime) ? incBox : curBox;
+          if (curBox.status === 'issued' && incBox.status === 'issued') {
+            const winner = (incUpdated >= curUpdated) ? incBox : curBox;
             boxMap.set(bId, {
               ...curBox,
               ...incBox,
@@ -469,8 +444,51 @@
               issuedTo: winner.issuedTo || curBox.issuedTo || incBox.issuedTo,
               updated_at: winner.updated_at || incBox.updated_at || curBox.updated_at
             });
+          } else if (curBox.status !== 'issued' && incBox.status !== 'issued') {
+            const winner = (incUpdated >= curUpdated) ? incBox : curBox;
+            boxMap.set(bId, {
+              ...curBox,
+              ...incBox,
+              status: 'available',
+              issueDate: null,
+              issuedTo: null,
+              unissued_at: winner.unissued_at || incBox.unissued_at || curBox.unissued_at || winner.updated_at,
+              updated_at: winner.updated_at || incBox.updated_at || curBox.updated_at
+            });
           } else {
-            boxMap.set(bId, { ...curBox, ...incBox });
+            // One is issued, the other is available (unissued)
+            const issuedBox = (curBox.status === 'issued') ? curBox : incBox;
+            const availBox = (curBox.status === 'issued') ? incBox : curBox;
+
+            const issuedTime = Math.max(
+              issuedBox.updated_at ? new Date(issuedBox.updated_at).getTime() : 0,
+              issuedBox.issueDate ? new Date(issuedBox.issueDate).getTime() : 0
+            );
+            const availTime = Math.max(
+              availBox.unissued_at ? new Date(availBox.unissued_at).getTime() : 0,
+              availBox.updated_at ? new Date(availBox.updated_at).getTime() : 0
+            );
+
+            if (availTime >= issuedTime) {
+              boxMap.set(bId, {
+                ...issuedBox,
+                ...availBox,
+                status: 'available',
+                issueDate: null,
+                issuedTo: null,
+                unissued_at: availBox.unissued_at || availBox.updated_at,
+                updated_at: availBox.updated_at || new Date().toISOString()
+              });
+            } else {
+              boxMap.set(bId, {
+                ...availBox,
+                ...issuedBox,
+                status: 'issued',
+                issueDate: issuedBox.issueDate,
+                issuedTo: issuedBox.issuedTo,
+                updated_at: issuedBox.updated_at || new Date().toISOString()
+              });
+            }
           }
         }
       });
@@ -527,9 +545,6 @@
     if (cleanRemote.length > 0 && cleanLocal.length === 0) {
       return cleanRemote;
     }
-    if (!isLocallyActive && cleanRemote.length > 0) {
-      return cleanRemote;
-    }
 
     const orderMap = new Map();
     const getOrderKey = (ord) => ord ? String(ord.id || ord.orderNumber || '').trim() : '';
@@ -581,18 +596,76 @@
                 if (isLocallyActive) bBoxMap.set(bxId, { ...locBx });
               } else {
                 const remBx = bBoxMap.get(bxId);
-                const isIssued = locBx.status === 'issued' || remBx.status === 'issued';
-                const issueDate = (locBx.status === 'issued' ? locBx.issueDate : null) || (remBx.status === 'issued' ? remBx.issueDate : null) || locBx.issueDate || remBx.issueDate || null;
-                const issuedTo = (locBx.status === 'issued' ? locBx.issuedTo : null) || (remBx.status === 'issued' ? remBx.issuedTo : null) || locBx.issuedTo || remBx.issuedTo || null;
-                const isGr = (Number(locBx.returnedWeight) > 0) || (Number(remBx.returnedWeight) > 0);
+                const isLocGr = (Number(locBx.returnedWeight) > 0) && (Number(locBx.returnedWeight) >= (Number(locBx.weight) || 1)) || locBx.status === 'gr';
+                const isRemGr = (Number(remBx.returnedWeight) > 0) && (Number(remBx.returnedWeight) >= (Number(remBx.weight) || 1)) || remBx.status === 'gr';
 
-                bBoxMap.set(bxId, {
-                  ...remBx,
-                  ...locBx,
-                  status: isGr && (Number(locBx.returnedWeight) >= (Number(locBx.weight) || 1)) ? 'gr' : (isIssued ? 'issued' : (locBx.status || remBx.status || 'available')),
-                  issueDate: isIssued ? issueDate : null,
-                  issuedTo: isIssued ? issuedTo : null
-                });
+                if (isLocGr || isRemGr) {
+                  bBoxMap.set(bxId, {
+                    ...remBx,
+                    ...locBx,
+                    status: 'gr'
+                  });
+                  return;
+                }
+
+                const locUpdated = locBx.updated_at ? new Date(locBx.updated_at).getTime() : 0;
+                const remUpdated = remBx.updated_at ? new Date(remBx.updated_at).getTime() : 0;
+
+                if (locBx.status === 'issued' && remBx.status === 'issued') {
+                  const winner = (locUpdated >= remUpdated) ? locBx : remBx;
+                  bBoxMap.set(bxId, {
+                    ...remBx,
+                    ...locBx,
+                    status: 'issued',
+                    issueDate: winner.issueDate || locBx.issueDate || remBx.issueDate,
+                    issuedTo: winner.issuedTo || locBx.issuedTo || remBx.issuedTo,
+                    updated_at: winner.updated_at || locBx.updated_at || remBx.updated_at
+                  });
+                } else if (locBx.status !== 'issued' && remBx.status !== 'issued') {
+                  const winner = (locUpdated >= remUpdated) ? locBx : remBx;
+                  bBoxMap.set(bxId, {
+                    ...remBx,
+                    ...locBx,
+                    status: 'available',
+                    issueDate: null,
+                    issuedTo: null,
+                    unissued_at: winner.unissued_at || locBx.unissued_at || remBx.unissued_at || winner.updated_at,
+                    updated_at: winner.updated_at || locBx.updated_at || remBx.updated_at
+                  });
+                } else {
+                  const issuedBx = (locBx.status === 'issued') ? locBx : remBx;
+                  const availBx = (locBx.status === 'issued') ? remBx : locBx;
+
+                  const issuedTime = Math.max(
+                    issuedBx.updated_at ? new Date(issuedBx.updated_at).getTime() : 0,
+                    issuedBx.issueDate ? new Date(issuedBx.issueDate).getTime() : 0
+                  );
+                  const availTime = Math.max(
+                    availBx.unissued_at ? new Date(availBx.unissued_at).getTime() : 0,
+                    availBx.updated_at ? new Date(availBx.updated_at).getTime() : 0
+                  );
+
+                  if (availTime >= issuedTime) {
+                    bBoxMap.set(bxId, {
+                      ...issuedBx,
+                      ...availBx,
+                      status: 'available',
+                      issueDate: null,
+                      issuedTo: null,
+                      unissued_at: availBx.unissued_at || availBx.updated_at,
+                      updated_at: availBx.updated_at || new Date().toISOString()
+                    });
+                  } else {
+                    bBoxMap.set(bxId, {
+                      ...availBx,
+                      ...issuedBx,
+                      status: 'issued',
+                      issueDate: issuedBx.issueDate,
+                      issuedTo: issuedBx.issuedTo,
+                      updated_at: issuedBx.updated_at || new Date().toISOString()
+                    });
+                  }
+                }
               }
             });
 

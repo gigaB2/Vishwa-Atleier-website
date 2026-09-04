@@ -238,4 +238,156 @@ test('Multi-User Concurrency & Merge Validation', async (t) => {
     assert.strictEqual(b1.status, 'issued');
     assert.strictEqual(b1.issuedTo, 'Doubler');
   });
+
+  await t.test('Yarn RM Stock Book: User reverts box to Available, stale issued remote snapshot does NOT revert it back to issued', () => {
+    // User A unissued box B1 at 2026-09-04
+    const userALocalUnissued = [
+      {
+        id: 'LOT-20-1-POLY',
+        lotNumber: 'L-201',
+        challanNo: 'CH-889',
+        quality: '20/1 BRT POLY',
+        supplier: 'ABC Mills',
+        updated_at: new Date('2026-09-04T12:00:00Z').toISOString(),
+        boxes: [
+          {
+            id: 'B1',
+            boxNumber: 'B1',
+            weight: 25.5,
+            status: 'available',
+            issueDate: null,
+            issuedTo: null,
+            unissued_at: new Date('2026-09-04T12:00:00Z').toISOString(),
+            updated_at: new Date('2026-09-04T12:00:00Z').toISOString()
+          },
+          {
+            id: 'B2',
+            boxNumber: 'B2',
+            weight: 24.8,
+            status: 'available',
+            issueDate: null,
+            issuedTo: null
+          }
+        ]
+      }
+    ];
+
+    // User B had an older snapshot where B1 was issued to Doubler on 2026-09-02
+    const userBRemoteStaleIssued = [
+      {
+        id: 'LOT-20-1-POLY',
+        lotNumber: 'L-201',
+        challanNo: 'CH-889',
+        quality: '20/1 BRT POLY',
+        supplier: 'ABC Mills',
+        updated_at: new Date('2026-09-02T10:00:00Z').toISOString(),
+        boxes: [
+          {
+            id: 'B1',
+            boxNumber: 'B1',
+            weight: 25.5,
+            status: 'issued',
+            issueDate: '2026-09-02',
+            issuedTo: 'Doubler',
+            updated_at: new Date('2026-09-02T10:00:00Z').toISOString()
+          },
+          {
+            id: 'B2',
+            boxNumber: 'B2',
+            weight: 24.8,
+            status: 'available',
+            issueDate: null,
+            issuedTo: null
+          }
+        ]
+      }
+    ];
+
+    // Merge: Local unissued + Remote stale issued -> MUST be Available
+    const testMerge = vSupabase.mergeDatasets('vishwa_yarn_rm_stock_data', userALocalUnissued, userBRemoteStaleIssued);
+    assert.strictEqual(testMerge.length, 1);
+    const lot = testMerge[0];
+    const boxB1 = lot.boxes.find(b => b.id === 'B1' || b.boxNumber === 'B1');
+    assert.ok(boxB1, 'Box B1 exists');
+    assert.strictEqual(boxB1.status, 'available', 'Box B1 MUST remain available after unissuing');
+    assert.strictEqual(boxB1.issueDate, null);
+    assert.strictEqual(boxB1.issuedTo, null);
+
+    // Reverse Merge: Remote unissued + Local stale issued -> MUST also be Available
+    const testMergeRev = vSupabase.mergeDatasets('vishwa_yarn_rm_stock_data', userBRemoteStaleIssued, userALocalUnissued);
+    const revBoxB1 = testMergeRev[0].boxes.find(b => b.id === 'B1' || b.boxNumber === 'B1');
+    assert.strictEqual(revBoxB1.status, 'available', 'Reverse merge also preserves unissued available status');
+    assert.strictEqual(revBoxB1.issueDate, null);
+    assert.strictEqual(revBoxB1.issuedTo, null);
+  });
+
+  await t.test('Yarn RM Orders: Box unissued status in batches is preserved across merges', () => {
+    const ordersLocalUnissued = [
+      {
+        id: 'ORD-101',
+        orderNumber: 'ORD-101',
+        supplier: 'ABC Mills',
+        quality: '20/1 BRT POLY',
+        batches: [
+          {
+            id: 'BATCH-1',
+            challanNumber: 'CH-889',
+            lotNumber: 'L-201',
+            boxes: [
+              {
+                boxNumber: 'B1',
+                weight: 25.5,
+                status: 'available',
+                issueDate: null,
+                issuedTo: null,
+                unissued_at: new Date('2026-09-04T12:00:00Z').toISOString(),
+                updated_at: new Date('2026-09-04T12:00:00Z').toISOString()
+              },
+              { boxNumber: 'B2', weight: 24.8, status: 'available' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const ordersRemoteStaleIssued = [
+      {
+        id: 'ORD-101',
+        orderNumber: 'ORD-101',
+        supplier: 'ABC Mills',
+        quality: '20/1 BRT POLY',
+        batches: [
+          {
+            id: 'BATCH-1',
+            challanNumber: 'CH-889',
+            lotNumber: 'L-201',
+            boxes: [
+              {
+                boxNumber: 'B1',
+                weight: 25.5,
+                status: 'issued',
+                issueDate: '2026-09-02',
+                issuedTo: 'Doubler',
+                updated_at: new Date('2026-09-02T10:00:00Z').toISOString()
+              },
+              { boxNumber: 'B2', weight: 24.8, status: 'available' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const merged = vSupabase.mergeDatasets('yarn-rm-orders', ordersLocalUnissued, ordersRemoteStaleIssued);
+    assert.strictEqual(merged.length, 1);
+    const b1 = merged[0].batches[0].boxes.find(b => b.boxNumber === 'B1');
+    assert.strictEqual(b1.status, 'available');
+    assert.strictEqual(b1.issueDate, null);
+    assert.strictEqual(b1.issuedTo, null);
+
+    const mergedRev = vSupabase.mergeDatasets('yarn-rm-orders', ordersRemoteStaleIssued, ordersLocalUnissued);
+    const revB1 = mergedRev[0].batches[0].boxes.find(b => b.boxNumber === 'B1');
+    assert.strictEqual(revB1.status, 'available');
+    assert.strictEqual(revB1.issueDate, null);
+    assert.strictEqual(revB1.issuedTo, null);
+  });
 });
