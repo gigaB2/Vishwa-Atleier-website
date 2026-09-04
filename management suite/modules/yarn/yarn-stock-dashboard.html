@@ -5456,13 +5456,66 @@
       const challanNo = document.getElementById('modal-sales-challan').value.trim();
       const invoiceNo = challanNo;
       const date = document.getElementById('modal-sales-date').value;
+      const customerName = document.getElementById('modal-sales-customer').value.trim();
+
+      if (!challanNo) {
+        showToast('Please enter a valid Challan / Invoice number.', 'error');
+        const chInput = document.getElementById('modal-sales-challan');
+        if (chInput) chInput.focus();
+        return;
+      }
+
+      // 1. Check for Duplicate Challan Number
+      const existingChallanSale = (dataStore[activeDivision].sales || []).find(s => 
+        s.id !== editId && 
+        s.challanNo && 
+        String(s.challanNo).trim().toLowerCase() === challanNo.toLowerCase()
+      );
+      if (existingChallanSale) {
+        showToast(`Cannot save: Challan number "${challanNo}" already exists in ${activeDivision.toUpperCase()} sales. Two challans cannot have the same Challan number.`, 'error');
+        const chInput = document.getElementById('modal-sales-challan');
+        if (chInput) {
+          chInput.focus();
+          chInput.style.borderColor = 'var(--error)';
+        }
+        return;
+      }
+
+      // 2. Check for Boris already sold in another Challan
+      for (let i = 0; i < modalChallanItems.length; i++) {
+        const item = modalChallanItems[i];
+        const prod = dataStore[activeDivision].production.find(p => p.boriNo === item.boriNo);
+        if (prod) {
+          const stock = getBoriStock(prod, editId);
+          if (item.rollsQty > stock.remainingRolls || (item.saleQty - 0.001) > stock.remainingQty) {
+            showToast(`Cannot save: Bori/Box "${item.boriNo}" is already sold in another Challan (Available: ${stock.remainingRolls} rolls, ${stock.remainingQty.toFixed(2)} Kg).`, 'error');
+            return;
+          }
+        }
+      }
+
+      // 3. Check for Exact Duplicate Sale Details
+      const currentItemsSig = modalChallanItems.map(i => `${i.boriNo}:${i.rollsQty}:${i.saleQty}`).sort().join('|');
+      const duplicateSale = (dataStore[activeDivision].sales || []).find(s => {
+        if (s.id === editId) return false;
+        const sItemsSig = (s.items && s.items.length > 0)
+          ? s.items.map(i => `${i.boriNo}:${i.rollsQty}:${i.saleQty}`).sort().join('|')
+          : `${s.boriNo}:${s.rollsQty}:${s.saleQty}`;
+        return s.customerName && s.customerName.trim().toLowerCase() === customerName.toLowerCase() &&
+               s.date === date &&
+               currentItemsSig && sItemsSig && currentItemsSig === sItemsSig;
+      });
+      if (duplicateSale) {
+        showToast(`Cannot save: A sale with identical customer, date, and items already exists under Challan "${duplicateSale.challanNo}".`, 'error');
+        return;
+      }
+
       const salesContractNo = document.getElementById('modal-sales-contract') ? document.getElementById('modal-sales-contract').value.trim() : '';
       const broker = document.getElementById('modal-sales-agent') ? document.getElementById('modal-sales-agent').value.trim() : 'DIRECT';
       const creditDays = parseInt(document.getElementById('modal-sales-credit-days') ? document.getElementById('modal-sales-credit-days').value : 30) || 30;
       const dueDate = document.getElementById('modal-sales-due-date') ? document.getElementById('modal-sales-due-date').value : '';
 
       const hsnCode = document.getElementById('modal-sales-hsn') ? document.getElementById('modal-sales-hsn').value.trim() : '54033100';
-      const customerName = document.getElementById('modal-sales-customer').value.trim();
       const buyerPhone = document.getElementById('modal-sales-buyer-phone') ? document.getElementById('modal-sales-buyer-phone').value.trim() : '';
       const buyerGstin = document.getElementById('modal-sales-buyer-gstin') ? document.getElementById('modal-sales-buyer-gstin').value.trim() : '';
       const customerAddress = (document.getElementById('modal-sales-address') ? document.getElementById('modal-sales-address').value.trim() : '') || 'Industrial Area, Surat, Gujarat, India';

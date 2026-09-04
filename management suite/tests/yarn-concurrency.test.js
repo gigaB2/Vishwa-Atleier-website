@@ -597,6 +597,42 @@ test('Multi-User Concurrency & Merge Validation', async (t) => {
     assert.ok(!filtered.some(s => s.id === 's_old_deleted_id'), 'Deleted sale must be filtered');
   });
 
+  await t.test('Yarn Sales: Two sales cannot have the same Challan number or duplicate details', async () => {
+    const existingSales = [
+      {
+        id: 's_existing_1',
+        challanNo: 'CH-0001/D/2026-27',
+        customerName: 'Customer A',
+        date: '2026-09-05',
+        items: [{ boriNo: 'D-101', rollsQty: 10, saleQty: 50 }]
+      }
+    ];
+
+    // Attempt to create a sale with the same Challan number
+    const isDuplicateChallan = (challanNo, editId = '') => {
+      return existingSales.some(s => s.id !== editId && s.challanNo && String(s.challanNo).trim().toLowerCase() === challanNo.trim().toLowerCase());
+    };
+
+    assert.strictEqual(isDuplicateChallan('CH-0001/D/2026-27'), true, 'Must detect duplicate challan number');
+    assert.strictEqual(isDuplicateChallan('ch-0001/d/2026-27'), true, 'Must detect case-insensitive duplicate challan number');
+    assert.strictEqual(isDuplicateChallan('CH-0002/D/2026-27'), false, 'New unique challan number must be allowed');
+    assert.strictEqual(isDuplicateChallan('CH-0001/D/2026-27', 's_existing_1'), false, 'Editing existing sale with its own challan number is allowed');
+
+    // Attempt to create duplicate details
+    const isDuplicateDetails = (customer, date, items, editId = '') => {
+      const curSig = items.map(i => `${i.boriNo}:${i.rollsQty}:${i.saleQty}`).sort().join('|');
+      return existingSales.some(s => {
+        if (s.id === editId) return false;
+        const sSig = (s.items && s.items.length > 0) ? s.items.map(i => `${i.boriNo}:${i.rollsQty}:${i.saleQty}`).sort().join('|') : '';
+        return s.customerName.toLowerCase() === customer.toLowerCase() && s.date === date && curSig === sSig;
+      });
+    };
+
+    assert.strictEqual(isDuplicateDetails('Customer A', '2026-09-05', [{ boriNo: 'D-101', rollsQty: 10, saleQty: 50 }]), true, 'Must detect identical sale details');
+    assert.strictEqual(isDuplicateDetails('Customer B', '2026-09-05', [{ boriNo: 'D-101', rollsQty: 10, saleQty: 50 }]), false, 'Different customer is allowed');
+    assert.strictEqual(isDuplicateDetails('Customer A', '2026-09-06', [{ boriNo: 'D-101', rollsQty: 10, saleQty: 50 }]), false, 'Different date is allowed');
+  });
+
   await t.test('Yarn Production: Multiple PCs producing Boris in Doubler/MX and TFO merge seamlessly', () => {
     const pc1Prod = [
       { id: 'p_d_1', boriNo: 'D-1001', productName: 'Doubler 2Core', qty: 25.5, rolls: 20, date: '2026-09-04' },
