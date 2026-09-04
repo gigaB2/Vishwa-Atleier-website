@@ -653,6 +653,10 @@
       position: relative;
     }
 
+    tr.sold-row td:not(.actions-cell) {
+      opacity: 0.72;
+    }
+
     th.actions-col {
       text-align: center !important;
       width: 70px;
@@ -5074,54 +5078,13 @@
         return;
       }
 
-      let baseProd = null;
-      const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
-      if (checkedBoxes.length > 0) {
-        baseProd = dataStore[activeDivision].production.find(p => p.id === checkedBoxes[0].value);
-      }
-
-      let anySkipped = false;
       checkboxes.forEach(cb => {
-        if (!cb.disabled) {
-          const prod = dataStore[activeDivision].production.find(p => p.id === cb.value);
-          if (!prod) return;
-          if (!baseProd) {
-            baseProd = prod;
-            cb.checked = true;
-          } else {
-            const mismatch = getProductDetailsMismatch(baseProd, prod);
-            if (!mismatch) {
-              cb.checked = true;
-            } else {
-              cb.checked = false;
-              anySkipped = true;
-            }
-          }
-        }
+        cb.checked = true;
       });
-
-      if (anySkipped) {
-        showToast('Only items with identical details were selected. Different items cannot be sold in 1 Challan.', 'info');
-      }
       updateBatchSellButtonState();
     };
 
     window.onProdCheckboxChange = function(cb) {
-      if (cb.checked) {
-        const otherChecked = Array.from(document.querySelectorAll('.prod-select-checkbox:checked')).filter(c => c !== cb);
-        if (otherChecked.length > 0) {
-          const firstProd = dataStore[activeDivision].production.find(p => p.id === otherChecked[0].value);
-          const currentProd = dataStore[activeDivision].production.find(p => p.id === cb.value);
-          if (firstProd && currentProd) {
-            const mismatch = getProductDetailsMismatch(firstProd, currentProd);
-            if (mismatch) {
-              cb.checked = false;
-              showToast(`Cannot select: ${mismatch}. All Boris/Boxes in a single Challan must have identical details.`, 'error');
-              return;
-            }
-          }
-        }
-      }
       updateBatchSellButtonState();
     };
 
@@ -5129,11 +5092,18 @@
       const checkedBoxes = document.querySelectorAll('.prod-select-checkbox:checked');
       const count = checkedBoxes.length;
       let totalWeight = 0;
+      let hasSold = false;
       checkedBoxes.forEach(cb => {
         const prod = dataStore[activeDivision].production.find(p => p.id === cb.value);
         if (prod) {
           const stock = getBoriStock(prod);
-          totalWeight += (stock.remainingQty || 0);
+          const isSold = stock.remainingRolls <= 0 || stock.remainingQty <= 0.001;
+          if (isSold) {
+            hasSold = true;
+            totalWeight += (parseFloat(prod.qty) || 0);
+          } else {
+            totalWeight += (stock.remainingQty > 0 ? stock.remainingQty : (parseFloat(prod.qty) || 0));
+          }
         }
       });
       const weightStr = totalWeight.toFixed(2);
@@ -5146,9 +5116,14 @@
       const labelEl = document.getElementById('batch-sell-label');
       if (labelEl) labelEl.innerText = boxLabel;
       const btn = document.getElementById('btn-batch-sell');
-      if (btn) btn.disabled = (count === 0);
+      if (btn) {
+        btn.disabled = (count === 0 || hasSold);
+        btn.title = hasSold ? 'Cannot batch sell: selection contains already sold items. Use Generate Packing Slip.' : '';
+      }
+      const slipBtn = document.getElementById('btn-batch-slip');
+      if (slipBtn) slipBtn.disabled = (count === 0);
       
-      const allSelectable = document.querySelectorAll('.prod-select-checkbox:not(:disabled)');
+      const allSelectable = document.querySelectorAll('.prod-select-checkbox');
       const master = document.getElementById('prod-select-all');
       if (master) {
         master.checked = allSelectable.length > 0 && Array.from(allSelectable).every(cb => cb.checked);
@@ -5354,7 +5329,7 @@
           tr.style.backgroundColor = lotStyle.rowBg;
         }
         if (isSold) {
-          tr.style.opacity = '0.75';
+          tr.classList.add('sold-row');
         }
 
         const borderStyle = lotStyle ? `border-left: 4px solid ${lotStyle.leftBorder};` : '';
@@ -5368,7 +5343,7 @@
 
         tr.innerHTML = `
           <td style="text-align: center; vertical-align: middle; ${borderStyle}">
-            <input type="checkbox" class="prod-select-checkbox" value="${l.id}" ${isSold ? 'disabled title="Fully sold"' : ''} onchange="onProdCheckboxChange(this)" style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;">
+            <input type="checkbox" class="prod-select-checkbox" value="${l.id}" onchange="onProdCheckboxChange(this)" style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;">
           </td>
           <td>${formatDate(l.date)}</td>
           <td>${isSold ? `<strong style="text-decoration: line-through; color: var(--muted);">${l.boriNo}</strong> <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>` : `<strong>${l.boriNo}</strong>`}</td>

@@ -930,6 +930,10 @@
       position: relative;
     }
 
+    tr.sold-row td:not(.actions-cell) {
+      opacity: 0.72;
+    }
+
     th.actions-col {
       text-align: center !important;
       width: 70px;
@@ -3734,6 +3738,18 @@
         return;
       }
 
+      // Check if any selected Boris/Boxes are already sold
+      const hasSold = selectedIds.some(id => {
+        const prod = dataStore[activeDivision].production.find(p => p.id === id);
+        if (!prod) return false;
+        const stock = getBoriStock(prod);
+        return stock.remainingRolls <= 0 || stock.remainingQty <= 0.001;
+      });
+      if (hasSold) {
+        showToast('Cannot batch sell: One or more selected Boris/Boxes are already sold. Only available in-stock items can be sold.', 'error');
+        return;
+      }
+
       // Check if all selected Boris/Boxes have identical details
       if (selectedIds.length > 1) {
         const firstProd = dataStore[activeDivision].production.find(p => p.id === selectedIds[0]);
@@ -5903,55 +5919,15 @@
         return;
       }
 
-      let baseProd = null;
-      if (selectedProdIds.size > 0) {
-        const firstId = selectedProdIds.values().next().value;
-        baseProd = dataStore[activeDivision].production.find(p => p.id === firstId);
-      }
-
-      let anySkipped = false;
       checkboxes.forEach(cb => {
-        if (!cb.disabled) {
-          const prod = dataStore[activeDivision].production.find(p => p.id === cb.value);
-          if (!prod) return;
-          if (!baseProd) {
-            baseProd = prod;
-            cb.checked = true;
-            selectedProdIds.add(cb.value);
-          } else {
-            const mismatch = getProductDetailsMismatch(baseProd, prod);
-            if (!mismatch) {
-              cb.checked = true;
-              selectedProdIds.add(cb.value);
-            } else {
-              cb.checked = false;
-              anySkipped = true;
-            }
-          }
-        }
+        cb.checked = true;
+        selectedProdIds.add(cb.value);
       });
-
-      if (anySkipped) {
-        showToast('Only items with identical details were selected. Different items cannot be sold in 1 Challan.', 'info');
-      }
       updateBatchSellButtonState();
     };
 
     window.onProdCheckboxChange = function(cb) {
       if (cb.checked) {
-        if (selectedProdIds.size > 0) {
-          const firstId = selectedProdIds.values().next().value;
-          const firstProd = dataStore[activeDivision].production.find(p => p.id === firstId);
-          const currentProd = dataStore[activeDivision].production.find(p => p.id === cb.value);
-          if (firstProd && currentProd) {
-            const mismatch = getProductDetailsMismatch(firstProd, currentProd);
-            if (mismatch) {
-              cb.checked = false;
-              showToast(`Cannot select: ${mismatch}. All Boris/Boxes in a single Challan must have identical details.`, 'error');
-              return;
-            }
-          }
-        }
         selectedProdIds.add(cb.value);
       } else {
         selectedProdIds.delete(cb.value);
@@ -5970,11 +5946,19 @@
     window.updateBatchSellButtonState = function() {
       const count = selectedProdIds.size;
       let totalWeight = 0;
+      let hasSold = false;
+
       selectedProdIds.forEach(id => {
         const prod = dataStore[activeDivision].production.find(p => p.id === id);
         if (prod) {
           const stock = getBoriStock(prod);
-          totalWeight += (stock.remainingQty || 0);
+          const isSold = stock.remainingRolls <= 0 || stock.remainingQty <= 0.001;
+          if (isSold) {
+            hasSold = true;
+            totalWeight += (parseFloat(prod.qty) || 0);
+          } else {
+            totalWeight += (stock.remainingQty > 0 ? stock.remainingQty : (parseFloat(prod.qty) || 0));
+          }
         }
       });
       const weightStr = totalWeight.toFixed(2);
@@ -5987,8 +5971,12 @@
       if (weightEl) weightEl.innerText = weightStr;
       const labelEl = document.getElementById('batch-sell-label');
       if (labelEl) labelEl.innerText = boxLabel;
+      
       const btn = document.getElementById('btn-batch-sell');
-      if (btn) btn.disabled = (count === 0);
+      if (btn) {
+        btn.disabled = (count === 0 || hasSold);
+        btn.title = hasSold ? 'Cannot batch sell: selection contains already sold items. Use Generate Packing Slip.' : '';
+      }
       const slipBtn = document.getElementById('btn-batch-slip');
       if (slipBtn) slipBtn.disabled = (count === 0);
 
@@ -6009,13 +5997,20 @@
       if (floatBar) {
         if (count > 0) {
           floatBar.classList.add('active');
+          const floatSellBtn = floatBar.querySelector('.floating-batch-btn-sell');
+          if (floatSellBtn) {
+            floatSellBtn.disabled = hasSold;
+            floatSellBtn.style.opacity = hasSold ? '0.45' : '1';
+            floatSellBtn.style.cursor = hasSold ? 'not-allowed' : 'pointer';
+            floatSellBtn.title = hasSold ? 'Cannot batch sell: selection contains already sold items.' : '';
+          }
         } else {
           floatBar.classList.remove('active');
         }
       }
       
       // Master checkbox state in current visible table
-      const visibleCheckboxes = document.querySelectorAll('.prod-select-checkbox:not(:disabled)');
+      const visibleCheckboxes = document.querySelectorAll('.prod-select-checkbox');
       const master = document.getElementById('prod-select-all');
       if (master) {
         master.checked = visibleCheckboxes.length > 0 && Array.from(visibleCheckboxes).every(cb => selectedProdIds.has(cb.value));
@@ -6226,7 +6221,7 @@
           tr.style.backgroundColor = lotStyle.rowBg;
         }
         if (isSold) {
-          tr.style.opacity = '0.75';
+          tr.classList.add('sold-row');
         }
 
         const borderStyle = lotStyle ? `border-left: 4px solid ${lotStyle.leftBorder};` : '';
@@ -6242,7 +6237,7 @@
 
         tr.innerHTML = `
           <td style="text-align: center; vertical-align: middle; ${borderStyle}">
-            <input type="checkbox" class="prod-select-checkbox" value="${l.id}" ${isChecked ? 'checked' : ''} ${isSold ? 'disabled title="Fully sold"' : ''} onchange="onProdCheckboxChange(this)" style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;">
+            <input type="checkbox" class="prod-select-checkbox" value="${l.id}" ${isChecked ? 'checked' : ''} onchange="onProdCheckboxChange(this)" style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;">
           </td>
           <td>${formatDate(l.date)}</td>
           <td>${isSold ? `<strong style="text-decoration: line-through; color: var(--muted);">${l.boriNo}</strong> <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>` : `<strong>${l.boriNo}</strong>`}</td>
@@ -6861,8 +6856,8 @@
         
         // Position relative to viewport (fixed positioning escapes table containers and overflow clipping)
         const rect = btn.getBoundingClientRect();
-        const estimatedHeight = 125;
-        const dropdownWidth = 135;
+        const estimatedHeight = 160;
+        const dropdownWidth = 145;
         
         // Vertical positioning
         if (rect.bottom + estimatedHeight > window.innerHeight && rect.top > estimatedHeight) {
