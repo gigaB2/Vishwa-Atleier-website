@@ -399,6 +399,58 @@ test('SyncEngine — mergeDatasets', async (t) => {
     assert.ok(!finalOrders.some(o => o.id === 'ORD-DEL-99'));
   });
 
+  await t.test('mergeYarnOrdersDatasets adopts active status when an order is reverted to active on peer PC', () => {
+    // PC 2 has order in Completed status with older timestamp
+    const pc2LocalOrders = [
+      { 
+        id: 'ORD-202', 
+        orderNumber: 'ORD-202', 
+        quality: '80D POLYESTER', 
+        status: 'Completed', 
+        updated_at: '2026-09-04T10:00:00.000Z',
+        batches: [] 
+      }
+    ];
+
+    // PC 1 reverted the order to Active with a newer timestamp
+    const pc1RemoteOrders = [
+      { 
+        id: 'ORD-202', 
+        orderNumber: 'ORD-202', 
+        quality: '80D POLYESTER', 
+        status: 'Active', 
+        updated_at: '2026-09-05T02:30:00.000Z',
+        batches: [] 
+      }
+    ];
+
+    // Merge simulation on PC 2
+    const orderMap = new Map();
+    const getOrderKey = (ord) => ord ? String(ord.id || ord.orderNumber || '').trim() : '';
+
+    pc1RemoteOrders.forEach(remOrd => {
+      const k = getOrderKey(remOrd);
+      if (k) orderMap.set(k, { ...remOrd });
+    });
+
+    pc2LocalOrders.forEach(locOrd => {
+      const k = getOrderKey(locOrd);
+      if (!k) return;
+      if (orderMap.has(k)) {
+        const remOrd = orderMap.get(k);
+        const locTime = (locOrd.updated_at || locOrd.updatedAt || locOrd.createdAt) ? new Date(locOrd.updated_at || locOrd.updatedAt || locOrd.createdAt).getTime() : 0;
+        const remTime = (remOrd.updated_at || remOrd.updatedAt || remOrd.createdAt) ? new Date(remOrd.updated_at || remOrd.updatedAt || remOrd.createdAt).getTime() : 0;
+        const baseOrd = (locTime >= remTime) ? locOrd : remOrd;
+        orderMap.set(k, { ...remOrd, ...baseOrd });
+      }
+    });
+
+    const merged = Array.from(orderMap.values());
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].id, 'ORD-202');
+    assert.equal(merged[0].status, 'Active', 'Peer PC should adopt Active status because its timestamp is newer');
+  });
+
   await t.test('reconciles relational table against KV master list so deleted DB rows are purged and do not re-inflate', () => {
     // Database table still had an old row 'Q_OLD' that was deleted via UI
     const dbQualities = [

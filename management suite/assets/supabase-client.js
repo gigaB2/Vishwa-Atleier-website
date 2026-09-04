@@ -717,9 +717,8 @@
           orderMap.set(k, { ...locOrd });
         }
       } else {
-        const remOrd = orderMap.get(k);
-        const locTime = locOrd.updated_at ? new Date(locOrd.updated_at).getTime() : 0;
-        const remTime = remOrd.updated_at ? new Date(remOrd.updated_at).getTime() : 0;
+        const locTime = (locOrd.updated_at || locOrd.updatedAt || locOrd.createdAt) ? new Date(locOrd.updated_at || locOrd.updatedAt || locOrd.createdAt).getTime() : 0;
+        const remTime = (remOrd.updated_at || remOrd.updatedAt || remOrd.createdAt) ? new Date(remOrd.updated_at || remOrd.updatedAt || remOrd.createdAt).getTime() : 0;
         const baseOrd = (locTime >= remTime) ? locOrd : remOrd;
 
         const batchMap = new Map();

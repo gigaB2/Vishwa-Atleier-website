@@ -2040,30 +2040,82 @@
       const updateOrder = (o) => {
         if (!o) return;
         recordSnapshot(`Update Order ${o.quality || ''}`);
-        const processed = { ...o, orderDate: addTimestampToDate(o.orderDate) };
-        setOrders(prev => (prev || []).map(x => (
-          (x.id && o.id && String(x.id) === String(o.id)) ||
-          (x.orderNumber && o.orderNumber && String(x.orderNumber) === String(o.orderNumber)) ||
-          (x.id && o.orderNumber && String(x.id) === String(o.orderNumber)) ||
-          (x.orderNumber && o.id && String(x.orderNumber) === String(o.id))
-        ) ? processed : x));
+        const nowIso = new Date().toISOString();
+        const processed = { 
+          ...o, 
+          orderDate: addTimestampToDate(o.orderDate),
+          updated_at: nowIso,
+          updatedAt: nowIso
+        };
+        let updatedList = [];
+        setOrders(prev => {
+          updatedList = (prev || []).map(x => (
+            (x.id && o.id && String(x.id) === String(o.id)) ||
+            (x.orderNumber && o.orderNumber && String(x.orderNumber) === String(o.orderNumber)) ||
+            (x.id && o.orderNumber && String(x.id) === String(o.orderNumber)) ||
+            (x.orderNumber && o.id && String(x.orderNumber) === String(o.id))
+          ) ? processed : x);
+          return updatedList;
+        });
         setSelectedOrder(processed);
+
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+          window.VishwaSupabase.saveToSupabase(YARN_ORDERS_STORAGE_KEY, updatedList, true);
+        }
       };
 
       const completeOrder = (idOrOrder) => {
         const id = typeof idOrOrder === 'object' && idOrOrder ? (idOrOrder.id || idOrOrder.orderNumber) : idOrOrder;
         const target = (orders || []).find(o => String(o.id) === String(id) || String(o.orderNumber) === String(id));
         recordSnapshot(`Complete Order ${target?.quality || ''}`);
-        setOrders(prev => (prev || []).map(o => (String(o.id) === String(id) || String(o.orderNumber) === String(id)) ? { ...o, status: 'Completed' } : o));
-        setSelectedOrder(prev => (prev && (String(prev.id) === String(id) || String(prev.orderNumber) === String(id))) ? { ...prev, status: 'Completed' } : prev);
+        const nowIso = new Date().toISOString();
+        let updatedList = [];
+        setOrders(prev => {
+          updatedList = (prev || []).map(o => (String(o.id) === String(id) || String(o.orderNumber) === String(id)) ? { 
+            ...o, 
+            status: 'Completed', 
+            updated_at: nowIso, 
+            updatedAt: nowIso 
+          } : o);
+          return updatedList;
+        });
+        setSelectedOrder(prev => (prev && (String(prev.id) === String(id) || String(prev.orderNumber) === String(id))) ? { 
+          ...prev, 
+          status: 'Completed', 
+          updated_at: nowIso, 
+          updatedAt: nowIso 
+        } : prev);
+
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+          window.VishwaSupabase.saveToSupabase(YARN_ORDERS_STORAGE_KEY, updatedList, true);
+        }
       };
 
       const reactivateOrder = (idOrOrder) => {
         const id = typeof idOrOrder === 'object' && idOrOrder ? (idOrOrder.id || idOrOrder.orderNumber) : idOrOrder;
         const target = (orders || []).find(o => String(o.id) === String(id) || String(o.orderNumber) === String(id));
         recordSnapshot(`Reactivate Order ${target?.quality || ''}`);
-        setOrders(prev => (prev || []).map(o => (String(o.id) === String(id) || String(o.orderNumber) === String(id)) ? { ...o, status: 'Active' } : o));
-        setSelectedOrder(prev => (prev && (String(prev.id) === String(id) || String(prev.orderNumber) === String(id))) ? { ...prev, status: 'Active' } : prev);
+        const nowIso = new Date().toISOString();
+        let updatedList = [];
+        setOrders(prev => {
+          updatedList = (prev || []).map(o => (String(o.id) === String(id) || String(o.orderNumber) === String(id)) ? { 
+            ...o, 
+            status: 'Active', 
+            updated_at: nowIso, 
+            updatedAt: nowIso 
+          } : o);
+          return updatedList;
+        });
+        setSelectedOrder(prev => (prev && (String(prev.id) === String(id) || String(prev.orderNumber) === String(id))) ? { 
+          ...prev, 
+          status: 'Active', 
+          updated_at: nowIso, 
+          updatedAt: nowIso 
+        } : prev);
+
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+          window.VishwaSupabase.saveToSupabase(YARN_ORDERS_STORAGE_KEY, updatedList, true);
+        }
       };
 
       const deleteOrder = (id) => {
@@ -2930,7 +2982,13 @@
         if (e && e.preventDefault) e.preventDefault();
         if (e && e.stopPropagation) e.stopPropagation();
         
-        const updated = { ...order, status: 'Active' };
+        const nowIso = new Date().toISOString();
+        const updated = { 
+          ...order, 
+          status: 'Active',
+          updated_at: nowIso,
+          updatedAt: nowIso
+        };
         onUpdate(updated);
         if (typeof onRevertActive === 'function') {
           onRevertActive(order.id || order.orderNumber || order);
@@ -2941,7 +2999,13 @@
         if (e && e.preventDefault) e.preventDefault();
         if (e && e.stopPropagation) e.stopPropagation();
         
-        const updated = { ...order, status: 'Completed' };
+        const nowIso = new Date().toISOString();
+        const updated = { 
+          ...order, 
+          status: 'Completed',
+          updated_at: nowIso,
+          updatedAt: nowIso
+        };
         onUpdate(updated);
         if (typeof onComplete === 'function') {
           onComplete(order.id || order.orderNumber || order);
