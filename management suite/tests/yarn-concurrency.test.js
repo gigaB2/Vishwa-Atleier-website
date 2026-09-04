@@ -390,4 +390,141 @@ test('Multi-User Concurrency & Merge Validation', async (t) => {
     assert.strictEqual(revB1.issueDate, null);
     assert.strictEqual(revB1.issuedTo, null);
   });
+
+  await t.test('Yarn Sales Multi-PC: PC 1 (2 Doubler challans, 3 TFO challans) + PC 2 (1 Doubler challan) syncs without data loss', () => {
+    // PC 1 has 2 challans in Doubler MX
+    const pc1DoublerSales = [
+      {
+        id: 's_doubler_1',
+        challanNo: 'CH-0001/D/26-27',
+        date: '2026-09-04',
+        customerName: 'Customer A',
+        totalAmount: 15000,
+        items: [{ boriNo: 'D-1001', rollsQty: 10, saleQty: 50, rate: 300, amount: 15000 }],
+        updated_at: '2026-09-04T10:00:00.000Z'
+      },
+      {
+        id: 's_doubler_2',
+        challanNo: 'CH-0002/D/26-27',
+        date: '2026-09-04',
+        customerName: 'Customer B',
+        totalAmount: 20000,
+        items: [{ boriNo: 'D-1002', rollsQty: 15, saleQty: 80, rate: 250, amount: 20000 }],
+        updated_at: '2026-09-04T11:00:00.000Z'
+      }
+    ];
+
+    // PC 2 only has 1 challan in Doubler MX
+    const pc2DoublerSales = [
+      {
+        id: 's_doubler_1',
+        challanNo: 'CH-0001/D/26-27',
+        date: '2026-09-04',
+        customerName: 'Customer A',
+        totalAmount: 15000,
+        items: [{ boriNo: 'D-1001', rollsQty: 10, saleQty: 50, rate: 300, amount: 15000 }],
+        updated_at: '2026-09-04T10:00:00.000Z'
+      }
+    ];
+
+    // Merge on PC 2 (PC 2 local + PC 1 remote)
+    const mergedDoublerOnPC2 = vSupabase.mergeDatasets('yarn_doubler_sales_logs', pc2DoublerSales, pc1DoublerSales);
+    assert.strictEqual(mergedDoublerOnPC2.length, 2, 'PC 2 must now have all 2 Doubler challans');
+    assert.ok(mergedDoublerOnPC2.some(s => s.challanNo === 'CH-0001/D/26-27'));
+    assert.ok(mergedDoublerOnPC2.some(s => s.challanNo === 'CH-0002/D/26-27'));
+
+    // Reverse merge on PC 1 (PC 1 local + PC 2 remote snapshot)
+    const mergedDoublerOnPC1 = vSupabase.mergeDatasets('yarn_doubler_sales_logs', pc1DoublerSales, pc2DoublerSales);
+    assert.strictEqual(mergedDoublerOnPC1.length, 2, 'PC 1 must never lose its 2nd Doubler challan when receiving older PC 2 snapshot');
+    assert.ok(mergedDoublerOnPC1.some(s => s.challanNo === 'CH-0001/D/26-27'));
+    assert.ok(mergedDoublerOnPC1.some(s => s.challanNo === 'CH-0002/D/26-27'));
+
+    // PC 1 has 3 challans in TFO
+    const pc1TfoSales = [
+      {
+        id: 's_tfo_1',
+        challanNo: 'CH-0001/T/26-27',
+        date: '2026-09-04',
+        customerName: 'Party X',
+        totalAmount: 12000,
+        items: [{ boriNo: 'T-1001', rollsQty: 8, saleQty: 40, rate: 300, amount: 12000 }],
+        updated_at: '2026-09-04T09:00:00.000Z'
+      },
+      {
+        id: 's_tfo_2',
+        challanNo: 'CH-0002/T/26-27',
+        date: '2026-09-04',
+        customerName: 'Party Y',
+        totalAmount: 18000,
+        items: [{ boriNo: 'T-1002', rollsQty: 12, saleQty: 60, rate: 300, amount: 18000 }],
+        updated_at: '2026-09-04T10:30:00.000Z'
+      },
+      {
+        id: 's_tfo_3',
+        challanNo: 'CH-0003/T/26-27',
+        date: '2026-09-04',
+        customerName: 'Party Z',
+        totalAmount: 24000,
+        items: [{ boriNo: 'T-1003', rollsQty: 16, saleQty: 80, rate: 300, amount: 24000 }],
+        updated_at: '2026-09-04T11:45:00.000Z'
+      }
+    ];
+
+    // PC 2 has 0 challans in TFO
+    const pc2TfoSales = [];
+
+    // Merge on PC 2 (PC 2 local empty + PC 1 remote 3 challans)
+    const mergedTfoOnPC2 = vSupabase.mergeDatasets('yarn_tfo_sales_logs', pc2TfoSales, pc1TfoSales);
+    assert.strictEqual(mergedTfoOnPC2.length, 3, 'PC 2 must receive all 3 TFO challans from PC 1');
+
+    // Reverse merge on PC 1 (PC 1 local 3 challans + PC 2 remote empty)
+    const mergedTfoOnPC1 = vSupabase.mergeDatasets('yarn_tfo_sales_logs', pc1TfoSales, pc2TfoSales);
+    assert.strictEqual(mergedTfoOnPC1.length, 3, 'PC 1 must never lose its 3 TFO challans');
+  });
+
+  await t.test('Yarn Sales: Concurrent edit on same Challan preserves newer updates', () => {
+    const saleOld = [
+      {
+        id: 's_doubler_1',
+        challanNo: 'CH-0001/D/26-27',
+        customerName: 'Old Customer Name',
+        totalAmount: 15000,
+        updated_at: '2026-09-04T10:00:00.000Z'
+      }
+    ];
+
+    const saleNew = [
+      {
+        id: 's_doubler_1',
+        challanNo: 'CH-0001/D/26-27',
+        customerName: 'Updated Customer Name Ltd',
+        totalAmount: 16500,
+        updated_at: '2026-09-04T12:00:00.000Z'
+      }
+    ];
+
+    const merged = vSupabase.mergeDatasets('yarn_doubler_sales_logs', saleNew, saleOld);
+    assert.strictEqual(merged.length, 1);
+    assert.strictEqual(merged[0].customerName, 'Updated Customer Name Ltd');
+    assert.strictEqual(merged[0].totalAmount, 16500);
+  });
+
+  await t.test('Yarn Production: Multiple PCs producing Boris in Doubler/MX and TFO merge seamlessly', () => {
+    const pc1Prod = [
+      { id: 'p_d_1', boriNo: 'D-1001', productName: 'Doubler 2Core', qty: 25.5, rolls: 20, date: '2026-09-04' },
+      { id: 'p_d_2', boriNo: 'D-1002', productName: 'Doubler 2Core', qty: 26.0, rolls: 20, date: '2026-09-04' }
+    ];
+
+    const pc2Prod = [
+      { id: 'p_d_1', boriNo: 'D-1001', productName: 'Doubler 2Core', qty: 25.5, rolls: 20, date: '2026-09-04' },
+      { id: 'p_d_3', boriNo: 'D-1003', productName: 'Doubler 2Core', qty: 25.8, rolls: 20, date: '2026-09-04' }
+    ];
+
+    const merged = vSupabase.mergeDatasets('yarn_doubler_production_logs', pc1Prod, pc2Prod);
+    assert.strictEqual(merged.length, 3, 'All 3 produced boris D-1001, D-1002, D-1003 must be preserved across PCs');
+    assert.ok(merged.some(p => p.boriNo === 'D-1001'));
+    assert.ok(merged.some(p => p.boriNo === 'D-1002'));
+    assert.ok(merged.some(p => p.boriNo === 'D-1003'));
+  });
 });
+

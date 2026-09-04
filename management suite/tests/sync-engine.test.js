@@ -419,6 +419,63 @@ test('SyncEngine — mergeDatasets', async (t) => {
     assert.equal(obsoleteDbRows.length, 1);
     assert.equal(obsoleteDbRows[0].id, 'Q_OLD');
   });
+
+  await t.test('merges multi-PC yarn sales datasets combining Doubler and TFO challans without data loss', () => {
+    // Replicate pure merge logic from supabase-client.js
+    function mergeSales(localArr, remoteArr) {
+      const cleanLocal = filterDeletedEntities(localArr);
+      const cleanRemote = filterDeletedEntities(remoteArr);
+      const saleMap = new Map();
+      const keyMap = new Map();
+
+      cleanRemote.forEach(rem => {
+        const pKey = rem.id || rem.challanNo;
+        saleMap.set(pKey, rem);
+        if (rem.id) keyMap.set(rem.id, pKey);
+        if (rem.challanNo) keyMap.set(rem.challanNo.toLowerCase(), pKey);
+      });
+
+      cleanLocal.forEach(loc => {
+        const pKey = loc.id || loc.challanNo;
+        let matched = keyMap.get(loc.id) || (loc.challanNo && keyMap.get(loc.challanNo.toLowerCase()));
+        if (matched && saleMap.has(matched)) {
+          const rem = saleMap.get(matched);
+          const locTs = new Date(loc.updated_at || 0).getTime();
+          const remTs = new Date(rem.updated_at || 0).getTime();
+          if (locTs >= remTs) {
+            saleMap.set(matched, { ...rem, ...loc });
+          }
+        } else {
+          saleMap.set(pKey, loc);
+          if (loc.id) keyMap.set(loc.id, pKey);
+          if (loc.challanNo) keyMap.set(loc.challanNo.toLowerCase(), pKey);
+        }
+      });
+
+      return Array.from(saleMap.values());
+    }
+
+    const pc1Doubler = [
+      { id: 's1', challanNo: 'CH-0001/D/26-27', totalAmount: 10000 },
+      { id: 's2', challanNo: 'CH-0002/D/26-27', totalAmount: 20000 }
+    ];
+    const pc2Doubler = [
+      { id: 's1', challanNo: 'CH-0001/D/26-27', totalAmount: 10000 }
+    ];
+
+    const mergedDoubler = mergeSales(pc2Doubler, pc1Doubler);
+    assert.equal(mergedDoubler.length, 2, 'Must have both Doubler challans');
+
+    const pc1Tfo = [
+      { id: 't1', challanNo: 'CH-0001/T/26-27', totalAmount: 5000 },
+      { id: 't2', challanNo: 'CH-0002/T/26-27', totalAmount: 6000 },
+      { id: 't3', challanNo: 'CH-0003/T/26-27', totalAmount: 7000 }
+    ];
+    const pc2Tfo = [];
+
+    const mergedTfo = mergeSales(pc2Tfo, pc1Tfo);
+    assert.equal(mergedTfo.length, 3, 'Must have all 3 TFO challans');
+  });
 });
 
 

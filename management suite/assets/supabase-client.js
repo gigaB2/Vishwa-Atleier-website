@@ -370,6 +370,160 @@
     return filterDeletedEntities(Array.from(rowMap.values()));
   }
 
+  // --- Dedicated High-Integrity Merge Engine for Yarn Sales Logs (Covering, TFO, Doubler/MX) ---
+  function mergeYarnSalesDatasets(localArr, remoteArr, division = null) {
+    if (!Array.isArray(localArr)) return Array.isArray(remoteArr) ? filterDeletedEntities(remoteArr) : [];
+    if (!Array.isArray(remoteArr)) return Array.isArray(localArr) ? filterDeletedEntities(localArr) : [];
+
+    const cleanLocal = filterDeletedEntities(localArr);
+    const cleanRemote = filterDeletedEntities(remoteArr);
+
+    const getSaleKeys = (sale) => {
+      if (!sale) return [];
+      const keys = [];
+      if (sale.id) keys.push(String(sale.id).trim());
+      if (sale.challanNo) {
+        const cClean = String(sale.challanNo).trim().toLowerCase();
+        keys.push(`challan_${cClean}`);
+        if (division) keys.push(`sale_${division}_${cClean}`);
+      }
+      if (sale.invoiceNo) {
+        const invClean = String(sale.invoiceNo).trim().toLowerCase();
+        keys.push(`inv_${invClean}`);
+      }
+      return keys;
+    };
+
+    const saleMap = new Map();
+    const keyToPrimaryMap = new Map();
+
+    cleanRemote.forEach(remSale => {
+      if (!remSale) return;
+      const pKey = String(remSale.id || (remSale.challanNo ? `challan_${remSale.challanNo}` : `rem_${Math.random()}`));
+      saleMap.set(pKey, { ...remSale });
+      getSaleKeys(remSale).forEach(k => keyToPrimaryMap.set(k, pKey));
+    });
+
+    cleanLocal.forEach(locSale => {
+      if (!locSale) return;
+      const locKeys = getSaleKeys(locSale);
+      let matchedPKey = null;
+
+      for (const k of locKeys) {
+        if (keyToPrimaryMap.has(k)) {
+          matchedPKey = keyToPrimaryMap.get(k);
+          break;
+        }
+      }
+
+      if (matchedPKey && saleMap.has(matchedPKey)) {
+        const remSale = saleMap.get(matchedPKey);
+        const locTime = locSale.updated_at ? new Date(locSale.updated_at).getTime() : (locSale.timestamp || 0);
+        const remTime = remSale.updated_at ? new Date(remSale.updated_at).getTime() : (remSale.timestamp || 0);
+
+        if (locTime >= remTime) {
+          saleMap.set(matchedPKey, {
+            ...remSale,
+            ...locSale,
+            id: locSale.id || remSale.id || matchedPKey
+          });
+        }
+      } else {
+        const locPKey = String(locSale.id || (locSale.challanNo ? `challan_${locSale.challanNo}` : `loc_${Math.random()}`));
+        saleMap.set(locPKey, { ...locSale });
+        locKeys.forEach(k => keyToPrimaryMap.set(k, locPKey));
+      }
+    });
+
+    const mergedList = filterDeletedEntities(Array.from(saleMap.values()));
+
+    mergedList.sort((a, b) => {
+      const dateA = a.date || a.saleDate || a.invoiceDate || '';
+      const dateB = b.date || b.saleDate || b.invoiceDate || '';
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      const chA = a.challanNo || a.invoiceNo || a.id || '';
+      const chB = b.challanNo || b.invoiceNo || b.id || '';
+      return String(chB).localeCompare(String(chA), undefined, { numeric: true });
+    });
+
+    return mergedList;
+  }
+
+  // --- Dedicated High-Integrity Merge Engine for Yarn Production Logs (Covering, TFO, Doubler/MX) ---
+  function mergeYarnProductionDatasets(localArr, remoteArr, division = null) {
+    if (!Array.isArray(localArr)) return Array.isArray(remoteArr) ? filterDeletedEntities(remoteArr) : [];
+    if (!Array.isArray(remoteArr)) return Array.isArray(localArr) ? filterDeletedEntities(localArr) : [];
+
+    const cleanLocal = filterDeletedEntities(localArr);
+    const cleanRemote = filterDeletedEntities(remoteArr);
+
+    const getProdKeys = (prod) => {
+      if (!prod) return [];
+      const keys = [];
+      if (prod.id) keys.push(String(prod.id).trim());
+      if (prod.boriNo) {
+        const bClean = String(prod.boriNo).trim().toLowerCase();
+        keys.push(`bori_${bClean}`);
+        if (division) keys.push(`prod_${division}_${bClean}`);
+      }
+      return keys;
+    };
+
+    const prodMap = new Map();
+    const keyToPrimaryMap = new Map();
+
+    cleanRemote.forEach(remProd => {
+      if (!remProd) return;
+      const pKey = String(remProd.id || (remProd.boriNo ? `bori_${remProd.boriNo}` : `rem_${Math.random()}`));
+      prodMap.set(pKey, { ...remProd });
+      getProdKeys(remProd).forEach(k => keyToPrimaryMap.set(k, pKey));
+    });
+
+    cleanLocal.forEach(locProd => {
+      if (!locProd) return;
+      const locKeys = getProdKeys(locProd);
+      let matchedPKey = null;
+
+      for (const k of locKeys) {
+        if (keyToPrimaryMap.has(k)) {
+          matchedPKey = keyToPrimaryMap.get(k);
+          break;
+        }
+      }
+
+      if (matchedPKey && prodMap.has(matchedPKey)) {
+        const remProd = prodMap.get(matchedPKey);
+        const locTime = locProd.updated_at ? new Date(locProd.updated_at).getTime() : (locProd.timestamp || 0);
+        const remTime = remProd.updated_at ? new Date(remProd.updated_at).getTime() : (remProd.timestamp || 0);
+
+        if (locTime >= remTime) {
+          prodMap.set(matchedPKey, {
+            ...remProd,
+            ...locProd,
+            id: locProd.id || remProd.id || matchedPKey
+          });
+        }
+      } else {
+        const locPKey = String(locProd.id || (locProd.boriNo ? `bori_${locProd.boriNo}` : `loc_${Math.random()}`));
+        prodMap.set(locPKey, { ...locProd });
+        locKeys.forEach(k => keyToPrimaryMap.set(k, locPKey));
+      }
+    });
+
+    const mergedList = filterDeletedEntities(Array.from(prodMap.values()));
+
+    mergedList.sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      const boriA = a.boriNo || a.id || '';
+      const boriB = b.boriNo || b.id || '';
+      return String(boriB).localeCompare(String(boriA), undefined, { numeric: true });
+    });
+
+    return mergedList;
+  }
+
   // --- Dedicated High-Integrity Merge Engine for Yarn RM Stock Book ---
   function mergeYarnStockDatasets(localArr, remoteArr) {
     if (!Array.isArray(localArr)) return Array.isArray(remoteArr) ? filterDeletedEntities(remoteArr) : [];
@@ -733,8 +887,20 @@
     }
 
     // Special Case: Yarn Ledgers (Sales & Purchase) Multi-PC Synchronization
-    if ((key === 'yarn_sales_ledger_data' || key === 'yarn_purchase_ledger_data') && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
+    if ((key === 'yarn_sales_ledger_data' || key === 'yarn_purchase_ledger_data') && (Array.isArray(parsedLocal) || Array.isArray(parsedRemote))) {
       return mergeYarnLedgerDatasets(parsedLocal, parsedRemote);
+    }
+
+    // Special Case: Yarn Sales Logs (Covering, TFO, Doubler/MX) Multi-PC Synchronization
+    if (typeof key === 'string' && key.startsWith('yarn_') && key.endsWith('_sales_logs') && (Array.isArray(parsedLocal) || Array.isArray(parsedRemote))) {
+      const division = key.replace('yarn_', '').replace('_sales_logs', '');
+      return mergeYarnSalesDatasets(parsedLocal, parsedRemote, division);
+    }
+
+    // Special Case: Yarn Production Logs (Covering, TFO, Doubler/MX) Multi-PC Synchronization
+    if (typeof key === 'string' && key.startsWith('yarn_') && key.endsWith('_production_logs') && (Array.isArray(parsedLocal) || Array.isArray(parsedRemote))) {
+      const division = key.replace('yarn_', '').replace('_production_logs', '');
+      return mergeYarnProductionDatasets(parsedLocal, parsedRemote, division);
     }
 
     // Case 1: Both are Arrays -> Intelligent Item-Level Merge for multi-user safety
@@ -744,20 +910,16 @@
       const lastWrite = lastLocalWrites[key] || 0;
       const isLocallyActive = (Date.now() - lastWrite < 3000);
 
-      // Master entity registries: when remote arrives and local user is not actively typing,
+      // Master entity registries (dropdowns/catalogs): when remote arrives and local user is not actively typing,
       // the remote server snapshot is the single source of truth. Deleted items must NOT be resurrected!
       const MASTER_ENTITY_KEYS = [
-        'yarn-rm-orders', 'vishwa_yarn_rm_stock_data',
-        'yarn_sales_ledger_data', 'yarn_purchase_ledger_data',
         'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
         'manage-jalas', 'manage-fanis', 'machines', 'warp-beams', 'warp-issues',
         'yarn-issues', 'costing-products-v4', 'costing-tfo-products-v1',
-        'costing-doubler-products-v1', 'costing-covering-products-v1',
-        'yarn_covering_sales_logs', 'yarn_tfo_sales_logs', 'yarn_doubler_sales_logs',
-        'yarn_covering_production_logs', 'yarn_tfo_production_logs', 'yarn_doubler_production_logs'
+        'costing-doubler-products-v1', 'costing-covering-products-v1'
       ];
 
-      const isMasterKey = MASTER_ENTITY_KEYS.includes(key) || (typeof key === 'string' && key.startsWith('yarn_') && (key.includes('_sales_logs') || key.includes('_production_logs')));
+      const isMasterKey = MASTER_ENTITY_KEYS.includes(key);
 
       // Absolute protection: If remote has master data and local is empty, always adopt remote
       if (isMasterKey && cleanRemote.length > 0 && cleanLocal.length === 0) {
@@ -5009,11 +5171,12 @@
             // Reconcile Dedicated Yarn Production Logs Relational Table
             try {
               const dbYarnProd = await fetchAllRowsPaginated('vf_yarn_production_logs', '*', 'order=date.desc');
-              if (Array.isArray(dbYarnProd) && dbYarnProd.length > 0) {
+              if (Array.isArray(dbYarnProd)) {
                 const tombstones = getDeletedTombstones();
                 const tombstoneSet = new Set(tombstones);
                 const divisions = ['covering', 'tfo', 'doubler'];
                 divisions.forEach(div => {
+                  const ypKey = `yarn_${div}_production_logs`;
                   // Strictly filter out any deleted/tombstoned entities
                   const divRows = dbYarnProd.filter(r => (r.division || '').toLowerCase() === div && !tombstoneSet.has(String(r.id)));
 
@@ -5048,27 +5211,14 @@
                     yarns: Array.isArray(yp.yarns) ? yp.yarns : []
                   }));
 
-                  const ypKey = `yarn_${div}_production_logs`;
-
-                  // Preserve locally created items that haven't reached the server yet
                   let localItems = [];
                   try {
                     const localRaw = cache[ypKey] || nativeLocalStorage.getItem(ypKey);
                     if (localRaw) localItems = JSON.parse(localRaw);
                   } catch(e) {}
-                  if (Array.isArray(localItems)) {
-                    localItems = filterDeletedEntities(localItems);
-                    localItems.forEach(lItem => {
-                      if (lItem && lItem.id && !tombstoneSet.has(String(lItem.id))) {
-                        if (!reconstructed.some(rItem => String(rItem.id) === String(lItem.id))) {
-                          reconstructed.push(lItem);
-                        }
-                      }
-                    });
-                  }
 
-                  const cleanReconstructed = filterDeletedEntities(reconstructed);
-                  const ypStr = JSON.stringify(cleanReconstructed);
+                  const mergedProd = mergeYarnProductionDatasets(localItems, reconstructed, div);
+                  const ypStr = JSON.stringify(mergedProd);
                   const lastYpWrite = lastLocalWrites[ypKey] || 0;
                   if (Date.now() - lastYpWrite >= 3000) {
                     cache[ypKey] = ypStr;
@@ -5076,6 +5226,12 @@
                     safeLocalStorageSet(ypKey, ypStr);
                     if (!updatedKeys.includes(ypKey)) updatedKeys.push(ypKey);
                     hasChanges = true;
+                  }
+
+                  // Auto-backfill: If local items had production logs not on the server, persist to Supabase immediately
+                  const missingProdOnServer = mergedProd.filter(mp => mp && mp.id && !divRows.some(dr => String(dr.id) === String(mp.id)));
+                  if (missingProdOnServer.length > 0 && activeConfig.isConfigured && SUPABASE_URL) {
+                    supabaseApi.set(ypKey, mergedProd, true);
                   }
                 });
               }
@@ -5086,11 +5242,12 @@
             // Reconcile Dedicated Yarn Sales Logs Relational Table
             try {
               const dbYarnSales = await fetchAllRowsPaginated('vf_yarn_sales_logs', '*', 'order=sale_date.desc');
-              if (Array.isArray(dbYarnSales) && dbYarnSales.length > 0) {
+              if (Array.isArray(dbYarnSales)) {
                 const tombstones = getDeletedTombstones();
                 const tombstoneSet = new Set(tombstones);
                 const divisions = ['covering', 'tfo', 'doubler'];
                 divisions.forEach(div => {
+                  const ysKey = `yarn_${div}_sales_logs`;
                   // Strictly filter out any deleted/tombstoned entities
                   const divRows = dbYarnSales.filter(r => (r.division || '').toLowerCase() === div && !tombstoneSet.has(String(r.id)));
 
@@ -5141,27 +5298,14 @@
                     };
                   });
 
-                  const ysKey = `yarn_${div}_sales_logs`;
-
-                  // Preserve locally created items that haven't reached the server yet
                   let localItems = [];
                   try {
                     const localRaw = cache[ysKey] || nativeLocalStorage.getItem(ysKey);
                     if (localRaw) localItems = JSON.parse(localRaw);
                   } catch(e) {}
-                  if (Array.isArray(localItems)) {
-                    localItems = filterDeletedEntities(localItems);
-                    localItems.forEach(lItem => {
-                      if (lItem && lItem.id && !tombstoneSet.has(String(lItem.id))) {
-                        if (!reconstructed.some(rItem => String(rItem.id) === String(lItem.id))) {
-                          reconstructed.push(lItem);
-                        }
-                      }
-                    });
-                  }
 
-                  const cleanReconstructed = filterDeletedEntities(reconstructed);
-                  const ysStr = JSON.stringify(cleanReconstructed);
+                  const mergedSales = mergeYarnSalesDatasets(localItems, reconstructed, div);
+                  const ysStr = JSON.stringify(mergedSales);
                   const lastYsWrite = lastLocalWrites[ysKey] || 0;
                   if (Date.now() - lastYsWrite >= 3000) {
                     cache[ysKey] = ysStr;
@@ -5169,6 +5313,12 @@
                     safeLocalStorageSet(ysKey, ysStr);
                     if (!updatedKeys.includes(ysKey)) updatedKeys.push(ysKey);
                     hasChanges = true;
+                  }
+
+                  // Auto-backfill: If local items had sales not on the server, persist to Supabase immediately
+                  const missingSalesOnServer = mergedSales.filter(ms => ms && ms.id && !divRows.some(dr => String(dr.id) === String(ms.id)));
+                  if (missingSalesOnServer.length > 0 && activeConfig.isConfigured && SUPABASE_URL) {
+                    supabaseApi.set(ysKey, mergedSales, true);
                   }
                 });
               }
@@ -7596,7 +7746,13 @@
 
       report('Migration Completed Successfully!', 100, summary);
       return { success: true, summary: summary };
-    }
+    },
+    mergeYarnSalesDatasets: mergeYarnSalesDatasets,
+    mergeYarnProductionDatasets: mergeYarnProductionDatasets,
+    mergeYarnLedgerDatasets: mergeYarnLedgerDatasets,
+    mergeYarnStockDatasets: mergeYarnStockDatasets,
+    mergeYarnOrdersDatasets: mergeYarnOrdersDatasets,
+    mergeDatasets: mergeDatasets
   };
 
   // Expose VF_DB globally
