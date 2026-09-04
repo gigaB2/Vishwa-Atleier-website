@@ -1361,7 +1361,7 @@
         <div class="dash-search-group">
           <div class="search-box" style="flex: 1; max-width: 380px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input type="text" id="dash-search-input" placeholder="Search quality, code, color, or supplier..." oninput="renderStockDashboard()">
+            <input type="text" id="dash-search-input" placeholder="Search quality, lot no, code, color, or supplier..." oninput="renderStockDashboard()">
           </div>
           <select class="form-control" id="dash-filter-item-type" onchange="renderStockDashboard()" style="width: 170px;">
             <option value="all">All Item Types</option>
@@ -1413,7 +1413,7 @@
                 <th>Item Type</th>
                 <th>Supplier</th>
                 <th>Yarn Quality</th>
-                <th>Challan / Lot No</th>
+                <th>Lot No</th>
                 <th>Code</th>
                 <th>Color</th>
                 <th style="text-align: right;">Available Cones</th>
@@ -3403,10 +3403,10 @@
       }
 
       if (searchInput) {
-        if (challanNo && challanNo !== '-') {
-          searchInput.value = challanNo;
-        } else if (lotNo && lotNo !== '-') {
+        if (lotNo && lotNo !== '-') {
           searchInput.value = lotNo;
+        } else if (challanNo && challanNo !== '-') {
+          searchInput.value = challanNo;
         } else if (qualityName) {
           searchInput.value = qualityName;
         }
@@ -3435,26 +3435,24 @@
       let totalIssuedWeight = 0;
       let totalGrWeight = 0;
 
-      // Quality, Challan & Lot Aggregation Map
-      // Key: supplier + quality + challanNo + lotNo + itemType + code + color
+      // Quality & Lot Aggregation Map
+      // Key: supplier + quality + lotNo + itemType + code + color
       const qualityMap = {};
 
       stockData.forEach(lot => {
         const qName = (lot.quality || 'Unspecified Quality').trim();
         const supplier = (lot.supplier || 'Unspecified Supplier').trim();
-        const challanNo = String(lot.challanNo || lot.challanNumber || '').trim();
         const lotNo = String(lot.lotNumber || lot.lotNo || lot.lot_no || lot.lot || '').trim();
         const typeName = lot.itemType || 'Polyester';
         const code = lot.code || '';
         const color = lot.color || '';
-        const groupKey = `${supplier}___${qName}___${challanNo}___${lotNo}___${typeName}___${code}___${color}`;
+        const groupKey = `${supplier}___${qName}___${lotNo}___${typeName}___${code}___${color}`;
 
         if (!qualityMap[groupKey]) {
           qualityMap[groupKey] = {
             key: groupKey,
             quality: qName,
             supplier: supplier,
-            challanNo: challanNo,
             lotNo: lotNo,
             itemType: typeName,
             code: code,
@@ -3531,7 +3529,7 @@
       if (searchVal) {
         const terms = searchVal.split(',').map(t => t.trim()).filter(Boolean);
         qualitiesList = qualitiesList.filter(q => {
-          const text = `${q.quality} ${q.challanNo} ${q.lotNo} ${q.supplier} ${q.itemType} ${q.code} ${q.color}`.toLowerCase();
+          const text = `${q.quality} ${q.lotNo} ${q.supplier} ${q.itemType} ${q.code} ${q.color}`.toLowerCase();
           return terms.every(term => text.includes(term));
         });
       }
@@ -3575,7 +3573,6 @@
             const escapedQName = q.quality.replace(/'/g, "\\'");
             const escapedSupplier = q.supplier.replace(/'/g, "\\'");
             const escapedLotNo = (q.lotNo || '').replace(/'/g, "\\'");
-            const escapedChallanNo = (q.challanNo || '').replace(/'/g, "\\'");
 
             return `
               <tr>
@@ -3583,10 +3580,10 @@
                 <td style="font-weight: 600; color: var(--fg);">${q.supplier || '—'}</td>
                 <td style="font-weight: 700; color: var(--fg);">${q.quality}</td>
                 <td>
-                  <div style="display: flex; flex-direction: column; gap: 3px; align-items: flex-start;">
-                    ${q.challanNo ? `<span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600; color: var(--fg);"><span style="color: var(--muted); font-size: 0.72rem; font-weight: normal;">Ch:</span> ${q.challanNo}</span>` : ''}
-                    ${q.lotNo && q.lotNo !== '-' ? `<span class="badge" style="font-family: var(--font-mono); font-size: 0.75rem; background: rgba(139, 92, 246, 0.12); color: var(--accent); font-weight: 600;"><span style="opacity: 0.7; font-size: 0.7rem;">Lot:</span> ${q.lotNo}</span>` : (q.challanNo ? '' : '<span style="color: var(--muted);">-</span>')}
-                  </div>
+                  ${q.lotNo && q.lotNo !== '-' 
+                    ? `<span class="badge" style="font-family: var(--font-mono); font-size: 0.78rem; background: rgba(139, 92, 246, 0.12); color: var(--accent); font-weight: 700; padding: 3px 8px; border-radius: 6px;"><span style="opacity: 0.7; font-size: 0.72rem;">Lot:</span> ${q.lotNo}</span>` 
+                    : `<span style="color: var(--muted); font-family: var(--font-mono);">-</span>`
+                  }
                 </td>
                 <td><span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);">${q.code || '-'}</span></td>
                 <td>${q.color || '-'}</td>
@@ -3612,7 +3609,7 @@
                   ${statusBadge}
                 </td>
                 <td style="text-align: center;">
-                  <button class="dash-btn-link" onclick="goToStockBookQuality('${escapedQName}', '${escapedSupplier}', '${escapedLotNo}', '${escapedChallanNo}')" title="View boxes & lots in Stock Book">
+                  <button class="dash-btn-link" onclick="goToStockBookQuality('${escapedQName}', '${escapedSupplier}', '${escapedLotNo}')" title="View boxes & lots in Stock Book">
                     <span>Stock Book</span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                   </button>
@@ -3636,10 +3633,7 @@
       const isNullState = topQualities.length === 0;
       const labels = isNullState ? ['No Stock Available'] : topQualities.map(q => {
         const hasLot = q.lotNo && q.lotNo !== '-';
-        const hasCh = q.challanNo && q.challanNo !== '-';
-        if (hasLot && hasCh) return `${q.quality} (Ch: ${q.challanNo}, Lot: ${q.lotNo})`;
         if (hasLot) return `${q.quality} (Lot: ${q.lotNo})`;
-        if (hasCh) return `${q.quality} (Ch: ${q.challanNo})`;
         return q.quality;
       });
       const dataWeights = isNullState ? [0] : topQualities.map(q => parseFloat(q.availWeight.toFixed(2)));

@@ -762,15 +762,82 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 0.72rem;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 0.7rem;
       font-weight: 700;
       background: rgba(124, 58, 237, 0.1);
       color: var(--accent);
       border: 1px solid rgba(124, 58, 237, 0.25);
       white-space: nowrap;
       user-select: none;
+      letter-spacing: 0.02em;
+    }
+
+    /* Actions Column Alignment & Sizing */
+    .excel-table th.actions-col,
+    .excel-table td.actions-col {
+      width: 100px !important;
+      min-width: 100px !important;
+      max-width: 100px !important;
+      text-align: center !important;
+      vertical-align: middle !important;
+      padding: 0 !important;
+    }
+
+    .excel-table th.actions-col {
+      padding: 0.85rem 0.5rem !important;
+      text-align: center !important;
+    }
+
+    .actions-cell-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 100%;
+      min-height: 44px;
+      padding: 0.35rem 0.5rem;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    .btn-action-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0;
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      flex-shrink: 0;
+    }
+
+    .btn-action-icon:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-action-icon:active {
+      transform: translateY(0);
+    }
+
+    .btn-action-icon.btn-view-row:hover {
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--accent);
+      border-color: rgba(124, 58, 237, 0.35);
+    }
+
+    .btn-action-icon.btn-delete-row:hover {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--error);
+      border-color: rgba(239, 68, 68, 0.35);
     }
 
     /* Badges */
@@ -1396,7 +1463,7 @@
               <th style="width: 145px; min-width: 140px;" class="num-col interest-col" style="background: rgba(245, 158, 11, 0.08);">Paid Int. (₹)</th>
               <th style="width: 165px; min-width: 160px;" class="num-col">Net Bal (₹)</th>
               <th style="width: 280px; min-width: 260px;">Remarks / Cheque No</th>
-              <th style="width: 85px; min-width: 80px;" class="center-col actions-col">Actions</th>
+              <th style="width: 100px; min-width: 100px;" class="center-col actions-col">Actions</th>
             </tr>
           </thead>
           <tbody id="excel-table-body">
@@ -1607,6 +1674,8 @@
     let calculateInterest = true;
     let defaultInterestRate = 18.0; // 18% per annum
     let defaultCreditDays = 30; // 30 days
+    let liveSaveTimer = null;
+    let isLocalSaving = false;
 
     // Data Storage for Ledgers
     let ledgerData = {
@@ -1713,29 +1782,32 @@
 
       // Cloud & Real-time Event Listeners
       const handleRemoteSync = async (e) => {
+        if (isLocalSaving) return; // Ignore own local writes
+        if (e && e.detail) {
+          if (e.detail.isRemote === false) return; // Skip non-remote events
+          if (e.detail.key) {
+            const k = e.detail.key;
+            if (!k.startsWith('yarn') && k !== 'yarn-rm-orders' && k !== 'yarn_ledger_deleted_keys' && k !== 'vf_deleted_entity_ids') {
+              return;
+            }
+          }
+        }
         const activeEl = document.activeElement;
-        const activeRowEl = activeEl ? activeEl.closest('tr[id^="ledger-row-"]') : null;
-        const activeRowId = activeRowEl ? activeRowEl.id.replace('ledger-row-', '') : null;
+        const isEditingInTable = activeEl && document.getElementById('excel-table-body')?.contains(activeEl);
+
+        // If the user is currently focused/typing anywhere in the table, DO NOT trigger full sync/render
+        if (isEditingInTable) {
+          return;
+        }
 
         await loadLedgers();
         await syncSourceData(false);
-
-        if (activeRowId) {
-          // User is actively editing row activeRowId: update all OTHER rows in-place and update KPIs without resetting caret
-          (ledgerData[activeTab] || []).forEach(r => {
-            if (r.id !== activeRowId) {
-              updateRowDOM(r.id);
-            }
-          });
-          updateFooterAndKPISummaries();
-        } else {
-          populatePartyFilter();
-          renderTable(false);
-        }
+        populatePartyFilter();
+        renderTable(false);
       };
 
       window.addEventListener('storage', async (e) => {
-        if (!e.key || e.key.startsWith('yarn') || e.key === 'yarn-rm-orders' || e.key === 'vf_deleted_entity_ids') {
+        if (!e.key || e.key.startsWith('yarn') || e.key === 'yarn-rm-orders' || e.key === 'yarn_ledger_deleted_keys' || e.key === 'vf_deleted_entity_ids') {
           handleRemoteSync(e);
         }
       });
@@ -1803,21 +1875,34 @@
         if (!Array.isArray(remoteArr)) return Array.isArray(localArr) ? localArr : [];
 
         const rowMap = new Map();
+        const keyMap = new Map(); // map syncKey -> id
+
         remoteArr.forEach(remRow => {
-          if (remRow && remRow.id) rowMap.set(String(remRow.id), { ...remRow });
+          if (!remRow) return;
+          const rId = String(remRow.id || (remRow.syncKey ? 'LEDGER-' + remRow.syncKey : ''));
+          if (!rId) return;
+          rowMap.set(rId, { ...remRow, id: rId });
+          if (remRow.syncKey) keyMap.set(remRow.syncKey, rId);
         });
 
         localArr.forEach(locRow => {
-          if (!locRow || !locRow.id) return;
-          const rId = String(locRow.id);
-          if (!rowMap.has(rId)) {
-            rowMap.set(rId, { ...locRow });
+          if (!locRow) return;
+          const locId = String(locRow.id || (locRow.syncKey ? 'LEDGER-' + locRow.syncKey : ''));
+          if (!locId) return;
+
+          let matchedId = rowMap.has(locId) ? locId : (locRow.syncKey && keyMap.has(locRow.syncKey) ? keyMap.get(locRow.syncKey) : null);
+
+          if (!matchedId) {
+            rowMap.set(locId, { ...locRow, id: locId });
+            if (locRow.syncKey) keyMap.set(locRow.syncKey, locId);
           } else {
-            const remRow = rowMap.get(rId);
+            const remRow = rowMap.get(matchedId);
             const locTime = locRow.updated_at ? new Date(locRow.updated_at).getTime() : 0;
             const remTime = remRow.updated_at ? new Date(remRow.updated_at).getTime() : 0;
-            if (locTime > remTime) {
-              rowMap.set(rId, { ...remRow, ...locRow });
+            if (locTime >= remTime) {
+              rowMap.set(matchedId, { ...remRow, ...locRow });
+            } else {
+              rowMap.set(matchedId, { ...locRow, ...remRow });
             }
           }
         });
@@ -1831,22 +1916,38 @@
         let cloudSales = [];
         let cloudPurchase = [];
 
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+        // Fast in-memory cache / synchronous localStorage read first
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.getFast === 'function') {
+          cloudSales = window.VishwaSupabase.getFast('yarn_sales_ledger_data') || [];
+          cloudPurchase = window.VishwaSupabase.getFast('yarn_purchase_ledger_data') || [];
+        } else {
           try {
-            cloudSales = (await window.VishwaSupabase.get('yarn_sales_ledger_data')) || [];
-            cloudPurchase = (await window.VishwaSupabase.get('yarn_purchase_ledger_data')) || [];
+            const sRaw = localStorage.getItem('yarn_sales_ledger_data');
+            if (sRaw) cloudSales = JSON.parse(sRaw);
+            const pRaw = localStorage.getItem('yarn_purchase_ledger_data');
+            if (pRaw) cloudPurchase = JSON.parse(pRaw);
+          } catch (e) {}
+        }
+
+        // Fallback to async REST get if cache was empty
+        if ((!cloudSales || cloudSales.length === 0) && (!cloudPurchase || cloudPurchase.length === 0) && window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+          try {
+            cloudSales = (await window.VishwaSupabase.get('yarn_sales_ledger_data')) || cloudSales || [];
+            cloudPurchase = (await window.VishwaSupabase.get('yarn_purchase_ledger_data')) || cloudPurchase || [];
           } catch (e) {
             console.error("Error loading ledgers from Supabase:", e);
           }
         }
 
+        // Filter tombstones
         if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
-          cloudSales = window.VishwaSupabase.filterDeletedEntities(cloudSales);
-          cloudPurchase = window.VishwaSupabase.filterDeletedEntities(cloudPurchase);
+          cloudSales = window.VishwaSupabase.filterDeletedEntities(cloudSales, 'yarn_ledger_deleted_keys');
+          cloudPurchase = window.VishwaSupabase.filterDeletedEntities(cloudPurchase, 'yarn_ledger_deleted_keys');
         }
 
-        ledgerData.sales = Array.isArray(cloudSales) ? cloudSales : [];
-        ledgerData.purchase = Array.isArray(cloudPurchase) ? cloudPurchase : [];
+        // Reconcile with local in-memory datasets
+        ledgerData.sales = mergeLedgerDatasets(ledgerData.sales, Array.isArray(cloudSales) ? cloudSales : []);
+        ledgerData.purchase = mergeLedgerDatasets(ledgerData.purchase, Array.isArray(cloudPurchase) ? cloudPurchase : []);
       } catch (e) {
         console.error("Error in loadLedgers:", e);
       }
@@ -1855,7 +1956,15 @@
     // Save Ledgers directly and strictly to Supabase Cloud with Realtime Broadcast
     function saveLedgers(showToastMsg = false, forceImmediate = false) {
       recordStateSnapshot();
+      isLocalSaving = true;
       try {
+        const nowIso = new Date().toISOString();
+        ['sales', 'purchase'].forEach(tab => {
+          (ledgerData[tab] || []).forEach(row => {
+            if (!row.updated_at) row.updated_at = nowIso;
+          });
+        });
+
         if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
           window.VishwaSupabase.set('yarn_sales_ledger_data', ledgerData.sales, forceImmediate);
           window.VishwaSupabase.set('yarn_purchase_ledger_data', ledgerData.purchase, forceImmediate);
@@ -1868,6 +1977,10 @@
         if (showToastMsg) showToast('Ledger saved to Supabase cloud', 'success');
       } catch (e) {
         console.error("Error saving ledger data to Supabase:", e);
+      } finally {
+        setTimeout(() => {
+          isLocalSaving = false;
+        }, 400);
       }
     }
 
@@ -1924,6 +2037,10 @@
       let syncAdded = 0;
       let syncUpdated = 0;
 
+      const ledgerDeletedKeys = (window.VishwaSupabase && typeof window.VishwaSupabase.getDeletedTombstones === 'function')
+        ? window.VishwaSupabase.getDeletedTombstones('yarn_ledger_deleted_keys')
+        : new Set();
+
       // 1. Sync Purchase Ledger from fulfilled delivery batches in yarn-rm-orders
       try {
         let rawOrders = [];
@@ -1975,8 +2092,14 @@
                 const batchChallan = (batch.challanNumber || '').trim();
                 const receiveDate = (batch.receiveDate || orderDate || new Date().toISOString().split('T')[0]).split('T')[0];
                 const uniqueSyncKey = `order_${order.id || orderNumber}_batch_${batch.id || bIdx}_${batchChallan}`;
+                const deterministicId = 'PUR-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
 
                 validPurchaseSyncKeys.add(uniqueSyncKey);
+
+                // Skip if this record was deleted/tombstoned by user
+                if (ledgerDeletedKeys.has(deterministicId) || ledgerDeletedKeys.has(uniqueSyncKey) || (batchChallan && ledgerDeletedKeys.has(batchChallan))) {
+                  return;
+                }
 
                 // Fallback to stock list or quality master if rate not on order
                 if (effectiveRate === 0 && Array.isArray(rawStock)) {
@@ -1999,16 +2122,17 @@
                 }
 
                 const subtotal = Number((batchQty * effectiveRate).toFixed(2));
-                const existingRow = ledgerData.purchase.find(r => r.syncKey === uniqueSyncKey || (r.challanNo === batchChallan && r.partyName === supplierName && batchChallan !== ''));
+                const existingRow = ledgerData.purchase.find(r => r.id === deterministicId || r.syncKey === uniqueSyncKey || (r.challanNo === batchChallan && r.partyName === supplierName && batchChallan !== ''));
 
                 if (!existingRow) {
-                  // Add new purchase ledger row for fulfilled delivery batch
+                  // Add new purchase ledger row with deterministic ID for cross-PC identity
                   const gstPercent = 5.0; // Standard 5% textile GST
                   const gstAmount = Number(((subtotal * gstPercent) / 100).toFixed(2));
                   const grandTotal = Number((subtotal + gstAmount).toFixed(2));
+                  const nowIso = new Date().toISOString();
 
                   ledgerData.purchase.push({
-                    id: 'PUR-' + Date.now() + '-' + Math.floor(Math.random()*1000),
+                    id: deterministicId,
                     syncKey: uniqueSyncKey,
                     source: 'yarn-rm-orders',
                     date: receiveDate,
@@ -2026,13 +2150,18 @@
                     interestRate: defaultInterestRate,
                     interestPaid: 0,
                     remarks: `Auto-synced from Yarn RM Order #${orderNumber}`,
-                    isManual: false
+                    isManual: false,
+                    created_at: nowIso,
+                    updated_at: nowIso
                   });
                   syncAdded++;
                 } else {
                   // Update base fields & auto-heal rates while keeping user inputs
                   const oldRate = existingRow.rate;
                   const oldQty = existingRow.qty;
+                  if (!existingRow.id || existingRow.id.startsWith('PUR-1') || existingRow.id.length > 30) {
+                    existingRow.id = deterministicId;
+                  }
                   existingRow.syncKey = uniqueSyncKey;
                   existingRow.qty = batchQty;
                   existingRow.rate = effectiveRate;
@@ -2049,16 +2178,18 @@
           });
         }
 
-        // Purge any unfulfilled orders (e.g. ORD-xxx without inward delivery) or deleted batches from purchase ledger
-        const prevPurchaseCount = ledgerData.purchase.length;
-        ledgerData.purchase = ledgerData.purchase.filter(r => {
-          if (r.source === 'yarn-rm-orders') {
-            return r.syncKey && validPurchaseSyncKeys.has(r.syncKey);
+        // Purge unfulfilled orders safely ONLY if rawOrders was successfully loaded
+        if (Array.isArray(rawOrders) && rawOrders.length > 0) {
+          const prevPurchaseCount = ledgerData.purchase.length;
+          ledgerData.purchase = ledgerData.purchase.filter(r => {
+            if (r.source === 'yarn-rm-orders') {
+              return r.syncKey && validPurchaseSyncKeys.has(r.syncKey);
+            }
+            return true; // Retain custom manual ledger entries
+          });
+          if (ledgerData.purchase.length !== prevPurchaseCount) {
+            syncUpdated++;
           }
-          return true; // Retain custom manual ledger entries
-        });
-        if (ledgerData.purchase.length !== prevPurchaseCount) {
-          syncUpdated++;
         }
       } catch (err) {
         console.error("Error syncing yarn-rm-orders:", err);
@@ -2084,8 +2215,14 @@
               const customerName = (sale.customerName || sale.customer || 'Direct Sale').trim();
               const saleDate = (sale.date || sale.saleDate || new Date().toISOString().split('T')[0]).split('T')[0];
               const uniqueSyncKey = `sales_${div}_${sale.id || challanNo}`;
+              const deterministicId = 'SAL-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-              const existingRow = ledgerData.sales.find(r => r.syncKey === uniqueSyncKey || (r.challanNo === challanNo && challanNo !== ''));
+              // Skip if this record was deleted/tombstoned by user
+              if (ledgerDeletedKeys.has(deterministicId) || ledgerDeletedKeys.has(uniqueSyncKey) || (challanNo && ledgerDeletedKeys.has(challanNo))) {
+                return;
+              }
+
+              const existingRow = ledgerData.sales.find(r => r.id === deterministicId || r.syncKey === uniqueSyncKey || (r.challanNo === challanNo && challanNo !== ''));
 
               if (!existingRow && challanNo) {
                 const qty = Number(sale.totalQty) || Number(sale.weight) || 0;
@@ -2094,9 +2231,10 @@
                 const gstAmount = Number(sale.gstAmount) || 0;
                 const grandTotal = Number(sale.grandTotal) || Number((subtotal + gstAmount).toFixed(2));
                 const gstPercent = subtotal > 0 ? Number(((gstAmount / subtotal) * 100).toFixed(1)) : 0;
+                const nowIso = new Date().toISOString();
 
                 ledgerData.sales.push({
-                  id: 'SAL-' + Date.now() + '-' + Math.floor(Math.random()*1000),
+                  id: deterministicId,
                   syncKey: uniqueSyncKey,
                   source: `yarn_${div}_sales`,
                   date: saleDate,
@@ -2114,11 +2252,15 @@
                   interestRate: defaultInterestRate,
                   interestPaid: 0,
                   remarks: `Auto-synced from ${div.toUpperCase()} Sales`,
-                  isManual: false
+                  isManual: false,
+                  created_at: nowIso,
+                  updated_at: nowIso
                 });
                 syncAdded++;
               } else if (existingRow) {
-                // Ensure synced flags are maintained and preserve interestPaid
+                if (!existingRow.id || existingRow.id.startsWith('SAL-1') || existingRow.id.length > 30) {
+                  existingRow.id = deterministicId;
+                }
                 existingRow.source = `yarn_${div}_sales`;
                 existingRow.isManual = false;
                 if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
@@ -2213,7 +2355,7 @@
       const nowIso = new Date().toISOString();
       const today = nowIso.split('T')[0];
       const newRow = {
-        id: (activeTab === 'sales' ? 'SAL-' : 'PUR-') + Date.now() + '-' + Math.floor(Math.random()*1000),
+        id: (activeTab === 'sales' ? 'SAL-MAN-' : 'PUR-MAN-') + Date.now() + '-' + Math.floor(Math.random()*1000),
         syncKey: null,
         source: 'manual',
         date: today,
@@ -2256,27 +2398,31 @@
       if (!row) return;
 
       const isLocked = (row.source && row.source !== 'manual') && !row.isManual;
-      if (isLocked) {
-        showToast('Auto-synced records cannot be deleted directly. Modify source order/sales.', 'error');
-        return;
-      }
+      const confirmMsg = isLocked
+        ? `Are you sure you want to remove this auto-synced entry (${row.challanNo || row.partyName}) from the ledger? It will remain deleted across all PCs.`
+        : 'Are you sure you want to delete this ledger entry? This will delete across all devices.';
 
-      if (!confirm('Are you sure you want to delete this custom ledger entry? This will delete across all devices.')) return;
+      if (!confirm(confirmMsg)) return;
       recordStateSnapshot();
       ledgerData[activeTab] = targetArray.filter(r => r.id !== rowId);
 
       const storageKey = activeTab === 'sales' ? 'yarn_sales_ledger_data' : 'yarn_purchase_ledger_data';
       if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
         window.VishwaSupabase.recordDeletion(storageKey, rowId);
+        window.VishwaSupabase.recordDeletion('yarn_ledger_deleted_keys', rowId);
         if (row.syncKey) {
           window.VishwaSupabase.recordDeletion(storageKey, row.syncKey);
+          window.VishwaSupabase.recordDeletion('yarn_ledger_deleted_keys', row.syncKey);
+        }
+        if (row.challanNo) {
+          window.VishwaSupabase.recordDeletion('yarn_ledger_deleted_keys', String(row.challanNo).trim());
         }
       }
 
       saveLedgers(false, true);
       populatePartyFilter();
       renderTable();
-      showToast('Row deleted and tombstone recorded across cloud', 'info');
+      showToast('Entry deleted and tombstone recorded across cloud', 'info');
     }
 
     // Direct In-Cell Edit Handler (Live Typing & Immediate Change Broadcasting)
@@ -2324,7 +2470,7 @@
         clearTimeout(liveSaveTimer);
         liveSaveTimer = setTimeout(() => {
           saveLedgers(false, false);
-        }, 120);
+        }, 600);
       }
     }
 
@@ -2678,8 +2824,9 @@
 
             <td class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
-                ? `<div class="cell-readonly font-mono bold challan-clickable" onclick="openChallanModal('${row.id}')" title="Click to view challan &amp; order details">
+                ? `<div class="cell-readonly font-mono bold challan-clickable" onclick="openChallanModal('${row.id}')" title="Click to view challan &amp; order details" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
                     <span class="challan-link-text">${escapeHtml(row.challanNo || '-')}</span>
+                    <span class="badge-synced" title="Auto-synced from orders/sales">Synced</span>
                    </div>`
                 : `<input type="text" class="cell-input" value="${escapeHtml(row.challanNo || '')}" placeholder="Challan #" oninput="handleCellChange('${row.id}', 'challanNo', this.value, false)" onchange="handleCellChange('${row.id}', 'challanNo', this.value, true)">`
               }
@@ -2730,7 +2877,7 @@
 
             <!-- Editable Paid / Received Principal Amount -->
             <td class="num-col" style="background: rgba(16, 185, 129, 0.05);">
-              <input type="number" step="0.01" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Enter paid/received principal amount">
+              <input type="number" step="0.01" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Enter paid/received principal amount">
             </td>
 
             <!-- Editable Payment Date (Expanded & Click anywhere to open calendar) -->
@@ -2740,7 +2887,7 @@
 
             <!-- Editable Credit Days -->
             <td class="num-col">
-              <input type="number" step="1" class="cell-input num-font" style="width: 80px;" value="${row.creditDays || defaultCreditDays}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
+              <input type="number" step="1" class="cell-input num-font" style="width: 80px;" value="${row.creditDays || defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
             </td>
 
             <td class="cell-locked-bg">
@@ -2757,7 +2904,7 @@
 
             <!-- Editable Interest Rate -->
             <td class="num-col interest-col" style="${calculateInterest ? '' : 'display:none;'}">
-              <input type="number" step="0.1" class="cell-input num-font" style="width: 85px;" value="${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}" oninput="handleCellChange('${row.id}', 'interestRate', this.value, false)" onchange="handleCellChange('${row.id}', 'interestRate', this.value, true)" title="Annual late interest %">
+              <input type="number" step="0.1" class="cell-input num-font" style="width: 85px;" value="${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestRate', this.value, false)" onchange="handleCellChange('${row.id}', 'interestRate', this.value, true)" title="Annual late interest %">
             </td>
 
             <td class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
@@ -2770,7 +2917,7 @@
 
             <!-- Editable Paid Interest (Settlement of Late Interest!) -->
             <td class="num-col interest-col" style="background: rgba(245, 158, 11, 0.05); ${calculateInterest ? '' : 'display:none;'}">
-              <input type="number" step="0.01" class="cell-input num-font col-input-interest-paid" style="color: var(--warning); font-weight: 700; width: 110px;" value="${row.interestPaid || 0}" oninput="handleCellChange('${row.id}', 'interestPaid', this.value, false)" onchange="handleCellChange('${row.id}', 'interestPaid', this.value, true)" title="Enter paid/settled late interest amount">
+              <input type="number" step="0.01" class="cell-input num-font col-input-interest-paid" style="color: var(--warning); font-weight: 700; width: 110px;" value="${row.interestPaid || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestPaid', this.value, false)" onchange="handleCellChange('${row.id}', 'interestPaid', this.value, true)" title="Enter paid/settled late interest amount">
             </td>
 
             <td class="num-col cell-locked-bg">
@@ -2783,12 +2930,17 @@
             </td>
 
             <td class="center-col actions-col cell-locked-bg">
-              ${isLocked 
-                ? `<span class="badge-synced">Synced</span>`
-                : `<button class="btn-icon" style="padding: 5px; border: none; background: transparent; color: var(--muted);" onclick="deleteRow('${row.id}')" title="Delete Custom Row">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                   </button>`
-              }
+              <div class="actions-cell-wrap">
+                ${isLocked 
+                  ? `<button class="btn-action-icon btn-view-row" onclick="openChallanModal('${row.id}')" title="View Challan &amp; Order Details">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                     </button>`
+                  : ''
+                }
+                <button class="btn-action-icon btn-delete-row" onclick="deleteRow('${row.id}')" title="${isLocked ? 'Remove synced entry from ledger' : 'Delete custom row'}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                </button>
+              </div>
             </td>
           </tr>
         `;

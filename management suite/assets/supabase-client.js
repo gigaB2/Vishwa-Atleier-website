@@ -236,6 +236,9 @@
     if (item.name !== undefined && item.name !== null && String(item.name).trim() !== '') {
       return String(item.name).trim();
     }
+    if (item.syncKey !== undefined && item.syncKey !== null && String(item.syncKey).trim() !== '') {
+      return String(item.syncKey).trim();
+    }
     if (item.code !== undefined && item.code !== null && String(item.code).trim() !== '') {
       return String(item.code).trim();
     }
@@ -245,10 +248,20 @@
   function getDeletedTombstones() {
     let deleted = [];
     try {
-      const raw = cache['vf_deleted_entity_ids'] || cache['vf_deleted_costing_ids'] || nativeLocalStorage.getItem('vf_deleted_entity_ids') || nativeLocalStorage.getItem('vf_deleted_costing_ids');
+      const raw = cache['vf_deleted_entity_ids'] || cache['vf_deleted_costing_ids'] || cache['yarn_ledger_deleted_keys'] || nativeLocalStorage.getItem('vf_deleted_entity_ids') || nativeLocalStorage.getItem('vf_deleted_costing_ids') || nativeLocalStorage.getItem('yarn_ledger_deleted_keys');
       if (raw) deleted = typeof raw === 'string' ? JSON.parse(raw) : raw;
     } catch(e) {}
-    return Array.isArray(deleted) ? deleted.map(String) : [];
+
+    try {
+      const rawLedger = cache['yarn_ledger_deleted_keys'] || nativeLocalStorage.getItem('yarn_ledger_deleted_keys');
+      if (rawLedger) {
+        const parsed = typeof rawLedger === 'string' ? JSON.parse(rawLedger) : rawLedger;
+        if (Array.isArray(parsed)) {
+          deleted = [...deleted, ...parsed];
+        }
+      }
+    } catch(e) {}
+    return Array.from(new Set(Array.isArray(deleted) ? deleted.map(String) : []));
   }
 
   function filterDeletedEntities(a, b) {
@@ -267,6 +280,7 @@
         const id = getItemIdentifier(item);
         if (id && tombstoneSet.has(String(id).trim().toLowerCase())) return false;
         if (item.id && tombstoneSet.has(String(item.id).trim().toLowerCase())) return false;
+        if (item.syncKey && tombstoneSet.has(String(item.syncKey).trim().toLowerCase())) return false;
         if (item._id && tombstoneSet.has(String(item._id).trim().toLowerCase())) return false;
         if (item.uuid && tombstoneSet.has(String(item.uuid).trim().toLowerCase())) return false;
         if (item.loanId && tombstoneSet.has(String(item.loanId).trim().toLowerCase())) return false;
@@ -286,9 +300,76 @@
         if (item.boriNo && tombstoneSet.has(String(item.boriNo).trim().toLowerCase())) return false;
         if (item.beamNumber && tombstoneSet.has(String(item.beamNumber).trim().toLowerCase())) return false;
         if (item.takaSerial && tombstoneSet.has(String(item.takaSerial).trim().toLowerCase())) return false;
+        if (item.challanNo && tombstoneSet.has(String(item.challanNo).trim().toLowerCase())) return false;
       } catch(e) {}
       return true;
     });
+  }
+
+  // --- Dedicated High-Integrity Merge Engine for Yarn Ledgers (Sales & Purchase) ---
+  function mergeYarnLedgerDatasets(localArr, remoteArr) {
+    if (!Array.isArray(localArr)) return Array.isArray(remoteArr) ? filterDeletedEntities(remoteArr) : [];
+    if (!Array.isArray(remoteArr)) return Array.isArray(localArr) ? filterDeletedEntities(localArr) : [];
+
+    const cleanLocal = filterDeletedEntities(localArr);
+    const cleanRemote = filterDeletedEntities(remoteArr);
+
+    const getRowKey = (row) => {
+      if (!row) return '';
+      if (row.syncKey) return String(row.syncKey).trim();
+      if (row.id) return String(row.id).trim();
+      if (row.challanNo && row.partyName) return `ledger_${String(row.challanNo).trim()}__${String(row.partyName).trim()}`;
+      return '';
+    };
+
+    const rowMap = new Map();
+    const keyToPrimaryMap = new Map();
+
+    cleanRemote.forEach(remRow => {
+      if (!remRow) return;
+      const pKey = String(remRow.id || remRow.syncKey || getRowKey(remRow));
+      if (!pKey) return;
+      rowMap.set(pKey, { ...remRow });
+      if (remRow.id) keyToPrimaryMap.set(String(remRow.id), pKey);
+      if (remRow.syncKey) keyToPrimaryMap.set(String(remRow.syncKey), pKey);
+      if (remRow.challanNo && remRow.partyName) {
+        keyToPrimaryMap.set(`ledger_${String(remRow.challanNo).trim()}__${String(remRow.partyName).trim()}`, pKey);
+      }
+    });
+
+    cleanLocal.forEach(locRow => {
+      if (!locRow) return;
+      const locPKey = String(locRow.id || locRow.syncKey || getRowKey(locRow));
+      if (!locPKey) return;
+
+      let matchedPKey = null;
+      if (keyToPrimaryMap.has(locPKey)) matchedPKey = keyToPrimaryMap.get(locPKey);
+      else if (locRow.id && keyToPrimaryMap.has(String(locRow.id))) matchedPKey = keyToPrimaryMap.get(String(locRow.id));
+      else if (locRow.syncKey && keyToPrimaryMap.has(String(locRow.syncKey))) matchedPKey = keyToPrimaryMap.get(String(locRow.syncKey));
+      else if (locRow.challanNo && locRow.partyName && keyToPrimaryMap.has(`ledger_${String(locRow.challanNo).trim()}__${String(locRow.partyName).trim()}`)) {
+        matchedPKey = keyToPrimaryMap.get(`ledger_${String(locRow.challanNo).trim()}__${String(locRow.partyName).trim()}`);
+      }
+
+      if (matchedPKey && rowMap.has(matchedPKey)) {
+        const remRow = rowMap.get(matchedPKey);
+        const locTime = locRow.updated_at ? new Date(locRow.updated_at).getTime() : 0;
+        const remTime = remRow.updated_at ? new Date(remRow.updated_at).getTime() : 0;
+
+        if (locTime >= remTime) {
+          rowMap.set(matchedPKey, {
+            ...remRow,
+            ...locRow,
+            id: locRow.syncKey ? (String(locRow.id).startsWith('PUR-') ? `PUR-${locRow.syncKey}` : `SAL-${locRow.syncKey}`) : locRow.id
+          });
+        }
+      } else {
+        rowMap.set(locPKey, { ...locRow });
+        if (locRow.id) keyToPrimaryMap.set(String(locRow.id), locPKey);
+        if (locRow.syncKey) keyToPrimaryMap.set(String(locRow.syncKey), locPKey);
+      }
+    });
+
+    return filterDeletedEntities(Array.from(rowMap.values()));
   }
 
   // --- Dedicated High-Integrity Merge Engine for Yarn RM Stock Book ---
@@ -567,6 +648,11 @@
     // Special Case: Yarn RM Orders Array Merge (Sync Box Statuses inside batches)
     if (key === 'yarn-rm-orders' && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
       return mergeYarnOrdersDatasets(parsedLocal, parsedRemote);
+    }
+
+    // Special Case: Yarn Ledgers (Sales & Purchase) Multi-PC Synchronization
+    if ((key === 'yarn_sales_ledger_data' || key === 'yarn_purchase_ledger_data') && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
+      return mergeYarnLedgerDatasets(parsedLocal, parsedRemote);
     }
 
     // Case 1: Both are Arrays -> Intelligent Item-Level Merge for multi-user safety
