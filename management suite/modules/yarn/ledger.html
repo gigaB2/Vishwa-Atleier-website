@@ -2528,7 +2528,7 @@
         if (!Array.isArray(remoteArr)) return Array.isArray(localArr) ? localArr : [];
 
         const rowMap = new Map();
-        const keyMap = new Map(); // map syncKey -> id
+        const keyMap = new Map(); // map syncKey / challan -> id
 
         remoteArr.forEach(remRow => {
           if (!remRow) return;
@@ -2536,6 +2536,13 @@
           if (!rId) return;
           rowMap.set(rId, { ...remRow, id: rId });
           if (remRow.syncKey) keyMap.set(remRow.syncKey, rId);
+          if (remRow.challanNo) {
+            const chKey = String(remRow.challanNo).trim().toLowerCase();
+            keyMap.set(`ch_${chKey}`, rId);
+            if (remRow.partyName) {
+              keyMap.set(`ch_${chKey}__${String(remRow.partyName).trim().toLowerCase()}`, rId);
+            }
+          }
         });
 
         localArr.forEach(locRow => {
@@ -2544,6 +2551,14 @@
           if (!locId) return;
 
           let matchedId = rowMap.has(locId) ? locId : (locRow.syncKey && keyMap.has(locRow.syncKey) ? keyMap.get(locRow.syncKey) : null);
+          if (!matchedId && locRow.challanNo) {
+            const chKey = String(locRow.challanNo).trim().toLowerCase();
+            if (locRow.partyName && keyMap.has(`ch_${chKey}__${String(locRow.partyName).trim().toLowerCase()}`)) {
+              matchedId = keyMap.get(`ch_${chKey}__${String(locRow.partyName).trim().toLowerCase()}`);
+            } else if (keyMap.has(`ch_${chKey}`)) {
+              matchedId = keyMap.get(`ch_${chKey}`);
+            }
+          }
 
           if (!matchedId) {
             rowMap.set(locId, { ...locRow, id: locId });
