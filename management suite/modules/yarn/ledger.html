@@ -1066,6 +1066,59 @@
       background: rgba(239, 68, 68, 0.22);
     }
 
+    .status-badge.status-gr {
+      background: rgba(249, 115, 22, 0.14);
+      color: #ea580c;
+      border: 1px solid rgba(249, 115, 22, 0.35);
+    }
+
+    body.dark-mode .status-badge.status-gr {
+      color: #fb923c;
+      background: rgba(249, 115, 22, 0.2);
+    }
+
+    .gr-badge-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #ea580c;
+      background: rgba(249, 115, 22, 0.1);
+      border: 1px solid rgba(249, 115, 22, 0.28);
+      border-radius: 6px;
+      padding: 1.5px 6px;
+      margin-top: 2px;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      cursor: help;
+      letter-spacing: -0.01em;
+      transition: all 0.15s ease;
+    }
+
+    body.dark-mode .gr-badge-chip {
+      color: #fb923c;
+      background: rgba(249, 115, 22, 0.18);
+      border-color: rgba(249, 115, 22, 0.38);
+    }
+
+    .gr-badge-chip:hover {
+      background: rgba(249, 115, 22, 0.22);
+      border-color: rgba(249, 115, 22, 0.5);
+    }
+
+    .gr-breakdown-card {
+      background: rgba(249, 115, 22, 0.05);
+      border: 1.5px dashed rgba(249, 115, 22, 0.35);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+    }
+
+    body.dark-mode .gr-breakdown-card {
+      background: rgba(249, 115, 22, 0.08);
+      border-color: rgba(249, 115, 22, 0.45);
+    }
+
     @keyframes subtle-pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.8; }
@@ -1856,10 +1909,11 @@
 
       <!-- Footer Totals Bar -->
       <div class="sheet-footer-bar">
-        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;">
           <div class="footer-stat">Rows: <span class="val" id="stat-row-count">0</span></div>
-          <div class="footer-stat">Weight: <span class="val" id="stat-total-weight">0.00 Kg</span></div>
-          <div class="footer-stat">Invoiced: <span class="val" id="stat-total-invoiced">₹0.00</span></div>
+          <div class="footer-stat">Net Weight: <span class="val" id="stat-total-weight">0.00 Kg</span></div>
+          <div class="footer-stat" id="stat-gr-wrapper" style="display: none; align-items: center; gap: 5px;">GR Returned: <span class="val" id="stat-total-gr" style="color: var(--accent3); font-weight: 700;">-0.00 Kg</span></div>
+          <div class="footer-stat">Invoiced (Net): <span class="val" id="stat-total-invoiced">₹0.00</span></div>
         </div>
         <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
           <div class="footer-stat">Settled: <span class="val" id="stat-total-paid" style="color: var(--success);">₹0.00</span></div>
@@ -2106,6 +2160,9 @@
 
     // Semantic Status Badge Renderer with SVG Icons
     function renderStatusBadge(status) {
+      if (status === 'gr' || status === 'returned') {
+        return `<span class="status-badge status-gr"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Fully GR</span>`;
+      }
       if (status === 'paid') {
         return `<span class="status-badge status-paid"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Paid</span>`;
       }
@@ -2669,13 +2726,42 @@
               batches.forEach((batch, bIdx) => {
                 if (!batch) return;
                 
-                let batchQty = Number(batch.totalWeight) || Number(batch.receivedQty) || 0;
+                let totalGrossQty = 0;
+                let totalGrQty = 0;
+                let grBoxes = [];
+
                 if (Array.isArray(batch.boxes) && batch.boxes.length > 0) {
-                  const boxNet = batch.boxes.reduce((acc, b) => acc + (Number(b.weight) || Number(b.grossWeight) || 0) - (Number(b.returnedWeight) || 0), 0);
-                  if (boxNet > 0 || batchQty === 0) batchQty = boxNet;
+                  batch.boxes.forEach(b => {
+                    const bw = Number(b.grossWeight) || Number(b.weight) || 0;
+                    const gw = Number(b.returnedWeight) || Number(b.grWeight) || 0;
+                    totalGrossQty += bw;
+                    totalGrQty += gw;
+                    if (gw > 0) {
+                      grBoxes.push({
+                        boxNumber: b.boxNumber || b.id || '',
+                        cones: Number(b.cones) || 0,
+                        weight: bw,
+                        returnedWeight: gw,
+                        date: (b.returnedDate || b.grDate || '').split('T')[0],
+                        remarks: b.returnedRemarks || b.grRemarks || ''
+                      });
+                    }
+                  });
                 }
 
-                if (batchQty <= 0) return;
+                if (totalGrossQty === 0) {
+                  totalGrossQty = Number(batch.totalWeight) || Number(batch.receivedQty) || 0;
+                }
+                if (totalGrQty === 0) {
+                  totalGrQty = Number(batch.returnedWeight) || Number(batch.grWeight) || 0;
+                }
+
+                totalGrossQty = Number(totalGrossQty.toFixed(2));
+                totalGrQty = Number(totalGrQty.toFixed(2));
+                const netQty = Math.max(0, Number((totalGrossQty - totalGrQty).toFixed(2)));
+
+                // If no received weight and no GR weight, skip
+                if (totalGrossQty <= 0 && totalGrQty <= 0) return;
 
                 let effectiveRate = Number(batch.rate) || Number(batch.price) || orderRate;
                 const batchChallan = (batch.challanNumber || '').trim();
@@ -2708,7 +2794,9 @@
                   }
                 }
 
-                const subtotal = Number((batchQty * effectiveRate).toFixed(2));
+                const grossAmount = Number((totalGrossQty * effectiveRate).toFixed(2));
+                const grAmount = Number((totalGrQty * effectiveRate).toFixed(2));
+                const subtotal = Number((netQty * effectiveRate).toFixed(2));
                 const existingRow = ledgerData.purchase.find(r => r.id === deterministicId || r.syncKey === uniqueSyncKey || (r.challanNo === batchChallan && r.partyName === supplierName && batchChallan !== ''));
 
                 if (!existingRow) {
@@ -2729,7 +2817,12 @@
                     challanNo: batchChallan || ('ORD-' + orderNumber),
                     partyName: supplierName || 'Unknown Supplier',
                     quality: qualityName + (batch.lotNumber ? ` (Lot: ${batch.lotNumber})` : ''),
-                    qty: batchQty,
+                    grossQty: totalGrossQty,
+                    grQty: totalGrQty,
+                    qty: netQty,
+                    grAmount: grAmount,
+                    grossAmount: grossAmount,
+                    grBoxes: grBoxes,
                     rate: effectiveRate,
                     subtotal: subtotal,
                     gstPercent: gstPercent,
@@ -2739,7 +2832,7 @@
                     creditDays: Number(order.creditDays) || defaultCreditDays,
                     interestRate: defaultInterestRate,
                     interestPaid: 0,
-                    remarks: `Auto-synced from Yarn RM Order #${orderNumber}`,
+                    remarks: totalGrQty > 0 ? `Auto-synced from RM Order #${orderNumber} (-${totalGrQty.toFixed(2)} Kg GR deducted)` : `Auto-synced from Yarn RM Order #${orderNumber}`,
                     isManual: false,
                     created_at: nowIso,
                     updated_at: nowIso
@@ -2748,6 +2841,7 @@
                 } else {
                   const oldRate = existingRow.rate;
                   const oldQty = existingRow.qty;
+                  const oldGrQty = existingRow.grQty;
                   if (!existingRow.id || existingRow.id.startsWith('PUR-1') || existingRow.id.length > 30) {
                     existingRow.id = deterministicId;
                   }
@@ -2756,15 +2850,21 @@
                   existingRow.orderNumber = orderNumber || existingRow.orderNumber || '';
                   existingRow.batchId = batch.id || existingRow.batchId || '';
                   existingRow.lotNumber = batch.lotNumber || existingRow.lotNumber || '';
-                  existingRow.qty = batchQty;
+                  existingRow.grossQty = totalGrossQty;
+                  existingRow.grQty = totalGrQty;
+                  existingRow.qty = netQty;
+                  existingRow.grAmount = grAmount;
+                  existingRow.grossAmount = grossAmount;
+                  existingRow.grBoxes = grBoxes;
                   existingRow.rate = effectiveRate;
                   existingRow.subtotal = subtotal;
-                  const gstAmt = Number(((existingRow.subtotal * (existingRow.gstPercent !== undefined ? existingRow.gstPercent : 5.0)) / 100).toFixed(2));
+                  const gstPct = existingRow.gstPercent !== undefined ? existingRow.gstPercent : 5.0;
+                  const gstAmt = Number(((existingRow.subtotal * gstPct) / 100).toFixed(2));
                   existingRow.grandTotal = Number((existingRow.subtotal + gstAmt).toFixed(2));
                   existingRow.source = 'yarn-rm-orders';
                   existingRow.isManual = false;
                   if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
-                  if (oldRate !== effectiveRate || oldQty !== batchQty) syncUpdated++;
+                  if (oldRate !== effectiveRate || oldQty !== netQty || oldGrQty !== totalGrQty) syncUpdated++;
                 }
               });
             }
@@ -3029,7 +3129,11 @@
         challanNo: '',
         partyName: '',
         quality: '',
+        grossQty: 0,
+        grQty: 0,
         qty: 0,
+        grAmount: 0,
+        grossAmount: 0,
         rate: 0,
         subtotal: 0,
         gstPercent: 5.0,
@@ -3109,7 +3213,7 @@
         return;
       }
 
-      if (field === 'qty' || field === 'rate' || field === 'gstPercent' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate' || field === 'interestPaid') {
+      if (field === 'qty' || field === 'grossQty' || field === 'grQty' || field === 'rate' || field === 'gstPercent' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate' || field === 'interestPaid') {
         row[field] = Number(value) || 0;
       } else {
         row[field] = value;
@@ -3117,12 +3221,31 @@
 
       row.updated_at = new Date().toISOString();
 
-      // Live Recalculate Subtotal & Grand Total for editable manual fields
-      if (field === 'qty' || field === 'rate' || field === 'gstPercent') {
-        const qty = Number(row.qty) || 0;
+      // Live Recalculate Subtotal, GR deductions & Grand Total for editable manual fields
+      if (field === 'qty' || field === 'grossQty' || field === 'grQty' || field === 'rate' || field === 'gstPercent') {
+        const grQty = Number(row.grQty) || 0;
+        let qty = Number(row.qty) || 0;
+        if (field === 'grossQty') {
+          row.grossQty = Number(value) || 0;
+          row.qty = Math.max(0, Number((row.grossQty - grQty).toFixed(2)));
+          qty = row.qty;
+        } else if (field === 'grQty') {
+          const gross = row.grossQty !== undefined ? Number(row.grossQty) : (qty + grQty);
+          row.grossQty = gross;
+          row.qty = Math.max(0, Number((gross - grQty).toFixed(2)));
+          qty = row.qty;
+        } else if (field === 'qty') {
+          if (grQty > 0) {
+            row.grossQty = Number((qty + grQty).toFixed(2));
+          } else {
+            row.grossQty = qty;
+          }
+        }
         const rate = Number(row.rate) || 0;
         const gstPct = Number(row.gstPercent) || 0;
-        const subtotal = Number((qty * rate).toFixed(2));
+        row.grAmount = Number((grQty * rate).toFixed(2));
+        row.grossAmount = Number(((row.grossQty || (qty + grQty)) * rate).toFixed(2));
+        const subtotal = Number((row.qty * rate).toFixed(2));
         const gstAmt = Number(((subtotal * gstPct) / 100).toFixed(2));
         row.subtotal = subtotal;
         row.grandTotal = Number((subtotal + gstAmt).toFixed(2));
@@ -3236,6 +3359,8 @@
       let totalNetOutstanding = 0;
       let overdueCount = 0;
       let totalWeight = 0;
+      let totalGrWeight = 0;
+      let totalGrAmount = 0;
 
       rows.forEach(row => {
         const computed = computeRowFinancials(row);
@@ -3246,6 +3371,8 @@
         totalInterestPaid += computed.interestPaid;
         totalNetOutstanding += computed.netOutstanding;
         totalWeight += Number(row.qty) || 0;
+        totalGrWeight += Number(row.grQty) || 0;
+        totalGrAmount += Number(row.grAmount || (row.grQty * row.rate)) || 0;
         if (computed.status === 'overdue' || computed.status === 'int-due') overdueCount++;
       });
 
@@ -3253,7 +3380,7 @@
       const kpiBilled = document.getElementById('kpi-val-total-billed');
       if (kpiBilled) kpiBilled.textContent = formatCurrency(totalBilled);
       const kpiSubBilled = document.getElementById('kpi-sub-total-billed');
-      if (kpiSubBilled) kpiSubBilled.textContent = `${rows.length} transactions`;
+      if (kpiSubBilled) kpiSubBilled.textContent = totalGrWeight > 0 ? `${rows.length} txns (incl. -${totalGrWeight.toFixed(2)} Kg GR)` : `${rows.length} transactions`;
 
       const kpiSettled = document.getElementById('kpi-val-total-settled');
       if (kpiSettled) kpiSettled.textContent = formatCurrency(totalSettled);
@@ -3281,6 +3408,18 @@
       if (statRowCount) statRowCount.textContent = rows.length;
       const statWeight = document.getElementById('stat-total-weight');
       if (statWeight) statWeight.textContent = `${totalWeight.toFixed(2)} Kg`;
+      
+      const statGrWrap = document.getElementById('stat-gr-wrapper');
+      const statGrVal = document.getElementById('stat-total-gr');
+      if (statGrWrap && statGrVal) {
+        if (totalGrWeight > 0) {
+          statGrWrap.style.display = 'flex';
+          statGrVal.textContent = `-${totalGrWeight.toFixed(2)} Kg (-${formatCurrency(totalGrAmount)})`;
+        } else {
+          statGrWrap.style.display = 'none';
+        }
+      }
+
       const statInvoiced = document.getElementById('stat-total-invoiced');
       if (statInvoiced) statInvoiced.textContent = formatCurrency(totalBilled);
       const statPaid = document.getElementById('stat-total-paid');
@@ -3315,7 +3454,7 @@
       return Math.floor(diffTime / (1000 * 60 * 60 * 24));
     }
 
-    // Compute Calculated Metrics for a Row with Interest Settlement Support
+    // Compute Calculated Metrics for a Row with Interest Settlement Support & GR
     function computeRowFinancials(row) {
       const grandTotal = Number(row.grandTotal) || 0;
       const paid = Number(row.paidAmount) || 0;
@@ -3323,10 +3462,13 @@
       const creditDays = Number(row.creditDays) || defaultCreditDays;
       const dueDate = addDays(row.date, creditDays);
       const today = new Date().toISOString().split('T')[0];
+      const isFullyReturned = (Number(row.qty) === 0 && Number(row.grQty) > 0);
 
       // Overdue Days calculation:
       let overdueDays = 0;
-      if (principalOutstanding <= 0 && row.paymentDate && dueDate) {
+      if (isFullyReturned) {
+        overdueDays = 0;
+      } else if (principalOutstanding <= 0 && row.paymentDate && dueDate) {
         // Paid in full - check if settled late
         overdueDays = Math.max(0, daysBetween(dueDate, row.paymentDate));
       } else if (principalOutstanding > 0 && dueDate) {
@@ -3337,7 +3479,7 @@
       // Interest Calculation
       const ratePct = row.interestRate !== undefined ? Number(row.interestRate) : defaultInterestRate;
       let interestAmount = 0;
-      if (calculateInterest && overdueDays > 0 && ratePct > 0) {
+      if (!isFullyReturned && calculateInterest && overdueDays > 0 && ratePct > 0) {
         // Formula: Outstanding * (rate / 100) * (overdueDays / 365)
         const baseAmount = principalOutstanding > 0 ? principalOutstanding : grandTotal;
         interestAmount = Number(((baseAmount * (ratePct / 100) * overdueDays) / 365).toFixed(2));
@@ -3351,7 +3493,9 @@
 
       // Payment Status
       let status = 'pending';
-      if (principalOutstanding <= 0 && interestOutstanding <= 0) {
+      if (isFullyReturned) {
+        status = 'gr';
+      } else if (principalOutstanding <= 0 && interestOutstanding <= 0) {
         status = 'paid';
       } else if (principalOutstanding <= 0 && interestOutstanding > 0) {
         status = 'int-due';
@@ -3645,8 +3789,25 @@
 
             <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
-                ? `<div class="cell-readonly num bold" title="Quantity (Kg)">${Number(row.qty || 0).toFixed(2)}</div>`
-                : `<input type="number" step="0.01" data-field="qty" class="cell-input num-font" value="${row.qty || 0}" oninput="handleCellChange('${row.id}', 'qty', this.value, false)" onchange="handleCellChange('${row.id}', 'qty', this.value, true)">`
+                ? `<div class="cell-readonly num bold" style="flex-direction: column; align-items: flex-end; justify-content: center; gap: 2px;" title="Net Billed Quantity: ${Number(row.qty || 0).toFixed(2)} Kg">
+                     <div>${Number(row.qty || 0).toFixed(2)}</div>
+                     ${Number(row.grQty) > 0 
+                       ? `<div class="gr-badge-chip" title="Gross Received: ${Number(row.grossQty || (row.qty + row.grQty)).toFixed(2)} kg&#10;Goods Return (GR): -${Number(row.grQty).toFixed(2)} kg&#10;GR Deducted: -${formatCurrency(row.grAmount || (row.grQty * row.rate))}">
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            <span>-${Number(row.grQty).toFixed(2)} kg GR</span>
+                          </div>` 
+                       : ''
+                     }
+                   </div>`
+                : `<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                     <input type="number" step="0.01" data-field="qty" class="cell-input num-font" value="${row.qty || 0}" oninput="handleCellChange('${row.id}', 'qty', this.value, false)" onchange="handleCellChange('${row.id}', 'qty', this.value, true)" title="Net Quantity (Kg)">
+                     ${Number(row.grQty) > 0 
+                       ? `<div class="gr-badge-chip" title="Goods Return: -${Number(row.grQty).toFixed(2)} kg&#10;GR Deducted: -${formatCurrency(row.grAmount || (row.grQty * row.rate))}">
+                            <span>-${Number(row.grQty).toFixed(2)} kg GR</span>
+                          </div>` 
+                       : ''
+                     }
+                   </div>`
               }
             </td>
 
@@ -3658,7 +3819,13 @@
             </td>
 
             <td class="num-col cell-locked-bg">
-              <div class="cell-readonly num font-mono col-val-subtotal" title="Subtotal">${formatCurrency(row.subtotal)}</div>
+              <div class="cell-readonly num font-mono col-val-subtotal" style="flex-direction: column; align-items: flex-end; justify-content: center; gap: 1px;" title="Taxable Subtotal">
+                <div>${formatCurrency(row.subtotal)}</div>
+                ${Number(row.grQty) > 0 
+                  ? `<div style="font-size: 0.7rem; color: var(--accent3); font-weight: 700; letter-spacing: -0.01em;" title="Goods Return Deducted Amount">(-${formatCurrency(row.grAmount || (row.grQty * row.rate))} GR)</div>` 
+                  : ''
+                }
+              </div>
             </td>
 
             <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
@@ -3868,12 +4035,17 @@
       let totalInterestPaid = 0;
       let totalNetBal = 0;
       let totalWeight = 0;
+      let totalGrWeight = 0;
+      let totalGrAmount = 0;
 
       tbody.innerHTML = partyRows.map((row, idx) => {
         const comp = computeRowFinancials(row);
         const billed = Number(row.grandTotal) || 0;
         const paid = Number(row.paidAmount) || 0;
         const qty = Number(row.qty) || 0;
+        const grQty = Number(row.grQty) || 0;
+        const grAmount = Number(row.grAmount || (grQty * row.rate)) || 0;
+
         totalInvoiced += billed;
         totalPaidPrincipal += paid;
         totalPrincipalBal += comp.principalOutstanding;
@@ -3881,8 +4053,8 @@
         totalInterestPaid += comp.interestPaid;
         totalNetBal += comp.netOutstanding;
         totalWeight += qty;
-
-        const badgeLabel = comp.status === 'int-due' ? 'Int. Due' : comp.status;
+        totalGrWeight += grQty;
+        totalGrAmount += grAmount;
 
         return `
           <tr>
@@ -3890,9 +4062,15 @@
             <td style="font-family: var(--font-mono); white-space: nowrap;">${formatDateDisplay(row.date)}</td>
             <td style="font-weight: 700; font-family: var(--font-mono); white-space: nowrap;">${escapeHtml(row.challanNo || '-')}</td>
             <td style="word-break: break-word; line-height: 1.4;">${escapeHtml(row.quality || '-')}</td>
-            <td class="num-col font-mono bold">${qty > 0 ? qty.toFixed(2) : '-'}</td>
+            <td class="num-col font-mono bold" style="white-space: nowrap;">
+              <div>${qty > 0 ? qty.toFixed(2) : (grQty > 0 ? '0.00' : '-')}</div>
+              ${grQty > 0 ? `<div style="font-size: 0.7rem; color: var(--accent3); font-weight: 700;" title="Goods Return Deducted: -${grQty.toFixed(2)} kg">(-${grQty.toFixed(2)} GR)</div>` : ''}
+            </td>
             <td class="num-col font-mono">${row.rate > 0 ? Number(row.rate).toFixed(2) : '-'}</td>
-            <td class="num-col font-mono bold">${formatCurrency(billed)}</td>
+            <td class="num-col font-mono bold">
+              <div>${formatCurrency(billed)}</div>
+              ${grQty > 0 ? `<div style="font-size: 0.68rem; color: var(--accent3); font-weight: 700;">(-${formatCurrency(grAmount)} GR)</div>` : ''}
+            </td>
             <td class="num-col font-mono" style="color: var(--success); font-weight: 700;">${paid > 0 ? formatCurrency(paid) : '-'}</td>
             <td class="num-col font-mono bold" style="color: ${comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.principalOutstanding)}</td>
             <td style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); white-space: nowrap;">${formatDateDisplay(comp.dueDate)}</td>
@@ -3909,9 +4087,15 @@
       tfoot.innerHTML = `
         <tr>
           <td colspan="4" style="text-align: right; text-transform: uppercase; letter-spacing: 0.05em;">GRAND TOTALS:</td>
-          <td class="num-col font-mono bold">${totalWeight.toFixed(2)} Kg</td>
+          <td class="num-col font-mono bold">
+            <div>${totalWeight.toFixed(2)} Kg</div>
+            ${totalGrWeight > 0 ? `<div style="font-size: 0.7rem; color: var(--accent3); font-weight: 700;">(-${totalGrWeight.toFixed(2)} GR)</div>` : ''}
+          </td>
           <td></td>
-          <td class="num-col font-mono bold">${formatCurrency(totalInvoiced)}</td>
+          <td class="num-col font-mono bold">
+            <div>${formatCurrency(totalInvoiced)}</div>
+            ${totalGrAmount > 0 ? `<div style="font-size: 0.68rem; color: var(--accent3); font-weight: 700;">(-${formatCurrency(totalGrAmount)} GR)</div>` : ''}
+          </td>
           <td class="num-col font-mono bold" style="color: var(--success);">${formatCurrency(totalPaidPrincipal)}</td>
           <td class="num-col font-mono bold" style="color: var(--error);">${formatCurrency(totalPrincipalBal)}</td>
           <td colspan="2"></td>
@@ -4060,7 +4244,7 @@
               <div style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(row.quality || '-')}</div>
             </div>
             <div>
-              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Billed Weight</div>
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Net Billed Weight</div>
               <div style="font-family: var(--font-mono); font-weight: 700; font-size: 0.95rem;">${Number(row.qty || 0).toFixed(2)} Kg</div>
             </div>
             <div>
@@ -4069,10 +4253,64 @@
             </div>
           </div>
 
+          ${Number(row.grQty) > 0 ? `
+            <div class="gr-breakdown-card" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--accent3); font-size: 0.95rem;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  <span>Goods Return (GR) Deduction Summary</span>
+                </div>
+                <span class="gr-badge-chip" style="font-size: 0.82rem; padding: 4px 10px;">
+                  -${Number(row.grQty).toFixed(2)} Kg Deducted
+                </span>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
+                <div style="background: var(--surface); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border);">
+                  <div style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Gross Received Qty</div>
+                  <div style="font-family: var(--font-mono); font-weight: 700; font-size: 1.05rem;">${Number(row.grossQty || (row.qty + row.grQty)).toFixed(2)} Kg</div>
+                </div>
+                <div style="background: var(--surface); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border);">
+                  <div style="font-size: 0.72rem; color: var(--accent3); text-transform: uppercase; font-weight: 700;">Returned (GR) Qty</div>
+                  <div style="font-family: var(--font-mono); font-weight: 800; font-size: 1.05rem; color: var(--accent3);">- ${Number(row.grQty).toFixed(2)} Kg</div>
+                </div>
+                <div style="background: var(--surface); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border);">
+                  <div style="font-size: 0.72rem; color: var(--success); text-transform: uppercase; font-weight: 700;">Net Billable Qty</div>
+                  <div style="font-family: var(--font-mono); font-weight: 800; font-size: 1.05rem; color: var(--success);">${Number(row.qty || 0).toFixed(2)} Kg</div>
+                </div>
+                <div style="background: var(--surface); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border);">
+                  <div style="font-size: 0.72rem; color: var(--accent3); text-transform: uppercase; font-weight: 700;">GR Deduction (₹)</div>
+                  <div style="font-family: var(--font-mono); font-weight: 800; font-size: 1.05rem; color: var(--accent3);">- ${formatCurrency(row.grAmount || (row.grQty * row.rate))}</div>
+                </div>
+              </div>
+
+              ${Array.isArray(row.grBoxes) && row.grBoxes.length > 0 ? `
+                <div style="margin-top: 0.25rem;">
+                  <div style="font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px;">Returned Boxes Breakdown (${row.grBoxes.length} box${row.grBoxes.length > 1 ? 'es' : ''})</div>
+                  <div style="display: flex; flex-direction: column; gap: 4px; max-height: 140px; overflow-y: auto;">
+                    ${row.grBoxes.map(b => `
+                      <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); font-size: 0.8rem;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <span style="font-family: var(--font-mono); font-weight: 700;">Box #${escapeHtml(b.boxNumber || '-')}</span>
+                          ${b.cones ? `<span style="color: var(--muted);">(${b.cones} cones)</span>` : ''}
+                          ${b.remarks ? `<span style="color: var(--muted); font-style: italic;">— ${escapeHtml(b.remarks)}</span>` : ''}
+                        </div>
+                        <div style="font-family: var(--font-mono); font-weight: 700; color: var(--accent3);">
+                          -${Number(b.returnedWeight || 0).toFixed(2)} Kg
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
             <div style="padding: 1rem; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);">
               <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Subtotal (Taxable)</div>
               <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700;">${formatCurrency(row.subtotal)}</div>
+              ${Number(row.grQty) > 0 ? `<div style="font-size: 0.72rem; color: var(--accent3); font-weight: 600; margin-top: 2px;">(Gross: ${formatCurrency(row.grossAmount || (row.grossQty * row.rate))} - GR: ${formatCurrency(row.grAmount || (row.grQty * row.rate))})</div>` : ''}
             </div>
             <div style="padding: 1rem; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);">
               <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">GST (${row.gstPercent !== undefined ? row.gstPercent : 5.0}%)</div>
