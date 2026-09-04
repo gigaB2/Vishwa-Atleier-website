@@ -3002,11 +3002,16 @@
         return companies;
       }
 
-      let legacyName = "Vishwa Fashions";
-      let legacyGst = "24AAAFV1234A1Z5";
-      let legacyPhone = "+91 98251 12345";
-      let legacyEmail = "sales@vishwafashions.com";
-      let legacyAddress = "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221";
+      let legacyName = "REAGHAN FASHIONS PVT LTD";
+      let legacyDivision = "YARN DIVISION";
+      let legacyGst = "24AAECR5066N1Z0";
+      let legacyCin = "U17120GJ2009PTC058296";
+      let legacyPhone = "9924400076";
+      let legacyEmail = "accounts@libertysilkmills.com";
+      let legacyAddress = "PLOT NO 527/2, ROAD NO 5, ,SACHIN GIDC,SURAT,";
+      let legacyBank = "YES BANK";
+      let legacyAcc = "OCC : 001181300000676";
+      let legacyIfsc = "YESB0000011";
 
       try {
         const stored = localStorage.getItem('vishwa_fashions_settings');
@@ -3026,10 +3031,15 @@
       return [{
         id: 'comp-1',
         sellerName: legacyName,
+        divisionName: legacyDivision,
         sellerGstin: legacyGst,
+        cinNo: legacyCin,
         sellerPhone: legacyPhone,
         sellerEmail: legacyEmail,
         sellerAddress: legacyAddress,
+        bankName: legacyBank,
+        bankAccountNo: legacyAcc,
+        bankIfsc: legacyIfsc,
         isDefault: true
       }];
     }
@@ -3045,21 +3055,149 @@
         if (foundByName) return foundByName;
         return {
           sellerName: sale.sellerName,
-          sellerGstin: sale.sellerGstin || "24AAAFV1234A1Z5",
-          sellerPhone: sale.sellerPhone || "+91 98251 12345",
-          sellerEmail: sale.sellerEmail || "sales@vishwafashions.com",
-          sellerAddress: sale.sellerAddress || "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221"
+          divisionName: sale.divisionName || 'YARN DIVISION',
+          sellerGstin: sale.sellerGstin || "24AAECR5066N1Z0",
+          cinNo: sale.cinNo || "U17120GJ2009PTC058296",
+          sellerPhone: sale.sellerPhone || "9924400076",
+          sellerEmail: sale.sellerEmail || "accounts@libertysilkmills.com",
+          sellerAddress: sale.sellerAddress || "PLOT NO 527/2, ROAD NO 5, ,SACHIN GIDC,SURAT,",
+          bankName: sale.bankName || "YES BANK",
+          bankAccountNo: sale.bankAccountNo || "OCC : 001181300000676",
+          bankIfsc: sale.bankIfsc || "YESB0000011"
         };
       }
       const def = companies.find(c => c.isDefault) || companies[0];
       return def || {
-        sellerName: "Vishwa Fashions",
-        sellerGstin: "24AAAFV1234A1Z5",
-        sellerPhone: "+91 98251 12345",
-        sellerEmail: "sales@vishwafashions.com",
-        sellerAddress: "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221"
+        sellerName: "REAGHAN FASHIONS PVT LTD",
+        divisionName: "YARN DIVISION",
+        sellerGstin: "24AAECR5066N1Z0",
+        cinNo: "U17120GJ2009PTC058296",
+        sellerPhone: "9924400076",
+        sellerEmail: "accounts@libertysilkmills.com",
+        sellerAddress: "PLOT NO 527/2, ROAD NO 5, ,SACHIN GIDC,SURAT,",
+        bankName: "YES BANK",
+        bankAccountNo: "OCC : 001181300000676",
+        bankIfsc: "YESB0000011"
       };
     }
+
+    // Number to Words in Indian numbering system
+    function numberToWordsIN(num) {
+      if (num === null || num === undefined || isNaN(num)) return 'Zero Only';
+      const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+      const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+      function inWords(n) {
+        if (n === 0) return '';
+        if (n < 20) return a[n] + ' ';
+        if (n < 100) return b[Math.floor(n / 10)] + ' ' + (n % 10 ? a[n % 10] + ' ' : '');
+        if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred ' + inWords(n % 100);
+        if (n < 100000) return inWords(Math.floor(n / 1000)) + 'Thousand ' + inWords(n % 1000);
+        if (n < 10000000) return inWords(Math.floor(n / 100000)) + 'Lakh ' + inWords(n % 100000);
+        return inWords(Math.floor(n / 10000000)) + 'Crore ' + inWords(n % 10000000);
+      }
+
+      const parts = Number(num).toFixed(2).split('.');
+      const whole = parseInt(parts[0], 10);
+      const decimal = parseInt(parts[1], 10);
+
+      let str = '';
+      if (whole === 0) {
+        str = 'Zero Rupees';
+      } else {
+        str = 'INR ' + inWords(whole).trim() + ' Rupees';
+      }
+
+      if (decimal > 0) {
+        str += ' and ' + inWords(decimal).trim() + ' Paise';
+      }
+      str += ' Only';
+      return str.replace(/\s+/g, ' ');
+    }
+
+    function formatDateDisplay(dStr) {
+      if (!dStr) return '-';
+      try {
+        const parts = String(dStr).split('T')[0].split('-');
+        if (parts.length === 3) {
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+      } catch(e) {}
+      return dStr;
+    }
+
+    function calculateDueDate(fromDateStr, creditDays) {
+      const base = fromDateStr ? new Date(fromDateStr) : new Date();
+      if (isNaN(base.getTime())) return '';
+      const days = parseInt(creditDays) || 0;
+      base.setDate(base.getDate() + days);
+      return base.toISOString().split('T')[0];
+    }
+
+    function autoSyncBuyerToConsignee() {
+      const buyerName = document.getElementById('modal-sales-customer') ? document.getElementById('modal-sales-customer').value : '';
+      const buyerAddr = document.getElementById('modal-sales-address') ? document.getElementById('modal-sales-address').value : '';
+      const consigneeNameEl = document.getElementById('modal-sales-consignee-name');
+      const consigneeAddrEl = document.getElementById('modal-sales-consignee-address');
+      if (consigneeNameEl && (!consigneeNameEl.value || consigneeNameEl.getAttribute('data-manual') !== 'true')) {
+        consigneeNameEl.value = buyerName;
+      }
+      if (consigneeAddrEl && (!consigneeAddrEl.value || consigneeAddrEl.getAttribute('data-manual') !== 'true')) {
+        consigneeAddrEl.value = buyerAddr;
+      }
+    }
+
+    window.copyBuyerToConsignee = function() {
+      const buyerName = document.getElementById('modal-sales-customer') ? document.getElementById('modal-sales-customer').value : '';
+      const buyerAddr = document.getElementById('modal-sales-address') ? document.getElementById('modal-sales-address').value : '';
+      const consigneeNameEl = document.getElementById('modal-sales-consignee-name');
+      const consigneeAddrEl = document.getElementById('modal-sales-consignee-address');
+      if (consigneeNameEl) {
+        consigneeNameEl.value = buyerName;
+        consigneeNameEl.setAttribute('data-manual', 'false');
+      }
+      if (consigneeAddrEl) {
+        consigneeAddrEl.value = buyerAddr;
+        consigneeAddrEl.setAttribute('data-manual', 'false');
+      }
+      showToast('Copied Buyer info to Consignee details', 'info');
+    };
+
+    window.syncInvoiceNoWithChallan = function() {
+      const challanEl = document.getElementById('modal-sales-challan');
+      const invEl = document.getElementById('modal-sales-invoice-no');
+      if (challanEl && invEl && (!invEl.value || invEl.getAttribute('data-manual') !== 'true')) {
+        invEl.value = challanEl.value;
+      }
+    };
+
+    window.onSellerCompanyChanged = function() {
+      const compSelect = document.getElementById('modal-sales-company');
+      if (!compSelect) return;
+      const companies = getAvailableCompanies();
+      const selected = companies.find(c => c.id === compSelect.value || c.sellerName === compSelect.value) || companies[0];
+      if (selected) {
+        const bankNameEl = document.getElementById('modal-sales-bank-name');
+        const bankAccEl = document.getElementById('modal-sales-bank-acc');
+        const bankIfscEl = document.getElementById('modal-sales-bank-ifsc');
+        if (bankNameEl && !bankNameEl.getAttribute('data-manual')) bankNameEl.value = selected.bankName || 'YES BANK';
+        if (bankAccEl && !bankAccEl.getAttribute('data-manual')) bankAccEl.value = selected.bankAccountNo || 'OCC : 001181300000676';
+        if (bankIfscEl && !bankIfscEl.getAttribute('data-manual')) bankIfscEl.value = selected.bankIfsc || 'YESB0000011';
+      }
+    };
+
+    window.onSaleDateChanged = function() {
+      const dateEl = document.getElementById('modal-sales-date');
+      const daysEl = document.getElementById('modal-sales-credit-days');
+      const dueEl = document.getElementById('modal-sales-due-date');
+      const ackDateEl = document.getElementById('modal-sales-ack-date');
+      if (dateEl && dueEl && daysEl) {
+        dueEl.value = calculateDueDate(dateEl.value, daysEl.value);
+      }
+      if (dateEl && ackDateEl && !ackDateEl.value) {
+        ackDateEl.value = dateEl.value;
+      }
+    };
 
     function populateCompanyDropdown(selectedCompanyId) {
       const compSelect = document.getElementById('modal-sales-company');
@@ -3077,6 +3215,7 @@
         }
         compSelect.appendChild(opt);
       });
+      onSellerCompanyChanged();
     }
 
     function getProductDetailsMismatch(prodA, prodB) {
@@ -3196,26 +3335,59 @@
       // Set default date
       setDefaultDate('modal-sales-date');
       const salesDate = document.getElementById('modal-sales-date').value;
-      document.getElementById('modal-sales-challan').value = generateNextChallanNumber(activeDivision, salesDate);
+      const nextChallan = generateNextChallanNumber(activeDivision, salesDate);
+      document.getElementById('modal-sales-challan').value = nextChallan;
+      if (document.getElementById('modal-sales-invoice-no')) {
+        document.getElementById('modal-sales-invoice-no').value = nextChallan;
+        document.getElementById('modal-sales-invoice-no').removeAttribute('data-manual');
+      }
 
-      // Reset customer, agent, hsn and address
+      // Reset customer, agent, contract, terms, hsn and address
       document.getElementById('modal-sales-customer').value = '';
+      if (document.getElementById('modal-sales-buyer-phone')) document.getElementById('modal-sales-buyer-phone').value = '';
+      if (document.getElementById('modal-sales-buyer-gstin')) document.getElementById('modal-sales-buyer-gstin').value = '';
       if (document.getElementById('modal-sales-agent')) {
-        document.getElementById('modal-sales-agent').value = '';
+        document.getElementById('modal-sales-agent').value = 'DIRECT';
+      }
+      if (document.getElementById('modal-sales-contract')) {
+        document.getElementById('modal-sales-contract').value = '';
+      }
+      if (document.getElementById('modal-sales-credit-days')) {
+        document.getElementById('modal-sales-credit-days').value = '30';
+      }
+      if (document.getElementById('modal-sales-due-date')) {
+        document.getElementById('modal-sales-due-date').value = calculateDueDate(salesDate, 30);
       }
       if (document.getElementById('modal-sales-hsn')) {
-        document.getElementById('modal-sales-hsn').value = '5402';
+        document.getElementById('modal-sales-hsn').value = '54033100';
       }
       if (document.getElementById('modal-sales-address')) {
         document.getElementById('modal-sales-address').value = 'Industrial Area, Surat, Gujarat, India';
       }
+      if (document.getElementById('modal-sales-consignee-name')) {
+        document.getElementById('modal-sales-consignee-name').value = '';
+        document.getElementById('modal-sales-consignee-name').removeAttribute('data-manual');
+      }
+      if (document.getElementById('modal-sales-consignee-address')) {
+        document.getElementById('modal-sales-consignee-address').value = 'Industrial Area, Surat, Gujarat, India';
+        document.getElementById('modal-sales-consignee-address').removeAttribute('data-manual');
+      }
+      if (document.getElementById('modal-sales-goods-desc')) {
+        document.getElementById('modal-sales-goods-desc').value = '';
+      }
+      if (document.getElementById('modal-sales-eway')) document.getElementById('modal-sales-eway').value = '';
+      if (document.getElementById('modal-sales-ack-no')) document.getElementById('modal-sales-ack-no').value = '';
+      if (document.getElementById('modal-sales-ack-date')) document.getElementById('modal-sales-ack-date').value = salesDate;
+      if (document.getElementById('modal-sales-prepared-by')) document.getElementById('modal-sales-prepared-by').value = 'Admin';
+      if (document.getElementById('modal-sales-remarks')) document.getElementById('modal-sales-remarks').value = '';
+
       if (document.getElementById('modal-sales-discount-type')) {
         document.getElementById('modal-sales-discount-type').value = 'percent';
       }
       if (document.getElementById('modal-sales-discount-value')) {
         document.getElementById('modal-sales-discount-value').value = '0';
       }
-      document.getElementById('modal-sales-gst').value = '12';
+      document.getElementById('modal-sales-gst').value = '5';
 
       // Build items list
       modalChallanItems = [];
@@ -3244,6 +3416,12 @@
           });
         }
       });
+
+      // Default goods description
+      if (modalChallanItems.length > 0 && document.getElementById('modal-sales-goods-desc')) {
+        const firstComp = cleanYarnQualityName(modalChallanItems[0].composition);
+        document.getElementById('modal-sales-goods-desc').value = `${firstComp} RAW WHITE CONES`.toUpperCase();
+      }
 
       const defaultRate = modalChallanItems.length > 0 ? (modalChallanItems[0].rate || '') : '';
       const rateInput = document.getElementById('modal-sales-rate');
@@ -3353,7 +3531,6 @@
         subtotalVal = sale.subtotalAmount || sale.amount || 0;
       }
 
-      // If user entered or stored discValue > 0, calculate discAmount
       if (hasExplicitValue && discValue > 0) {
         if (discType === 'percent') {
           discAmount = subtotalVal * (discValue / 100);
@@ -3388,12 +3565,12 @@
     }
 
     function getSaleGstRate(sale) {
-      if (!sale) return 12;
+      if (!sale) return 5;
 
       const rawGst = (sale.gstRate !== undefined && sale.gstRate !== null) ? sale.gstRate : sale.gst_rate;
       if (rawGst !== undefined && rawGst !== null && !isNaN(parseFloat(rawGst))) {
         let r = Math.round(parseFloat(rawGst));
-        if (r === 11 || r === 13) r = 12; // Auto-correct rounding artifacts (11%, 13%) to 12%
+        if (r === 11 || r === 13) r = 12;
         return Math.max(0, r);
       }
 
@@ -3416,7 +3593,7 @@
         return rTax;
       }
 
-      return 12;
+      return 5;
     }
 
     window.openSaleDetailsModal = function(id) {
@@ -3427,22 +3604,57 @@
 
       const companyInfo = getSellerCompanyInfo(sale);
       const sellerCompEl = document.getElementById('details-sales-company');
-      if (sellerCompEl) sellerCompEl.innerText = companyInfo.sellerName;
+      if (sellerCompEl) sellerCompEl.innerText = `${companyInfo.sellerName} (${companyInfo.divisionName || 'YARN DIVISION'})`;
 
       const gstRateVal = getSaleGstRate(sale);
 
-      document.getElementById('details-modal-title').innerText = `Sale Details - ${activeDivision.toUpperCase()}`;
+      document.getElementById('details-modal-title').innerText = `Sale & Invoice Details - ${activeDivision.toUpperCase()}`;
       document.getElementById('details-sales-challan').innerText = sale.challanNo;
+      const invEl = document.getElementById('details-sales-invoice');
+      if (invEl) invEl.innerText = sale.invoiceNo || sale.challanNo;
       document.getElementById('details-sales-lot').innerText = resolveSaleLotNo(sale);
       const hsnEl = document.getElementById('details-sales-hsn');
-      if (hsnEl) hsnEl.innerText = sale.hsnCode || '5402';
-      document.getElementById('details-sales-date').innerText = formatDate(sale.date);
+      if (hsnEl) hsnEl.innerText = sale.hsnCode || '54033100';
+      document.getElementById('details-sales-date').innerText = formatDateDisplay(sale.date);
+      
+      const contractEl = document.getElementById('details-sales-contract');
+      if (contractEl) contractEl.innerText = sale.salesContractNo || '-';
+      
+      const brokerEl = document.getElementById('details-sales-agent');
+      if (brokerEl) brokerEl.innerText = sale.broker || sale.agentName || sale.agent || 'DIRECT';
+
+      const creditEl = document.getElementById('details-sales-credit-days');
+      if (creditEl) creditEl.innerText = sale.creditDays || '30';
+      const dueEl = document.getElementById('details-sales-due-date');
+      if (dueEl) dueEl.innerText = formatDateDisplay(sale.dueDate || calculateDueDate(sale.date, sale.creditDays || 30));
+
       document.getElementById('details-sales-customer').innerText = sale.customerName;
-      const agentEl = document.getElementById('details-sales-agent');
-      if (agentEl) agentEl.innerText = sale.agentName || sale.agent || '-';
+      const bPhoneEl = document.getElementById('details-sales-buyer-phone');
+      if (bPhoneEl) bPhoneEl.innerText = sale.buyerPhone || '-';
+      const bGstEl = document.getElementById('details-sales-buyer-gstin');
+      if (bGstEl) bGstEl.innerText = sale.buyerGstin || '-';
       
       const addrEl = document.getElementById('details-sales-address');
       if (addrEl) addrEl.innerText = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
+
+      const cNameEl = document.getElementById('details-sales-consignee-name');
+      if (cNameEl) cNameEl.innerText = sale.consigneeName || sale.customerName;
+      const cAddrEl = document.getElementById('details-sales-consignee-address');
+      if (cAddrEl) cAddrEl.innerText = sale.consigneeAddress || sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
+      
+      const gDescEl = document.getElementById('details-sales-goods-desc');
+      if (gDescEl) gDescEl.innerText = sale.goodsDescription || '-';
+
+      const ewayEl = document.getElementById('details-sales-eway');
+      if (ewayEl) ewayEl.innerText = sale.ewayBillNo || '-';
+      const ackEl = document.getElementById('details-sales-ack');
+      if (ackEl) ackEl.innerText = sale.ackNo ? `${sale.ackNo} (${formatDateDisplay(sale.ackDate || sale.date)})` : '-';
+      const prepEl = document.getElementById('details-sales-prepared');
+      if (prepEl) prepEl.innerText = sale.preparedBy || 'Admin';
+      const remEl = document.getElementById('details-sales-remarks');
+      if (remEl) remEl.innerText = sale.remarks || '-';
+      const bankEl = document.getElementById('details-sales-bank');
+      if (bankEl) bankEl.innerText = sale.bankName ? `${sale.bankName} - ${sale.bankAccountNo} (${sale.bankIfsc})` : `${companyInfo.bankName} - ${companyInfo.bankAccountNo}`;
 
       document.getElementById('details-sales-gst').innerText = `${gstRateVal}%`;
 
@@ -3475,19 +3687,13 @@
           ? parseFloat(item.amount)
           : ((item.saleQty || 0) * itemRate);
 
-        const grossStr = (parseFloat(item.grossWeight) || 0) > 0 ? `${(parseFloat(item.grossWeight) || 0).toFixed(2)} Kg` : '-';
-        const tareStr = (parseFloat(item.tareWeight) || 0) > 0 ? `${(parseFloat(item.tareWeight) || 0).toFixed(2)} Kg` : '-';
-
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${item.boriNo}</strong></td>
-          <td><span style="font-size:0.8rem; color:var(--muted);">${item.composition || '-'}</span></td>
-          <td>${formatItemSpecs(item)}</td>
+          <td><span style="font-size:0.85rem; font-weight: 600;">${item.composition || '-'}</span></td>
           <td>${item.color || '-'}</td>
           <td style="text-align: center;">${item.rollsQty || 0}</td>
-          <td style="text-align: right; color: var(--muted);">${grossStr}</td>
-          <td style="text-align: right; color: var(--muted);">${tareStr}</td>
-          <td style="text-align: right; font-weight: 600;">${(item.saleQty || 0).toFixed(2)} Kg</td>
+          <td style="text-align: right; font-weight: 600;">${(parseFloat(item.saleQty) || 0).toFixed(3)} Kg</td>
           <td style="text-align: right;">₹${itemRate.toFixed(2)}</td>
           <td style="text-align: right;"><strong>₹${itemAmt.toFixed(2)}</strong></td>
         `;
@@ -3496,8 +3702,6 @@
 
       const totalBoris = items.length;
       const totalRolls = items.reduce((sum, item) => sum + (parseInt(item.rollsQty) || 0), 0);
-      const totalGross = items.reduce((sum, item) => sum + (parseFloat(item.grossWeight) || 0), 0) || parseFloat(sale.totalGrossWeight) || parseFloat(sale.grossWeight) || 0;
-      const totalTare = items.reduce((sum, item) => sum + (parseFloat(item.tareWeight) || 0), 0) || parseFloat(sale.totalTareWeight) || parseFloat(sale.tareWeight) || 0;
       const totalWeight = items.reduce((sum, item) => sum + (parseFloat(item.saleQty) || 0), 0);
       const subtotalVal = sale.subtotalAmount || sale.amount || items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
@@ -3508,11 +3712,7 @@
 
       document.getElementById('details-summary-total-boris').innerText = totalBoris;
       document.getElementById('details-summary-total-rolls').innerText = totalRolls;
-      const dGrossEl = document.getElementById('details-summary-total-gross');
-      if (dGrossEl) dGrossEl.innerText = `${totalGross.toFixed(2)} Kg`;
-      const dTareEl = document.getElementById('details-summary-total-tare');
-      if (dTareEl) dTareEl.innerText = `${totalTare.toFixed(2)} Kg`;
-      document.getElementById('details-summary-total-weight').innerText = `${totalWeight.toFixed(2)} Kg`;
+      document.getElementById('details-summary-total-weight').innerText = `${totalWeight.toFixed(3)} Kg`;
       document.getElementById('details-summary-subtotal').innerText = `₹${subtotalVal.toFixed(2)}`;
 
       const discWrapper = document.getElementById('details-summary-discount-row');
@@ -3598,39 +3798,81 @@
       const grandTotalVal = sale.totalAmount || (taxableVal + gstVal);
       const lotNo = resolveSaleLotNo(sale);
 
+      const company = getSellerCompanyInfo(sale);
+      const companyName = company.sellerName || "REAGHAN FASHIONS PVT LTD";
+      const divisionName = company.divisionName || (activeDivision ? activeDivision.toUpperCase() + ' DIVISION' : "YARN DIVISION");
+      const companyAddress = company.sellerAddress || "PLOT NO 527/2, ROAD NO 5, ,SACHIN GIDC,SURAT,";
+      const companyPhone = company.sellerPhone || "9924400076";
+      const companyEmail = company.sellerEmail || "accounts@libertysilkmills.com";
+      const companyGst = company.sellerGstin || "24AAECR5066N1Z0";
+      const companyCin = company.cinNo || "U17120GJ2009PTC058296";
+      const bankName = sale.bankName || company.bankName || "YES BANK";
+      const bankAccountNo = sale.bankAccountNo || company.bankAccountNo || "OCC : 001181300000676";
+      const bankIfsc = sale.bankIfsc || company.bankIfsc || "YESB0000011";
+
+      const invoiceNo = sale.invoiceNo || sale.challanNo || 'CH-0001/B/24-25';
+      const invoiceDate = formatDateDisplay(sale.invoiceDate || sale.date);
+      const challanNo = sale.challanNo || invoiceNo;
+      const challanDate = formatDateDisplay(sale.date);
+      const salesContractNo = sale.salesContractNo || '-';
+      const brokerName = sale.broker || sale.agentName || sale.agent || 'DIRECT';
+      const creditDays = sale.creditDays !== undefined ? sale.creditDays : 30;
+      const dueDate = formatDateDisplay(sale.dueDate || calculateDueDate(sale.date, creditDays));
+      const hsnCode = sale.hsnCode || '54033100';
+
+      const buyerName = sale.customerName || 'CLIENT NAME';
+      const buyerAddress = sale.customerAddress || 'Surat, Gujarat, India';
+      const buyerPhone = sale.buyerPhone || '';
+      const buyerGst = sale.buyerGstin || '';
+
+      const consigneeName = sale.consigneeName || buyerName;
+      const consigneeAddress = sale.consigneeAddress || buyerAddress;
+
+      const ewayBillNo = sale.ewayBillNo || '';
+      const ackNo = sale.ackNo || '';
+      const ackDate = formatDateDisplay(sale.ackDate || sale.date);
+      const preparedBy = sale.preparedBy || 'Admin';
+      const remarks = sale.remarks || '';
+
+      // GST Calculation Breakdown: Intrastate (CGST+SGST) vs Interstate (IGST)
+      const isGujarat = !buyerGst || buyerGst.startsWith('24') || buyerAddress.toLowerCase().includes('gujarat') || buyerAddress.toLowerCase().includes('surat');
+      let cgstRate = 0, sgstRate = 0, igstRate = 0;
+      let cgstAmt = 0, sgstAmt = 0, igstAmt = 0;
+
+      if (isGujarat) {
+        cgstRate = gstRate / 2;
+        sgstRate = gstRate / 2;
+        cgstAmt = taxableVal * (cgstRate / 100);
+        sgstAmt = taxableVal * (sgstRate / 100);
+      } else {
+        igstRate = gstRate;
+        igstAmt = gstVal;
+      }
+
+      const totalTaxAmt = cgstAmt + sgstAmt + igstAmt;
+      const amountInWords = numberToWordsIN(grandTotalVal);
+
       // Create new window
-      const printWindow = window.open('', '_blank', 'width=900,height=700');
+      const printWindow = window.open('', '_blank', 'width=1000,height=800');
       if (!printWindow) {
         showToast('Popup blocked! Please allow popups for this site to print bills.', 'error');
         return;
       }
-      
-      const company = getSellerCompanyInfo(sale);
-      const companyName = company.sellerName || "Vishwa Fashions";
-      const companyAddress = company.sellerAddress || "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221";
-      const companyPhone = company.sellerPhone || "+91 98251 12345";
-      const companyEmail = company.sellerEmail || "sales@vishwafashions.com";
-      const companyGst = company.sellerGstin || "24AAAFV1234A1Z5";
-      const customerAddress = sale.customerAddress || "Industrial Area, Surat, Gujarat, India";
 
-      // Aggregate invoice items by composition, twist, color, rate
+      // Aggregate item lines for invoice table
       const aggregatedMap = new Map();
       items.forEach(item => {
         const comp = cleanYarnQualityName(item.composition);
-        const twist = item.twist || '-';
-        const color = item.color || '-';
         const rate = parseFloat(item.rate) || 0;
         const rolls = parseInt(item.rollsQty) || 0;
         const weight = parseFloat(item.saleQty) || 0;
         const amt = parseFloat(item.amount) || (weight * rate);
 
-        const groupKey = `${comp}___${twist}___${color}___${rate.toFixed(4)}`;
+        const groupKey = `${comp}___${rate.toFixed(4)}`;
         if (!aggregatedMap.has(groupKey)) {
           aggregatedMap.set(groupKey, {
             composition: comp,
-            twist: twist,
-            color: color,
-            totalRolls: 0,
+            totalBoxes: 0,
             totalWeight: 0,
             rate: rate,
             totalAmount: 0
@@ -3638,83 +3880,108 @@
         }
 
         const group = aggregatedMap.get(groupKey);
-        group.totalRolls += rolls;
+        group.totalBoxes += 1;
         group.totalWeight += weight;
         group.totalAmount += amt;
       });
 
       const aggregatedItems = Array.from(aggregatedMap.values());
+      const goodsDescriptionDisplay = sale.goodsDescription || (aggregatedItems.length > 0 ? `${aggregatedItems[0].composition} RAW WHITE CONES` : 'VISCOSE FILAMENT YARN');
 
-      const itemsHtml = aggregatedItems.map(item => {
-        return `
+      let tableRowsHtml = '';
+      aggregatedItems.forEach((item, index) => {
+        tableRowsHtml += `
           <tr>
-            <td><strong>${item.composition}</strong></td>
-            <td>${item.twist || '-'}</td>
-            <td>${item.color || '-'}</td>
-            <td style="text-align: center;">${item.totalRolls || 0}</td>
-            <td style="text-align: right;">${(item.totalWeight || 0).toFixed(2)} Kg</td>
-            <td style="text-align: right;">₹${(item.rate || 0).toFixed(2)}</td>
-            <td style="text-align: right; font-weight: 600;">₹${(item.totalAmount || 0).toFixed(2)}</td>
+            <td style="text-align: center; border-right: 1px solid #000;">${index + 1}</td>
+            <td style="border-right: 1px solid #000; font-weight: 700;">
+              ${goodsDescriptionDisplay}<br>
+              <span style="font-size: 8.5px; font-weight: normal; color: #333;">QUALITY: ${item.composition} | LOT NO: ${lotNo}</span>
+            </td>
+            <td style="text-align: center; border-right: 1px solid #000;">${hsnCode}</td>
+            <td style="text-align: right; border-right: 1px solid #000; font-weight: 700;">${item.totalWeight.toFixed(3)}</td>
+            <td style="text-align: center; border-right: 1px solid #000;">${item.totalBoxes}</td>
+            <td style="text-align: right; border-right: 1px solid #000;">${item.rate.toFixed(2)}</td>
+            <td style="text-align: right; font-weight: 700;">${item.totalAmount.toFixed(2)}</td>
           </tr>
         `;
-      }).join('');
+      });
 
-      let discountHtml = '';
-      if (discountAmount > 0) {
-        const discLabel = discountType === 'percent' ? `${discountValue}%` : 'Flat';
-        discountHtml = `
+      // Pad empty rows so bill matches standardized invoice height
+      const padCount = Math.max(0, 3 - aggregatedItems.length);
+      for (let p = 0; p < padCount; p++) {
+        tableRowsHtml += `
           <tr>
-            <td>Discount (${discLabel})</td>
-            <td style="text-align: right; font-weight: 600; color: #dc2626;">-₹${discountAmount.toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td>Taxable Subtotal</td>
-            <td style="text-align: right; font-weight: 600;">₹${taxableVal.toFixed(2)}</td>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td style="border-right: 1px solid #000;">&nbsp;</td>
+            <td>&nbsp;</td>
           </tr>
         `;
       }
+
+      // QR Code Content
+      const qrPayload = `UPI://PAY?PA=accounts@libertysilkmills.com&PN=${encodeURIComponent(companyName)}&AM=${grandTotalVal.toFixed(2)}&CU=INR&TN=INV-${invoiceNo}`;
 
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Sales Bill - Challan No: ${sale.challanNo}</title>
+          <title>Commercial Invoice - ${invoiceNo}</title>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
           <style>
+            @page {
+              size: A4 portrait;
+              margin: 6mm 8mm;
+            }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: Arial, Helvetica, sans-serif;
+              color: #000000;
+              background-color: #ffffff;
+              font-size: 9.5px;
+              line-height: 1.25;
+            }
             @media print {
-              @page {
-                size: A4 portrait;
-                margin: 15mm;
-              }
-              body {
-                padding: 0 !important;
-                margin: 0 !important;
-              }
               .no-print {
                 display: none !important;
               }
+              body {
+                padding: 0 !important;
+                background: #ffffff !important;
+              }
             }
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-              color: #000000;
-              background-color: #ffffff;
-              line-height: 1.4;
-              font-size: 12px;
-              padding: 20px;
-            }
-            .invoice-box {
-              width: 100%;
-              margin: auto;
-              max-width: 850px;
+            @media screen {
+              body {
+                background: #e2e8f0;
+                padding: 20px;
+              }
+              .invoice-card {
+                background: #ffffff;
+                width: 210mm;
+                min-height: 290mm;
+                margin: 0 auto 30px auto;
+                padding: 6mm 8mm;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+              }
             }
             .no-print-bar {
-              margin-bottom: 20px;
+              width: 210mm;
+              margin: 0 auto 15px auto;
               display: flex;
               gap: 10px;
               justify-content: flex-end;
               padding: 10px 14px;
-              background: #f1f5f9;
+              background: #ffffff;
               border-radius: 8px;
-              border: 1px solid #e2e8f0;
+              border: 1px solid #cbd5e1;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             }
             .no-print-btn {
               padding: 8px 18px;
@@ -3725,277 +3992,498 @@
               border: none;
               transition: opacity 0.2s;
             }
-            .no-print-btn:hover {
-              opacity: 0.9;
-            }
             .btn-print {
-              background: #7c3aed;
+              background: #2563eb;
               color: #ffffff;
             }
             .btn-close {
-              background: #e2e8f0;
+              background: #f1f5f9;
               color: #334155;
             }
-            .header-table {
+
+            /* Invoice Outer Border Container */
+            .invoice-frame {
+              border: 1.5px solid #000000;
               width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 20px;
+              background: #ffffff;
             }
-            .header-table td {
-              border: none !important;
-              padding: 0 !important;
-            }
-            .company-name {
-              font-size: 24px;
-              font-weight: 800;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-              line-height: 1.1;
-              color: #000000;
-            }
-            .company-details {
-              font-size: 10px;
-              color: #333333;
-              margin-top: 5px;
-              line-height: 1.5;
-            }
-            .invoice-title {
-              text-align: right;
-              font-size: 18px;
-              font-weight: 700;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-              color: #000000;
-            }
-            .details-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 20px;
-              border: 1px solid #000000;
-            }
-            .details-table td {
-              width: 50%;
-              vertical-align: top;
-              padding: 10px;
-              border: none !important;
-            }
-            .details-table td:first-child {
-              border-right: 1px solid #000000 !important;
-            }
-            .section-title {
-              font-size: 10px;
-              font-weight: 700;
-              text-transform: uppercase;
-              color: #555555;
-              margin-bottom: 8px;
-              border-bottom: 1px solid #cccccc;
-              padding-bottom: 3px;
-            }
-            .info-item {
-              margin: 4px 0;
-            }
-            .info-item span {
-              display: inline-block;
-              width: 90px;
-              color: #555555;
-            }
-            .info-item strong {
-              color: #000000;
-            }
-            .items-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 20px;
-              border: 1px solid #000000;
-            }
-            .items-table th {
-              background-color: #f3f4f6;
-              color: #000000;
-              font-weight: 700;
-              text-transform: uppercase;
-              font-size: 10px;
-              padding: 8px 10px;
-              border: 1px solid #000000;
-              text-align: left;
-            }
-            .items-table td {
-              padding: 8px 10px;
-              border: 1px solid #cccccc;
-              font-size: 11px;
-            }
-            .items-table td.border-right-black {
-              border-right: 1px solid #000000;
-            }
-            .items-table tr:last-child td {
-              border-bottom: 1px solid #000000;
-            }
-            .bottom-section {
-              width: 100%;
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-              margin-bottom: 30px;
-            }
-            .declarations {
-              width: 50%;
-              font-size: 10px;
-              color: #444444;
-              line-height: 1.6;
-              border: 1px solid #000000;
-              padding: 10px;
-              border-radius: 4px;
-            }
-            .summary-table {
-              width: 45%;
-              border-collapse: collapse;
-              border: 1px solid #000000;
-            }
-            .summary-table td {
-              padding: 6px 10px;
-              font-size: 11px;
-              border: 1px solid #cccccc;
-            }
-            .summary-table tr.total-row td {
-              font-weight: 700;
-              font-size: 13px;
-              border-top: 1px solid #000000;
-              border-bottom: 1px solid #000000;
-              background-color: #f3f4f6;
-            }
-            .signatures {
-              margin-top: 50px;
-              width: 100%;
-              display: flex;
-              justify-content: space-between;
-            }
-            .sig-box {
-              width: 220px;
+
+            .top-invocation {
               text-align: center;
-              border-top: 1px solid #000000;
-              padding-top: 5px;
+              font-size: 9px;
+              font-weight: bold;
+              padding: 2px 0;
+              letter-spacing: 0.5px;
+            }
+            .tax-inv-badge {
+              text-align: center;
               font-size: 11px;
+              font-weight: 900;
+              letter-spacing: 1px;
+              padding: 1px 0 3px 0;
+            }
+
+            .header-grid {
+              display: flex;
+              border-top: 1px solid #000;
+              border-bottom: 1px solid #000;
+              padding: 4px 6px;
+              align-items: center;
+            }
+            .monogram-box {
+              width: 55px;
+              height: 55px;
+              border: 2px solid #000;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 26px;
+              font-weight: 900;
+              font-family: 'Times New Roman', serif;
+              margin-right: 10px;
+              flex-shrink: 0;
+            }
+            .company-info {
+              flex: 1;
+            }
+            .company-title {
+              font-size: 17px;
+              font-weight: 900;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+              line-height: 1.1;
+            }
+            .company-division {
+              font-size: 11px;
+              font-weight: 800;
+              letter-spacing: 0.8px;
+              margin-top: 1px;
+            }
+            .company-address {
+              font-size: 9px;
+              margin-top: 1px;
+            }
+            .company-tax-ids {
+              font-size: 8.5px;
+              font-weight: bold;
+              margin-top: 1px;
+            }
+            .qr-wrapper {
+              width: 65px;
+              height: 65px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+              margin-left: 8px;
+            }
+
+            .banner-strip {
+              background: #ffffff;
+              text-align: center;
+              font-size: 11px;
+              font-weight: 900;
+              letter-spacing: 1.2px;
+              padding: 3px 0;
+              border-bottom: 1px solid #000;
+              text-transform: uppercase;
+            }
+
+            .party-grid {
+              display: grid;
+              grid-template-columns: 1.15fr 1fr;
+              border-bottom: 1px solid #000;
+            }
+            .party-col {
+              padding: 4px 6px;
+            }
+            .party-col:first-child {
+              border-right: 1px solid #000;
+            }
+            .party-heading {
+              font-size: 9.5px;
+              font-weight: 900;
+              margin-bottom: 2px;
+              text-decoration: underline;
+            }
+            .info-row {
+              display: flex;
+              margin: 1.5px 0;
+              font-size: 9px;
+            }
+            .info-lbl {
+              width: 90px;
+              font-weight: bold;
+              flex-shrink: 0;
+            }
+            .info-lbl-wide {
+              width: 120px;
+              font-weight: bold;
+              flex-shrink: 0;
+            }
+            .info-val {
+              flex: 1;
+              word-break: break-word;
+            }
+
+            .sub-strip {
+              display: grid;
+              grid-template-columns: 1.15fr 1fr;
+              border-bottom: 1px solid #000;
+              font-size: 9px;
+              font-weight: bold;
+            }
+            .sub-strip-cell {
+              padding: 3px 6px;
+            }
+            .sub-strip-cell:first-child {
+              border-right: 1px solid #000;
+            }
+
+            /* Goods Table */
+            .goods-table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 9px;
+            }
+            .goods-table th {
+              border-bottom: 1px solid #000;
+              border-right: 1px solid #000;
+              padding: 4px 4px;
+              font-weight: 900;
+              text-align: center;
+              background: #ffffff;
+            }
+            .goods-table th:last-child {
+              border-right: none;
+            }
+            .goods-table td {
+              padding: 4px 5px;
+              vertical-align: top;
+            }
+            .remarks-row td {
+              border-top: 1px solid #000;
+              border-bottom: 1px solid #000;
+              padding: 3px 6px;
+              font-weight: bold;
+            }
+
+            /* Lower Mid Section */
+            .lower-mid-grid {
+              display: grid;
+              grid-template-columns: 1.35fr 0.95fr;
+              border-bottom: 1px solid #000;
+            }
+            .lower-left-box {
+              border-right: 1px solid #000;
+              padding: 5px 6px;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+            }
+            .lower-right-box {
+              padding: 0;
+            }
+            .tax-table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 9px;
+            }
+            .tax-table td {
+              padding: 2.5px 6px;
+              border-bottom: 1px solid #e0e0e0;
+            }
+            .tax-table tr:last-child td {
+              border-bottom: none;
+            }
+            .tax-table .lbl-td {
+              font-weight: bold;
+              width: 55%;
+            }
+            .tax-table .val-td {
+              text-align: right;
               font-weight: 600;
+            }
+            .tax-table .net-row td {
+              border-top: 1px solid #000;
+              border-bottom: 1px solid #000;
+              font-size: 11px;
+              font-weight: 900;
+              padding: 4px 6px;
+            }
+
+            /* Terms & Signatures */
+            .terms-sig-grid {
+              display: grid;
+              grid-template-columns: 1.15fr 1fr;
+              border-bottom: 1px solid #000;
+              min-height: 105px;
+            }
+            .terms-col {
+              border-right: 1px solid #000;
+              padding: 4px 6px;
+              font-size: 8px;
+              line-height: 1.35;
+            }
+            .terms-title {
+              font-size: 8.5px;
+              font-weight: 900;
+              text-decoration: underline;
+              margin-bottom: 3px;
+            }
+            .sig-col {
+              padding: 4px 6px;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              text-align: right;
+            }
+
+            .bottom-declaration {
+              display: flex;
+              justify-content: space-between;
+              padding: 3px 6px;
+              font-size: 8px;
+              border-bottom: 1px solid #000;
+              font-weight: bold;
+            }
+            .footer-strip {
+              text-align: center;
+              font-size: 7.5px;
+              padding: 2px 4px;
+              line-height: 1.2;
             }
           </style>
         </head>
         <body>
-          <div class="invoice-box">
-            <div class="no-print no-print-bar">
-              <button type="button" class="no-print-btn btn-print" onclick="window.print()">Print Bill</button>
-              <button type="button" class="no-print-btn btn-close" onclick="window.close()">Close</button>
-            </div>
+          <div class="no-print no-print-bar">
+            <button type="button" class="no-print-btn btn-print" onclick="window.print()">Print Tax Invoice</button>
+            <button type="button" class="no-print-btn btn-close" onclick="window.close()">Close</button>
+          </div>
 
-            <table class="header-table">
-              <tr>
-                <td>
-                  <div class="company-name">${companyName}</div>
-                  <div class="company-details">
-                    Factory: ${companyAddress}<br>
-                    ${companyEmail ? 'Email: ' + companyEmail : ''} ${companyPhone ? ' | Mobile: ' + companyPhone : ''} ${companyGst ? ' | GSTIN: ' + companyGst : ''}
+          <div class="invoice-card">
+            <div class="invoice-frame">
+              <!-- Invocations -->
+              <div class="top-invocation">|| Shree Ganeshaya Namah ||</div>
+              <div class="tax-inv-badge">TAX INVOICE</div>
+
+              <!-- Header with Crest, Details, and QR -->
+              <div class="header-grid">
+                <div class="monogram-box">R</div>
+                <div class="company-info">
+                  <div class="company-title">${companyName}</div>
+                  <div class="company-division">${divisionName}</div>
+                  <div class="company-address">${companyAddress}</div>
+                  <div class="company-tax-ids">
+                    G.S.T. No. : ${companyGst} &nbsp;|&nbsp; C.I.N No. : ${companyCin}<br>
+                    ${companyPhone ? 'Phone : ' + companyPhone : ''} ${companyEmail ? '&nbsp;|&nbsp; Email : ' + companyEmail : ''}
                   </div>
-                </td>
-                <td style="text-align: right; vertical-align: top;">
-                  <div class="invoice-title">Sales Invoice / Challan</div>
-                  <div style="font-size: 11px; margin-top: 5px; font-weight: 600;">
-                    Division: ${activeDivision.toUpperCase()}
-                  </div>
-                </td>
-              </tr>
-            </table>
-
-            <table class="details-table">
-              <tr>
-                <td>
-                  <div class="section-title">Billed To (Buyer)</div>
-                  <div style="font-size: 12px; font-weight: 700; margin-bottom: 5px;">${sale.customerName}</div>
-                  <div style="color: #444444; font-size: 11px; line-height: 1.5;">
-                    Address: ${customerAddress}<br>
-                    State Code: 24 (Gujarat)
-                  </div>
-                </td>
-                <td>
-                  <div class="section-title">Challan / Invoice Details</div>
-                  <div class="info-item"><span>Challan No:</span> <strong>${sale.challanNo}</strong></div>
-                  <div class="info-item"><span>Lot No:</span> <strong>${lotNo}</strong></div>
-                  <div class="info-item"><span>HSN / SAC:</span> <strong>${sale.hsnCode || '5402'}</strong></div>
-                  <div class="info-item"><span>Date:</span> <strong>${formatDate(sale.date)}</strong></div>
-                  <div class="info-item"><span>Agent Name:</span> <strong>${sale.agentName || sale.agent || '-'}</strong></div>
-                </td>
-              </tr>
-            </table>
-
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th style="width: 30%;">Name</th>
-                  <th style="width: 12%;">Twist</th>
-                  <th style="width: 14%;">Color</th>
-                  <th style="width: 10%; text-align: center;">Rolls</th>
-                  <th style="width: 14%; text-align: right;">Weight</th>
-                  <th style="width: 10%; text-align: right;">Rate/Kg</th>
-                  <th style="width: 10%; text-align: right;">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${itemsHtml}
-              </tbody>
-            </table>
-
-            <div class="bottom-section">
-              <div class="declarations">
-                <div style="font-weight: 700; margin-bottom: 5px; text-transform: uppercase;">Terms & Conditions</div>
-                1. Goods once sold will not be taken back.<br>
-                2. Subject to Surat jurisdiction only.<br>
-                3. We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+                </div>
+                <div class="qr-wrapper" id="invoice-qr-box"></div>
               </div>
-              <table class="summary-table">
-                <tr>
-                  <td>Total Boris/Boxes</td>
-                  <td style="text-align: right; font-weight: 600;">${totalBoris}</td>
-                </tr>
-                <tr>
-                  <td>Total Rolls</td>
-                  <td style="text-align: right; font-weight: 600;">${totalRolls}</td>
-                </tr>
-                <tr>
-                  <td>Total Weight</td>
-                  <td style="text-align: right; font-weight: 600;">${totalWeight.toFixed(2)} Kg</td>
-                </tr>
-                <tr>
-                  <td>Subtotal</td>
-                  <td style="text-align: right; font-weight: 600;">₹${subtotalVal.toFixed(2)}</td>
-                </tr>
-                ${discountHtml}
-                <tr>
-                  <td>GST (${gstRate}%)</td>
-                  <td style="text-align: right; font-weight: 600;">₹${gstVal.toFixed(2)}</td>
-                </tr>
-                <tr class="total-row">
-                  <td><strong>Grand Total</strong></td>
-                  <td style="text-align: right; font-weight: 700;">₹${grandTotalVal.toFixed(2)}</td>
-                </tr>
-              </table>
-            </div>
 
-            <div class="signatures">
-              <div class="sig-box">Receiver's Signature</div>
-              <div style="text-align: right;">
-                <div style="font-size: 10px; margin-bottom: 45px; font-weight: 700; text-transform: uppercase;">For ${companyName}</div>
-                <div class="sig-box">Authorized Signatory</div>
+              <!-- Banner -->
+              <div class="banner-strip">COMMERCIAL INVOICE</div>
+
+              <!-- Party / Bill To vs Invoice / Ship To Grid -->
+              <div class="party-grid">
+                <!-- Left: Buyer Details -->
+                <div class="party-col">
+                  <div class="party-heading">Details of Receiver (Billed to)</div>
+                  <div class="info-row">
+                    <div class="info-lbl">Name :</div>
+                    <div class="info-val" style="font-weight: 800; font-size: 10px;">${buyerName}</div>
+                  </div>
+                  <div class="info-row">
+                    <div class="info-lbl">Address :</div>
+                    <div class="info-val">${buyerAddress}</div>
+                  </div>
+                  ${buyerPhone ? `
+                  <div class="info-row">
+                    <div class="info-lbl">Phone :</div>
+                    <div class="info-val">${buyerPhone}</div>
+                  </div>` : ''}
+                  <div class="info-row" style="margin-top: 3px;">
+                    <div class="info-lbl">G.S.T. NO. :</div>
+                    <div class="info-val" style="font-weight: 800;">${buyerGst || '-'}</div>
+                  </div>
+                </div>
+
+                <!-- Right: Invoice Info & Consignee -->
+                <div class="party-col">
+                  <div class="info-row">
+                    <div class="info-lbl-wide">Invoice No :</div>
+                    <div class="info-val" style="font-weight: 800;">${invoiceNo}</div>
+                  </div>
+                  <div class="info-row">
+                    <div class="info-lbl-wide">Invoice Date :</div>
+                    <div class="info-val"><strong>${invoiceDate}</strong></div>
+                  </div>
+                  <div class="info-row">
+                    <div class="info-lbl-wide">Challan No & Dt. :</div>
+                    <div class="info-val"><strong>${challanNo}</strong> &nbsp; (${challanDate})</div>
+                  </div>
+                  <div style="border-top: 1px dashed #999; margin: 3px 0 2px 0;"></div>
+                  <div class="party-heading" style="font-size: 8.5px;">Details of Consignee (Shipped to)</div>
+                  <div class="info-row">
+                    <div class="info-lbl">Name :</div>
+                    <div class="info-val" style="font-weight: 700;">${consigneeName}</div>
+                  </div>
+                  <div class="info-row">
+                    <div class="info-lbl">Address :</div>
+                    <div class="info-val">${consigneeAddress}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contract & Broker Strip -->
+              <div class="sub-strip">
+                <div class="sub-strip-cell">Sales Contract No. : &nbsp; <strong>${salesContractNo}</strong></div>
+                <div class="sub-strip-cell">Broker : &nbsp; <strong>${brokerName}</strong></div>
+              </div>
+
+              <!-- Items Table -->
+              <table class="goods-table">
+                <thead>
+                  <tr>
+                    <th style="width: 5%;">Sr. No.</th>
+                    <th style="width: 38%;">Description of Goods</th>
+                    <th style="width: 11%;">HSN</th>
+                    <th style="width: 14%;">Quantity (KGS)</th>
+                    <th style="width: 9%;">BOX (Nos.)</th>
+                    <th style="width: 11%;">Unit Rate (INR)</th>
+                    <th style="width: 12%;">Amount (In INR)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${tableRowsHtml}
+                  <tr class="remarks-row">
+                    <td colspan="3">
+                      <strong>Remarks:</strong> ${remarks ? remarks : (discountAmount > 0 ? `Discount Applied: ₹${discountAmount.toFixed(2)}` : 'DISPATCHED AS PER ORDER')}
+                    </td>
+                    <td style="text-align: right; border-right: 1px solid #000; font-weight: 900;">${totalWeight.toFixed(3)}</td>
+                    <td style="text-align: center; border-right: 1px solid #000; font-weight: 900;">${totalBoris}</td>
+                    <td style="border-right: 1px solid #000;">&nbsp;</td>
+                    <td style="text-align: right; font-weight: 900;">₹${taxableVal.toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- Lower Mid Section: Bank & Terms on Left, Tax Breakdown on Right -->
+              <div class="lower-mid-grid">
+                <div class="lower-left-box">
+                  <div>
+                    <div style="font-weight: bold; margin-bottom: 2px;">
+                      Credit Days : <strong>${creditDays}</strong> &nbsp;|&nbsp; Due Date : <strong>${dueDate}</strong>
+                    </div>
+                    <div style="font-size: 8px; color: #333; margin-bottom: 4px;">
+                      Please make online payment on or before due date.
+                    </div>
+                    <div style="border: 1px solid #000; padding: 4px 6px; border-radius: 3px; font-size: 8.5px; background: #fafafa;">
+                      <div style="font-weight: 800; text-decoration: underline; margin-bottom: 2px;">BANK DETAILS :</div>
+                      <div>Bank Name : <strong>${bankName}</strong></div>
+                      <div>A/c No : <strong>${bankAccountNo}</strong></div>
+                      <div>IFSC Code : <strong>${bankIfsc}</strong></div>
+                    </div>
+                  </div>
+                  <div style="margin-top: 6px; font-size: 9px; font-weight: bold;">
+                    INR in words : <span style="font-weight: normal; font-style: italic;">${amountInWords}</span>
+                  </div>
+                </div>
+
+                <div class="lower-right-box">
+                  <table class="tax-table">
+                    <tr>
+                      <td class="lbl-td">Taxable Value :</td>
+                      <td class="val-td">₹${taxableVal.toFixed(2)}</td>
+                    </tr>
+                    ${isGujarat ? `
+                    <tr>
+                      <td class="lbl-td">CGST (${cgstRate.toFixed(1)}%) :</td>
+                      <td class="val-td">₹${cgstAmt.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td class="lbl-td">SGST (${sgstRate.toFixed(1)}%) :</td>
+                      <td class="val-td">₹${sgstAmt.toFixed(2)}</td>
+                    </tr>
+                    ` : `
+                    <tr>
+                      <td class="lbl-td">IGST (${igstRate.toFixed(1)}%) :</td>
+                      <td class="val-td">₹${igstAmt.toFixed(2)}</td>
+                    </tr>
+                    `}
+                    <tr>
+                      <td class="lbl-td">Total Tax Amount :</td>
+                      <td class="val-td">₹${totalTaxAmt.toFixed(2)}</td>
+                    </tr>
+                    <tr class="net-row">
+                      <td class="lbl-td">Net Invoice Value :</td>
+                      <td class="val-td">₹${grandTotalVal.toFixed(2)}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Terms & Signatures -->
+              <div class="terms-sig-grid">
+                <div class="terms-col">
+                  <div class="terms-title">Terms & Conditions:</div>
+                  1. Goods once sold will not be taken back.<br>
+                  2. Interest @ 18% per annum will be charged if payment is not made within the due date.<br>
+                  3. Our responsibility ceases immediately after goods leave our factory/godown.<br>
+                  4. Strictly do not mix different yarn lot numbers during warping, weaving or processing.<br>
+                  5. No complaints will be entertained once the yarn is consumed or warped.<br>
+                  6. Subject to Surat jurisdiction only.
+                </div>
+                <div class="sig-col">
+                  <div>
+                    ${ewayBillNo ? `<div style="font-size: 8.5px; font-weight: bold;">EWAY BILL NO : ${ewayBillNo}</div>` : ''}
+                    ${ackNo ? `<div style="font-size: 8px; color: #333;">Ack No : ${ackNo} &nbsp;|&nbsp; Dt : ${ackDate}</div>` : ''}
+                  </div>
+                  <div>
+                    <div style="font-size: 9.5px; font-weight: 800; text-transform: uppercase;">For, ${companyName}</div>
+                    <div style="font-size: 8.5px; font-weight: 700; margin-bottom: 30px;">${divisionName}</div>
+                    <div style="font-weight: 800; font-size: 9px;">Authorised Signatory</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Footer Declaration -->
+              <div class="bottom-declaration">
+                <div>E.&O.E Receiver' Signatory : ____________________</div>
+                <div>PREPARED BY : ${preparedBy}</div>
+              </div>
+
+              <div class="footer-strip">
+                Certified that the particulars given above are true and correct and the amount indicated represents the price actually charged and that there is no flow of additional consideration directly or indirectly from the buyer.
               </div>
             </div>
           </div>
-          
+
           <scr` + `ipt>
+            try {
+              if (typeof QRCode !== 'undefined') {
+                new QRCode(document.getElementById("invoice-qr-box"), {
+                  text: "${qrPayload}",
+                  width: 60,
+                  height: 60,
+                  colorDark: "#000000",
+                  colorLight: "#ffffff",
+                  correctLevel: QRCode.CorrectLevel.M
+                });
+              }
+            } catch(e) {}
+
             function triggerPrint() {
               window.focus();
               window.print();
             }
             if (document.readyState === 'complete') {
-              setTimeout(triggerPrint, 300);
+              setTimeout(triggerPrint, 400);
             } else {
               window.addEventListener('load', function() {
-                setTimeout(triggerPrint, 300);
+                setTimeout(triggerPrint, 400);
               });
             }
           </scr` + `ipt>
@@ -5049,9 +5537,9 @@
 
       if (totalBorisEl) totalBorisEl.innerText = totalBoris;
       if (totalRollsEl) totalRollsEl.innerText = totalRolls;
-      if (totalGrossEl) totalGrossEl.innerText = `${totalGross.toFixed(2)} Kg`;
-      if (totalTareEl) totalTareEl.innerText = `${totalTare.toFixed(2)} Kg`;
-      if (totalWeightEl) totalWeightEl.innerText = `${totalWeight.toFixed(2)} Kg`;
+      if (totalGrossEl) totalGrossEl.innerText = `${totalGross.toFixed(3)} Kg`;
+      if (totalTareEl) totalTareEl.innerText = `${totalTare.toFixed(3)} Kg`;
+      if (totalWeightEl) totalWeightEl.innerText = `${totalWeight.toFixed(3)} Kg`;
       if (subtotalEl) subtotalEl.innerText = `₹${subtotal.toFixed(2)}`;
       if (taxableEl) taxableEl.innerText = `₹${taxableAmount.toFixed(2)}`;
       if (gstEl) gstEl.innerText = `₹${gstAmount.toFixed(2)}`;
@@ -5108,12 +5596,33 @@
 
       const editId = document.getElementById('modal-sales-edit-id').value;
       const challanNo = document.getElementById('modal-sales-challan').value.trim();
+      const invoiceNo = (document.getElementById('modal-sales-invoice-no') ? document.getElementById('modal-sales-invoice-no').value.trim() : '') || challanNo;
       const date = document.getElementById('modal-sales-date').value;
-      const hsnCode = document.getElementById('modal-sales-hsn') ? document.getElementById('modal-sales-hsn').value.trim() : '5402';
+      const salesContractNo = document.getElementById('modal-sales-contract') ? document.getElementById('modal-sales-contract').value.trim() : '';
+      const broker = document.getElementById('modal-sales-agent') ? document.getElementById('modal-sales-agent').value.trim() : 'DIRECT';
+      const creditDays = parseInt(document.getElementById('modal-sales-credit-days') ? document.getElementById('modal-sales-credit-days').value : 30) || 30;
+      const dueDate = document.getElementById('modal-sales-due-date') ? document.getElementById('modal-sales-due-date').value : '';
+
+      const hsnCode = document.getElementById('modal-sales-hsn') ? document.getElementById('modal-sales-hsn').value.trim() : '54033100';
       const customerName = document.getElementById('modal-sales-customer').value.trim();
-      const agentName = document.getElementById('modal-sales-agent') ? document.getElementById('modal-sales-agent').value.trim() : '';
+      const buyerPhone = document.getElementById('modal-sales-buyer-phone') ? document.getElementById('modal-sales-buyer-phone').value.trim() : '';
+      const buyerGstin = document.getElementById('modal-sales-buyer-gstin') ? document.getElementById('modal-sales-buyer-gstin').value.trim() : '';
       const customerAddress = (document.getElementById('modal-sales-address') ? document.getElementById('modal-sales-address').value.trim() : '') || 'Industrial Area, Surat, Gujarat, India';
       
+      const consigneeName = (document.getElementById('modal-sales-consignee-name') ? document.getElementById('modal-sales-consignee-name').value.trim() : '') || customerName;
+      const consigneeAddress = (document.getElementById('modal-sales-consignee-address') ? document.getElementById('modal-sales-consignee-address').value.trim() : '') || customerAddress;
+      const goodsDescription = document.getElementById('modal-sales-goods-desc') ? document.getElementById('modal-sales-goods-desc').value.trim() : '';
+
+      const ewayBillNo = document.getElementById('modal-sales-eway') ? document.getElementById('modal-sales-eway').value.trim() : '';
+      const ackNo = document.getElementById('modal-sales-ack-no') ? document.getElementById('modal-sales-ack-no').value.trim() : '';
+      const ackDate = (document.getElementById('modal-sales-ack-date') ? document.getElementById('modal-sales-ack-date').value : '') || date;
+      const preparedBy = (document.getElementById('modal-sales-prepared-by') ? document.getElementById('modal-sales-prepared-by').value.trim() : '') || 'Admin';
+      const remarks = document.getElementById('modal-sales-remarks') ? document.getElementById('modal-sales-remarks').value.trim() : '';
+
+      const bankName = document.getElementById('modal-sales-bank-name') ? document.getElementById('modal-sales-bank-name').value.trim() : '';
+      const bankAccountNo = document.getElementById('modal-sales-bank-acc') ? document.getElementById('modal-sales-bank-acc').value.trim() : '';
+      const bankIfsc = document.getElementById('modal-sales-bank-ifsc') ? document.getElementById('modal-sales-bank-ifsc').value.trim() : '';
+
       const selectedCompId = document.getElementById('modal-sales-company') ? document.getElementById('modal-sales-company').value : '';
       const companies = getAvailableCompanies();
       const selectedComp = companies.find(c => c.id === selectedCompId || c.sellerName === selectedCompId) || companies[0];
@@ -5145,17 +5654,38 @@
         updated_at: new Date().toISOString(),
         timestamp: Date.now(),
         challanNo: challanNo,
+        invoiceNo: invoiceNo,
         date: date,
-        hsnCode: hsnCode || '5402',
+        invoiceDate: date,
+        salesContractNo: salesContractNo,
+        broker: broker,
+        agentName: broker,
+        creditDays: creditDays,
+        dueDate: dueDate,
+        hsnCode: hsnCode || '54033100',
         customerName: customerName,
-        agentName: agentName,
+        buyerPhone: buyerPhone,
+        buyerGstin: buyerGstin,
         customerAddress: customerAddress,
+        consigneeName: consigneeName,
+        consigneeAddress: consigneeAddress,
+        goodsDescription: goodsDescription,
+        ewayBillNo: ewayBillNo,
+        ackNo: ackNo,
+        ackDate: ackDate,
+        preparedBy: preparedBy,
+        remarks: remarks,
+        bankName: bankName || (selectedComp ? selectedComp.bankName : 'YES BANK'),
+        bankAccountNo: bankAccountNo || (selectedComp ? selectedComp.bankAccountNo : 'OCC : 001181300000676'),
+        bankIfsc: bankIfsc || (selectedComp ? selectedComp.bankIfsc : 'YESB0000011'),
         sellerCompanyId: selectedComp ? selectedComp.id : '',
-        sellerName: selectedComp ? selectedComp.sellerName : 'Vishwa Fashions',
-        sellerGstin: selectedComp ? selectedComp.sellerGstin : '',
-        sellerPhone: selectedComp ? selectedComp.sellerPhone : '',
-        sellerEmail: selectedComp ? selectedComp.sellerEmail : '',
-        sellerAddress: selectedComp ? selectedComp.sellerAddress : '',
+        sellerName: selectedComp ? selectedComp.sellerName : 'REAGHAN FASHIONS PVT LTD',
+        divisionName: selectedComp ? (selectedComp.divisionName || 'YARN DIVISION') : 'YARN DIVISION',
+        sellerGstin: selectedComp ? selectedComp.sellerGstin : '24AAECR5066N1Z0',
+        cinNo: selectedComp ? (selectedComp.cinNo || 'U17120GJ2009PTC058296') : 'U17120GJ2009PTC058296',
+        sellerPhone: selectedComp ? selectedComp.sellerPhone : '9924400076',
+        sellerEmail: selectedComp ? selectedComp.sellerEmail : 'accounts@libertysilkmills.com',
+        sellerAddress: selectedComp ? selectedComp.sellerAddress : 'PLOT NO 527/2, ROAD NO 5, ,SACHIN GIDC,SURAT,',
         discountType: discType,
         discountValue: rawDiscVal,
         discountAmount: discountAmount,
@@ -6526,17 +7056,72 @@
 
       document.getElementById('modal-sales-edit-id').value = sale.id;
       document.getElementById('modal-sales-challan').value = sale.challanNo;
+      
+      const invInput = document.getElementById('modal-sales-invoice-no');
+      if (invInput) invInput.value = sale.invoiceNo || sale.challanNo;
+
       document.getElementById('modal-sales-date').value = sale.date;
+
+      const contractInput = document.getElementById('modal-sales-contract');
+      if (contractInput) contractInput.value = sale.salesContractNo || '';
+
+      const agentInput = document.getElementById('modal-sales-agent');
+      if (agentInput) agentInput.value = sale.broker || sale.agentName || sale.agent || 'DIRECT';
+
+      const creditInput = document.getElementById('modal-sales-credit-days');
+      if (creditInput) creditInput.value = sale.creditDays !== undefined ? sale.creditDays : 30;
+
+      const dueInput = document.getElementById('modal-sales-due-date');
+      if (dueInput) dueInput.value = sale.dueDate || '';
+
       if (document.getElementById('modal-sales-hsn')) {
-        document.getElementById('modal-sales-hsn').value = sale.hsnCode || '5402';
+        document.getElementById('modal-sales-hsn').value = sale.hsnCode || '54033100';
       }
       document.getElementById('modal-sales-customer').value = sale.customerName;
-      if (document.getElementById('modal-sales-agent')) {
-        document.getElementById('modal-sales-agent').value = sale.agentName || sale.agent || '';
-      }
+
+      const phoneInput = document.getElementById('modal-sales-buyer-phone');
+      if (phoneInput) phoneInput.value = sale.buyerPhone || '';
+
+      const gstinInput = document.getElementById('modal-sales-buyer-gstin');
+      if (gstinInput) gstinInput.value = sale.buyerGstin || '';
+
       if (document.getElementById('modal-sales-address')) {
         document.getElementById('modal-sales-address').value = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
       }
+
+      const consNameInput = document.getElementById('modal-sales-consignee-name');
+      if (consNameInput) consNameInput.value = sale.consigneeName || sale.customerName;
+
+      const consAddrInput = document.getElementById('modal-sales-consignee-address');
+      if (consAddrInput) consAddrInput.value = sale.consigneeAddress || sale.customerAddress;
+
+      const descInput = document.getElementById('modal-sales-goods-desc');
+      if (descInput) descInput.value = sale.goodsDescription || '';
+
+      const ewayInput = document.getElementById('modal-sales-eway');
+      if (ewayInput) ewayInput.value = sale.ewayBillNo || '';
+
+      const ackNoInput = document.getElementById('modal-sales-ack-no');
+      if (ackNoInput) ackNoInput.value = sale.ackNo || '';
+
+      const ackDateInput = document.getElementById('modal-sales-ack-date');
+      if (ackDateInput) ackDateInput.value = sale.ackDate || sale.date;
+
+      const prepInput = document.getElementById('modal-sales-prepared-by');
+      if (prepInput) prepInput.value = sale.preparedBy || 'Admin';
+
+      const remInput = document.getElementById('modal-sales-remarks');
+      if (remInput) remInput.value = sale.remarks || '';
+
+      const bName = document.getElementById('modal-sales-bank-name');
+      if (bName) bName.value = sale.bankName || '';
+
+      const bAcc = document.getElementById('modal-sales-bank-acc');
+      if (bAcc) bAcc.value = sale.bankAccountNo || '';
+
+      const bIfsc = document.getElementById('modal-sales-bank-ifsc');
+      if (bIfsc) bIfsc.value = sale.bankIfsc || '';
+
       populateCompanyDropdown(sale.sellerCompanyId || sale.sellerName);
       const discInfo = getSaleDiscountInfo(sale);
       if (document.getElementById('modal-sales-discount-type')) {
@@ -6546,7 +7131,7 @@
         document.getElementById('modal-sales-discount-value').value = discInfo.value > 0 ? discInfo.value : (discInfo.percent > 0 ? discInfo.percent : 0);
       }
       const editGstRate = getSaleGstRate(sale);
-      document.getElementById('modal-sales-gst').value = editGstRate > 0 ? editGstRate : 12;
+      document.getElementById('modal-sales-gst').value = editGstRate > 0 ? editGstRate : 5;
 
       document.getElementById('modal-title').innerText = `Edit Sale (Challan ${sale.challanNo}) - ${activeDivision.toUpperCase()}`;
       document.getElementById('modal-sales-submit-btn').innerText = 'Update Sale';
@@ -6627,14 +7212,70 @@
       const salesDate = document.getElementById('modal-sales-date').value;
       const nextChallan = incrementStringNumber(sale.challanNo) || generateNextChallanNumber(activeDivision, salesDate);
       document.getElementById('modal-sales-challan').value = nextChallan;
+      
+      const invInput = document.getElementById('modal-sales-invoice-no');
+      if (invInput) invInput.value = nextChallan;
+
+      const contractInput = document.getElementById('modal-sales-contract');
+      if (contractInput) contractInput.value = sale.salesContractNo || '';
+
+      const agentInput = document.getElementById('modal-sales-agent');
+      if (agentInput) agentInput.value = sale.broker || sale.agentName || sale.agent || 'DIRECT';
+
+      const creditInput = document.getElementById('modal-sales-credit-days');
+      if (creditInput) creditInput.value = sale.creditDays !== undefined ? sale.creditDays : 30;
+
+      calculateDueDate();
+
+      if (document.getElementById('modal-sales-hsn')) {
+        document.getElementById('modal-sales-hsn').value = sale.hsnCode || '54033100';
+      }
 
       document.getElementById('modal-sales-customer').value = sale.customerName;
-      if (document.getElementById('modal-sales-agent')) {
-        document.getElementById('modal-sales-agent').value = sale.agentName || sale.agent || '';
-      }
+
+      const phoneInput = document.getElementById('modal-sales-buyer-phone');
+      if (phoneInput) phoneInput.value = sale.buyerPhone || '';
+
+      const gstinInput = document.getElementById('modal-sales-buyer-gstin');
+      if (gstinInput) gstinInput.value = sale.buyerGstin || '';
+
       if (document.getElementById('modal-sales-address')) {
         document.getElementById('modal-sales-address').value = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
       }
+
+      const consNameInput = document.getElementById('modal-sales-consignee-name');
+      if (consNameInput) consNameInput.value = sale.consigneeName || sale.customerName;
+
+      const consAddrInput = document.getElementById('modal-sales-consignee-address');
+      if (consAddrInput) consAddrInput.value = sale.consigneeAddress || sale.customerAddress;
+
+      const descInput = document.getElementById('modal-sales-goods-desc');
+      if (descInput) descInput.value = sale.goodsDescription || '';
+
+      const ewayInput = document.getElementById('modal-sales-eway');
+      if (ewayInput) ewayInput.value = sale.ewayBillNo || '';
+
+      const ackNoInput = document.getElementById('modal-sales-ack-no');
+      if (ackNoInput) ackNoInput.value = sale.ackNo || '';
+
+      const ackDateInput = document.getElementById('modal-sales-ack-date');
+      if (ackDateInput) ackDateInput.value = salesDate;
+
+      const prepInput = document.getElementById('modal-sales-prepared-by');
+      if (prepInput) prepInput.value = sale.preparedBy || 'Admin';
+
+      const remInput = document.getElementById('modal-sales-remarks');
+      if (remInput) remInput.value = sale.remarks || '';
+
+      const bName = document.getElementById('modal-sales-bank-name');
+      if (bName) bName.value = sale.bankName || '';
+
+      const bAcc = document.getElementById('modal-sales-bank-acc');
+      if (bAcc) bAcc.value = sale.bankAccountNo || '';
+
+      const bIfsc = document.getElementById('modal-sales-bank-ifsc');
+      if (bIfsc) bIfsc.value = sale.bankIfsc || '';
+
       const repDiscInfo = getSaleDiscountInfo(sale);
       if (document.getElementById('modal-sales-discount-type')) {
         document.getElementById('modal-sales-discount-type').value = repDiscInfo.type || 'percent';
@@ -6643,7 +7284,7 @@
         document.getElementById('modal-sales-discount-value').value = repDiscInfo.value > 0 ? repDiscInfo.value : (repDiscInfo.percent > 0 ? repDiscInfo.percent : 0);
       }
       const repGstRate = getSaleGstRate(sale);
-      document.getElementById('modal-sales-gst').value = repGstRate > 0 ? repGstRate : 12;
+      document.getElementById('modal-sales-gst').value = repGstRate > 0 ? repGstRate : 5;
 
       let loadedItems = [];
       if (sale.items && sale.items.length > 0) {
@@ -6913,65 +7554,116 @@
   <div id="batch-sell-modal" class="modal-overlay">
     <div class="modal-content" style="max-width: 1200px; width: 95%;">
       <div class="modal-header">
-        <h2 id="modal-title">Batch Sell Selected Boris/Boxes</h2>
+        <h2 id="modal-title">Record Sale / Invoice</h2>
         <button type="button" class="modal-close-btn" onclick="closeBatchSellModal()">&times;</button>
       </div>
       <div class="modal-body">
         <form id="modal-sales-form" onsubmit="submitBatchSell(event)">
           <input type="hidden" id="modal-sales-edit-id">
           
-          <!-- Top Row 1: Seller Company, Challan & Date & Lot No -->
-          <div class="form-inline" style="padding-bottom: 12px; margin-bottom: 12px; gap: 0.75rem; flex-wrap: wrap;">
-            <div class="form-group" style="flex: 2 1 220px;">
+          <!-- Top Row 1: Seller Company, Challan, Invoice No, Date & Lot No -->
+          <div class="form-inline" style="padding-bottom: 10px; margin-bottom: 10px; gap: 0.75rem; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 2 1 200px;">
               <label for="modal-sales-company"><span style="color: var(--accent);">Seller Company</span> (From Settings)</label>
-              <select id="modal-sales-company" style="font-weight: 600; border-color: var(--accent);" required>
+              <select id="modal-sales-company" onchange="onSellerCompanyChanged()" style="font-weight: 600; border-color: var(--accent);" required>
                 <!-- Populated dynamically -->
               </select>
             </div>
             <div class="form-group" style="flex: 1 1 120px;">
               <label for="modal-sales-challan">Challan No</label>
-              <input type="text" id="modal-sales-challan" placeholder="Challan No" readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed;" required>
+              <input type="text" id="modal-sales-challan" placeholder="Challan No" oninput="syncInvoiceNoWithChallan()" style="background: rgba(255,255,255,0.05); font-weight: 600;" required>
             </div>
             <div class="form-group" style="flex: 1 1 120px;">
+              <label for="modal-sales-invoice-no"><span style="color: var(--accent);">Invoice No</span></label>
+              <input type="text" id="modal-sales-invoice-no" placeholder="Invoice No" style="font-weight: 600;" required>
+            </div>
+            <div class="form-group" style="flex: 1 1 130px;">
+              <label for="modal-sales-date">Sale / Inv Date</label>
+              <input type="date" id="modal-sales-date" onchange="onSaleDateChanged()" required>
+            </div>
+            <div class="form-group" style="flex: 1 1 100px;">
               <label for="modal-sales-lot">Lot No</label>
               <input type="text" id="modal-sales-lot" placeholder="Lot No" readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed; font-weight: bold; color: var(--accent);">
             </div>
+          </div>
+
+          <!-- Top Row 2: Sales Contract, Broker, Credit Days, Due Date, HSN -->
+          <div class="form-inline" style="padding-bottom: 10px; margin-bottom: 10px; gap: 0.75rem; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1 1 120px;">
+              <label for="modal-sales-contract">Sales Contract No</label>
+              <input type="text" id="modal-sales-contract" placeholder="e.g. 542 / direct">
+            </div>
+            <div class="form-group" style="flex: 1.2 1 140px;">
+              <label for="modal-sales-agent">Broker / Agent</label>
+              <input type="text" id="modal-sales-agent" placeholder="Broker / DIRECT" value="DIRECT">
+            </div>
+            <div class="form-group" style="flex: 0.8 1 90px;">
+              <label for="modal-sales-credit-days">Credit Days</label>
+              <input type="number" id="modal-sales-credit-days" min="0" max="365" value="30" oninput="calculateDueDate()">
+            </div>
+            <div class="form-group" style="flex: 1 1 130px;">
+              <label for="modal-sales-due-date">Due Date</label>
+              <input type="date" id="modal-sales-due-date">
+            </div>
             <div class="form-group" style="flex: 1 1 110px;">
               <label for="modal-sales-hsn"><span style="color: var(--accent);">HSN Code</span></label>
-              <input type="text" id="modal-sales-hsn" placeholder="e.g. 5402" value="5402" style="font-weight: 600;">
-            </div>
-            <div class="form-group" style="flex: 1 1 140px;">
-              <label for="modal-sales-date">Sale Date</label>
-              <input type="date" id="modal-sales-date" required>
+              <input type="text" id="modal-sales-hsn" placeholder="e.g. 54033100" value="54033100" style="font-weight: 600;">
             </div>
           </div>
 
-          <!-- Top Row 2: Customer Name, Agent Name, Shipment Address & Rate & GST & Discount -->
-          <div class="form-inline" style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; gap: 0.75rem; flex-wrap: wrap;">
-            <div class="form-group" style="flex: 1.8 1 170px;">
-              <label for="modal-sales-customer">Customer / Buyer Name</label>
-              <input type="text" id="modal-sales-customer" placeholder="Enter Buyer Name" required>
+          <!-- Top Row 3: Buyer Details (Name, Phone, GSTIN, Address) -->
+          <div class="form-inline" style="padding-bottom: 10px; margin-bottom: 10px; gap: 0.75rem; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1.8 1 180px;">
+              <label for="modal-sales-customer">Buyer / Customer Name</label>
+              <input type="text" id="modal-sales-customer" placeholder="Enter Buyer Name" oninput="autoSyncBuyerToConsignee()" required>
             </div>
-            <div class="form-group" style="flex: 1.4 1 140px;">
-              <label for="modal-sales-agent">Agent / Broker Name</label>
-              <input type="text" id="modal-sales-agent" placeholder="Agent Name (optional)">
+            <div class="form-group" style="flex: 1 1 120px;">
+              <label for="modal-sales-buyer-phone">Buyer Phone</label>
+              <input type="text" id="modal-sales-buyer-phone" placeholder="Phone No">
             </div>
-            <div class="form-group" style="flex: 2 1 190px;">
-              <label for="modal-sales-address">Shipment / Delivery Address</label>
-              <input type="text" id="modal-sales-address" placeholder="Delivery destination address" value="Industrial Area, Surat, Gujarat, India">
+            <div class="form-group" style="flex: 1.2 1 140px;">
+              <label for="modal-sales-buyer-gstin">Buyer GSTIN</label>
+              <input type="text" id="modal-sales-buyer-gstin" placeholder="GSTIN (15 chars)" style="text-transform: uppercase;">
             </div>
-            <div class="form-group" style="flex: 0.8 1 75px;">
+            <div class="form-group" style="flex: 2 1 200px;">
+              <label for="modal-sales-address">Buyer Address</label>
+              <input type="text" id="modal-sales-address" placeholder="Billing address" value="Industrial Area, Surat, Gujarat, India" oninput="autoSyncBuyerToConsignee()">
+            </div>
+          </div>
+
+          <!-- Top Row 4: Consignee Details & Goods Description -->
+          <div class="form-inline" style="padding-bottom: 10px; margin-bottom: 10px; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end;">
+            <div class="form-group" style="flex: 1.5 1 170px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label for="modal-sales-consignee-name" style="margin: 0;">Consignee / Shipped To</label>
+                <button type="button" class="btn btn-secondary" onclick="copyBuyerToConsignee()" style="padding: 2px 6px; font-size: 0.7rem; line-height: 1;">Copy Buyer</button>
+              </div>
+              <input type="text" id="modal-sales-consignee-name" placeholder="Consignee Name">
+            </div>
+            <div class="form-group" style="flex: 2 1 200px;">
+              <label for="modal-sales-consignee-address">Consignee Delivery Address</label>
+              <input type="text" id="modal-sales-consignee-address" placeholder="Delivery destination address">
+            </div>
+            <div class="form-group" style="flex: 2 1 200px;">
+              <label for="modal-sales-goods-desc">Description of Goods</label>
+              <input type="text" id="modal-sales-goods-desc" placeholder="e.g. 100% VISCOSE FILAMENT YARN RAW WHITE CONES">
+            </div>
+          </div>
+
+          <!-- Top Row 5: Rate, GST, Discount -->
+          <div class="form-inline" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 12px; gap: 0.75rem; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1 1 110px;">
+              <label for="modal-sales-rate">Rate/Kg (₹)</label>
+              <input type="number" id="modal-sales-rate" step="0.01" min="0.01" placeholder="Rate/Kg" oninput="updateCommonRate(this.value)" style="padding: 4px 8px; font-size: 0.85rem; font-weight: bold;" required>
+            </div>
+            <div class="form-group" style="flex: 0.8 1 80px;">
               <label for="modal-sales-gst">GST (%)</label>
               <select id="modal-sales-gst" onchange="calculateModalTotals()" required>
-                <option value="12" selected>12%</option>
+                <option value="5" selected>5%</option>
+                <option value="12">12%</option>
                 <option value="18">18%</option>
-                <option value="5">5%</option>
                 <option value="0">0%</option>
               </select>
-            </div>
-            <div class="form-group" style="flex: 1 1 100px;">
-              <label for="modal-sales-rate">Rate/Kg (₹)</label>
-              <input type="number" id="modal-sales-rate" step="0.01" min="0.01" placeholder="Rate/Kg" oninput="updateCommonRate(this.value)" style="padding: 4px 8px; font-size: 0.85rem;" required>
             </div>
             <div class="form-group" style="flex: 1.4 1 140px;">
               <label for="modal-sales-discount-value">Discount <span id="modal-discount-calc-display" style="font-size: 0.75rem; color: #ef4444;"></span></label>
@@ -6985,8 +7677,53 @@
             </div>
           </div>
 
+          <!-- Collapsible: Additional Tax Invoice Details (E-Way, Ack, Bank, Remarks) -->
+          <details style="margin-bottom: 12px; background: var(--bg-card-hover, rgba(255,255,255,0.02)); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px;">
+            <summary style="cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--accent); user-select: none;">
+              <span>+ Additional Tax Invoice & E-Way / Bank Details (Optional)</span>
+            </summary>
+            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+              <div class="form-inline" style="gap: 0.75rem; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 1.5 1 150px;">
+                  <label for="modal-sales-eway">E-Way Bill No</label>
+                  <input type="text" id="modal-sales-eway" placeholder="e.g. 241785234123">
+                </div>
+                <div class="form-group" style="flex: 1.5 1 150px;">
+                  <label for="modal-sales-ack-no">Ack No</label>
+                  <input type="text" id="modal-sales-ack-no" placeholder="e.g. 132410098765432">
+                </div>
+                <div class="form-group" style="flex: 1 1 130px;">
+                  <label for="modal-sales-ack-date">Ack Date</label>
+                  <input type="date" id="modal-sales-ack-date">
+                </div>
+                <div class="form-group" style="flex: 1 1 120px;">
+                  <label for="modal-sales-prepared-by">Prepared By</label>
+                  <input type="text" id="modal-sales-prepared-by" placeholder="Admin" value="Admin">
+                </div>
+              </div>
+              <div class="form-inline" style="gap: 0.75rem; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 1.2 1 140px;">
+                  <label for="modal-sales-bank-name">Bank Name</label>
+                  <input type="text" id="modal-sales-bank-name" placeholder="Bank Name">
+                </div>
+                <div class="form-group" style="flex: 1.5 1 160px;">
+                  <label for="modal-sales-bank-acc">Account No / Type</label>
+                  <input type="text" id="modal-sales-bank-acc" placeholder="e.g. OCC : 001181300000676">
+                </div>
+                <div class="form-group" style="flex: 1 1 120px;">
+                  <label for="modal-sales-bank-ifsc">IFSC Code</label>
+                  <input type="text" id="modal-sales-bank-ifsc" placeholder="IFSC Code" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group" style="flex: 2 1 180px;">
+                  <label for="modal-sales-remarks">Challan / Invoice Remarks</label>
+                  <input type="text" id="modal-sales-remarks" placeholder="Notes / Terms (optional)">
+                </div>
+              </div>
+            </div>
+          </details>
+
           <!-- Items Table -->
-          <div style="margin-bottom: 15px; overflow-x: auto; max-height: 280px; border: 1px solid var(--border); border-radius: 8px;">
+          <div style="margin-bottom: 12px; overflow-x: auto; max-height: 250px; border: 1px solid var(--border); border-radius: 8px;">
             <table class="data-table" style="font-size: 0.85rem; width: 100%; border: none; margin: 0;">
               <thead>
                 <tr>
@@ -6994,11 +7731,9 @@
                   <th>Composition</th>
                   <th>Color</th>
                   <th>Specs</th>
-                  <th style="width: 80px; text-align: center;">Rolls</th>
-                  <th style="width: 95px; text-align: right;">Gross Wt</th>
-                  <th style="width: 95px; text-align: right;">Tare Wt</th>
-                  <th style="width: 105px; text-align: right;">Net Wt (Kg)</th>
-                  <th style="width: 110px; text-align: right;">Amount (₹)</th>
+                  <th style="width: 90px; text-align: center;">Rolls Qty</th>
+                  <th style="width: 110px; text-align: right;">Weight (Kg)</th>
+                  <th style="width: 120px; text-align: right;">Amount (₹)</th>
                 </tr>
               </thead>
               <tbody id="modal-sales-items-body">
@@ -7012,9 +7747,7 @@
             <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
               <span style="font-size: 0.85rem;">Total Boris/Boxes: <strong id="modal-summary-total-boris">0</strong></span>
               <span style="font-size: 0.85rem;">Total Rolls: <strong id="modal-summary-total-rolls">0</strong></span>
-              <span style="font-size: 0.85rem;">Gross: <strong id="modal-summary-total-gross">0.00 Kg</strong></span>
-              <span style="font-size: 0.85rem;">Tare: <strong id="modal-summary-total-tare">0.00 Kg</strong></span>
-              <span style="font-size: 0.85rem;">Net Wt: <strong id="modal-summary-total-weight">0.00 Kg</strong></span>
+              <span style="font-size: 0.85rem;">Total Weight: <strong id="modal-summary-total-weight">0.000 Kg</strong></span>
               <span style="font-size: 0.85rem;">Subtotal: <strong id="modal-summary-subtotal">₹0.00</strong></span>
               <span style="font-size: 0.85rem;">Taxable: <strong id="modal-summary-taxable" style="color: var(--accent);">₹0.00</strong></span>
               <span style="font-size: 0.85rem;">GST: <strong id="modal-summary-gst">₹0.00</strong></span>
@@ -7037,48 +7770,77 @@
   <div id="sale-details-modal" class="modal-overlay">
     <div class="modal-content" style="max-width: 1200px; width: 95%;">
       <div class="modal-header">
-        <h2 id="details-modal-title">Sale Details</h2>
+        <h2 id="details-modal-title">Sale & Invoice Details</h2>
         <button type="button" class="modal-close-btn" onclick="closeSaleDetailsModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <!-- Top Info Row -->
-        <div class="form-inline" style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; gap: 1.25rem; flex-wrap: wrap;">
-          <div style="flex: 1.5 1 180px;">
-            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Seller Company</span>
-            <strong id="details-sales-company" style="font-size: 1rem; color: var(--accent);"></strong>
+        <!-- Top Info Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 14px;">
+          <div>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Seller Company</span>
+            <strong id="details-sales-company" style="font-size: 0.95rem; color: var(--accent);"></strong>
           </div>
-          <div style="flex: 1 1 110px;">
-            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Challan No</span>
-            <strong id="details-sales-challan" style="font-size: 1.05rem;"></strong>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Challan No</span>
+            <strong id="details-sales-challan" style="font-size: 0.95rem;"></strong>
           </div>
-          <div style="flex: 1 1 100px;">
-            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Lot No</span>
-            <strong id="details-sales-lot" style="font-size: 1.05rem;"></strong>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Invoice No</span>
+            <strong id="details-sales-invoice" style="font-size: 0.95rem; color: var(--accent);">-</strong>
           </div>
-          <div style="flex: 1 1 90px;">
-            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">HSN Code</span>
-            <strong id="details-sales-hsn" style="font-size: 1.05rem; color: var(--accent);">-</strong>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Sale Date</span>
+            <strong id="details-sales-date" style="font-size: 0.95rem;"></strong>
           </div>
-          <div style="flex: 1 1 110px;">
-            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Sale Date</span>
-            <strong id="details-sales-date" style="font-size: 1.05rem;"></strong>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Lot No</span>
+            <strong id="details-sales-lot" style="font-size: 0.95rem;"></strong>
           </div>
-          <div style="flex: 1.5 1 160px;">
-            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Customer Name</span>
-            <strong id="details-sales-customer" style="font-size: 1.05rem;"></strong>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">HSN Code</span>
+            <strong id="details-sales-hsn" style="font-size: 0.95rem; color: var(--accent);">-</strong>
           </div>
-          <div style="flex: 1.2 1 130px;">
-            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Agent Name</span>
-            <strong id="details-sales-agent" style="font-size: 1.05rem;">-</strong>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Sales Contract No</span>
+            <strong id="details-sales-contract" style="font-size: 0.95rem;">-</strong>
           </div>
-          <div style="flex: 2 1 200px;">
-            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Shipment Address</span>
-            <span id="details-sales-address" style="font-size: 0.9rem; font-weight: 500;"></span>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Broker / Agent</span>
+            <strong id="details-sales-agent" style="font-size: 0.95rem;">-</strong>
           </div>
-          <div style="flex: 0.8 1 70px;">
-            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">GST (%)</span>
-            <strong id="details-sales-gst" style="font-size: 1.05rem;"></strong>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">Credit Days / Due Date</span>
+            <span style="font-size: 0.9rem; font-weight: 600;"><span id="details-sales-credit-days">30</span> Days (<span id="details-sales-due-date">-</span>)</span>
           </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 2px;">GST (%)</span>
+            <strong id="details-sales-gst" style="font-size: 0.95rem;"></strong>
+          </div>
+        </div>
+
+        <!-- Buyer & Consignee Row -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; background: var(--bg-card-hover, rgba(255,255,255,0.02)); padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; border: 1px solid var(--border-color);">
+          <div>
+            <span style="font-size: 0.75rem; color: var(--accent); font-weight: 600; text-transform: uppercase;">Buyer (Bill To)</span>
+            <div style="font-size: 0.95rem; font-weight: 700; margin: 2px 0;" id="details-sales-customer"></div>
+            <div style="font-size: 0.8rem; color: var(--muted);">GSTIN: <span id="details-sales-buyer-gstin" style="font-weight: 600; color: var(--fg);">-</span> | Phone: <span id="details-sales-buyer-phone" style="color: var(--fg);">-</span></div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-top: 2px;" id="details-sales-address"></div>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--accent); font-weight: 600; text-transform: uppercase;">Consignee (Ship To)</span>
+            <div style="font-size: 0.95rem; font-weight: 700; margin: 2px 0;" id="details-sales-consignee-name"></div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-top: 2px;" id="details-sales-consignee-address"></div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-top: 4px;">Description: <span id="details-sales-goods-desc" style="font-weight: 600; color: var(--fg);">-</span></div>
+          </div>
+        </div>
+
+        <!-- Extra E-Way & Bank Info Row -->
+        <div style="display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-bottom: 12px; padding: 6px 12px; background: rgba(0,0,0,0.15); border-radius: 6px;">
+          <span>E-Way: <strong id="details-sales-eway" style="color: var(--fg);">-</strong></span>
+          <span>Ack No: <strong id="details-sales-ack" style="color: var(--fg);">-</strong></span>
+          <span>Prepared By: <strong id="details-sales-prepared" style="color: var(--fg);">Admin</strong></span>
+          <span>Bank: <strong id="details-sales-bank" style="color: var(--fg);">-</strong></span>
+          <span>Remarks: <strong id="details-sales-remarks" style="color: var(--fg);">-</strong></span>
         </div>
 
         <!-- Items Table -->
@@ -7088,12 +7850,9 @@
               <tr>
                 <th>Bori/Box No</th>
                 <th>Composition</th>
-                <th>Specs</th>
                 <th>Color</th>
                 <th style="text-align: center;">Rolls Qty</th>
-                <th style="text-align: right;">Gross Wt</th>
-                <th style="text-align: right;">Tare Wt</th>
-                <th style="text-align: right;">Net Wt (Kg)</th>
+                <th style="text-align: right;">Weight (Kg)</th>
                 <th style="text-align: right;">Rate/Kg (₹)</th>
                 <th style="text-align: right;">Amount (₹)</th>
               </tr>
@@ -7109,9 +7868,7 @@
           <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
             <span style="font-size: 0.85rem;">Total Boris/Boxes: <strong id="details-summary-total-boris">0</strong></span>
             <span style="font-size: 0.85rem;">Total Rolls: <strong id="details-summary-total-rolls">0</strong></span>
-            <span style="font-size: 0.85rem;">Gross: <strong id="details-summary-total-gross">0.00 Kg</strong></span>
-            <span style="font-size: 0.85rem;">Tare: <strong id="details-summary-total-tare">0.00 Kg</strong></span>
-            <span style="font-size: 0.85rem;">Net Wt: <strong id="details-summary-total-weight">0.00 Kg</strong></span>
+            <span style="font-size: 0.85rem;">Total Weight: <strong id="details-summary-total-weight">0.000 Kg</strong></span>
             <span style="font-size: 0.85rem;">Subtotal: <strong id="details-summary-subtotal">₹0.00</strong></span>
             <span id="details-summary-discount-row" style="font-size: 0.85rem; display: none;"></span>
             <span style="font-size: 0.85rem;">Taxable: <strong id="details-summary-taxable" style="color: var(--accent);">₹0.00</strong></span>
