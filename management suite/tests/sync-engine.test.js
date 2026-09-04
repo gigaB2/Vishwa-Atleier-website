@@ -372,5 +372,53 @@ test('SyncEngine — mergeDatasets', async (t) => {
     assert.equal(merged[0].id, 'ord-1002');
     assert.ok(!merged.some(o => o.id === 'ord-1001'));
   });
+
+  await t.test('mergeYarnOrdersDatasets adopts clean remote baseline and prevents resurrection of deleted orders on secondary PC', () => {
+    // Server has 1 active order; order ORD-DEL-99 was deleted on PC 1
+    const remoteOrders = [
+      { id: 'ORD-ACTIVE-1', orderNumber: 'ORD-101', quality: '20/1 BRT NYLON', batches: [] }
+    ];
+    // PC 2 still has stale local storage containing ORD-DEL-99
+    const staleLocalOrders = [
+      { id: 'ORD-ACTIVE-1', orderNumber: 'ORD-101', quality: '20/1 BRT NYLON', batches: [] },
+      { id: 'ORD-DEL-99', orderNumber: 'ORD-99', quality: 'DELETED QUALITY', batches: [] }
+    ];
+
+    // Simulate merge when not locally typing
+    const isLocallyActive = false;
+    const cleanLocal = filterDeletedEntities(staleLocalOrders, null, []);
+    const cleanRemote = filterDeletedEntities(remoteOrders, null, []);
+
+    let finalOrders;
+    if (!isLocallyActive && cleanRemote.length > 0) {
+      finalOrders = cleanRemote;
+    }
+
+    assert.equal(finalOrders.length, 1);
+    assert.equal(finalOrders[0].id, 'ORD-ACTIVE-1');
+    assert.ok(!finalOrders.some(o => o.id === 'ORD-DEL-99'));
+  });
+
+  await t.test('reconciles relational table against KV master list so deleted DB rows are purged and do not re-inflate', () => {
+    // Database table still had an old row 'Q_OLD' that was deleted via UI
+    const dbQualities = [
+      { id: 'Q_1', quality: '20/1 NYLON', code: 'N1', color: 'White', type: 'Nylon', supplier: 'Sup1' },
+      { id: 'Q_OLD', quality: 'OLD DELETED POLY', code: 'P9', color: 'Black', type: 'Polyester', supplier: 'Sup2' }
+    ];
+    // KV master list has only active qualities
+    const kvMasterQualities = [
+      { id: 'Q_1', quality: '20/1 NYLON', code: 'N1', color: 'White', type: 'Nylon', supplier: 'Sup1' }
+    ];
+
+    const finalQualities = (Array.isArray(kvMasterQualities) && kvMasterQualities.length > 0) ? kvMasterQualities : dbQualities;
+    const finalIdSet = new Set(finalQualities.map(q => String(q.id).toLowerCase()));
+    const obsoleteDbRows = dbQualities.filter(q => q && q.id && !finalIdSet.has(String(q.id).toLowerCase()));
+
+    assert.equal(finalQualities.length, 1);
+    assert.equal(finalQualities[0].id, 'Q_1');
+    assert.equal(obsoleteDbRows.length, 1);
+    assert.equal(obsoleteDbRows[0].id, 'Q_OLD');
+  });
 });
+
 

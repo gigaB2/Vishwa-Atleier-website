@@ -1669,18 +1669,29 @@
       }, [view]);
 
       const allCombinations = useMemo(() => {
+        const cleanOrders = (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function')
+          ? window.VishwaSupabase.filterDeletedEntities(orders)
+          : orders;
+        const cleanQualities = (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function')
+          ? window.VishwaSupabase.filterDeletedEntities(qualities)
+          : qualities;
+
         const combos = [];
-        orders.forEach(o => combos.push({ quality: o.quality, supplier: o.supplier, code: o.code, color: o.color, type: o.category || o.type || 'Polyester' }));
-        qualities.forEach(q => {
+        (cleanOrders || []).forEach(o => combos.push({ quality: o.quality, supplier: o.supplier, code: o.code, color: o.color, type: o.category || o.type || 'Polyester' }));
+        (cleanQualities || []).forEach(q => {
           combos.push({ quality: q.quality, supplier: q.supplier, code: q.code, color: q.color, type: q.type || 'Polyester' });
         });
         const seen = new Set();
-        return combos.filter(c => {
+        let list = combos.filter(c => {
           const key = `${c.quality}|${c.supplier}|${c.code}|${c.color}|${c.type}`;
           if (seen.has(key)) return false;
           seen.add(key);
           return true;
         });
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+          list = window.VishwaSupabase.filterDeletedEntities(list);
+        }
+        return list;
       }, [qualities, orders]);
 
       const getOrderOptions = (field) => {
@@ -3915,15 +3926,22 @@
       }, [setTimelineScrollPos]);
 
       const allCombinations = useMemo(() => {
+        const cleanOrders = (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function')
+          ? window.VishwaSupabase.filterDeletedEntities(orders)
+          : orders;
+        const cleanQualities = (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function')
+          ? window.VishwaSupabase.filterDeletedEntities(qualities)
+          : qualities;
+
         const combos = [];
-        orders.forEach(o => combos.push({ 
+        (cleanOrders || []).forEach(o => combos.push({ 
           quality: o.quality, 
           supplier: o.supplier, 
           code: o.code || '', 
           color: o.color || '', 
           type: o.category || o.type || 'Polyester' 
         }));
-        (qualities || []).forEach(q => {
+        (cleanQualities || []).forEach(q => {
           combos.push({ 
             quality: q.quality, 
             supplier: q.supplier, 
@@ -3934,12 +3952,16 @@
         });
 
         const seen = new Set();
-        return combos.filter(c => {
+        let list = combos.filter(c => {
           const key = `${c.quality}|${c.supplier}|${c.code}|${c.color}|${c.type}`;
           if (seen.has(key)) return false;
           seen.add(key);
           return true;
         });
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+          list = window.VishwaSupabase.filterDeletedEntities(list);
+        }
+        return list;
       }, [qualities, orders]);
 
       const getOptions = (field) => {

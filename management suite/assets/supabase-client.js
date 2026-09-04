@@ -247,21 +247,19 @@
 
   function getDeletedTombstones() {
     let deleted = [];
-    try {
-      const raw = cache['vf_deleted_entity_ids'] || cache['vf_deleted_costing_ids'] || cache['yarn_ledger_deleted_keys'] || nativeLocalStorage.getItem('vf_deleted_entity_ids') || nativeLocalStorage.getItem('vf_deleted_costing_ids') || nativeLocalStorage.getItem('yarn_ledger_deleted_keys');
-      if (raw) deleted = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    } catch(e) {}
-
-    try {
-      const rawLedger = cache['yarn_ledger_deleted_keys'] || nativeLocalStorage.getItem('yarn_ledger_deleted_keys');
-      if (rawLedger) {
-        const parsed = typeof rawLedger === 'string' ? JSON.parse(rawLedger) : rawLedger;
-        if (Array.isArray(parsed)) {
-          deleted = [...deleted, ...parsed];
+    const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids', 'yarn_ledger_deleted_keys', 'vf_deleted_yarn_orders'];
+    tombstoneKeys.forEach(tKey => {
+      try {
+        const raw = cache[tKey] || nativeLocalStorage.getItem(tKey);
+        if (raw) {
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (Array.isArray(parsed)) {
+            deleted = [...deleted, ...parsed];
+          }
         }
-      }
-    } catch(e) {}
-    return Array.from(new Set(Array.isArray(deleted) ? deleted.map(String) : []));
+      } catch(e) {}
+    });
+    return Array.from(new Set(deleted.map(s => String(s).trim()).filter(Boolean)));
   }
 
   function filterDeletedEntities(a, b) {
@@ -523,64 +521,75 @@
 
     const cleanLocal = filterDeletedEntities(localArr);
     const cleanRemote = filterDeletedEntities(remoteArr);
+    const lastWrite = lastLocalWrites['yarn-rm-orders'] || 0;
+    const isLocallyActive = (Date.now() - lastWrite < 3000);
+
+    if (cleanRemote.length > 0 && cleanLocal.length === 0) {
+      return cleanRemote;
+    }
+    if (!isLocallyActive && cleanRemote.length > 0) {
+      return cleanRemote;
+    }
 
     const orderMap = new Map();
     const getOrderKey = (ord) => ord ? String(ord.id || ord.orderNumber || '').trim() : '';
 
-    cleanLocal.forEach(ord => {
-      const k = getOrderKey(ord);
-      if (k) orderMap.set(k, { ...ord });
-    });
-
     cleanRemote.forEach(remOrd => {
       const k = getOrderKey(remOrd);
+      if (k) orderMap.set(k, { ...remOrd });
+    });
+
+    cleanLocal.forEach(locOrd => {
+      const k = getOrderKey(locOrd);
       if (!k) return;
 
       if (!orderMap.has(k)) {
-        orderMap.set(k, { ...remOrd });
+        if (isLocallyActive) {
+          orderMap.set(k, { ...locOrd });
+        }
       } else {
-        const locOrd = orderMap.get(k);
+        const remOrd = orderMap.get(k);
         const locTime = locOrd.updated_at ? new Date(locOrd.updated_at).getTime() : 0;
         const remTime = remOrd.updated_at ? new Date(remOrd.updated_at).getTime() : 0;
-        const baseOrd = (remTime >= locTime) ? remOrd : locOrd;
+        const baseOrd = (locTime >= remTime) ? locOrd : remOrd;
 
         const batchMap = new Map();
         const getBatchKey = (b) => b ? String(b.id || `${b.lotNumber}__${b.challanNumber}`).trim() : '';
 
-        (locOrd.batches || []).forEach(b => {
+        (remOrd.batches || []).forEach(b => {
           const bk = getBatchKey(b);
           if (bk) batchMap.set(bk, { ...b });
         });
 
-        (remOrd.batches || []).forEach(remB => {
-          const bk = getBatchKey(remB);
+        (locOrd.batches || []).forEach(locB => {
+          const bk = getBatchKey(locB);
           if (!bk) return;
           if (!batchMap.has(bk)) {
-            batchMap.set(bk, { ...remB });
+            if (isLocallyActive) batchMap.set(bk, { ...locB });
           } else {
-            const locB = batchMap.get(bk);
+            const remB = batchMap.get(bk);
             const bBoxMap = new Map();
-            (locB.boxes || []).forEach(bx => {
+            (remB.boxes || []).forEach(bx => {
               const bxId = String(bx.boxNumber || bx.id || '').trim();
               if (bxId) bBoxMap.set(bxId, { ...bx });
             });
 
-            (remB.boxes || []).forEach(remBx => {
-              const bxId = String(remBx.boxNumber || remBx.id || '').trim();
+            (locB.boxes || []).forEach(locBx => {
+              const bxId = String(locBx.boxNumber || locBx.id || '').trim();
               if (!bxId) return;
               if (!bBoxMap.has(bxId)) {
-                bBoxMap.set(bxId, { ...remBx });
+                if (isLocallyActive) bBoxMap.set(bxId, { ...locBx });
               } else {
-                const locBx = bBoxMap.get(bxId);
+                const remBx = bBoxMap.get(bxId);
                 const isIssued = locBx.status === 'issued' || remBx.status === 'issued';
-                const issueDate = (remBx.status === 'issued' ? remBx.issueDate : null) || (locBx.status === 'issued' ? locBx.issueDate : null) || remBx.issueDate || locBx.issueDate || null;
-                const issuedTo = (remBx.status === 'issued' ? remBx.issuedTo : null) || (locBx.status === 'issued' ? locBx.issuedTo : null) || remBx.issuedTo || locBx.issuedTo || null;
+                const issueDate = (locBx.status === 'issued' ? locBx.issueDate : null) || (remBx.status === 'issued' ? remBx.issueDate : null) || locBx.issueDate || remBx.issueDate || null;
+                const issuedTo = (locBx.status === 'issued' ? locBx.issuedTo : null) || (remBx.status === 'issued' ? remBx.issuedTo : null) || locBx.issuedTo || remBx.issuedTo || null;
                 const isGr = (Number(locBx.returnedWeight) > 0) || (Number(remBx.returnedWeight) > 0);
 
                 bBoxMap.set(bxId, {
-                  ...locBx,
                   ...remBx,
-                  status: isGr && (Number(remBx.returnedWeight) >= (Number(remBx.weight) || 1)) ? 'gr' : (isIssued ? 'issued' : (remBx.status || locBx.status || 'available')),
+                  ...locBx,
+                  status: isGr && (Number(locBx.returnedWeight) >= (Number(locBx.weight) || 1)) ? 'gr' : (isIssued ? 'issued' : (locBx.status || remBx.status || 'available')),
                   issueDate: isIssued ? issueDate : null,
                   issuedTo: isIssued ? issuedTo : null
                 });
@@ -588,22 +597,22 @@
             });
 
             batchMap.set(bk, {
-              ...locB,
               ...remB,
+              ...locB,
               boxes: Array.from(bBoxMap.values())
             });
           }
         });
 
         orderMap.set(k, {
-          ...locOrd,
+          ...remOrd,
           ...baseOrd,
           batches: Array.from(batchMap.values())
         });
       }
     });
 
-    return Array.from(orderMap.values());
+    return filterDeletedEntities(Array.from(orderMap.values()));
   }
 
   function mergeDatasets(key, localVal, remoteVal) {
@@ -2337,7 +2346,8 @@
             // Dedicated Relational Synchronization for RM Qualities
             if (key === 'yarn-qualities' && Array.isArray(value)) {
               try {
-                const qRows = value.filter(q => q && q.id).map(q => ({
+                const cleanValue = filterDeletedEntities(value);
+                const qRows = cleanValue.filter(q => q && q.id).map(q => ({
                   id: String(q.id),
                   quality: String(q.quality || ''),
                   code: String(q.code || ''),
@@ -2362,12 +2372,21 @@
                       body: JSON.stringify(chunk)
                     }).catch(() => {});
                   }
-                  const currentIds = qRows.map(r => `"${r.id}"`).join(',');
-                  fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities?id=not.in.(${currentIds})`, {
-                    method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-                  }).catch(() => {});
-                } else if (value.length === 0) {
+                  try {
+                    const dbExisting = await fetchAllRowsPaginated('vf_rm_qualities', 'id');
+                    if (Array.isArray(dbExisting)) {
+                      const validIdSet = new Set(qRows.map(r => String(r.id).toLowerCase()));
+                      const toDelete = dbExisting.filter(d => d && d.id && !validIdSet.has(String(d.id).toLowerCase()));
+                      toDelete.forEach(d => {
+                        const encId = encodeURIComponent(d.id);
+                        fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities?id=eq.${encId}`, {
+                          method: 'DELETE',
+                          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                        }).catch(() => {});
+                      });
+                    }
+                  } catch(delErr) {}
+                } else if (cleanValue.length === 0) {
                   fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities`, {
                     method: 'DELETE',
                     headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
@@ -2381,7 +2400,8 @@
             // Dedicated Relational Synchronization for FP Qualities
             if (key === 'yarn-fp-qualities' && Array.isArray(value)) {
               try {
-                const fpRows = value.filter(q => q && q.id).map(q => ({
+                const cleanValue = filterDeletedEntities(value);
+                const fpRows = cleanValue.filter(q => q && q.id).map(q => ({
                   id: String(q.id),
                   division: String(q.division || 'covering'),
                   name: String(q.name || ''),
@@ -2409,12 +2429,21 @@
                       body: JSON.stringify(chunk)
                     }).catch(() => {});
                   }
-                  const currentIds = fpRows.map(r => `"${r.id}"`).join(',');
-                  fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities?id=not.in.(${currentIds})`, {
-                    method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-                  }).catch(() => {});
-                } else if (value.length === 0) {
+                  try {
+                    const dbExisting = await fetchAllRowsPaginated('vf_fp_qualities', 'id');
+                    if (Array.isArray(dbExisting)) {
+                      const validIdSet = new Set(fpRows.map(r => String(r.id).toLowerCase()));
+                      const toDelete = dbExisting.filter(d => d && d.id && !validIdSet.has(String(d.id).toLowerCase()));
+                      toDelete.forEach(d => {
+                        const encId = encodeURIComponent(d.id);
+                        fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities?id=eq.${encId}`, {
+                          method: 'DELETE',
+                          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                        }).catch(() => {});
+                      });
+                    }
+                  } catch(delErr) {}
+                } else if (cleanValue.length === 0) {
                   fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities`, {
                     method: 'DELETE',
                     headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
@@ -2428,7 +2457,8 @@
             // Dedicated Relational Synchronization for RM Suppliers
             if (key === 'yarn-suppliers' && Array.isArray(value)) {
               try {
-                const sRows = value.filter(s => s && s.id).map(s => ({
+                const cleanValue = filterDeletedEntities(value);
+                const sRows = cleanValue.filter(s => s && s.id).map(s => ({
                   id: String(s.id),
                   name: String(s.name || ''),
                   phone: s.phone || '',
@@ -2453,12 +2483,21 @@
                       body: JSON.stringify(chunk)
                     }).catch(() => {});
                   }
-                  const currentIds = sRows.map(r => `"${r.id}"`).join(',');
-                  fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers?id=not.in.(${currentIds})`, {
-                    method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-                  }).catch(() => {});
-                } else if (value.length === 0) {
+                  try {
+                    const dbExisting = await fetchAllRowsPaginated('vf_rm_suppliers', 'id');
+                    if (Array.isArray(dbExisting)) {
+                      const validIdSet = new Set(sRows.map(r => String(r.id).toLowerCase()));
+                      const toDelete = dbExisting.filter(d => d && d.id && !validIdSet.has(String(d.id).toLowerCase()));
+                      toDelete.forEach(d => {
+                        const encId = encodeURIComponent(d.id);
+                        fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers?id=eq.${encId}`, {
+                          method: 'DELETE',
+                          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                        }).catch(() => {});
+                      });
+                    }
+                  } catch(delErr) {}
+                } else if (cleanValue.length === 0) {
                   fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers`, {
                     method: 'DELETE',
                     headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
@@ -4270,7 +4309,7 @@
             const kvMap = {};
 
             // PRIORITY STEP 1: Pre-populate and cache all deleted entity tombstones FIRST
-            const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids'];
+            const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids', 'yarn_ledger_deleted_keys', 'vf_deleted_yarn_orders'];
             tombstoneKeys.forEach(tKey => {
               const tRow = rows.find(r => r && r.key === tKey);
               if (tRow && tRow.value) {
@@ -4404,24 +4443,43 @@
             try {
               const qKey = 'yarn-qualities';
               const dbQualities = await fetchAllRowsPaginated('vf_rm_qualities', '*', 'order=created_at.desc');
-              if (Array.isArray(dbQualities) && dbQualities.length > 0) {
-                const tombstones = getDeletedTombstones();
-                const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()));
-                const reconstructedQualities = dbQualities
-                  .filter(q => q && q.id && !tombstoneSet.has(String(q.id).toLowerCase()))
-                  .map(q => ({
-                    id: q.id,
-                    quality: q.quality,
-                    code: q.code || '',
-                    color: q.color || '',
-                    type: q.type || 'Polyester',
-                    supplier: q.supplier || '',
-                    createdAt: q.created_at || new Date().toISOString()
-                  }));
+              if (Array.isArray(dbQualities)) {
+                const mappedQualities = dbQualities.map(q => ({
+                  id: q.id,
+                  quality: q.quality,
+                  code: q.code || '',
+                  color: q.color || '',
+                  type: q.type || 'Polyester',
+                  supplier: q.supplier || '',
+                  createdAt: q.created_at || new Date().toISOString()
+                }));
+                const cleanDbQualities = filterDeletedEntities(mappedQualities);
+
+                let currentKvQualities = [];
+                try {
+                  const rawKv = kvMap[qKey] || cache[qKey] || nativeLocalStorage.getItem(qKey);
+                  if (rawKv) currentKvQualities = typeof rawKv === 'string' ? JSON.parse(rawKv) : rawKv;
+                } catch(e) {}
+                currentKvQualities = filterDeletedEntities(currentKvQualities);
+
+                const finalQualities = (Array.isArray(currentKvQualities) && currentKvQualities.length > 0) ? currentKvQualities : cleanDbQualities;
+
+                // Purge obsolete rows from database table
+                const finalIdSet = new Set(finalQualities.map(q => String(q.id || '').toLowerCase()));
+                const obsoleteDbRows = dbQualities.filter(q => q && q.id && !finalIdSet.has(String(q.id).toLowerCase()));
+                if (obsoleteDbRows.length > 0) {
+                  obsoleteDbRows.forEach(obs => {
+                    const encId = encodeURIComponent(obs.id);
+                    fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities?id=eq.${encId}`, {
+                      method: 'DELETE',
+                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    }).catch(() => {});
+                  });
+                }
 
                 const lastQWrite = lastLocalWrites[qKey] || 0;
-                if (Date.now() - lastQWrite >= 3000 && reconstructedQualities.length > 0) {
-                  const qStr = JSON.stringify(reconstructedQualities);
+                if (Date.now() - lastQWrite >= 3000) {
+                  const qStr = JSON.stringify(finalQualities);
                   cache[qKey] = qStr;
                   lastSavedHashes[qKey] = computeHash(qStr);
                   safeLocalStorageSet(qKey, qStr);
@@ -4437,28 +4495,47 @@
             try {
               const fpKey = 'yarn-fp-qualities';
               const dbFpQualities = await fetchAllRowsPaginated('vf_fp_qualities', '*', 'order=created_at.desc');
-              if (Array.isArray(dbFpQualities) && dbFpQualities.length > 0) {
-                const tombstones = getDeletedTombstones();
-                const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()));
-                const reconstructedFp = dbFpQualities
-                  .filter(q => q && q.id && !tombstoneSet.has(String(q.id).toLowerCase()))
-                  .map(q => ({
-                    id: q.id,
-                    division: q.division || 'covering',
-                    name: q.name,
-                    composition: q.composition || '',
-                    yarns: Array.isArray(q.yarns) ? q.yarns : [],
-                    denier: q.denier !== null && q.denier !== '' ? Number(q.denier) : '',
-                    tpm: q.tpm !== null && q.tpm !== '' ? Number(q.tpm) : '',
-                    twist: q.twist || '',
-                    color: q.color || '',
-                    createdAt: q.created_at || new Date().toISOString(),
-                    updatedAt: q.updated_at || new Date().toISOString()
-                  }));
+              if (Array.isArray(dbFpQualities)) {
+                const mappedFp = dbFpQualities.map(q => ({
+                  id: q.id,
+                  division: q.division || 'covering',
+                  name: q.name,
+                  composition: q.composition || '',
+                  yarns: Array.isArray(q.yarns) ? q.yarns : [],
+                  denier: q.denier !== null && q.denier !== '' ? Number(q.denier) : '',
+                  tpm: q.tpm !== null && q.tpm !== '' ? Number(q.tpm) : '',
+                  twist: q.twist || '',
+                  color: q.color || '',
+                  createdAt: q.created_at || new Date().toISOString(),
+                  updatedAt: q.updated_at || new Date().toISOString()
+                }));
+                const cleanDbFp = filterDeletedEntities(mappedFp);
+
+                let currentKvFp = [];
+                try {
+                  const rawKv = kvMap[fpKey] || cache[fpKey] || nativeLocalStorage.getItem(fpKey);
+                  if (rawKv) currentKvFp = typeof rawKv === 'string' ? JSON.parse(rawKv) : rawKv;
+                } catch(e) {}
+                currentKvFp = filterDeletedEntities(currentKvFp);
+
+                const finalFp = (Array.isArray(currentKvFp) && currentKvFp.length > 0) ? currentKvFp : cleanDbFp;
+
+                // Purge obsolete rows from database table
+                const finalFpIdSet = new Set(finalFp.map(q => String(q.id || '').toLowerCase()));
+                const obsoleteFpRows = dbFpQualities.filter(q => q && q.id && !finalFpIdSet.has(String(q.id).toLowerCase()));
+                if (obsoleteFpRows.length > 0) {
+                  obsoleteFpRows.forEach(obs => {
+                    const encId = encodeURIComponent(obs.id);
+                    fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities?id=eq.${encId}`, {
+                      method: 'DELETE',
+                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    }).catch(() => {});
+                  });
+                }
 
                 const lastFpWrite = lastLocalWrites[fpKey] || 0;
-                if (Date.now() - lastFpWrite >= 3000 && reconstructedFp.length > 0) {
-                  const fpStr = JSON.stringify(reconstructedFp);
+                if (Date.now() - lastFpWrite >= 3000) {
+                  const fpStr = JSON.stringify(finalFp);
                   cache[fpKey] = fpStr;
                   lastSavedHashes[fpKey] = computeHash(fpStr);
                   safeLocalStorageSet(fpKey, fpStr);
@@ -4474,24 +4551,43 @@
             try {
               const sKey = 'yarn-suppliers';
               const dbSuppliers = await fetchAllRowsPaginated('vf_rm_suppliers', '*', 'order=created_at.desc');
-              if (Array.isArray(dbSuppliers) && dbSuppliers.length > 0) {
-                const tombstones = getDeletedTombstones();
-                const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()));
-                const reconstructedSuppliers = dbSuppliers
-                  .filter(s => s && s.id && !tombstoneSet.has(String(s.id).toLowerCase()))
-                  .map(s => ({
-                    id: s.id,
-                    name: s.name,
-                    phone: s.phone || '',
-                    email: s.email || '',
-                    address: s.address || '',
-                    notes: s.notes || '',
-                    createdAt: s.created_at || new Date().toISOString()
-                  }));
+              if (Array.isArray(dbSuppliers)) {
+                const mappedSuppliers = dbSuppliers.map(s => ({
+                  id: s.id,
+                  name: s.name,
+                  phone: s.phone || '',
+                  email: s.email || '',
+                  address: s.address || '',
+                  notes: s.notes || '',
+                  createdAt: s.created_at || new Date().toISOString()
+                }));
+                const cleanDbSuppliers = filterDeletedEntities(mappedSuppliers);
+
+                let currentKvSuppliers = [];
+                try {
+                  const rawKv = kvMap[sKey] || cache[sKey] || nativeLocalStorage.getItem(sKey);
+                  if (rawKv) currentKvSuppliers = typeof rawKv === 'string' ? JSON.parse(rawKv) : rawKv;
+                } catch(e) {}
+                currentKvSuppliers = filterDeletedEntities(currentKvSuppliers);
+
+                const finalSuppliers = (Array.isArray(currentKvSuppliers) && currentKvSuppliers.length > 0) ? currentKvSuppliers : cleanDbSuppliers;
+
+                // Purge obsolete rows from database table
+                const finalSuppIdSet = new Set(finalSuppliers.map(s => String(s.id || '').toLowerCase()));
+                const obsoleteSuppRows = dbSuppliers.filter(s => s && s.id && !finalSuppIdSet.has(String(s.id).toLowerCase()));
+                if (obsoleteSuppRows.length > 0) {
+                  obsoleteSuppRows.forEach(obs => {
+                    const encId = encodeURIComponent(obs.id);
+                    fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers?id=eq.${encId}`, {
+                      method: 'DELETE',
+                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    }).catch(() => {});
+                  });
+                }
 
                 const lastSWrite = lastLocalWrites[sKey] || 0;
-                if (Date.now() - lastSWrite >= 3000 && reconstructedSuppliers.length > 0) {
-                  const sStr = JSON.stringify(reconstructedSuppliers);
+                if (Date.now() - lastSWrite >= 3000) {
+                  const sStr = JSON.stringify(finalSuppliers);
                   cache[sKey] = sStr;
                   lastSavedHashes[sKey] = computeHash(sStr);
                   safeLocalStorageSet(sKey, sStr);
