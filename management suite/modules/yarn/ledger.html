@@ -4592,39 +4592,54 @@
 
       title.textContent = `Issue Goods Return (GR) — ${row.challanNo || row.partyName || 'Transaction'}`;
 
-      // Try to fetch box details from live yarn-rm-orders or stock
+      // Always fetch all original boxes for this batch from live yarn-rm-orders or stock
       let batchBoxes = [];
-      if (Array.isArray(row.grBoxes) && row.grBoxes.length > 0) {
-        batchBoxes = row.grBoxes;
-      }
+      const targetOrderId = String(row.orderId || row.orderNumber || '').trim();
+      const targetBatchId = String(row.batchId || '').trim();
+      const targetChallan = String(row.challanNo || '').trim();
+      const targetLot = String(row.lotNumber || '').trim();
+      const targetSupplier = String(row.partyName || '').trim().toLowerCase();
 
+      // 1. Try fetching from yarn-rm-orders
       try {
+        let orders = [];
         if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
-          const orders = (await window.VishwaSupabase.get('yarn-rm-orders')) || [];
-          const targetOrderId = String(row.orderId || row.orderNumber || '').trim();
-          const targetBatchId = String(row.batchId || '').trim();
-          const targetChallan = String(row.challanNo || '').trim();
-          const targetLot = String(row.lotNumber || '').trim();
+          orders = (await window.VishwaSupabase.get('yarn-rm-orders')) || [];
+        }
+        if (!Array.isArray(orders) || orders.length === 0) {
+          try {
+            const raw = localStorage.getItem('yarn-rm-orders');
+            if (raw) orders = JSON.parse(raw);
+          } catch(e) {}
+        }
 
+        if (Array.isArray(orders)) {
           for (const ord of orders) {
             if (!ord || !Array.isArray(ord.batches)) continue;
+            const ordId = String(ord.id || ord.orderNumber || '').trim();
+            const ordSupplier = String(ord.supplier || '').trim().toLowerCase();
+
             for (const b of ord.batches) {
               if (!b) continue;
-              if ((targetBatchId && String(b.id) === targetBatchId) ||
-                  (targetChallan && String(b.challanNumber).trim() === targetChallan) ||
-                  (targetLot && String(b.lotNumber).trim() === targetLot) ||
-                  (targetOrderId && (String(ord.id) === targetOrderId || String(ord.orderNumber) === targetOrderId) && String(b.challanNumber).trim() === targetChallan)) {
-                if (Array.isArray(b.boxes) && b.boxes.length > 0) {
-                  batchBoxes = b.boxes.map((bx, idx) => ({
-                    boxNumber: bx.boxNumber || bx.id || `B${idx + 1}`,
-                    cones: Number(bx.cones) || 0,
-                    weight: Number(bx.grossWeight) || Number(bx.weight) || 0,
-                    returnedWeight: Number(bx.returnedWeight) || Number(bx.grWeight) || 0,
-                    date: bx.returnedDate || bx.grDate || '',
-                    remarks: bx.returnedRemarks || bx.grRemarks || '',
-                    status: bx.status || 'available'
-                  }));
-                }
+              const bId = String(b.id || '').trim();
+              const bChallan = String(b.challanNumber || '').trim();
+              const bLot = String(b.lotNumber || '').trim();
+
+              const isMatch = (targetBatchId && bId === targetBatchId) ||
+                              (targetChallan && bChallan === targetChallan && (targetSupplier === '' || ordSupplier === targetSupplier)) ||
+                              (targetLot && bLot === targetLot && (targetChallan === '' || bChallan === targetChallan)) ||
+                              (targetOrderId && (ordId === targetOrderId || ord.id === targetOrderId) && (targetChallan === '' || bChallan === targetChallan));
+
+              if (isMatch && Array.isArray(b.boxes) && b.boxes.length > 0) {
+                batchBoxes = b.boxes.map((bx, idx) => ({
+                  boxNumber: bx.boxNumber || bx.id || `B${idx + 1}`,
+                  cones: Number(bx.cones) || 0,
+                  weight: Number(bx.grossWeight) || Number(bx.weight) || 0,
+                  returnedWeight: Number(bx.returnedWeight) || Number(bx.grWeight) || 0,
+                  date: (bx.returnedDate || bx.grDate || '').split('T')[0],
+                  remarks: bx.returnedRemarks || bx.grRemarks || '',
+                  status: bx.status || 'available'
+                }));
                 break;
               }
             }
@@ -4635,7 +4650,76 @@
         console.warn('Could not fetch batch boxes from orders:', e);
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      // 2. Fallback to vishwa_yarn_rm_stock_data if not found in orders
+      if (batchBoxes.length === 0) {
+        try {
+          let stock = [];
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+            stock = (await window.VishwaSupabase.get('vishwa_yarn_rm_stock_data')) || [];
+          }
+          if (!Array.isArray(stock) || stock.length === 0) {
+            try {
+              const rawStock = localStorage.getItem('vishwa_yarn_rm_stock_data');
+              if (rawStock) stock = JSON.parse(rawStock);
+            } catch(e) {}
+          }
+
+          if (Array.isArray(stock)) {
+            const matchedLot = stock.find(lot => 
+              (targetBatchId && String(lot.batchId) === targetBatchId) ||
+              (targetChallan && String(lot.challanNo || lot.challanNumber).trim() === targetChallan) ||
+              (targetLot && String(lot.lotNumber).trim() === targetLot) ||
+              (targetOrderId && (String(lot.orderRef) === targetOrderId))
+            );
+            if (matchedLot && Array.isArray(matchedLot.boxes) && matchedLot.boxes.length > 0) {
+              batchBoxes = matchedLot.boxes.map((bx, idx) => ({
+                boxNumber: bx.boxNumber || bx.id || `B${idx + 1}`,
+                cones: Number(bx.cones) || 0,
+                weight: Number(bx.grossWeight) || (Number(bx.weight || 0) + Number(bx.grWeight || 0)),
+                returnedWeight: Number(bx.grWeight) || Number(bx.returnedWeight) || 0,
+                date: (bx.grDate || bx.returnedDate || '').split('T')[0],
+                remarks: bx.grRemarks || bx.returnedRemarks || '',
+                status: bx.status || 'available'
+              }));
+            }
+          }
+        } catch(e) {
+          console.warn('Could not fetch batch boxes from stock:', e);
+        }
+      }
+
+      // 3. Overlay any saved row.grBoxes so return details saved in ledger row take precedence
+      if (batchBoxes.length > 0 && Array.isArray(row.grBoxes) && row.grBoxes.length > 0) {
+        const grMap = new Map();
+        row.grBoxes.forEach(b => {
+          grMap.set(String(b.boxNumber || b.id || '').trim(), b);
+        });
+        batchBoxes = batchBoxes.map(bx => {
+          const bNum = String(bx.boxNumber).trim();
+          if (grMap.has(bNum)) {
+            const saved = grMap.get(bNum);
+            return {
+              ...bx,
+              returnedWeight: Number(saved.returnedWeight) || Number(saved.grWeight) || bx.returnedWeight,
+              date: saved.date || saved.returnedDate || saved.grDate || bx.date,
+              remarks: saved.remarks || saved.returnedRemarks || saved.grRemarks || bx.remarks
+            };
+          }
+          return bx;
+        });
+      } else if (batchBoxes.length === 0 && Array.isArray(row.grBoxes) && row.grBoxes.length > 0) {
+        batchBoxes = row.grBoxes.map(bx => ({
+          boxNumber: bx.boxNumber || bx.id || 'B1',
+          cones: Number(bx.cones) || 0,
+          weight: Number(bx.weight) || Number(bx.grossWeight) || gross,
+          returnedWeight: Number(bx.returnedWeight) || Number(bx.grWeight) || 0,
+          date: bx.date || bx.returnedDate || '',
+          remarks: bx.remarks || bx.returnedRemarks || '',
+          status: bx.status || 'available'
+        }));
+      }
+
+      const today = row.grDate || new Date().toISOString().split('T')[0];
 
       body.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 1.25rem;">
@@ -4681,7 +4765,7 @@
             </div>
             <div>
               <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px;">Return Reason / Remarks</label>
-              <input type="text" id="gr-modal-remarks" class="cell-input" value="${escapeHtml(row.remarks && row.remarks.includes('GR') ? row.remarks : '')}" placeholder="e.g. Quality defect / count variation / excess cones" style="width: 100%; padding: 8px 12px; font-size: 0.9rem; border-radius: 8px; border: 1px solid var(--border);">
+              <input type="text" id="gr-modal-remarks" class="cell-input" value="${escapeHtml(row.grRemarks || (row.remarks && row.remarks.includes('GR') ? row.remarks : ''))}" placeholder="e.g. Quality defect / count variation / excess cones" style="width: 100%; padding: 8px 12px; font-size: 0.9rem; border-radius: 8px; border: 1px solid var(--border);">
               <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
                 <span class="gr-preset-badge" onclick="selectGrPresetReason('Quality Defect')">Quality Defect</span>
                 <span class="gr-preset-badge" onclick="selectGrPresetReason('Count Variation')">Count Variation</span>
@@ -4712,7 +4796,7 @@
             <div>
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Box Breakdown (${batchBoxes.length} boxes)</span>
-                <span style="font-size: 0.75rem; color: var(--muted);">Cones marked for GR will show as GR in Stockbook</span>
+                <span style="font-size: 0.75rem; color: var(--muted);">Cones marked for GR will show as GR in Stockbook & Orders</span>
               </div>
               <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
@@ -4892,6 +4976,19 @@
         stock = (await window.VishwaSupabase.get('vishwa_yarn_rm_stock_data')) || [];
       }
 
+      if (!Array.isArray(orders) || orders.length === 0) {
+        try {
+          const raw = localStorage.getItem('yarn-rm-orders');
+          if (raw) orders = JSON.parse(raw);
+        } catch(e) {}
+      }
+      if (!Array.isArray(stock) || stock.length === 0) {
+        try {
+          const raw = localStorage.getItem('vishwa_yarn_rm_stock_data');
+          if (raw) stock = JSON.parse(raw);
+        } catch(e) {}
+      }
+
       if (!Array.isArray(orders)) orders = [];
       if (!Array.isArray(stock)) stock = [];
 
@@ -4933,7 +5030,14 @@
 
       let grBoxesResult = [];
       if (matchedBatch) {
+        let grossTotal = (matchedBatch.boxes || []).reduce((acc, bx) => acc + (Number(bx.grossWeight) || Number(bx.weight) || 0), 0);
+        if (grossTotal === 0) {
+          grossTotal = Number(row.grossQty) || (Number(row.qty || 0) + Number(newGrQty || 0));
+        }
+
         matchedBatch.returnedWeight = Number(newGrQty.toFixed(2));
+        matchedBatch.totalWeight = Math.max(0, Number((grossTotal - newGrQty).toFixed(2)));
+        matchedBatch.receivedQty = matchedBatch.totalWeight;
         matchedBatch.updated_at = new Date().toISOString();
 
         if (Array.isArray(matchedBatch.boxes) && matchedBatch.boxes.length > 0) {
@@ -4944,6 +5048,7 @@
               if (targetBox) {
                 const ret = Number(alloc.returnedWeight) || 0;
                 const gross = Number(targetBox.grossWeight) || Number(targetBox.weight) || 0;
+                targetBox.grossWeight = gross;
                 targetBox.returnedWeight = ret;
                 targetBox.returnedDate = ret > 0 ? (alloc.date || effectiveGrDate) : null;
                 targetBox.returnedRemarks = ret > 0 ? (alloc.remarks || effectiveGrRemarks) : null;
@@ -4978,6 +5083,7 @@
                 retForThisBox = Math.min(gross, remainingGrToDistribute);
                 remainingGrToDistribute = Math.max(0, Number((remainingGrToDistribute - retForThisBox).toFixed(2)));
               }
+              bx.grossWeight = gross;
               bx.returnedWeight = Number(retForThisBox.toFixed(2));
               bx.returnedDate = retForThisBox > 0 ? effectiveGrDate : null;
               bx.returnedRemarks = retForThisBox > 0 ? effectiveGrRemarks : null;
@@ -5065,11 +5171,21 @@
         stockChanged = true;
       }
 
-      if (ordersChanged && window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
-        window.VishwaSupabase.set('yarn-rm-orders', orders, true);
+      if (ordersChanged) {
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+          window.VishwaSupabase.set('yarn-rm-orders', orders, true);
+        }
+        try {
+          localStorage.setItem('yarn-rm-orders', JSON.stringify(orders));
+        } catch(e) {}
       }
-      if (stockChanged && window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
-        window.VishwaSupabase.set('vishwa_yarn_rm_stock_data', stock, true);
+      if (stockChanged) {
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+          window.VishwaSupabase.set('vishwa_yarn_rm_stock_data', stock, true);
+        }
+        try {
+          localStorage.setItem('vishwa_yarn_rm_stock_data', JSON.stringify(stock));
+        } catch(e) {}
       }
 
       row.grQty = Number(newGrQty.toFixed(2));
@@ -5083,9 +5199,9 @@
       row.subtotal = Number((row.qty * rate).toFixed(2));
       const gstAmt = Number(((row.subtotal * gstPct) / 100).toFixed(2));
       row.grandTotal = Number((row.subtotal + gstAmt).toFixed(2));
-      if (grBoxesResult.length > 0) {
-        row.grBoxes = grBoxesResult;
-      }
+      row.grBoxes = grBoxesResult;
+      row.grDate = newGrQty > 0 ? effectiveGrDate : null;
+      row.grRemarks = newGrQty > 0 ? effectiveGrRemarks : null;
       row.updated_at = new Date().toISOString();
 
       saveLedgers(false, true);
@@ -5093,8 +5209,12 @@
       try {
         window.dispatchEvent(new CustomEvent('yarn-order-updated', { detail: { orders } }));
         window.dispatchEvent(new CustomEvent('yarn-stock-updated', { detail: { stock } }));
+        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn-rm-orders' } }));
+        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'vishwa_yarn_rm_stock_data' } }));
         window.postMessage({ type: 'YARN_ORDER_UPDATED', orders }, '*');
         window.postMessage({ type: 'YARN_STOCK_UPDATED', stock }, '*');
+        window.postMessage({ type: 'STORAGE_SYNC', key: 'yarn-rm-orders', value: orders }, '*');
+        window.postMessage({ type: 'STORAGE_SYNC', key: 'vishwa_yarn_rm_stock_data', value: stock }, '*');
       } catch(e) {}
     }
 
@@ -5133,7 +5253,7 @@
         await syncGRToOrdersAndStock(row, totalGr, returnDate, remarks, boxAllocations);
         closeIssueGrModal();
         renderTable(false);
-        showToast(`Goods Return of ${totalGr.toFixed(2)} Kg synced to RM Orders & Stock!`, 'success');
+        showToast(`Goods Return of ${totalGr.toFixed(2)} Kg saved & synced to RM Orders and Stock!`, 'success');
       } catch (err) {
         console.error('Error syncing GR:', err);
         showToast('Error syncing GR to orders/stock', 'error');

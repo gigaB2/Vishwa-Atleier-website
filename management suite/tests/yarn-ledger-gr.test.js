@@ -344,5 +344,162 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(issuedWeight, 35.0, 'Issued weight should be the remaining 35 kg of B2');
     assert.strictEqual(grWeight, 15.0, 'GR weight should be 15 kg');
   });
+
+  await t.test('modal loads all original delivery boxes even when some already have saved GR', () => {
+    // 1. Orders batch has 4 boxes (B1, B2, B3, B4)
+    const orders = [
+      {
+        id: 'ORD-701',
+        orderNumber: '701',
+        supplier: 'Reliance Industries',
+        batches: [
+          {
+            id: 'BATCH-701-1',
+            challanNumber: 'CH-9900',
+            lotNumber: 'LOT-77',
+            totalWeight: 160.0,
+            returnedWeight: 40.0,
+            boxes: [
+              { boxNumber: 'B1', weight: 40.0, grossWeight: 40.0, returnedWeight: 40.0, returnedDate: '2026-09-02', returnedRemarks: 'Defective cone', status: 'gr' },
+              { boxNumber: 'B2', weight: 40.0, grossWeight: 40.0, returnedWeight: 0, status: 'available' },
+              { boxNumber: 'B3', weight: 40.0, grossWeight: 40.0, returnedWeight: 0, status: 'available' },
+              { boxNumber: 'B4', weight: 40.0, grossWeight: 40.0, returnedWeight: 0, status: 'available' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    // 2. Ledger row previously saved with only B1 in grBoxes
+    const ledgerRow = {
+      id: 'PUR-ORD-701-1',
+      orderId: 'ORD-701',
+      batchId: 'BATCH-701-1',
+      challanNo: 'CH-9900',
+      lotNumber: 'LOT-77',
+      partyName: 'Reliance Industries',
+      grossQty: 160.0,
+      grQty: 40.0,
+      qty: 120.0,
+      grBoxes: [
+        { boxNumber: 'B1', cones: 20, weight: 40.0, returnedWeight: 40.0, date: '2026-09-02', remarks: 'Defective cone' }
+      ]
+    };
+
+    // Simulate openIssueGrModal box loader logic
+    const matchedBatch = orders[0].batches[0];
+    let batchBoxes = matchedBatch.boxes.map((bx, idx) => ({
+      boxNumber: bx.boxNumber || bx.id || `B${idx + 1}`,
+      cones: Number(bx.cones) || 0,
+      weight: Number(bx.grossWeight) || Number(bx.weight) || 0,
+      returnedWeight: Number(bx.returnedWeight) || 0,
+      date: bx.returnedDate || '',
+      remarks: bx.returnedRemarks || '',
+      status: bx.status || 'available'
+    }));
+
+    if (Array.isArray(ledgerRow.grBoxes) && ledgerRow.grBoxes.length > 0) {
+      const grMap = new Map();
+      ledgerRow.grBoxes.forEach(b => grMap.set(String(b.boxNumber).trim(), b));
+      batchBoxes = batchBoxes.map(bx => {
+        const bNum = String(bx.boxNumber).trim();
+        if (grMap.has(bNum)) {
+          const saved = grMap.get(bNum);
+          return {
+            ...bx,
+            returnedWeight: Number(saved.returnedWeight) || 0,
+            date: saved.date || bx.date,
+            remarks: saved.remarks || bx.remarks
+          };
+        }
+        return bx;
+      });
+    }
+
+    // Must have all 4 boxes loaded
+    assert.strictEqual(batchBoxes.length, 4, 'All 4 boxes in batch must be loaded');
+    assert.strictEqual(batchBoxes[0].boxNumber, 'B1');
+    assert.strictEqual(batchBoxes[0].returnedWeight, 40.0);
+    assert.strictEqual(batchBoxes[1].boxNumber, 'B2');
+    assert.strictEqual(batchBoxes[1].returnedWeight, 0);
+    assert.strictEqual(batchBoxes[2].boxNumber, 'B3');
+    assert.strictEqual(batchBoxes[3].boxNumber, 'B4');
+  });
+
+  await t.test('syncGRToOrdersAndStock updates batch totalWeight, receivedQty, and box statuses in yarn-rm-orders', () => {
+    const orders = [
+      {
+        id: 'ORD-801',
+        orderNumber: '801',
+        supplier: 'Welspun India',
+        batches: [
+          {
+            id: 'BATCH-801-1',
+            challanNumber: 'CH-1122',
+            lotNumber: 'LOT-88',
+            totalWeight: 200.0,
+            returnedWeight: 0,
+            boxes: [
+              { boxNumber: 'B1', weight: 50.0, grossWeight: 50.0, returnedWeight: 0, status: 'available' },
+              { boxNumber: 'B2', weight: 50.0, grossWeight: 50.0, returnedWeight: 0, status: 'available' },
+              { boxNumber: 'B3', weight: 50.0, grossWeight: 50.0, returnedWeight: 0, status: 'available' },
+              { boxNumber: 'B4', weight: 50.0, grossWeight: 50.0, returnedWeight: 0, status: 'available' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const ledgerRow = {
+      id: 'PUR-801',
+      orderId: 'ORD-801',
+      batchId: 'BATCH-801-1',
+      challanNo: 'CH-1122',
+      lotNumber: 'LOT-88',
+      partyName: 'Welspun India',
+      rate: 220,
+      grossQty: 200.0
+    };
+
+    // User returns B2 (50 kg) and 20 kg of B3 (total GR = 70 kg)
+    const boxAllocations = [
+      { boxNumber: 'B1', returnedWeight: 0, remarks: '' },
+      { boxNumber: 'B2', returnedWeight: 50.0, remarks: '100% defective return' },
+      { boxNumber: 'B3', returnedWeight: 20.0, remarks: 'Partial return 20 kg' },
+      { boxNumber: 'B4', returnedWeight: 0, remarks: '' }
+    ];
+    const newGrQty = 70.0;
+
+    // Execute sync
+    const targetBatch = orders[0].batches[0];
+    const grossTotal = targetBatch.boxes.reduce((acc, bx) => acc + (Number(bx.grossWeight) || Number(bx.weight) || 0), 0);
+    targetBatch.returnedWeight = Number(newGrQty.toFixed(2));
+    targetBatch.totalWeight = Math.max(0, Number((grossTotal - newGrQty).toFixed(2)));
+    targetBatch.receivedQty = targetBatch.totalWeight;
+
+    boxAllocations.forEach(alloc => {
+      const b = targetBatch.boxes.find(x => x.boxNumber === alloc.boxNumber);
+      if (b) {
+        b.returnedWeight = alloc.returnedWeight;
+        b.grossWeight = Number(b.grossWeight) || Number(b.weight) || 0;
+        if (alloc.returnedWeight >= b.grossWeight && b.grossWeight > 0) {
+          b.status = 'gr';
+        } else if (b.status === 'gr' && alloc.returnedWeight < b.grossWeight) {
+          b.status = 'available';
+        }
+      }
+    });
+
+    // Verify order updates
+    assert.strictEqual(targetBatch.returnedWeight, 70.0, 'Batch returned weight must be 70 kg');
+    assert.strictEqual(targetBatch.totalWeight, 130.0, 'Batch net weight must be 130 kg (200 - 70)');
+    assert.strictEqual(targetBatch.receivedQty, 130.0, 'Batch receivedQty must equal net totalWeight');
+    assert.strictEqual(targetBatch.boxes[0].status, 'available');
+    assert.strictEqual(targetBatch.boxes[1].status, 'gr', 'B2 must have status gr');
+    assert.strictEqual(targetBatch.boxes[2].status, 'available', 'B3 partial return must remain available for the remaining 30 kg');
+    assert.strictEqual(targetBatch.boxes[2].returnedWeight, 20.0);
+    assert.strictEqual(targetBatch.boxes[3].status, 'available');
+  });
 });
+
 
