@@ -794,6 +794,12 @@
       border: 1px solid rgba(16, 185, 129, 0.3);
     }
 
+    .status-int-due {
+      background: rgba(249, 115, 22, 0.14);
+      color: #f97316;
+      border: 1px solid rgba(249, 115, 22, 0.35);
+    }
+
     .status-partial {
       background: rgba(245, 158, 11, 0.12);
       color: var(--warning);
@@ -853,13 +859,13 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.75);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      z-index: 2500;
       padding: 1.25rem;
     }
 
@@ -1330,6 +1336,7 @@
           <option value="overdue">🔴 Overdue</option>
           <option value="pending">🔵 Pending</option>
           <option value="partial">🟡 Partial</option>
+          <option value="int-due">🟠 Interest Due</option>
           <option value="paid">🟢 Paid</option>
         </select>
 
@@ -1371,16 +1378,17 @@
               <th style="width: 145px; min-width: 140px;" class="num-col">Subtotal (₹)</th>
               <th style="width: 90px; min-width: 85px;" class="num-col">GST %</th>
               <th style="width: 160px; min-width: 155px;" class="num-col">Grand Total (₹)</th>
-              <th style="width: 160px; min-width: 155px;" class="num-col" style="background: rgba(16, 185, 129, 0.08);">Paid / Recv (₹)</th>
+              <th style="width: 160px; min-width: 155px;" class="num-col" style="background: rgba(16, 185, 129, 0.08);">Paid Principal (₹)</th>
               <th style="width: 190px; min-width: 185px;">Payment Date</th>
               <th style="width: 95px; min-width: 90px;" class="num-col">Cr. Days</th>
               <th style="width: 130px; min-width: 125px;">Due Date</th>
-              <th style="width: 160px; min-width: 155px;" class="num-col" style="background: rgba(239, 68, 68, 0.08);">Outstanding (₹)</th>
+              <th style="width: 160px; min-width: 155px;" class="num-col" style="background: rgba(239, 68, 68, 0.08);">Principal Bal (₹)</th>
               <th style="width: 120px; min-width: 115px;" class="center-col">Status</th>
               <th style="width: 105px; min-width: 100px;" class="num-col interest-col">Int. % p.a.</th>
               <th style="width: 100px; min-width: 95px;" class="num-col interest-col">Late Days</th>
-              <th style="width: 145px; min-width: 140px;" class="num-col interest-col">Interest (₹)</th>
-              <th style="width: 165px; min-width: 160px;" class="num-col">Net Total (₹)</th>
+              <th style="width: 145px; min-width: 140px;" class="num-col interest-col">Accrued Int. (₹)</th>
+              <th style="width: 145px; min-width: 140px;" class="num-col interest-col" style="background: rgba(245, 158, 11, 0.08);">Paid Int. (₹)</th>
+              <th style="width: 165px; min-width: 160px;" class="num-col">Net Bal (₹)</th>
               <th style="width: 280px; min-width: 260px;">Remarks / Cheque No</th>
               <th style="width: 85px; min-width: 80px;" class="center-col actions-col">Actions</th>
             </tr>
@@ -1399,10 +1407,10 @@
           <div class="footer-stat">Invoiced: <span class="val" id="stat-total-invoiced">₹0.00</span></div>
         </div>
         <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-          <div class="footer-stat">Paid: <span class="val" id="stat-total-paid" style="color: var(--success);">₹0.00</span></div>
-          <div class="footer-stat">Outstanding: <span class="val" id="stat-total-outstanding" style="color: var(--error);">₹0.00</span></div>
+          <div class="footer-stat">Settled: <span class="val" id="stat-total-paid" style="color: var(--success);">₹0.00</span></div>
+          <div class="footer-stat">Principal Bal: <span class="val" id="stat-total-outstanding" style="color: var(--error);">₹0.00</span></div>
           <div class="footer-stat interest-col">Accrued Interest: <span class="val" id="stat-total-interest" style="color: var(--warning);">₹0.00</span></div>
-          <div class="footer-stat">Net Total: <span class="val" id="stat-net-total" style="color: var(--accent);">₹0.00</span></div>
+          <div class="footer-stat">Net Outstanding: <span class="val" id="stat-net-total" style="color: var(--accent);">₹0.00</span></div>
         </div>
       </div>
     </div>
@@ -1551,11 +1559,36 @@
         <button class="btn btn-primary" onclick="closePartyStatementModal()">Close</button>
       </div>
     </div>
-  <!-- Yarn RM Order / Challan Iframe Modal (Opens in-page without navigation) -->
-  <div class="modal-overlay" id="modal-order-iframe-overlay" style="display: none; z-index: 1100;">
+  </div>
+
+  <!-- Yarn RM Order / Sales Challan Iframe Modal (Opens in-page without navigation) -->
+  <div class="modal-overlay" id="modal-order-iframe-overlay" style="display: none; z-index: 2500;">
     <div class="modal-card" style="max-width: 1280px; width: 96%; height: 92vh; padding: 0; overflow: hidden; position: relative; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
       <button class="modal-close-btn" onclick="closeOrderIframeModal()" style="position: absolute; top: 12px; right: 16px; z-index: 100; background: var(--surface); border: 1px solid var(--border); border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-md); color: var(--fg); font-size: 1.4rem; cursor: pointer;">&times;</button>
       <iframe id="order-details-iframe" src="about:blank" style="width: 100%; height: 100%; border: none; background: var(--bg);"></iframe>
+    </div>
+  </div>
+
+  <!-- In-Page Challan & Bill Details Breakdown Modal -->
+  <div class="modal-overlay" id="modal-challan-details" style="display: none; z-index: 2600;">
+    <div class="modal-card" style="max-width: 840px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span id="challan-modal-title">Bill / Challan Details</span>
+        </div>
+        <button class="modal-close-btn" onclick="closeChallanDetailsModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="challan-modal-body">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="printChallanDetails()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Details
+        </button>
+        <button class="btn btn-primary" onclick="closeChallanDetailsModal()">Close</button>
+      </div>
     </div>
   </div>
 
@@ -1582,7 +1615,7 @@
     let isHistoryAction = false;
 
     // Allowed editable fields for auto-synced rows
-    const SYNCED_EDITABLE_FIELDS = ['paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'remarks'];
+    const SYNCED_EDITABLE_FIELDS = ['paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
 
     // Toast Notification helper
     function showToast(message, type = 'info') {
@@ -1604,7 +1637,7 @@
     }
 
     // Initialize State & Storage
-    function init() {
+    async function init() {
       // Check query parameter for active tab
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
@@ -1645,8 +1678,8 @@
         });
       }
 
-      // Load Saved Ledgers
-      loadLedgers();
+      // Load Saved Ledgers from Cloud / Local
+      await loadLedgers();
 
       // Automatically sync latest orders and sales
       syncSourceData(false);
@@ -1657,32 +1690,48 @@
       renderTable();
 
       // Cloud & Storage Event Listeners (Safeguarded against wiping active input focus)
-      window.addEventListener('storage', (e) => {
-        if (!e.key || e.key.startsWith('yarn') || e.key === 'yarn-rm-orders') {
+      window.addEventListener('storage', async (e) => {
+        if (!e.key || e.key.startsWith('yarn') || e.key === 'yarn-rm-orders' || e.key === 'vf_deleted_entity_ids') {
           const activeEl = document.activeElement;
           const isTableFocused = activeEl && document.getElementById('excel-table-body')?.contains(activeEl);
           if (!isTableFocused) {
-            loadLedgers();
+            await loadLedgers();
             syncSourceData(false);
+            populatePartyFilter();
             renderTable(false);
           }
         }
       });
-      window.addEventListener('supabase-sync', () => {
+
+      window.addEventListener('supabase-sync', async (e) => {
         const activeEl = document.activeElement;
         const isTableFocused = activeEl && document.getElementById('excel-table-body')?.contains(activeEl);
         if (!isTableFocused) {
-          loadLedgers();
+          await loadLedgers();
           syncSourceData(false);
+          populatePartyFilter();
           renderTable(false);
         }
       });
-      window.addEventListener('supabase-ready', () => {
+
+      window.addEventListener('supabase-ready', async () => {
         const activeEl = document.activeElement;
         const isTableFocused = activeEl && document.getElementById('excel-table-body')?.contains(activeEl);
         if (!isTableFocused) {
-          loadLedgers();
+          await loadLedgers();
           syncSourceData(false);
+          populatePartyFilter();
+          renderTable(false);
+        }
+      });
+
+      window.addEventListener('supabase-item-deleted', async () => {
+        const activeEl = document.activeElement;
+        const isTableFocused = activeEl && document.getElementById('excel-table-body')?.contains(activeEl);
+        if (!isTableFocused) {
+          await loadLedgers();
+          syncSourceData(false);
+          populatePartyFilter();
           renderTable(false);
         }
       });
@@ -1699,11 +1748,32 @@
       });
     }
 
-    // Load Ledgers from localStorage
-    function loadLedgers() {
+    // Load Ledgers with Cloud-First Supabase & Tombstone Deletion Filtering
+    async function loadLedgers() {
       try {
-        let savedSales = JSON.parse(localStorage.getItem('yarn_sales_ledger_data') || '[]');
-        let savedPurchase = JSON.parse(localStorage.getItem('yarn_purchase_ledger_data') || '[]');
+        let savedSales = null;
+        let savedPurchase = null;
+
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+          try {
+            const cloudSales = await window.VishwaSupabase.get('yarn_sales_ledger_data');
+            if (cloudSales && Array.isArray(cloudSales)) savedSales = cloudSales;
+            const cloudPurchase = await window.VishwaSupabase.get('yarn_purchase_ledger_data');
+            if (cloudPurchase && Array.isArray(cloudPurchase)) savedPurchase = cloudPurchase;
+          } catch (e) {}
+        }
+
+        if (!savedSales) {
+          try {
+            savedSales = JSON.parse(localStorage.getItem('yarn_sales_ledger_data') || '[]');
+          } catch(e) { savedSales = []; }
+        }
+
+        if (!savedPurchase) {
+          try {
+            savedPurchase = JSON.parse(localStorage.getItem('yarn_purchase_ledger_data') || '[]');
+          } catch(e) { savedPurchase = []; }
+        }
 
         if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
           savedSales = window.VishwaSupabase.filterDeletedEntities(savedSales);
@@ -1717,19 +1787,25 @@
       }
     }
 
-    // Save Ledgers to localStorage & Supabase
+    // Save Ledgers to localStorage & Supabase Cloud with Realtime Broadcast
     function saveLedgers(showToastMsg = false) {
       recordStateSnapshot();
       try {
-        localStorage.setItem('yarn_sales_ledger_data', JSON.stringify(ledgerData.sales));
-        localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(ledgerData.purchase));
+        const salesJson = JSON.stringify(ledgerData.sales);
+        const purchaseJson = JSON.stringify(ledgerData.purchase);
+        localStorage.setItem('yarn_sales_ledger_data', salesJson);
+        localStorage.setItem('yarn_purchase_ledger_data', purchaseJson);
 
         if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
-          window.VishwaSupabase.set('yarn_sales_ledger_data', ledgerData.sales);
-          window.VishwaSupabase.set('yarn_purchase_ledger_data', ledgerData.purchase);
+          window.VishwaSupabase.set('yarn_sales_ledger_data', ledgerData.sales, true);
+          window.VishwaSupabase.set('yarn_purchase_ledger_data', ledgerData.purchase, true);
+        }
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+          window.VishwaSupabase.saveToSupabase('yarn_sales_ledger_data', ledgerData.sales);
+          window.VishwaSupabase.saveToSupabase('yarn_purchase_ledger_data', ledgerData.purchase);
         }
 
-        if (showToastMsg) showToast('Ledger saved successfully', 'success');
+        if (showToastMsg) showToast('Ledger saved and synced to cloud', 'success');
       } catch (e) {
         console.error("Error saving ledger data:", e);
       }
@@ -1754,6 +1830,10 @@
         ledgerData = undoStack.pop();
         localStorage.setItem('yarn_sales_ledger_data', JSON.stringify(ledgerData.sales));
         localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(ledgerData.purchase));
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+          window.VishwaSupabase.set('yarn_sales_ledger_data', ledgerData.sales, true);
+          window.VishwaSupabase.set('yarn_purchase_ledger_data', ledgerData.purchase, true);
+        }
         renderTable();
         showToast('Undo performed (Ctrl+Z)', 'info');
       } finally {
@@ -1772,6 +1852,10 @@
         ledgerData = redoStack.pop();
         localStorage.setItem('yarn_sales_ledger_data', JSON.stringify(ledgerData.sales));
         localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(ledgerData.purchase));
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+          window.VishwaSupabase.set('yarn_sales_ledger_data', ledgerData.sales, true);
+          window.VishwaSupabase.set('yarn_purchase_ledger_data', ledgerData.purchase, true);
+        }
         renderTable();
         showToast('Redo performed (Ctrl+Y)', 'info');
       } finally {
@@ -1881,12 +1965,13 @@
                     paymentDate: '',
                     creditDays: Number(order.creditDays) || defaultCreditDays,
                     interestRate: defaultInterestRate,
+                    interestPaid: 0,
                     remarks: `Auto-synced from Yarn RM Order #${orderNumber}`,
                     isManual: false
                   });
                   syncAdded++;
                 } else {
-                  // Update base fields & auto-heal rates from order
+                  // Update base fields & auto-heal rates while keeping user inputs
                   const oldRate = existingRow.rate;
                   const oldQty = existingRow.qty;
                   existingRow.syncKey = uniqueSyncKey;
@@ -1897,6 +1982,7 @@
                   existingRow.grandTotal = Number((existingRow.subtotal + gstAmt).toFixed(2));
                   existingRow.source = 'yarn-rm-orders';
                   existingRow.isManual = false;
+                  if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
                   if (oldRate !== effectiveRate || oldQty !== batchQty) syncUpdated++;
                 }
               });
@@ -1962,14 +2048,16 @@
                   paymentDate: sale.paymentDate || '',
                   creditDays: defaultCreditDays,
                   interestRate: defaultInterestRate,
+                  interestPaid: 0,
                   remarks: `Auto-synced from ${div.toUpperCase()} Sales`,
                   isManual: false
                 });
                 syncAdded++;
               } else if (existingRow) {
-                // Ensure synced flags are maintained
+                // Ensure synced flags are maintained and preserve interestPaid
                 existingRow.source = `yarn_${div}_sales`;
                 existingRow.isManual = false;
+                if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
               }
             });
           }
@@ -2020,14 +2108,14 @@
         partyHeader.textContent = 'Customer Name';
         kpiBilledLabel.textContent = 'Total Sales Invoiced (₹)';
         kpiSettledLabel.textContent = 'Total Collections (₹)';
-        kpiOutstandingLabel.textContent = 'Outstanding Receivable (₹)';
+        kpiOutstandingLabel.textContent = 'Principal Balance (₹)';
       } else {
         purchaseBtn.classList.add('active');
         salesBtn.classList.remove('active');
         partyHeader.textContent = 'Supplier Name';
         kpiBilledLabel.textContent = 'Total Purchase Billed (₹)';
         kpiSettledLabel.textContent = 'Total Supplier Payments (₹)';
-        kpiOutstandingLabel.textContent = 'Outstanding Payable (₹)';
+        kpiOutstandingLabel.textContent = 'Principal Balance (₹)';
       }
 
       document.getElementById('badge-sales-count').textContent = ledgerData.sales.length;
@@ -2076,6 +2164,7 @@
         paymentDate: '',
         creditDays: defaultCreditDays,
         interestRate: defaultInterestRate,
+        interestPaid: 0,
         remarks: '',
         isManual: true
       };
@@ -2093,9 +2182,10 @@
       }, 50);
     }
 
-    // Delete a row (Only manual rows can be deleted)
+    // Delete a row with Universal Tombstone Deletion across Supabase Cloud
     function deleteRow(rowId) {
-      const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
+      const targetArray = ledgerData[activeTab] || [];
+      const row = targetArray.find(r => r.id === rowId);
       if (!row) return;
 
       const isLocked = (row.source && row.source !== 'manual') && !row.isManual;
@@ -2104,13 +2194,22 @@
         return;
       }
 
-      if (!confirm('Are you sure you want to delete this custom ledger entry?')) return;
+      if (!confirm('Are you sure you want to delete this custom ledger entry? This will delete across all devices.')) return;
       recordStateSnapshot();
-      ledgerData[activeTab] = ledgerData[activeTab].filter(r => r.id !== rowId);
+      ledgerData[activeTab] = targetArray.filter(r => r.id !== rowId);
+
+      const storageKey = activeTab === 'sales' ? 'yarn_sales_ledger_data' : 'yarn_purchase_ledger_data';
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+        window.VishwaSupabase.recordDeletion(storageKey, rowId);
+        if (row.syncKey) {
+          window.VishwaSupabase.recordDeletion(storageKey, row.syncKey);
+        }
+      }
+
       saveLedgers();
       populatePartyFilter();
       renderTable();
-      showToast('Row deleted', 'info');
+      showToast('Row deleted and tombstone recorded across cloud', 'info');
     }
 
     // Direct In-Cell Edit Handler
@@ -2127,7 +2226,7 @@
         return;
       }
 
-      if (field === 'qty' || field === 'rate' || field === 'gstPercent' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate') {
+      if (field === 'qty' || field === 'rate' || field === 'gstPercent' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate' || field === 'interestPaid') {
         row[field] = Number(value) || 0;
       } else {
         row[field] = value;
@@ -2180,13 +2279,14 @@
 
       const elOutstanding = tr.querySelector('.col-val-outstanding');
       if (elOutstanding) {
-        elOutstanding.textContent = formatCurrency(comp.outstanding);
-        elOutstanding.style.color = comp.outstanding > 0 ? 'var(--error)' : 'var(--success)';
+        elOutstanding.textContent = formatCurrency(comp.principalOutstanding);
+        elOutstanding.style.color = comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)';
       }
 
       const elStatus = tr.querySelector('.col-val-status');
       if (elStatus) {
-        elStatus.innerHTML = `<span class="status-badge status-${comp.status}">${comp.status}</span>`;
+        const badgeLabel = comp.status === 'int-due' ? 'Int. Due' : comp.status;
+        elStatus.innerHTML = `<span class="status-badge status-${comp.status}">${badgeLabel}</span>`;
       }
 
       const elOverdueDays = tr.querySelector('.col-val-overdue-days');
@@ -2203,7 +2303,8 @@
 
       const elNetTotal = tr.querySelector('.col-val-net-total');
       if (elNetTotal) {
-        elNetTotal.textContent = formatCurrency(comp.netTotal);
+        elNetTotal.textContent = formatCurrency(comp.netOutstanding);
+        elNetTotal.style.color = comp.netOutstanding > 0 ? 'var(--accent)' : 'var(--success)';
       }
     }
 
@@ -2233,19 +2334,23 @@
 
       let totalBilled = 0;
       let totalSettled = 0;
-      let totalOutstanding = 0;
+      let totalPrincipalOutstanding = 0;
       let totalInterest = 0;
+      let totalInterestPaid = 0;
+      let totalNetOutstanding = 0;
       let overdueCount = 0;
       let totalWeight = 0;
 
       rows.forEach(row => {
         const computed = computeRowFinancials(row);
         totalBilled += Number(row.grandTotal) || 0;
-        totalSettled += Number(row.paidAmount) || 0;
-        totalOutstanding += computed.outstanding;
+        totalSettled += (Number(row.paidAmount) || 0) + (Number(row.interestPaid) || 0);
+        totalPrincipalOutstanding += computed.principalOutstanding;
         totalInterest += computed.interestAmount;
+        totalInterestPaid += computed.interestPaid;
+        totalNetOutstanding += computed.netOutstanding;
         totalWeight += Number(row.qty) || 0;
-        if (computed.status === 'overdue') overdueCount++;
+        if (computed.status === 'overdue' || computed.status === 'int-due') overdueCount++;
       });
 
       // Update KPI Cards
@@ -2254,13 +2359,13 @@
 
       document.getElementById('kpi-val-total-settled').textContent = formatCurrency(totalSettled);
       const recoveryPct = totalBilled > 0 ? ((totalSettled / totalBilled) * 100).toFixed(1) : 0;
-      document.getElementById('kpi-sub-total-settled').textContent = `${recoveryPct}% settled`;
+      document.getElementById('kpi-sub-total-settled').textContent = `${recoveryPct}% settled (incl. interest)`;
 
-      document.getElementById('kpi-val-total-outstanding').textContent = formatCurrency(totalOutstanding);
-      document.getElementById('kpi-sub-total-outstanding').textContent = `${((totalOutstanding / (totalBilled || 1)) * 100).toFixed(1)}% unpaid`;
+      document.getElementById('kpi-val-total-outstanding').textContent = formatCurrency(totalPrincipalOutstanding);
+      document.getElementById('kpi-sub-total-outstanding').textContent = `${((totalPrincipalOutstanding / (totalBilled || 1)) * 100).toFixed(1)}% unpaid`;
 
       document.getElementById('kpi-val-total-interest').textContent = formatCurrency(totalInterest);
-      document.getElementById('kpi-sub-total-interest').textContent = calculateInterest ? `Enabled (${defaultInterestRate}% p.a.)` : 'Disabled';
+      document.getElementById('kpi-sub-total-interest').textContent = calculateInterest ? `Settled: ${formatCurrency(totalInterestPaid)}` : 'Disabled';
 
       document.getElementById('kpi-val-overdue-count').textContent = overdueCount;
       document.getElementById('kpi-sub-overdue-count').textContent = overdueCount > 0 ? 'Action needed' : 'All accounts healthy';
@@ -2270,9 +2375,9 @@
       document.getElementById('stat-total-weight').textContent = `${totalWeight.toFixed(2)} Kg`;
       document.getElementById('stat-total-invoiced').textContent = formatCurrency(totalBilled);
       document.getElementById('stat-total-paid').textContent = formatCurrency(totalSettled);
-      document.getElementById('stat-total-outstanding').textContent = formatCurrency(totalOutstanding);
+      document.getElementById('stat-total-outstanding').textContent = formatCurrency(totalPrincipalOutstanding);
       document.getElementById('stat-total-interest').textContent = formatCurrency(totalInterest);
-      document.getElementById('stat-net-total').textContent = formatCurrency(totalOutstanding + totalInterest);
+      document.getElementById('stat-net-total').textContent = formatCurrency(totalNetOutstanding);
     }
 
     // Date math: add days to a date string YYYY-MM-DD
@@ -2294,33 +2399,23 @@
       return Math.floor(diffTime / (1000 * 60 * 60 * 24));
     }
 
-    // Compute Calculated Metrics for a Row
+    // Compute Calculated Metrics for a Row with Interest Settlement Support
     function computeRowFinancials(row) {
       const grandTotal = Number(row.grandTotal) || 0;
       const paid = Number(row.paidAmount) || 0;
-      const outstanding = Math.max(0, Number((grandTotal - paid).toFixed(2)));
+      const principalOutstanding = Math.max(0, Number((grandTotal - paid).toFixed(2)));
       const creditDays = Number(row.creditDays) || defaultCreditDays;
       const dueDate = addDays(row.date, creditDays);
       const today = new Date().toISOString().split('T')[0];
 
       // Overdue Days calculation:
       let overdueDays = 0;
-      if (outstanding <= 0 && row.paymentDate && dueDate) {
+      if (principalOutstanding <= 0 && row.paymentDate && dueDate) {
         // Paid in full - check if settled late
         overdueDays = Math.max(0, daysBetween(dueDate, row.paymentDate));
-      } else if (outstanding > 0 && dueDate) {
+      } else if (principalOutstanding > 0 && dueDate) {
         // Still outstanding - compare with today
         overdueDays = Math.max(0, daysBetween(dueDate, today));
-      }
-
-      // Payment Status
-      let status = 'pending';
-      if (outstanding <= 0) {
-        status = 'paid';
-      } else if (paid > 0 && outstanding > 0) {
-        status = overdueDays > 0 ? 'overdue' : 'partial';
-      } else if (overdueDays > 0) {
-        status = 'overdue';
       }
 
       // Interest Calculation
@@ -2328,18 +2423,38 @@
       let interestAmount = 0;
       if (calculateInterest && overdueDays > 0 && ratePct > 0) {
         // Formula: Outstanding * (rate / 100) * (overdueDays / 365)
-        const baseAmount = outstanding > 0 ? outstanding : grandTotal;
+        const baseAmount = principalOutstanding > 0 ? principalOutstanding : grandTotal;
         interestAmount = Number(((baseAmount * (ratePct / 100) * overdueDays) / 365).toFixed(2));
       }
 
-      const netTotal = Number((outstanding + interestAmount).toFixed(2));
+      // Interest Settlement
+      const interestPaid = Number(row.interestPaid) || 0;
+      const interestOutstanding = Math.max(0, Number((interestAmount - interestPaid).toFixed(2)));
+      const netOutstanding = Number((principalOutstanding + interestOutstanding).toFixed(2));
+      const netTotal = Number((grandTotal + interestAmount).toFixed(2));
+
+      // Payment Status
+      let status = 'pending';
+      if (principalOutstanding <= 0 && interestOutstanding <= 0) {
+        status = 'paid';
+      } else if (principalOutstanding <= 0 && interestOutstanding > 0) {
+        status = 'int-due';
+      } else if (paid > 0 && principalOutstanding > 0) {
+        status = overdueDays > 0 ? 'overdue' : 'partial';
+      } else if (overdueDays > 0) {
+        status = 'overdue';
+      }
 
       return {
         dueDate,
-        outstanding,
+        outstanding: principalOutstanding,
+        principalOutstanding,
         overdueDays,
         status,
         interestAmount,
+        interestPaid,
+        interestOutstanding,
+        netOutstanding,
         netTotal
       };
     }
@@ -2393,19 +2508,23 @@
       // Calculate KPI Aggregates
       let totalBilled = 0;
       let totalSettled = 0;
-      let totalOutstanding = 0;
+      let totalPrincipalOutstanding = 0;
       let totalInterest = 0;
+      let totalInterestPaid = 0;
+      let totalNetOutstanding = 0;
       let overdueCount = 0;
       let totalWeight = 0;
 
       rows.forEach(row => {
         const computed = computeRowFinancials(row);
         totalBilled += Number(row.grandTotal) || 0;
-        totalSettled += Number(row.paidAmount) || 0;
-        totalOutstanding += computed.outstanding;
+        totalSettled += (Number(row.paidAmount) || 0) + (Number(row.interestPaid) || 0);
+        totalPrincipalOutstanding += computed.principalOutstanding;
         totalInterest += computed.interestAmount;
+        totalInterestPaid += computed.interestPaid;
+        totalNetOutstanding += computed.netOutstanding;
         totalWeight += Number(row.qty) || 0;
-        if (computed.status === 'overdue') overdueCount++;
+        if (computed.status === 'overdue' || computed.status === 'int-due') overdueCount++;
       });
 
       // Update KPI Cards
@@ -2414,13 +2533,13 @@
 
       document.getElementById('kpi-val-total-settled').textContent = formatCurrency(totalSettled);
       const recoveryPct = totalBilled > 0 ? ((totalSettled / totalBilled) * 100).toFixed(1) : 0;
-      document.getElementById('kpi-sub-total-settled').textContent = `${recoveryPct}% settled`;
+      document.getElementById('kpi-sub-total-settled').textContent = `${recoveryPct}% settled (incl. interest)`;
 
-      document.getElementById('kpi-val-total-outstanding').textContent = formatCurrency(totalOutstanding);
-      document.getElementById('kpi-sub-total-outstanding').textContent = `${((totalOutstanding / (totalBilled || 1)) * 100).toFixed(1)}% unpaid`;
+      document.getElementById('kpi-val-total-outstanding').textContent = formatCurrency(totalPrincipalOutstanding);
+      document.getElementById('kpi-sub-total-outstanding').textContent = `${((totalPrincipalOutstanding / (totalBilled || 1)) * 100).toFixed(1)}% unpaid`;
 
       document.getElementById('kpi-val-total-interest').textContent = formatCurrency(totalInterest);
-      document.getElementById('kpi-sub-total-interest').textContent = calculateInterest ? `Enabled (${defaultInterestRate}% p.a.)` : 'Disabled';
+      document.getElementById('kpi-sub-total-interest').textContent = calculateInterest ? `Settled: ${formatCurrency(totalInterestPaid)}` : 'Disabled';
 
       document.getElementById('kpi-val-overdue-count').textContent = overdueCount;
       document.getElementById('kpi-sub-overdue-count').textContent = overdueCount > 0 ? 'Action needed' : 'All accounts healthy';
@@ -2430,9 +2549,9 @@
       document.getElementById('stat-total-weight').textContent = `${totalWeight.toFixed(2)} Kg`;
       document.getElementById('stat-total-invoiced').textContent = formatCurrency(totalBilled);
       document.getElementById('stat-total-paid').textContent = formatCurrency(totalSettled);
-      document.getElementById('stat-total-outstanding').textContent = formatCurrency(totalOutstanding);
+      document.getElementById('stat-total-outstanding').textContent = formatCurrency(totalPrincipalOutstanding);
       document.getElementById('stat-total-interest').textContent = formatCurrency(totalInterest);
-      document.getElementById('stat-net-total').textContent = formatCurrency(totalOutstanding + totalInterest);
+      document.getElementById('stat-net-total').textContent = formatCurrency(totalNetOutstanding);
 
       // Interest Column Visibility Toggle
       const intCols = document.querySelectorAll('.interest-col');
@@ -2444,7 +2563,7 @@
       if (rows.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="22" style="text-align: center; padding: 3.5rem 1rem; color: var(--muted);">
+            <td colspan="23" style="text-align: center; padding: 3.5rem 1rem; color: var(--muted);">
               <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; color: var(--fg);">No ledger entries found</div>
               <div style="font-size: 0.875rem;">Click <strong>+ Add Row</strong> to insert manual bills or click <strong>Re-sync</strong> to fetch latest orders/sales.</div>
             </td>
@@ -2456,7 +2575,8 @@
       tbody.innerHTML = rows.map((row, idx) => {
         const comp = computeRowFinancials(row);
         const isLocked = (row.source && row.source !== 'manual') && !row.isManual;
-        let statusBadge = `<span class="status-badge status-${comp.status}">${comp.status}</span>`;
+        const badgeLabel = comp.status === 'int-due' ? 'Int. Due' : comp.status;
+        let statusBadge = `<span class="status-badge status-${comp.status}">${badgeLabel}</span>`;
 
         return `
           <tr id="ledger-row-${row.id}" class="${comp.status === 'overdue' ? 'is-overdue' : (comp.status === 'paid' ? 'is-paid' : '')} ${isLocked ? 'is-locked' : ''}">
@@ -2521,9 +2641,9 @@
               <div class="cell-readonly num bold font-mono col-val-grandtotal" title="Grand Total">${formatCurrency(row.grandTotal)}</div>
             </td>
 
-            <!-- Editable Paid / Received Amount -->
+            <!-- Editable Paid / Received Principal Amount -->
             <td class="num-col" style="background: rgba(16, 185, 129, 0.05);">
-              <input type="number" step="0.01" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onchange="handleCellChange('${row.id}', 'paidAmount', this.value)" title="Enter received/paid amount">
+              <input type="number" step="0.01" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onchange="handleCellChange('${row.id}', 'paidAmount', this.value)" title="Enter paid/received principal amount">
             </td>
 
             <!-- Editable Payment Date (Expanded & Click anywhere to open calendar) -->
@@ -2541,7 +2661,7 @@
             </td>
 
             <td class="num-col cell-locked-bg" style="background: rgba(239, 68, 68, 0.05);">
-              <div class="cell-readonly num bold font-mono col-val-outstanding" style="color: ${comp.outstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.outstanding)}</div>
+              <div class="cell-readonly num bold font-mono col-val-outstanding" style="color: ${comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.principalOutstanding)}</div>
             </td>
 
             <td class="center-col cell-locked-bg col-val-status">
@@ -2561,8 +2681,13 @@
               <div class="cell-readonly num bold font-mono col-val-interest-amount" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</div>
             </td>
 
+            <!-- Editable Paid Interest (Settlement of Late Interest!) -->
+            <td class="num-col interest-col" style="background: rgba(245, 158, 11, 0.05); ${calculateInterest ? '' : 'display:none;'}">
+              <input type="number" step="0.01" class="cell-input num-font col-input-interest-paid" style="color: var(--warning); font-weight: 700; width: 110px;" value="${row.interestPaid || 0}" onchange="handleCellChange('${row.id}', 'interestPaid', this.value)" title="Enter paid/settled late interest amount">
+            </td>
+
             <td class="num-col cell-locked-bg">
-              <div class="cell-readonly num bold font-mono col-val-net-total" style="color: var(--accent);">${formatCurrency(comp.netTotal)}</div>
+              <div class="cell-readonly num bold font-mono col-val-net-total" style="color: ${comp.netOutstanding > 0 ? 'var(--accent)' : 'var(--success)'};">${formatCurrency(comp.netOutstanding)}</div>
             </td>
 
             <!-- Editable Remarks -->
@@ -2668,7 +2793,7 @@
       printPartyName.textContent = party ? `PARTY: ${party}` : '';
 
       if (!party) {
-        tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 1rem; font-weight: 600;">Please select a customer or supplier party from the dropdown above</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 1rem; font-weight: 600;">Please select a customer or supplier party from the dropdown above</td></tr>';
         tfoot.innerHTML = '';
         document.getElementById('statement-total-invoiced').textContent = '₹0.00';
         document.getElementById('statement-total-settled').textContent = '₹0.00';
@@ -2681,9 +2806,11 @@
       partyRows.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
 
       let totalInvoiced = 0;
-      let totalPaid = 0;
-      let runningBalance = 0;
+      let totalPaidPrincipal = 0;
+      let totalPrincipalBal = 0;
       let totalInterest = 0;
+      let totalInterestPaid = 0;
+      let totalNetBal = 0;
       let totalWeight = 0;
 
       tbody.innerHTML = partyRows.map((row, idx) => {
@@ -2692,10 +2819,14 @@
         const paid = Number(row.paidAmount) || 0;
         const qty = Number(row.qty) || 0;
         totalInvoiced += billed;
-        totalPaid += paid;
-        runningBalance += (billed - paid);
+        totalPaidPrincipal += paid;
+        totalPrincipalBal += comp.principalOutstanding;
         totalInterest += comp.interestAmount;
+        totalInterestPaid += comp.interestPaid;
+        totalNetBal += comp.netOutstanding;
         totalWeight += qty;
+
+        const badgeLabel = comp.status === 'int-due' ? 'Int. Due' : comp.status;
 
         return `
           <tr>
@@ -2707,11 +2838,13 @@
             <td class="num-col font-mono">${row.rate > 0 ? Number(row.rate).toFixed(2) : '-'}</td>
             <td class="num-col font-mono bold">${formatCurrency(billed)}</td>
             <td class="num-col font-mono" style="color: var(--success); font-weight: 700;">${paid > 0 ? formatCurrency(paid) : '-'}</td>
-            <td class="num-col font-mono bold" style="color: ${runningBalance > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(runningBalance)}</td>
+            <td class="num-col font-mono bold" style="color: ${comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.principalOutstanding)}</td>
             <td style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); white-space: nowrap;">${comp.dueDate || '-'}</td>
             <td class="num-col font-mono" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</td>
             <td class="num-col font-mono bold" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</td>
-            <td class="center-col"><span class="status-badge status-${comp.status}">${comp.status}</span></td>
+            <td class="num-col font-mono" style="color: var(--warning); font-weight: 700;">${comp.interestPaid > 0 ? formatCurrency(comp.interestPaid) : '-'}</td>
+            <td class="num-col font-mono bold" style="color: ${comp.netOutstanding > 0 ? 'var(--accent)' : 'var(--success)'};">${formatCurrency(comp.netOutstanding)}</td>
+            <td class="center-col"><span class="status-badge status-${comp.status}">${badgeLabel}</span></td>
           </tr>
         `;
       }).join('');
@@ -2723,17 +2856,19 @@
           <td class="num-col font-mono bold">${totalWeight.toFixed(2)} Kg</td>
           <td></td>
           <td class="num-col font-mono bold">${formatCurrency(totalInvoiced)}</td>
-          <td class="num-col font-mono bold" style="color: var(--success);">${formatCurrency(totalPaid)}</td>
-          <td class="num-col font-mono bold" style="color: var(--error);">${formatCurrency(runningBalance)}</td>
+          <td class="num-col font-mono bold" style="color: var(--success);">${formatCurrency(totalPaidPrincipal)}</td>
+          <td class="num-col font-mono bold" style="color: var(--error);">${formatCurrency(totalPrincipalBal)}</td>
           <td colspan="2"></td>
           <td class="num-col font-mono bold" style="color: var(--warning);">${formatCurrency(totalInterest)}</td>
+          <td class="num-col font-mono bold" style="color: var(--warning);">${formatCurrency(totalInterestPaid)}</td>
+          <td class="num-col font-mono bold" style="color: var(--accent);">${formatCurrency(totalNetBal)}</td>
           <td></td>
         </tr>
       `;
 
       document.getElementById('statement-total-invoiced').textContent = formatCurrency(totalInvoiced);
-      document.getElementById('statement-total-settled').textContent = formatCurrency(totalPaid);
-      document.getElementById('statement-total-balance').textContent = formatCurrency(runningBalance);
+      document.getElementById('statement-total-settled').textContent = formatCurrency(totalPaidPrincipal + totalInterestPaid);
+      document.getElementById('statement-total-balance').textContent = formatCurrency(totalNetBal);
       document.getElementById('statement-total-interest').textContent = formatCurrency(totalInterest);
     }
 
@@ -2752,62 +2887,216 @@
       }, 500);
     }
 
-    // Open Yarn RM Order / Challan Modal in an in-page iframe overlay
+    // Open Yarn RM Order / Sales Challan Modal or in-page Breakdown Modal
     function openChallanModal(rowId) {
       const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
       if (!row) return;
 
-      try {
-        let orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
-          orders = window.VishwaSupabase.filterDeletedEntities(orders);
-        }
+      const challan = (row.challanNo || '').trim();
+      const party = (row.partyName || '').trim();
 
-        const challan = (row.challanNo || '').trim();
-        const party = (row.partyName || '').trim();
-        let matchingOrder = null;
-        let matchedBatchId = '';
-        let matchedLot = '';
-
-        if (challan) {
-          matchingOrder = orders.find(o => 
-            (o.batches || []).some(b => {
-              if (String(b.challanNumber || '').trim() === challan) {
-                matchedBatchId = b.id || '';
-                matchedLot = b.lotNumber || '';
-                return true;
-              }
-              return false;
-            })
-          );
-        }
-
-        if (!matchingOrder && challan.startsWith('ORD-')) {
-          const orderNum = challan.replace('ORD-', '').trim();
-          matchingOrder = orders.find(o => String(o.orderNumber || o.id) === orderNum);
-        }
-
-        if (!matchingOrder && challan) {
-          matchingOrder = orders.find(o => String(o.orderNumber || o.id) === challan);
-        }
-
-        if (!matchingOrder && party) {
-          matchingOrder = orders.find(o => (o.supplier || '').trim().toLowerCase() === party.toLowerCase());
-        }
-
-        if (matchingOrder) {
-          const overlay = document.getElementById('modal-order-iframe-overlay');
-          const iframe = document.getElementById('order-details-iframe');
-          if (overlay && iframe) {
-            iframe.src = `yarn-rm-orders.html?view=orders&orderId=${encodeURIComponent(matchingOrder.id)}&batchId=${encodeURIComponent(matchedBatchId)}&challan=${encodeURIComponent(challan)}&lot=${encodeURIComponent(matchedLot)}&openModal=1&embedded=1`;
-            overlay.style.display = 'flex';
+      // 1. Purchase Ledger or Yarn RM Order Source
+      if (activeTab === 'purchase' || row.source === 'yarn-rm-orders') {
+        try {
+          let orders = [];
+          try {
+            orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
+          } catch(e) {}
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+            orders = window.VishwaSupabase.filterDeletedEntities(orders);
           }
-        } else {
-          showToast('No linked Yarn RM Order found for ' + (challan || party || 'this entry'), 'info');
+
+          let matchingOrder = null;
+          let matchedBatchId = '';
+          let matchedLot = '';
+
+          if (challan) {
+            matchingOrder = (orders || []).find(o => 
+              (o.batches || []).some(b => {
+                if (String(b.challanNumber || '').trim() === challan) {
+                  matchedBatchId = b.id || '';
+                  matchedLot = b.lotNumber || '';
+                  return true;
+                }
+                return false;
+              })
+            );
+          }
+
+          if (!matchingOrder && challan.startsWith('ORD-')) {
+            const orderNum = challan.replace('ORD-', '').trim();
+            matchingOrder = (orders || []).find(o => String(o.orderNumber || o.id) === orderNum);
+          }
+
+          if (!matchingOrder && challan) {
+            matchingOrder = (orders || []).find(o => String(o.orderNumber || o.id) === challan);
+          }
+
+          if (!matchingOrder && party) {
+            matchingOrder = (orders || []).find(o => (o.supplier || '').trim().toLowerCase() === party.toLowerCase());
+          }
+
+          if (matchingOrder) {
+            const overlay = document.getElementById('modal-order-iframe-overlay');
+            const iframe = document.getElementById('order-details-iframe');
+            if (overlay && iframe) {
+              iframe.src = `yarn-rm-orders.html?view=orders&orderId=${encodeURIComponent(matchingOrder.id)}&batchId=${encodeURIComponent(matchedBatchId)}&challan=${encodeURIComponent(challan)}&lot=${encodeURIComponent(matchedLot)}&openModal=1&embedded=1`;
+              overlay.style.display = 'flex';
+              return;
+            }
+          }
+        } catch (e) {
+          console.error("Error finding yarn-rm-order:", e);
         }
-      } catch (e) {
-        console.error("Error opening challan modal:", e);
       }
+
+      // 2. Sales Ledger or Yarn Sales Logs Source
+      if (activeTab === 'sales' || (row.source && row.source.includes('sales'))) {
+        try {
+          let matchedSale = null;
+          let matchedDiv = 'covering';
+
+          ['covering', 'tfo', 'doubler'].forEach(div => {
+            if (matchedSale) return;
+            try {
+              let sales = JSON.parse(localStorage.getItem(`yarn_${div}_sales_logs`) || '[]');
+              if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+                sales = window.VishwaSupabase.filterDeletedEntities(sales);
+              }
+              const s = (sales || []).find(item => String(item.challanNo || item.challanNumber || item.id).trim() === challan);
+              if (s) {
+                matchedSale = s;
+                matchedDiv = div;
+              }
+            } catch(e) {}
+          });
+
+          if (matchedSale) {
+            const overlay = document.getElementById('modal-order-iframe-overlay');
+            const iframe = document.getElementById('order-details-iframe');
+            if (overlay && iframe) {
+              iframe.src = `yarn-sales.html?division=${encodeURIComponent(matchedDiv)}&tab=sales&challan=${encodeURIComponent(challan)}&embedded=1`;
+              overlay.style.display = 'flex';
+              return;
+            }
+          }
+        } catch (e) {
+          console.error("Error finding yarn sales log:", e);
+        }
+      }
+
+      // 3. Fallback: Always open rich in-page Challan Details breakdown modal
+      openChallanDetailsModal(row);
+    }
+
+    // Open In-Page Challan Details Breakdown Modal
+    function openChallanDetailsModal(row) {
+      const modal = document.getElementById('modal-challan-details');
+      const body = document.getElementById('challan-modal-body');
+      const title = document.getElementById('challan-modal-title');
+      if (!modal || !body) return;
+
+      const comp = computeRowFinancials(row);
+      const isSales = activeTab === 'sales' || (row.source && row.source.includes('sales'));
+      title.textContent = `${isSales ? 'Sales Invoice' : 'Purchase Challan'}: ${row.challanNo || 'Entry Details'}`;
+
+      body.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <div style="font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">${isSales ? 'Customer Account' : 'Supplier Account'}</div>
+              <div style="font-size: 1.35rem; font-weight: 800; color: var(--fg);">${escapeHtml(row.partyName || '-')}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Bill / Challan No</div>
+              <div style="font-family: var(--font-mono); font-size: 1.25rem; font-weight: 800; color: var(--accent);">${escapeHtml(row.challanNo || '-')}</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; background: var(--surface-subtle); padding: 1.15rem; border-radius: 12px; border: 1px solid var(--border);">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Transaction Date</div>
+              <div style="font-family: var(--font-mono); font-weight: 700; font-size: 0.95rem;">${row.date || '-'}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Quality / Specs</div>
+              <div style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(row.quality || '-')}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Billed Weight</div>
+              <div style="font-family: var(--font-mono); font-weight: 700; font-size: 0.95rem;">${Number(row.qty || 0).toFixed(2)} Kg</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Unit Rate</div>
+              <div style="font-family: var(--font-mono); font-weight: 700; font-size: 0.95rem;">₹${Number(row.rate || 0).toFixed(2)} / Kg</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+            <div style="padding: 1rem; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);">
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Subtotal (Taxable)</div>
+              <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700;">${formatCurrency(row.subtotal)}</div>
+            </div>
+            <div style="padding: 1rem; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);">
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">GST (${row.gstPercent !== undefined ? row.gstPercent : 5.0}%)</div>
+              <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700;">${formatCurrency((row.grandTotal || 0) - (row.subtotal || 0))}</div>
+            </div>
+            <div style="padding: 1rem; border-radius: 10px; border: 1px solid var(--accent); background: rgba(124, 58, 237, 0.05);">
+              <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: 700;">Grand Invoiced Total</div>
+              <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 800; color: var(--accent);">${formatCurrency(row.grandTotal)}</div>
+            </div>
+          </div>
+
+          <div style="border-top: 1px solid var(--border); padding-top: 1rem;">
+            <div style="font-size: 0.85rem; font-weight: 700; color: var(--fg); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Settlement &amp; Late Interest Breakdown</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem;">
+              <div style="background: rgba(16, 185, 129, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                <div style="font-size: 0.72rem; color: var(--success); font-weight: 700; text-transform: uppercase;">Paid Principal</div>
+                <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--success);">${formatCurrency(row.paidAmount)}</div>
+                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">${row.paymentDate ? `Date: ${row.paymentDate}` : 'Unpaid'}</div>
+              </div>
+              <div style="background: rgba(239, 68, 68, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                <div style="font-size: 0.72rem; color: var(--error); font-weight: 700; text-transform: uppercase;">Principal Due</div>
+                <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--error);">${formatCurrency(comp.principalOutstanding)}</div>
+                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Due: ${comp.dueDate || '-'}</div>
+              </div>
+              <div style="background: rgba(245, 158, 11, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                <div style="font-size: 0.72rem; color: var(--warning); font-weight: 700; text-transform: uppercase;">Accrued Interest</div>
+                <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--warning);">${formatCurrency(comp.interestAmount)}</div>
+                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">${comp.overdueDays}d @ ${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}%</div>
+              </div>
+              <div style="background: rgba(245, 158, 11, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                <div style="font-size: 0.72rem; color: var(--warning); font-weight: 700; text-transform: uppercase;">Paid Interest</div>
+                <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--warning);">${formatCurrency(comp.interestPaid)}</div>
+                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Bal: ${formatCurrency(comp.interestOutstanding)}</div>
+              </div>
+              <div style="background: rgba(124, 58, 237, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(124, 58, 237, 0.2);">
+                <div style="font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase;">Net Outstanding</div>
+                <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 800; color: var(--accent);">${formatCurrency(comp.netOutstanding)}</div>
+                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Status: ${comp.status.toUpperCase()}</div>
+              </div>
+            </div>
+          </div>
+
+          ${row.remarks ? `
+            <div style="background: var(--surface-subtle); padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid var(--border);">
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Remarks / Cheque Details</div>
+              <div style="font-size: 0.9rem; color: var(--fg);">${escapeHtml(row.remarks)}</div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      modal.style.display = 'flex';
+    }
+
+    function closeChallanDetailsModal() {
+      const modal = document.getElementById('modal-challan-details');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function printChallanDetails() {
+      window.print();
     }
 
     // Close in-page Yarn RM Order / Challan Iframe Modal
@@ -2842,9 +3131,9 @@
 
       const headers = [
         'Date', 'Bill/Challan No', activeTab === 'sales' ? 'Customer' : 'Supplier', 'Quality',
-        'Quantity (Kg)', 'Rate', 'Subtotal', 'GST %', 'Grand Total', 'Paid Amount',
-        'Payment Date', 'Credit Days', 'Due Date', 'Outstanding', 'Status',
-        'Interest Rate %', 'Overdue Days', 'Interest Amount', 'Net Total', 'Remarks'
+        'Quantity (Kg)', 'Rate', 'Subtotal', 'GST %', 'Grand Total', 'Paid Principal Amount',
+        'Payment Date', 'Credit Days', 'Due Date', 'Principal Outstanding', 'Status',
+        'Interest Rate %', 'Overdue Days', 'Accrued Interest', 'Paid Interest', 'Interest Outstanding', 'Net Outstanding', 'Remarks'
       ];
 
       const csvRows = [headers.join(',')];
@@ -2865,12 +3154,14 @@
           `"${r.paymentDate || ''}"`,
           r.creditDays || defaultCreditDays,
           `"${comp.dueDate || ''}"`,
-          comp.outstanding,
+          comp.principalOutstanding,
           `"${comp.status}"`,
           r.interestRate || defaultInterestRate,
           comp.overdueDays,
           comp.interestAmount,
-          comp.netTotal,
+          comp.interestPaid,
+          comp.interestOutstanding,
+          comp.netOutstanding,
           `"${(r.remarks || '').replace(/"/g, '""')}"`
         ];
         csvRows.push(values.join(','));
