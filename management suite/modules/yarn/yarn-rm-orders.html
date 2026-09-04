@@ -1475,9 +1475,9 @@
         return () => window.removeEventListener('fyChanged', handleFYChange);
       }, []);
 
-      // Auto-heal and sync all orders and batches into Yarn RM Stock Book
+      // Auto-heal and sync all orders and batches into Yarn RM Stock Book (Strict Single Source of Truth)
       useEffect(() => {
-        if (!Array.isArray(orders) || orders.length === 0) return;
+        if (!Array.isArray(orders)) return;
         if (window.VishwaSupabase && typeof window.VishwaSupabase.isHydrated === 'function' && !window.VishwaSupabase.isHydrated()) {
           return; // Wait until cloud hydration completes
         }
@@ -1486,11 +1486,7 @@
           let stockList = rawStock ? JSON.parse(rawStock) : [];
           if (!Array.isArray(stockList)) stockList = [];
 
-          let changed = false;
-          const activeLotKeys = new Set();
-          const activeOrderRefs = new Set();
-
-          // Build comprehensive index of existing boxes and lots so issue statuses are 100% preserved
+          // Index existing boxes to preserve runtime statuses (issued/available/gr)
           const existingBoxMap = new Map();
           const existingLotMap = new Map();
 
@@ -1504,6 +1500,7 @@
             if (lId) existingLotMap.set(lId, lot);
             if (bId) existingLotMap.set(bId, lot);
             if (lNum && lChallan) existingLotMap.set(`${lNum}__${lChallan}`, lot);
+            if (lNum) existingLotMap.set(`lot_${lNum}`, lot);
 
             (lot.boxes || []).forEach(b => {
               if (!b) return;
@@ -1518,14 +1515,10 @@
             });
           });
 
-          orders.forEach(order => {
-            const orderRefId = String(order.orderNumber || order.id || '');
-            if (orderRefId) {
-              activeOrderRefs.add(orderRefId);
-              activeOrderRefs.add(String(order.id));
-              if (order.orderNumber) activeOrderRefs.add(String(order.orderNumber));
-            }
+          // Rebuild stock strictly from active orders and batches
+          const freshStockList = [];
 
+          orders.forEach(order => {
             (order.batches || []).forEach((batch, bIdx) => {
               const recDateOnly = (batch.receiveDate || new Date().toISOString().split('T')[0]).split('T')[0];
               const batchChallan = String(batch.challanNumber || '').trim();
@@ -1533,24 +1526,14 @@
               const batchId = String(batch.id || `BATCH-${bIdx}`);
               const orderId = String(order.orderNumber || order.id || '');
               
-              // Ensure unique lot ID per batch
-              const lotIdVal = batch.lotNumber 
-                ? (batch.lotNumber + (batchChallan ? `__${batchChallan}` : `__${batchId}`))
+              const lotIdVal = batchLot 
+                ? (batchLot + (batchChallan ? `__${batchChallan}` : `__${batchId}`))
                 : (`LOT-${batchChallan || batchId || bIdx}`);
 
-              activeLotKeys.add(lotIdVal);
-              if (batch.id) activeLotKeys.add(String(batch.id));
-              if (batchLot && batchChallan) activeLotKeys.add(`${batchLot}__${batchChallan}`);
-              
-              // Find existing lot by exact lotIdVal, batchId, or matching lotNumber AND challanNumber
-              const existingIdx = stockList.findIndex(s => 
-                String(s.id) === String(lotIdVal) || 
-                String(s.batchId) === String(batch.id) ||
-                (batchLot && batchChallan && String(s.lotNumber).trim() === batchLot && String(s.challanNo || s.challanNumber).trim() === batchChallan) ||
-                (batchLot && !batchChallan && String(s.lotNumber).trim() === batchLot && String(s.orderRef) === orderId)
-              );
-
-              const existingLot = existingIdx >= 0 ? stockList[existingIdx] : null;
+              const existingLot = existingLotMap.get(lotIdVal) ||
+                (batch.id ? existingLotMap.get(String(batch.id)) : null) ||
+                (batchLot && batchChallan ? existingLotMap.get(`${batchLot}__${batchChallan}`) : null) ||
+                (batchLot ? existingLotMap.get(`lot_${batchLot}`) : null);
 
               const boxes = (batch.boxes || []).map((bx, idx) => {
                 const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
@@ -1566,10 +1549,41 @@
                              (batchLot ? existingBoxMap.get(`${batchLot}__${bId}`) : null) ||
                              (existingLot && Array.isArray(existingLot.boxes) ? existingLot.boxes.find(x => String(x.id || x.boxNumber).trim() === bId) : null);
 
-                const isIssued = (oldB && oldB.status === 'issued') || (bx.status === 'issued');
-                const issueDate = isIssued ? (oldB?.issueDate || bx.issueDate || null) : null;
-                const issuedTo = isIssued ? (oldB?.issuedTo || bx.issuedTo || null) : null;
-                const updatedAt = isIssued ? (oldB?.updated_at || bx.updated_at || null) : (oldB?.updated_at || null);
+                let isIssued = false;
+                let issueDate = null;
+                let issuedTo = null;
+                let updatedAt = oldB?.updated_at || bx.updated_at || null;
+                let unissuedAt = oldB?.unissued_at || bx.unissued_at || null;
+
+                if (oldB && oldB.status === 'issued' && bx.status === 'issued') {
+                  isIssued = true;
+                  issueDate = oldB.issueDate || bx.issueDate || null;
+                  issuedTo = oldB.issuedTo || bx.issuedTo || null;
+                } else if (oldB && oldB.status === 'issued' && bx.status !== 'issued') {
+                  const oldBTime = Math.max(oldB.updated_at ? new Date(oldB.updated_at).getTime() : 0, oldB.issueDate ? new Date(oldB.issueDate).getTime() : 0);
+                  const bxAvailTime = Math.max(bx.unissued_at ? new Date(bx.unissued_at).getTime() : 0, bx.updated_at ? new Date(bx.updated_at).getTime() : 0);
+                  if (bxAvailTime >= oldBTime && bxAvailTime > 0) {
+                    isIssued = false;
+                  } else {
+                    isIssued = true;
+                    issueDate = oldB.issueDate || null;
+                    issuedTo = oldB.issuedTo || null;
+                  }
+                } else if (bx.status === 'issued' && (!oldB || oldB.status !== 'issued')) {
+                  const bxIssueTime = Math.max(bx.updated_at ? new Date(bx.updated_at).getTime() : 0, bx.issueDate ? new Date(bx.issueDate).getTime() : 0);
+                  const oldBAvailTime = Math.max(oldB?.unissued_at ? new Date(oldB.unissued_at).getTime() : 0, oldB?.updated_at ? new Date(oldB.updated_at).getTime() : 0);
+                  if (oldBAvailTime >= bxIssueTime && oldBAvailTime > 0) {
+                    isIssued = false;
+                  } else if (!oldB || !oldB.status) {
+                    isIssued = true;
+                    issueDate = bx.issueDate || null;
+                    issuedTo = bx.issuedTo || null;
+                  } else {
+                    isIssued = false;
+                  }
+                } else {
+                  isIssued = false;
+                }
 
                 return {
                   id: bId,
@@ -1582,64 +1596,45 @@
                   issueDate: isFullyGr ? null : (isIssued ? issueDate : null),
                   issuedTo: isFullyGr ? null : (isIssued ? issuedTo : null),
                   updated_at: updatedAt,
+                  unissued_at: isIssued ? null : unissuedAt,
                   grWeight: retWt,
                   grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
                   grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(2)} kg)` : null)
                 };
               });
 
-              const updatedLot = {
-                id: existingLot?.id || lotIdVal,
-                batchId: batch.id || '',
-                lotNumber: batchLot || (existingLot?.lotNumber || ('LOT-' + (batchChallan || 'AUTO'))),
-                challanNo: batchChallan || (existingLot?.challanNo || ''),
-                challanNumber: batchChallan || (existingLot?.challanNumber || ''),
-                receiveDate: recDateOnly,
-                date: recDateOnly,
-                supplier: order.supplier || (existingLot?.supplier || ''),
-                quality: order.quality || (existingLot?.quality || ''),
-                itemType: order.category || order.type || (existingLot?.itemType || 'Polyester'),
-                code: order.code || (existingLot?.code || ''),
-                color: order.color || (existingLot?.color || ''),
-                rate: order.price || (existingLot?.rate || ''),
-                orderRef: order.orderNumber || order.id,
-                boxes: boxes,
-                updated_at: existingLot?.updated_at || batch.updated_at || order.updated_at || new Date().toISOString()
-              };
+              if (boxes.length > 0) {
+                const updatedLot = {
+                  id: existingLot?.id || lotIdVal,
+                  batchId: batch.id || '',
+                  lotNumber: batchLot || (existingLot?.lotNumber || ('LOT-' + (batchChallan || 'AUTO'))),
+                  challanNo: batchChallan || (existingLot?.challanNo || ''),
+                  challanNumber: batchChallan || (existingLot?.challanNumber || ''),
+                  receiveDate: recDateOnly,
+                  date: recDateOnly,
+                  supplier: order.supplier || (existingLot?.supplier || ''),
+                  quality: order.quality || (existingLot?.quality || ''),
+                  itemType: order.category || order.type || (existingLot?.itemType || 'Polyester'),
+                  code: order.code || (existingLot?.code || ''),
+                  color: order.color || (existingLot?.color || ''),
+                  rate: order.price || (existingLot?.rate || ''),
+                  orderRef: order.orderNumber || order.id,
+                  boxes: boxes,
+                  updated_at: existingLot?.updated_at || batch.updated_at || order.updated_at || new Date().toISOString()
+                };
 
-              if (existingIdx >= 0) {
-                const prevSerialized = JSON.stringify(stockList[existingIdx]);
-                const nextSerialized = JSON.stringify(updatedLot);
-                if (prevSerialized !== nextSerialized) {
-                  stockList[existingIdx] = updatedLot;
-                  changed = true;
-                }
-              } else {
-                stockList.unshift(updatedLot);
-                changed = true;
+                freshStockList.push(updatedLot);
               }
             });
           });
 
-          // Clean up stock lots belonging to deleted orders or deleted batches (ONLY if orders is populated)
-          if (activeOrderRefs.size > 0) {
-            const initialLen = stockList.length;
-            stockList = stockList.filter(lot => {
-              if (!lot || !lot.orderRef) return true; // Keep manual lots not linked to orders
-              if (!activeOrderRefs.has(String(lot.orderRef))) return false; // Order was deleted
-              if (lot.batchId && !activeLotKeys.has(String(lot.batchId))) return false; // Batch was deleted
-              const rawChallan = String(lot.challanNo || lot.challanNumber || '').trim();
-              const rawLot = String(lot.lotNumber || '').trim();
-              if (rawLot && rawChallan && !activeLotKeys.has(`${rawLot}__${rawChallan}`) && !activeLotKeys.has(String(lot.id))) {
-                return false; // Batch with lot and challan was deleted
-              }
-              return true;
-            });
-            if (stockList.length !== initialLen) changed = true;
-          }
-
-          if (changed) {
-            localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
+          const prevSerialized = JSON.stringify(stockList);
+          const nextSerialized = JSON.stringify(freshStockList);
+          if (prevSerialized !== nextSerialized) {
+            localStorage.setItem(YARN_STOCK_STORAGE_KEY, nextSerialized);
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+              window.VishwaSupabase.set(YARN_STOCK_STORAGE_KEY, freshStockList);
+            }
           }
         } catch(e) {
           console.error("Yarn stock auto-heal sync error:", e);

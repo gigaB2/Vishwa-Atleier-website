@@ -598,6 +598,75 @@ test('Multi-User Concurrency & Merge Validation', async (t) => {
   await t.test('VishwaSupabase exposes saveToSupabase API method for instant sync', () => {
     assert.ok(typeof vSupabase.saveToSupabase === 'function', 'saveToSupabase function is exposed on VishwaSupabase');
   });
+
+  await t.test('Yarn RM Stock Book Single Source of Truth: Deleted lot in orders is evicted and cannot resurrect', () => {
+    // Orders only contains Active Lot 201 (Lot 100 was deleted by user)
+    const activeOrders = [
+      {
+        id: 'ORD-101',
+        orderNumber: 'ORD-101',
+        supplier: 'ABC Mills',
+        quality: '20/1 BRT POLY',
+        batches: [
+          {
+            id: 'BATCH-201',
+            challanNumber: 'CH-889',
+            lotNumber: 'L-201',
+            boxes: [
+              { boxNumber: 'B1', weight: 25.5, status: 'available' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    // Simulate active orders in storage
+    env.localStorage.setItem('yarn-rm-orders', JSON.stringify(activeOrders));
+
+    // Stale local or remote stock still had old/deleted Lot 100 (Resurrected Quality: 80/72 Polyester DTY)
+    const staleStockWithDeletedLot = [
+      {
+        id: 'LOT-DELETED-100',
+        batchId: 'BATCH-OLD-100',
+        lotNumber: 'OLD-LOT-100',
+        challanNo: 'CH-OLD-999',
+        quality: '80/72 Polyester DTY',
+        supplier: 'Old Supplier',
+        boxes: [{ id: 'B1', boxNumber: 'B1', weight: 30.0, status: 'available' }]
+      },
+      {
+        id: 'L-201__CH-889',
+        batchId: 'BATCH-201',
+        lotNumber: 'L-201',
+        challanNo: 'CH-889',
+        quality: '20/1 BRT POLY',
+        supplier: 'ABC Mills',
+        boxes: [{ id: 'B1', boxNumber: 'B1', weight: 25.5, status: 'available' }]
+      }
+    ];
+
+    const mergedStock = vSupabase.mergeDatasets('vishwa_yarn_rm_stock_data', staleStockWithDeletedLot, []);
+    assert.strictEqual(mergedStock.length, 1, 'Deleted lot must be pruned from stock');
+    assert.strictEqual(mergedStock[0].quality, '20/1 BRT POLY', 'Only active quality remains');
+    assert.strictEqual(mergedStock[0].lotNumber, 'L-201');
+    assert.ok(!mergedStock.some(l => l.quality === '80/72 Polyester DTY'), 'Deleted resurrected quality is evicted');
+  });
+
+  await t.test('Yarn RM Stock Book Single Source of Truth: When all orders deleted, stock is empty', () => {
+    // All orders deleted
+    env.localStorage.setItem('yarn-rm-orders', JSON.stringify([]));
+
+    const staleStock = [
+      {
+        id: 'LOT-DELETED-100',
+        quality: '80/72 Polyester DTY',
+        boxes: [{ id: 'B1', boxNumber: 'B1', weight: 30.0, status: 'available' }]
+      }
+    ];
+
+    const mergedStock = vSupabase.mergeDatasets('vishwa_yarn_rm_stock_data', staleStock, []);
+    assert.strictEqual(mergedStock.length, 0, 'Stock is strictly empty when all orders are deleted');
+  });
 });
 
 

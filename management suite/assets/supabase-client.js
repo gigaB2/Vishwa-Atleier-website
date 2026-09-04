@@ -1,6 +1,6 @@
 (function() {
   // Native browser localStorage reference before overriding
-  const nativeLocalStorage = window.localStorage;
+  const nativeLocalStorage = (typeof window !== 'undefined' && window.localStorage) ? window.localStorage : (typeof localStorage !== 'undefined' ? localStorage : null);
 
   // Resolve Supabase configuration dynamically:
   // 1. LocalStorage overrides (configured via Admin Settings in UI)
@@ -683,7 +683,52 @@
       }
     });
 
-    return Array.from(mergedLotMap.values());
+    const allMergedLots = Array.from(mergedLotMap.values());
+
+    // Single Source of Truth Enforcement: Reconcile stock lots strictly against active yarn-rm-orders
+    const rawOrders = (typeof cache !== 'undefined' && cache && cache['yarn-rm-orders']) || (nativeLocalStorage && typeof nativeLocalStorage.getItem === 'function' ? nativeLocalStorage.getItem('yarn-rm-orders') : null);
+    if (rawOrders !== null && rawOrders !== undefined) {
+      try {
+        const parsedOrders = typeof rawOrders === 'string' ? JSON.parse(rawOrders) : rawOrders;
+        if (Array.isArray(parsedOrders)) {
+          const activeKeys = new Set();
+          parsedOrders.forEach(ord => {
+            if (!ord) return;
+            if (ord.id) activeKeys.add(String(ord.id).trim());
+            if (ord.orderNumber) activeKeys.add(String(ord.orderNumber).trim());
+            (ord.batches || []).forEach(b => {
+              if (!b) return;
+              if (b.id) activeKeys.add(String(b.id).trim());
+              const bLot = String(b.lotNumber || '').trim();
+              const bChallan = String(b.challanNumber || '').trim();
+              if (bLot && bChallan) activeKeys.add(`${bLot}__${bChallan}`);
+              if (bLot) activeKeys.add(`lot_${bLot}`);
+            });
+          });
+
+          const filteredLots = allMergedLots.filter(lot => {
+            if (!lot) return false;
+            const lId = String(lot.id || '').trim();
+            const bId = String(lot.batchId || '').trim();
+            const oRef = String(lot.orderRef || '').trim();
+            const lNum = String(lot.lotNumber || '').trim();
+            const lChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+
+            if (bId && activeKeys.has(bId)) return true;
+            if (lId && activeKeys.has(lId)) return true;
+            if (oRef && activeKeys.has(oRef)) return true;
+            if (lNum && lChallan && activeKeys.has(`${lNum}__${lChallan}`)) return true;
+            if (lNum && activeKeys.has(`lot_${lNum}`)) return true;
+
+            return false;
+          });
+
+          return filteredLots;
+        }
+      } catch(e) {}
+    }
+
+    return allMergedLots;
   }
 
   // --- Dedicated High-Integrity Merge Engine for Yarn RM Orders ---

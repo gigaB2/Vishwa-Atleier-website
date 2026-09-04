@@ -1814,24 +1814,23 @@
       }
     }
 
-    // Initial Data Seed and Strict Auto-heal against Yarn RM Orders
+    // Initial Data Seed and Strict Auto-heal against Yarn RM Orders (Single Source of Truth)
     function initSeedData() {
-      // 1. First load existing stock data from localStorage (authoritative for box issue statuses)
+      // 1. Build comprehensive index of existing box and lot states from local stock
+      //    ONLY to preserve runtime issue statuses (issued/available/gr, issueDate, issuedTo, unissued_at, updated_at)
       let existingStockList = [];
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         try {
           let data = JSON.parse(stored);
           if (Array.isArray(data)) {
-            data = data.filter(item => item && Array.isArray(item.boxes) && item.boxes.length > 0 && item.id !== 'LOT-8072-01' && item.id !== 'LOT-30C-02' && item.quality !== '80/72 Polyester DTY' && item.quality !== '30s Combed Cotton');
-            existingStockList = data;
+            existingStockList = data.filter(item => item && Array.isArray(item.boxes) && item.boxes.length > 0 && item.id !== 'LOT-8072-01' && item.id !== 'LOT-30C-02' && item.quality !== '80/72 Polyester DTY' && item.quality !== '30s Combed Cotton');
           }
         } catch(e) {
           console.error('Error parsing stored stock data:', e);
         }
       }
 
-      // 2. Build comprehensive map of all known box states (issued/available/gr)
       const existingBoxMap = new Map();
       const existingLotMap = new Map();
 
@@ -1860,22 +1859,14 @@
         });
       });
 
-      // 3. Merge lots and batches from yarn-rm-orders without destroying issue statuses
-      let hasStructuralChange = false;
+      // 2. Read Yarn RM Orders as the strict single source of truth
       try {
         const rawOrders = localStorage.getItem('yarn-rm-orders');
         if (rawOrders !== null) {
           const orders = JSON.parse(rawOrders);
-          if (Array.isArray(orders) && orders.length > 0) {
-            const mergedStockMap = new Map();
+          if (Array.isArray(orders)) {
+            const freshStockList = [];
 
-            // First index existing stock lots
-            existingStockList.forEach(l => {
-              const key = String(l.id || (l.lotNumber + (l.challanNo ? `__${l.challanNo}` : '')));
-              mergedStockMap.set(key, l);
-            });
-
-            // Iterate orders and batches
             orders.forEach(order => {
               (order.batches || []).forEach((batch, bIdx) => {
                 const recDateOnly = (batch.receiveDate || new Date().toISOString().split('T')[0]).split('T')[0];
@@ -1888,12 +1879,11 @@
                   ? (batchLot + (batchChallan ? `__${batchChallan}` : `__${batchId}`))
                   : (`LOT-${batchChallan || batchId || bIdx}`);
 
-                // Check if this lot already exists
+                // Check if this lot had existing meta
                 const existingLot = existingLotMap.get(lotIdVal) ||
                   (batch.id ? existingLotMap.get(String(batch.id)) : null) ||
                   (batchLot && batchChallan ? existingLotMap.get(`${batchLot}__${batchChallan}`) : null) ||
-                  (batchLot ? existingLotMap.get(`lot_${batchLot}`) : null) ||
-                  mergedStockMap.get(lotIdVal);
+                  (batchLot ? existingLotMap.get(`lot_${batchLot}`) : null);
 
                 const boxes = (batch.boxes || []).map((bx, idx) => {
                   const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
@@ -1983,34 +1973,24 @@
                     updated_at: existingLot?.updated_at || batch.updated_at || order.updated_at || new Date().toISOString()
                   };
 
-                  if (!mergedStockMap.has(updatedLot.id)) {
-                    hasStructuralChange = true;
-                  }
-                  mergedStockMap.set(updatedLot.id, updatedLot);
+                  freshStockList.push(updatedLot);
                 }
               });
             });
 
-            const mergedList = Array.from(mergedStockMap.values());
-            if (mergedList.length > 0) {
-              stockData = mergedList.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
-              if (hasStructuralChange) {
-                saveStockData();
-              }
-              return;
-            }
+            stockData = freshStockList.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
+            
+            // Reconcile and save synced stockData
+            saveStockData();
+            return;
           }
         }
       } catch(e) {
         console.error('Error auto-syncing from orders:', e);
       }
 
-      if (existingStockList.length > 0) {
-        stockData = existingStockList.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
-        return;
-      }
-
       stockData = [];
+      saveStockData();
     }
 
     function saveStockData() {
@@ -2844,35 +2824,81 @@
 
       const avgBoxWeight = totalWtSum / boxes.length;
 
-      if (existingLot) {
-        existingLot.itemType = itemType;
-        existingLot.quality = quality;
-        existingLot.code = code;
-        existingLot.color = color;
-        existingLot.lotNumber = lotNumber;
-        existingLot.challanNo = challanNo;
-        existingLot.supplier = supplier;
-        existingLot.receiveDate = receiveDate;
-        existingLot.boxWeight = avgBoxWeight;
-        existingLot.boxes = boxes;
+      let orders = [];
+      try {
+        orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
+      } catch(e) { orders = []; }
+      if (!Array.isArray(orders)) orders = [];
+
+      const batchBoxes = boxes.map(b => ({
+        boxNumber: b.id,
+        cones: b.cones || 0,
+        weight: b.weight,
+        returnedWeight: b.grWeight || 0,
+        returnedDate: b.grDate || null,
+        status: b.status || 'available',
+        issueDate: b.issueDate || null,
+        issuedTo: b.issuedTo || null
+      }));
+
+      const newBatch = {
+        id: existingLot?.batchId || `BATCH-${Date.now()}`,
+        receiveDate: receiveDate,
+        challanNumber: challanNo,
+        lotNumber: lotNumber,
+        totalWeight: totalWtSum,
+        boxes: batchBoxes,
+        updated_at: new Date().toISOString()
+      };
+
+      // Find or create order for this supplier + quality + category
+      let matchingOrder = orders.find(o => 
+        (o.supplier || '').trim() === supplier && 
+        (o.quality || '').trim() === quality &&
+        (o.category || o.type || 'Polyester').trim() === itemType
+      );
+
+      if (matchingOrder) {
+        if (!Array.isArray(matchingOrder.batches)) matchingOrder.batches = [];
+        const existingBIdx = matchingOrder.batches.findIndex(b => 
+          (existingLot?.batchId && String(b.id) === String(existingLot.batchId)) ||
+          (String(b.challanNumber).trim() === challanNo && String(b.lotNumber).trim() === lotNumber)
+        );
+        if (existingBIdx >= 0) {
+          matchingOrder.batches[existingBIdx] = newBatch;
+        } else {
+          matchingOrder.batches.unshift(newBatch);
+        }
+        matchingOrder.updated_at = new Date().toISOString();
       } else {
-        const newLot = {
-          id: `LOT-${Date.now()}`,
-          itemType,
-          quality,
-          code,
-          color,
-          lotNumber,
-          challanNo,
-          supplier,
-          receiveDate,
-          boxWeight: avgBoxWeight,
-          boxes
+        const newOrderId = `ORD-${Date.now().toString().slice(-4)}`;
+        matchingOrder = {
+          id: newOrderId,
+          orderNumber: newOrderId,
+          orderDate: receiveDate,
+          supplier: supplier,
+          category: itemType,
+          quality: quality,
+          code: code,
+          color: color,
+          orderedWeight: totalWtSum,
+          price: '',
+          status: 'Active',
+          batches: [newBatch],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         };
-        stockData.unshift(newLot);
+        orders.unshift(matchingOrder);
       }
 
-      saveStockData();
+      localStorage.setItem('yarn-rm-orders', JSON.stringify(orders));
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+        window.VishwaSupabase.saveToSupabase('yarn-rm-orders', orders);
+      } else if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+        window.VishwaSupabase.set('yarn-rm-orders', orders);
+      }
+
+      initSeedData();
       closeModal('modal-challan');
       renderStockBook();
     }
@@ -2940,13 +2966,10 @@
       const container = document.getElementById('stock-groups-container');
       container.innerHTML = '';
 
-      // Populate Item Types Filter dropdown dynamically from RM Qualities (yarn-qualities)
-      const storedQualities = getStoredYarnQualities();
-      const rawTypes = storedQualities.map(q => q.type || q.itemType).filter(Boolean);
+      // Populate Item Types Filter dropdown dynamically from active Stock Book
       const stockTypes = stockData.map(l => l.itemType).filter(Boolean);
       const defaultTypes = ['Polyester', 'Nylon', 'Viscose'];
-      
-      const itemTypesSet = new Set([...rawTypes, ...stockTypes, ...defaultTypes]);
+      const itemTypesSet = new Set(stockTypes.length > 0 ? stockTypes : defaultTypes);
       const itemTypeSelect = document.getElementById('item-type-filter');
       if (itemTypeSelect) {
         const currentTypeVal = itemTypeSelect.value;
@@ -2960,8 +2983,8 @@
         });
       }
 
-      // Populate Qualities Filter dropdown if needed
-      const qualitiesSet = new Set([...stockData.map(l => l.quality), ...storedQualities.map(q => q.quality)].filter(Boolean));
+      // Populate Qualities Filter dropdown strictly from active Stock Book
+      const qualitiesSet = new Set(stockData.map(l => l.quality).filter(Boolean));
       const qualityFilterSelect = document.getElementById('quality-filter');
       const currentQVal = qualityFilterSelect.value;
       qualityFilterSelect.innerHTML = '<option value="all">All Qualities</option>';
