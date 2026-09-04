@@ -684,6 +684,29 @@
       z-index: 5;
     }
 
+    .cell-input[type="date"] {
+      min-width: 165px;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.45rem 0.65rem;
+      cursor: pointer;
+    }
+
+    .cell-input[type="date"]::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.75;
+      padding: 3px;
+      border-radius: 4px;
+      transition: opacity 0.15s, transform 0.15s, background 0.15s;
+    }
+
+    .cell-input[type="date"]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+      transform: scale(1.18);
+      background: rgba(124, 58, 237, 0.12);
+    }
+
     .cell-input.num-font {
       font-family: var(--font-mono);
       text-align: right;
@@ -1349,7 +1372,7 @@
               <th style="width: 90px; min-width: 85px;" class="num-col">GST %</th>
               <th style="width: 160px; min-width: 155px;" class="num-col">Grand Total (₹)</th>
               <th style="width: 160px; min-width: 155px;" class="num-col" style="background: rgba(16, 185, 129, 0.08);">Paid / Recv (₹)</th>
-              <th style="width: 145px; min-width: 140px;">Payment Date</th>
+              <th style="width: 190px; min-width: 185px;">Payment Date</th>
               <th style="width: 95px; min-width: 90px;" class="num-col">Cr. Days</th>
               <th style="width: 130px; min-width: 125px;">Due Date</th>
               <th style="width: 160px; min-width: 155px;" class="num-col" style="background: rgba(239, 68, 68, 0.08);">Outstanding (₹)</th>
@@ -1633,23 +1656,35 @@
       populatePartyFilter();
       renderTable();
 
-      // Cloud & Storage Event Listeners
+      // Cloud & Storage Event Listeners (Safeguarded against wiping active input focus)
       window.addEventListener('storage', (e) => {
         if (!e.key || e.key.startsWith('yarn') || e.key === 'yarn-rm-orders') {
-          loadLedgers();
-          syncSourceData(false);
-          renderTable();
+          const activeEl = document.activeElement;
+          const isTableFocused = activeEl && document.getElementById('excel-table-body')?.contains(activeEl);
+          if (!isTableFocused) {
+            loadLedgers();
+            syncSourceData(false);
+            renderTable(false);
+          }
         }
       });
       window.addEventListener('supabase-sync', () => {
-        loadLedgers();
-        syncSourceData(false);
-        renderTable();
+        const activeEl = document.activeElement;
+        const isTableFocused = activeEl && document.getElementById('excel-table-body')?.contains(activeEl);
+        if (!isTableFocused) {
+          loadLedgers();
+          syncSourceData(false);
+          renderTable(false);
+        }
       });
       window.addEventListener('supabase-ready', () => {
-        loadLedgers();
-        syncSourceData(false);
-        renderTable();
+        const activeEl = document.activeElement;
+        const isTableFocused = activeEl && document.getElementById('excel-table-body')?.contains(activeEl);
+        if (!isTableFocused) {
+          loadLedgers();
+          syncSourceData(false);
+          renderTable(false);
+        }
       });
 
       // Keyboard Shortcuts for Undo/Redo
@@ -2080,7 +2115,7 @@
 
     // Direct In-Cell Edit Handler
     function handleCellChange(rowId, field, value) {
-      const row = ledgerData[activeTab].find(r => r.id === rowId);
+      const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
       if (!row) return;
 
       const isLocked = (row.source && row.source !== 'manual') && !row.isManual;
@@ -2110,7 +2145,134 @@
       }
 
       saveLedgers();
-      renderTable(false);
+
+      // Update in place to preserve date picker / input focus without tearing down active DOM
+      const activeEl = document.activeElement;
+      if (activeEl && document.getElementById('excel-table-body')?.contains(activeEl)) {
+        updateRowDOM(rowId);
+        updateFooterAndKPISummaries();
+      } else {
+        renderTable(false);
+      }
+    }
+
+    // In-place DOM updater for single row edits (Preserves active element focus & dropdowns)
+    function updateRowDOM(rowId) {
+      const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
+      if (!row) return;
+
+      const tr = document.getElementById(`ledger-row-${rowId}`);
+      if (!tr) return;
+
+      const comp = computeRowFinancials(row);
+      const isLocked = (row.source && row.source !== 'manual') && !row.isManual;
+
+      tr.className = `${comp.status === 'overdue' ? 'is-overdue' : (comp.status === 'paid' ? 'is-paid' : '')} ${isLocked ? 'is-locked' : ''}`;
+
+      const elSubtotal = tr.querySelector('.col-val-subtotal');
+      if (elSubtotal) elSubtotal.textContent = formatCurrency(row.subtotal);
+
+      const elGrandTotal = tr.querySelector('.col-val-grandtotal');
+      if (elGrandTotal) elGrandTotal.textContent = formatCurrency(row.grandTotal);
+
+      const elDueDate = tr.querySelector('.col-val-due-date');
+      if (elDueDate) elDueDate.textContent = comp.dueDate || '-';
+
+      const elOutstanding = tr.querySelector('.col-val-outstanding');
+      if (elOutstanding) {
+        elOutstanding.textContent = formatCurrency(comp.outstanding);
+        elOutstanding.style.color = comp.outstanding > 0 ? 'var(--error)' : 'var(--success)';
+      }
+
+      const elStatus = tr.querySelector('.col-val-status');
+      if (elStatus) {
+        elStatus.innerHTML = `<span class="status-badge status-${comp.status}">${comp.status}</span>`;
+      }
+
+      const elOverdueDays = tr.querySelector('.col-val-overdue-days');
+      if (elOverdueDays) {
+        elOverdueDays.textContent = comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-';
+        elOverdueDays.style.color = comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)';
+        elOverdueDays.style.fontWeight = comp.overdueDays > 0 ? '700' : 'normal';
+      }
+
+      const elInterest = tr.querySelector('.col-val-interest-amount');
+      if (elInterest) {
+        elInterest.textContent = comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-';
+      }
+
+      const elNetTotal = tr.querySelector('.col-val-net-total');
+      if (elNetTotal) {
+        elNetTotal.textContent = formatCurrency(comp.netTotal);
+      }
+    }
+
+    // Live update KPI summary metrics and footer aggregates without full table re-render
+    function updateFooterAndKPISummaries() {
+      const search = (document.getElementById('sheet-search').value || '').toLowerCase().trim();
+      const partyFilter = document.getElementById('filter-party').value;
+      const statusFilter = document.getElementById('filter-status').value;
+      const fromDate = document.getElementById('filter-from-date').value;
+      const toDate = document.getElementById('filter-to-date').value;
+
+      let rows = (ledgerData[activeTab] || []).filter(row => {
+        if (!row) return false;
+        if (search) {
+          const matchString = `${row.challanNo || ''} ${row.partyName || ''} ${row.quality || ''} ${row.remarks || ''}`.toLowerCase();
+          if (!matchString.includes(search)) return false;
+        }
+        if (partyFilter !== 'all' && (row.partyName || '').trim() !== partyFilter) return false;
+        if (fromDate && row.date && row.date < fromDate) return false;
+        if (toDate && row.date && row.date > toDate) return false;
+        if (statusFilter !== 'all') {
+          const computed = computeRowFinancials(row);
+          if (computed.status !== statusFilter) return false;
+        }
+        return true;
+      });
+
+      let totalBilled = 0;
+      let totalSettled = 0;
+      let totalOutstanding = 0;
+      let totalInterest = 0;
+      let overdueCount = 0;
+      let totalWeight = 0;
+
+      rows.forEach(row => {
+        const computed = computeRowFinancials(row);
+        totalBilled += Number(row.grandTotal) || 0;
+        totalSettled += Number(row.paidAmount) || 0;
+        totalOutstanding += computed.outstanding;
+        totalInterest += computed.interestAmount;
+        totalWeight += Number(row.qty) || 0;
+        if (computed.status === 'overdue') overdueCount++;
+      });
+
+      // Update KPI Cards
+      document.getElementById('kpi-val-total-billed').textContent = formatCurrency(totalBilled);
+      document.getElementById('kpi-sub-total-billed').textContent = `${rows.length} transactions`;
+
+      document.getElementById('kpi-val-total-settled').textContent = formatCurrency(totalSettled);
+      const recoveryPct = totalBilled > 0 ? ((totalSettled / totalBilled) * 100).toFixed(1) : 0;
+      document.getElementById('kpi-sub-total-settled').textContent = `${recoveryPct}% settled`;
+
+      document.getElementById('kpi-val-total-outstanding').textContent = formatCurrency(totalOutstanding);
+      document.getElementById('kpi-sub-total-outstanding').textContent = `${((totalOutstanding / (totalBilled || 1)) * 100).toFixed(1)}% unpaid`;
+
+      document.getElementById('kpi-val-total-interest').textContent = formatCurrency(totalInterest);
+      document.getElementById('kpi-sub-total-interest').textContent = calculateInterest ? `Enabled (${defaultInterestRate}% p.a.)` : 'Disabled';
+
+      document.getElementById('kpi-val-overdue-count').textContent = overdueCount;
+      document.getElementById('kpi-sub-overdue-count').textContent = overdueCount > 0 ? 'Action needed' : 'All accounts healthy';
+
+      // Update Footer Stats
+      document.getElementById('stat-row-count').textContent = rows.length;
+      document.getElementById('stat-total-weight').textContent = `${totalWeight.toFixed(2)} Kg`;
+      document.getElementById('stat-total-invoiced').textContent = formatCurrency(totalBilled);
+      document.getElementById('stat-total-paid').textContent = formatCurrency(totalSettled);
+      document.getElementById('stat-total-outstanding').textContent = formatCurrency(totalOutstanding);
+      document.getElementById('stat-total-interest').textContent = formatCurrency(totalInterest);
+      document.getElementById('stat-net-total').textContent = formatCurrency(totalOutstanding + totalInterest);
     }
 
     // Date math: add days to a date string YYYY-MM-DD
@@ -2297,13 +2459,13 @@
         let statusBadge = `<span class="status-badge status-${comp.status}">${comp.status}</span>`;
 
         return `
-          <tr class="${comp.status === 'overdue' ? 'is-overdue' : (comp.status === 'paid' ? 'is-paid' : '')} ${isLocked ? 'is-locked' : ''}">
+          <tr id="ledger-row-${row.id}" class="${comp.status === 'overdue' ? 'is-overdue' : (comp.status === 'paid' ? 'is-paid' : '')} ${isLocked ? 'is-locked' : ''}">
             <td class="center-col cell-locked-bg" style="font-family: var(--font-mono); color: var(--muted); font-size: 0.8rem;">${idx + 1}</td>
             
             <td class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked 
                 ? `<div class="cell-readonly font-mono" title="Date">${row.date || '-'}</div>`
-                : `<input type="date" class="cell-input" value="${row.date || ''}" onchange="handleCellChange('${row.id}', 'date', this.value)">`
+                : `<input type="date" class="cell-input date-picker-input" value="${row.date || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" onchange="handleCellChange('${row.id}', 'date', this.value)">`
               }
             </td>
 
@@ -2345,7 +2507,7 @@
             </td>
 
             <td class="num-col cell-locked-bg">
-              <div class="cell-readonly num font-mono" title="Subtotal">${formatCurrency(row.subtotal)}</div>
+              <div class="cell-readonly num font-mono col-val-subtotal" title="Subtotal">${formatCurrency(row.subtotal)}</div>
             </td>
 
             <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
@@ -2356,7 +2518,7 @@
             </td>
 
             <td class="num-col cell-locked-bg">
-              <div class="cell-readonly num bold font-mono" title="Grand Total">${formatCurrency(row.grandTotal)}</div>
+              <div class="cell-readonly num bold font-mono col-val-grandtotal" title="Grand Total">${formatCurrency(row.grandTotal)}</div>
             </td>
 
             <!-- Editable Paid / Received Amount -->
@@ -2364,9 +2526,9 @@
               <input type="number" step="0.01" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onchange="handleCellChange('${row.id}', 'paidAmount', this.value)" title="Enter received/paid amount">
             </td>
 
-            <!-- Editable Payment Date -->
-            <td>
-              <input type="date" class="cell-input" value="${row.paymentDate || ''}" onchange="handleCellChange('${row.id}', 'paymentDate', this.value)" title="Payment date">
+            <!-- Editable Payment Date (Expanded & Click anywhere to open calendar) -->
+            <td style="min-width: 185px;">
+              <input type="date" class="cell-input date-picker-input" style="width: 100%; min-width: 170px; cursor: pointer;" value="${row.paymentDate || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" onchange="handleCellChange('${row.id}', 'paymentDate', this.value)" title="Click to pick payment date">
             </td>
 
             <!-- Editable Credit Days -->
@@ -2375,14 +2537,14 @@
             </td>
 
             <td class="cell-locked-bg">
-              <div class="cell-readonly font-mono" style="font-size: 0.85rem; color: var(--muted);">${comp.dueDate || '-'}</div>
+              <div class="cell-readonly font-mono col-val-due-date" style="font-size: 0.85rem; color: var(--muted);">${comp.dueDate || '-'}</div>
             </td>
 
             <td class="num-col cell-locked-bg" style="background: rgba(239, 68, 68, 0.05);">
-              <div class="cell-readonly num bold font-mono" style="color: ${comp.outstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.outstanding)}</div>
+              <div class="cell-readonly num bold font-mono col-val-outstanding" style="color: ${comp.outstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.outstanding)}</div>
             </td>
 
-            <td class="center-col cell-locked-bg">
+            <td class="center-col cell-locked-bg col-val-status">
               <div class="cell-readonly" style="justify-content: center;">${statusBadge}</div>
             </td>
 
@@ -2392,15 +2554,15 @@
             </td>
 
             <td class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
-              <div class="cell-readonly num font-mono" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</div>
+              <div class="cell-readonly num font-mono col-val-overdue-days" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</div>
             </td>
 
             <td class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
-              <div class="cell-readonly num bold font-mono" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</div>
+              <div class="cell-readonly num bold font-mono col-val-interest-amount" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</div>
             </td>
 
             <td class="num-col cell-locked-bg">
-              <div class="cell-readonly num bold font-mono" style="color: var(--accent);">${formatCurrency(comp.netTotal)}</div>
+              <div class="cell-readonly num bold font-mono col-val-net-total" style="color: var(--accent);">${formatCurrency(comp.netTotal)}</div>
             </td>
 
             <!-- Editable Remarks -->
