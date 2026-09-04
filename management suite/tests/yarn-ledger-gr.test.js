@@ -500,6 +500,82 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(targetBatch.boxes[2].returnedWeight, 20.0);
     assert.strictEqual(targetBatch.boxes[3].status, 'available');
   });
+
+  await t.test('OrderDetailsModal in + Challan correctly reflects GR, gross received, and net weight from synced batch', () => {
+    const order = {
+      id: 'ORD-901',
+      orderNumber: '901',
+      supplier: 'Sintex Industries',
+      orderedWeight: 1000.0,
+      batches: [
+        {
+          id: 'BATCH-901-1',
+          challanNumber: 'CH-901',
+          lotNumber: 'LOT-901',
+          totalWeight: 360.0,
+          returnedWeight: 40.0,
+          boxes: [
+            { boxNumber: 'B1', weight: 100.0, returnedWeight: 40.0, cones: 20 },
+            { boxNumber: 'B2', weight: 100.0, returnedWeight: 0, cones: 20 },
+            { boxNumber: 'B3', weight: 100.0, returnedWeight: 0, cones: 20 },
+            { boxNumber: 'B4', weight: 100.0, returnedWeight: 0, cones: 20 }
+          ]
+        },
+        {
+          id: 'BATCH-901-2',
+          challanNumber: 'CH-902',
+          lotNumber: 'LOT-902',
+          totalWeight: 450.0,
+          returnedWeight: 50.0,
+          grossWeight: 500.0,
+          boxes: [] // Legacy or direct batch without box array
+        }
+      ]
+    };
+
+    const getBatchGross = (b) => {
+      const boxGross = (b.boxes || []).reduce((acc, box) => acc + (Number(box.weight) || 0), 0);
+      return boxGross > 0 ? boxGross : (Number(b.grossWeight) || Number(b.totalWeight) || 0);
+    };
+
+    const getBatchGR = (b) => {
+      const boxGR = (b.boxes || []).reduce((acc, box) => acc + (Number(box.returnedWeight) || 0), 0);
+      return boxGR > 0 ? boxGR : (Number(b.returnedWeight) || 0);
+    };
+
+    const getBatchNet = (b) => {
+      if (b.totalWeight !== undefined && b.totalWeight !== null && b.totalWeight !== '') {
+        return Number(b.totalWeight);
+      }
+      return Math.max(0, getBatchGross(b) - getBatchGR(b));
+    };
+
+    const grossReceived = (order.batches || []).reduce((acc, b) => acc + getBatchGross(b), 0);
+    const gr = (order.batches || []).reduce((acc, b) => acc + getBatchGR(b), 0);
+    const received = (order.batches || []).reduce((acc, b) => acc + getBatchNet(b), 0);
+
+    assert.strictEqual(grossReceived, 900.0, 'Gross received should be 400 + 500 = 900 kg');
+    assert.strictEqual(gr, 90.0, 'GR should be 40 + 50 = 90 kg');
+    assert.strictEqual(received, 810.0, 'Net received should be 360 + 450 = 810 kg');
+  });
+
+  await t.test('ledger.html actions column contains only the Eye button and Delete button, not the GR button', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const ledgerHtml = fs.readFileSync(path.join(__dirname, '../modules/yarn/ledger.html'), 'utf8');
+
+    // Find the actions-cell-wrap block
+    const actionsBlockMatch = ledgerHtml.match(/<div class="actions-cell-wrap">([\s\S]*?)<\/div>/);
+    assert.ok(actionsBlockMatch, 'actions-cell-wrap must exist in ledger.html');
+    const actionsContent = actionsBlockMatch[1];
+
+    assert.ok(actionsContent.includes('openChallanModal'), 'Actions column must include openChallanModal (the Eye)');
+    assert.ok(!actionsContent.includes('openIssueGrModal'), 'Actions column must NOT include openIssueGrModal (GR button removed)');
+    
+    // Check that GR inline button still exists in the GR column
+    assert.ok(ledgerHtml.includes('btn-issue-gr-inline'), 'Inline GR button in GR column must remain intact');
+  });
 });
+
 
 

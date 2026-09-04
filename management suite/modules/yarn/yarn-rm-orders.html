@@ -1885,8 +1885,15 @@
           list.forEach(item => {
             o += Number(item.orderedWeight) || 0;
             (item.batches || []).forEach(b => {
-              r += Number(b.totalWeight) || 0;
-              (b.boxes || []).forEach(box => g += (Number(box.returnedWeight) || 0));
+              const boxGross = (b.boxes || []).reduce((bAcc, bx) => bAcc + (Number(bx.weight) || 0), 0);
+              const gross = boxGross > 0 ? boxGross : (Number(b.grossWeight) || Number(b.totalWeight) || 0);
+              const boxRet = (b.boxes || []).reduce((bAcc, bx) => bAcc + (Number(bx.returnedWeight) || 0), 0);
+              const ret = boxRet > 0 ? boxRet : (Number(b.returnedWeight) || 0);
+              const net = (b.totalWeight !== undefined && b.totalWeight !== null && b.totalWeight !== '') 
+                ? Number(b.totalWeight) 
+                : Math.max(0, gross - ret);
+              r += net;
+              g += ret;
             });
           });
           return { ordered: o, received: r, gr: g };
@@ -2444,10 +2451,19 @@
                         </tr>
                       ) : (
                         filteredOrders.map(order => {
-                          const netReceived = (order.batches || []).reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
-                          const totalReturned = (order.batches || []).reduce((acc, batch) => 
-                            acc + (batch.boxes || []).reduce((boxAcc, box) => boxAcc + (Number(box.returnedWeight) || 0), 0)
-                          , 0);
+                          const netReceived = (order.batches || []).reduce((acc, b) => {
+                            const boxGross = (b.boxes || []).reduce((bAcc, bx) => bAcc + (Number(bx.weight) || 0), 0);
+                            const gross = boxGross > 0 ? boxGross : (Number(b.grossWeight) || Number(b.totalWeight) || 0);
+                            const boxRet = (b.boxes || []).reduce((bAcc, bx) => bAcc + (Number(bx.returnedWeight) || 0), 0);
+                            const ret = boxRet > 0 ? boxRet : (Number(b.returnedWeight) || 0);
+                            return acc + ((b.totalWeight !== undefined && b.totalWeight !== null && b.totalWeight !== '') 
+                              ? Number(b.totalWeight) 
+                              : Math.max(0, gross - ret));
+                          }, 0);
+                          const totalReturned = (order.batches || []).reduce((acc, b) => {
+                            const boxRet = (b.boxes || []).reduce((bAcc, bx) => bAcc + (Number(bx.returnedWeight) || 0), 0);
+                            return acc + (boxRet > 0 ? boxRet : (Number(b.returnedWeight) || 0));
+                          }, 0);
                           const orderedWt = Number(order.orderedWeight) || 0;
                           const totalToDisplay = netReceived + totalReturned;
                           const scaleBase = Math.max(orderedWt, totalToDisplay) || 1;
@@ -3019,9 +3035,26 @@
         }
       };
 
-      const received = (order.batches || []).reduce((acc, b) => acc + (Number(b.totalWeight) || 0), 0);
-      const gr = (order.batches || []).reduce((acc, batch) => acc + (batch.boxes || []).reduce((boxAcc, box) => boxAcc + (Number(box.returnedWeight) || 0), 0), 0);
-      const grossReceived = received + gr;
+      const getBatchGross = (b) => {
+        const boxGross = (b.boxes || []).reduce((acc, box) => acc + (Number(box.weight) || 0), 0);
+        return boxGross > 0 ? boxGross : (Number(b.grossWeight) || Number(b.totalWeight) || 0);
+      };
+
+      const getBatchGR = (b) => {
+        const boxGR = (b.boxes || []).reduce((acc, box) => acc + (Number(box.returnedWeight) || 0), 0);
+        return boxGR > 0 ? boxGR : (Number(b.returnedWeight) || 0);
+      };
+
+      const getBatchNet = (b) => {
+        if (b.totalWeight !== undefined && b.totalWeight !== null && b.totalWeight !== '') {
+          return Number(b.totalWeight);
+        }
+        return Math.max(0, getBatchGross(b) - getBatchGR(b));
+      };
+
+      const received = (order.batches || []).reduce((acc, b) => acc + getBatchNet(b), 0);
+      const gr = (order.batches || []).reduce((acc, b) => acc + getBatchGR(b), 0);
+      const grossReceived = (order.batches || []).reduce((acc, b) => acc + getBatchGross(b), 0);
       
       const isCompleted = order.status === 'Completed';
       const netDiff = received - Number(order.orderedWeight || 0);
@@ -3360,8 +3393,8 @@
                       </tr>
                     ) : (
                       [...(order.batches || [])].sort((a, b) => new Date(b.receiveDate) - new Date(a.receiveDate)).map((b, bIdx, bArr) => {
-                        const grossTotal = (b.boxes || []).reduce((acc, box) => acc + (Number(box.weight) || 0), 0);
-                        const grTotal = (b.boxes || []).reduce((acc, box) => acc + (Number(box.returnedWeight) || 0), 0);
+                        const grossTotal = getBatchGross(b);
+                        const grTotal = getBatchGR(b);
                         const conesTotal = (b.boxes || []).reduce((acc, box) => acc + (Number(box.cones) || 0), 0);
                         
                         const calcGRCones = (box) => {
@@ -3370,27 +3403,40 @@
                         };
                         
                         const grConesTotal = (b.boxes || []).reduce((acc, box) => acc + calcGRCones(box), 0);
+                        const boxList = (b.boxes && b.boxes.length > 0) ? b.boxes : [{ boxNumber: 'All / Batch', cones: conesTotal || '-', weight: grossTotal, returnedWeight: grTotal, returnedDate: b.returnedDate || '' }];
+                        const rowCount = boxList.length;
 
                         return (
                           <React.Fragment key={b.id}>
-                            {(b.boxes || []).map((box, idx) => (
+                            {boxList.map((box, idx) => (
                               <tr key={`${b.id}-${idx}`}>
                                 {idx === 0 && (
                                   <React.Fragment>
-                                    <td rowSpan={b.boxes.length + 1}>{new Date(b.receiveDate).toLocaleDateString('en-GB')}</td>
-                                    <td rowSpan={b.boxes.length + 1}><strong>{b.challanNumber}</strong></td>
-                                    <td rowSpan={b.boxes.length + 1}><span style={{fontFamily: 'var(--font-mono)'}}>{b.lotNumber || '-'}</span></td>
+                                    <td rowSpan={rowCount + 1}>{new Date(b.receiveDate).toLocaleDateString('en-GB')}</td>
+                                    <td rowSpan={rowCount + 1}>
+                                      <strong>{b.challanNumber}</strong>
+                                      {grTotal > 0 && (
+                                        <div style={{ marginTop: '2px' }}>
+                                          <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(249, 115, 22, 0.15)', color: 'var(--accent3)', fontWeight: '700', display: 'inline-block' }}>
+                                            GR (-{grTotal.toFixed(2)} kg)
+                                          </span>
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td rowSpan={rowCount + 1}><span style={{fontFamily: 'var(--font-mono)'}}>{b.lotNumber || '-'}</span></td>
                                   </React.Fragment>
                                 )}
                                 <td style={{fontWeight: '600'}}>{box.boxNumber}</td>
                                 <td>{box.cones || '-'}</td>
                                 <td>{Number(box.weight || 0).toFixed(2)}</td>
                                 <td style={{color: 'var(--error)', fontWeight: '600'}}>{calcGRCones(box) || '-'}</td>
-                                <td style={{color: Number(box.returnedWeight) > 0 ? 'var(--error)' : 'inherit'}}>{box.returnedWeight || '0.00'}</td>
+                                <td style={{color: Number(box.returnedWeight) > 0 ? 'var(--error)' : 'inherit', fontWeight: Number(box.returnedWeight) > 0 ? '700' : 'normal'}}>
+                                  {Number(box.returnedWeight) > 0 ? Number(box.returnedWeight).toFixed(2) : '0.00'}
+                                </td>
                                 <td style={{color: 'var(--error)'}}>{box.returnedDate ? new Date(box.returnedDate).toLocaleDateString('en-GB') : '-'}</td>
-                                <td>{(Number(box.weight || 0) - (Number(box.returnedWeight) || 0)).toFixed(2)}</td>
+                                <td style={{fontWeight: '600'}}>{(Number(box.weight || 0) - (Number(box.returnedWeight) || 0)).toFixed(2)}</td>
                                 {idx === 0 && (
-                                  <td rowSpan={b.boxes.length + 1}>
+                                  <td rowSpan={rowCount + 1}>
                                     <div style={{display: 'flex', gap: '0.4rem', justifyContent: 'center'}}>
                                       <button className="btn btn-outline" style={{padding: '0.3rem 0.6rem'}} onClick={() => { setEditingBatch(b); setShowBatchForm(true); }}>✏️</button>
                                       <button className="btn btn-outline" style={{padding: '0.3rem 0.6rem', color: 'var(--error)', borderColor: 'transparent'}} onClick={() => handleDeleteBatch(b.id)}>🗑️</button>
@@ -3406,7 +3452,7 @@
                               <td style={{color: 'var(--error)'}}>{grConesTotal || '-'}</td>
                               <td style={{color: 'var(--error)'}}>{grTotal.toFixed(2)}</td>
                               <td style={{color: 'var(--muted)'}}>-</td>
-                              <td style={{color: 'var(--success)', fontSize: '0.95rem'}}>{Number(b.totalWeight || (grossTotal - grTotal)).toFixed(2)} kg</td>
+                              <td style={{color: 'var(--success)', fontSize: '0.95rem'}}>{getBatchNet(b).toFixed(2)} kg</td>
                             </tr>
                             {bIdx < bArr.length - 1 && (
                               <tr key={`${b.id}-sep`}><td colSpan="11" style={{padding: 0, border: 'none', height: '5px', background: '#000000', lineHeight: '0'}}></td></tr>
@@ -3456,16 +3502,36 @@
 
     // Component: Batch Form with AI Scan & Mobile QR Upload
     const BatchForm = ({ order, onCancel, onSubmit, initialData, geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
+      const getInitialBoxes = (data) => {
+        if (data?.boxes && data.boxes.length > 0) {
+          return data.boxes.map(b => ({
+            ...b,
+            returnedWeight: (b.returnedWeight !== undefined && b.returnedWeight !== null && b.returnedWeight !== '') ? b.returnedWeight : '',
+            returnedDate: b.returnedDate ? b.returnedDate.split('T')[0] : ''
+          }));
+        }
+        return [{ boxNumber: 'B1', cones: '', weight: '', returnedWeight: data?.returnedWeight || '', returnedDate: data?.returnedDate ? data.returnedDate.split('T')[0] : '' }];
+      };
+
       const [challan, setChallan] = useState(initialData?.challanNumber || '');
       const [receiveDate, setReceiveDate] = useState(initialData?.receiveDate?.split('T')[0] || new Date().toISOString().split('T')[0]);
       const [lotNumber, setLotNumber] = useState(initialData?.lotNumber || '');
-      const [boxInputs, setBoxInputs] = useState(initialData?.boxes ? initialData.boxes.map(b => ({...b})) : [{ boxNumber: 'B1', cones: '', weight: '', returnedWeight: '', returnedDate: '' }]);
+      const [boxInputs, setBoxInputs] = useState(() => getInitialBoxes(initialData));
       const [error, setError] = useState(null);
       const [invalidFields, setInvalidFields] = useState({});
       const [isScanning, setIsScanning] = useState(false);
       const [scanProgress, setScanProgress] = useState(0);
       const [scanStage, setScanStage] = useState('');
       const scanIntervalRef = useRef(null);
+
+      useEffect(() => {
+        if (initialData) {
+          setChallan(initialData.challanNumber || '');
+          setReceiveDate(initialData.receiveDate?.split('T')[0] || new Date().toISOString().split('T')[0]);
+          setLotNumber(initialData.lotNumber || '');
+          setBoxInputs(getInitialBoxes(initialData));
+        }
+      }, [initialData]);
 
       // Mobile QR Upload State
       const [showQrModal, setShowQrModal] = useState(false);
@@ -3772,11 +3838,26 @@
           return;
         }
 
-        setError(null);
-        setInvalidFields({});
-        const boxes = validBoxes.map(b => ({ ...b, cones: Number(b.cones), weight: Number(b.weight), returnedWeight: Number(b.returnedWeight) || 0 }));
-        const tw = boxes.reduce((acc, b) => acc + (b.weight - b.returnedWeight), 0);
-        onSubmit({ challanNumber: challan, receiveDate, lotNumber, boxes, totalWeight: tw });
+        const boxes = validBoxes.map(b => ({ 
+          ...b, 
+          cones: Number(b.cones), 
+          weight: Number(b.weight), 
+          returnedWeight: Number(b.returnedWeight) || 0,
+          returnedDate: Number(b.returnedWeight) > 0 ? (b.returnedDate || receiveDate) : ''
+        }));
+        const totalGr = boxes.reduce((acc, b) => acc + (b.returnedWeight || 0), 0);
+        const grossTotal = boxes.reduce((acc, b) => acc + (b.weight || 0), 0);
+        const tw = Math.max(0, grossTotal - totalGr);
+        onSubmit({ 
+          challanNumber: challan, 
+          receiveDate, 
+          lotNumber, 
+          boxes,
+          grossWeight: grossTotal,
+          returnedWeight: totalGr,
+          totalWeight: tw,
+          receivedQty: tw
+        });
       };
 
       const inputStyle = (isInvalid) => ({
