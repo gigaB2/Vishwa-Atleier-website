@@ -226,6 +226,77 @@
       flex-wrap: wrap;
     }
 
+    /* Live Sync Status Indicator */
+    .sync-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.45rem 0.85rem;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    .sync-status-badge .sync-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #94a3b8;
+      display: inline-block;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .sync-status-badge.connected {
+      background: rgba(16, 185, 129, 0.08);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #059669;
+    }
+
+    .sync-status-badge.connected .sync-dot {
+      background: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+      animation: pulseGreen 2.2s infinite;
+    }
+
+    .sync-status-badge.syncing {
+      background: rgba(59, 130, 246, 0.08);
+      border-color: rgba(59, 130, 246, 0.3);
+      color: #2563eb;
+    }
+
+    .sync-status-badge.syncing .sync-dot {
+      background: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+      animation: pulseBlue 1s infinite;
+    }
+
+    .sync-status-badge.error {
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #dc2626;
+    }
+
+    .sync-status-badge.error .sync-dot {
+      background: #ef4444;
+      box-shadow: none;
+    }
+
+    @keyframes pulseGreen {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.75; }
+    }
+
+    @keyframes pulseBlue {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+
     /* Control Toolbar */
     .control-toolbar {
       background: var(--surface);
@@ -371,6 +442,68 @@
       color: var(--accent);
       background: rgba(124, 58, 237, 0.05);
       transform: translateY(-1px);
+    }
+
+    /* Live Sync Status Badge */
+    .sync-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0.4rem 0.85rem;
+      border-radius: 20px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      transition: all 0.25s ease;
+      user-select: none;
+      height: 38px;
+    }
+
+    .sync-status-badge .sync-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulseSyncDot 2s infinite ease-in-out;
+    }
+
+    .sync-status-badge.syncing {
+      background: rgba(124, 58, 237, 0.1);
+      color: var(--accent);
+      border-color: rgba(124, 58, 237, 0.25);
+    }
+
+    .sync-status-badge.syncing .sync-dot {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: spinSyncDot 0.8s infinite linear;
+    }
+
+    .sync-status-badge.offline {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+
+    .sync-status-badge.offline .sync-dot {
+      background: var(--error);
+      box-shadow: none;
+      animation: none;
+    }
+
+    @keyframes pulseSyncDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.35); opacity: 0.7; }
+    }
+
+    @keyframes spinSyncDot {
+      0% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.4); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.6; }
     }
 
     /* KPI Bento Row */
@@ -727,6 +860,10 @@
       </div>
 
       <div class="header-actions">
+        <div class="sync-status-badge connected" id="syncStatusBadge" title="Realtime Supabase Cloud Synchronization Active">
+          <span class="sync-dot"></span>
+          <span id="syncStatusText">Live Cloud Realtime</span>
+        </div>
         <button type="button" class="btn btn-secondary" onclick="exportAnalyticsCSV()" title="Export all filtered analytics to CSV">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export CSV
@@ -735,7 +872,7 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print Report
         </button>
-        <button type="button" class="btn btn-primary" onclick="triggerRefreshWithAnimation()" title="Refresh Analytics Data">
+        <button type="button" class="btn btn-primary" onclick="triggerRefreshWithAnimation()" title="Force Refresh &amp; Re-sync Cloud Data">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Refresh Data
         </button>
@@ -1231,6 +1368,23 @@
       return { productName: baseName || prodName };
     }
 
+    function updateSyncBadge(status, text) {
+      const badge = document.getElementById('syncStatusBadge');
+      const label = document.getElementById('syncStatusText');
+      if (!badge || !label) return;
+      badge.classList.remove('connected', 'syncing', 'error');
+      if (status === 'syncing') {
+        badge.classList.add('syncing');
+        label.textContent = text || 'Syncing Cloud Data...';
+      } else if (status === 'live') {
+        badge.classList.add('connected');
+        label.textContent = text || 'Live Cloud Realtime';
+      } else if (status === 'error') {
+        badge.classList.add('error');
+        label.textContent = text || 'Cloud Offline / Local';
+      }
+    }
+
     // Load logs from localStorage and Supabase
     function fetchAllYarnData() {
       ['covering', 'tfo', 'doubler'].forEach(div => {
@@ -1251,6 +1405,44 @@
         rawData[div].production = Array.isArray(prod) ? prod : [];
         rawData[div].sales = Array.isArray(sales) ? sales : [];
       });
+    }
+
+    let isCloudSyncing = false;
+    async function syncLatestDataFromCloud(silent = false) {
+      if (isCloudSyncing) return;
+      isCloudSyncing = true;
+      if (!silent) updateSyncBadge('syncing', 'Syncing Cloud...');
+
+      try {
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.loadAll === 'function') {
+          await window.VishwaSupabase.loadAll(true);
+        } else if (window.VF_DB && typeof window.VF_DB.isConfigured === 'function' && window.VF_DB.isConfigured()) {
+          // Fallback direct table fetch if loadAll is not ready
+          await Promise.allSettled(['covering', 'tfo', 'doubler'].map(async div => {
+            const [pLogs, sLogs] = await Promise.all([
+              window.VF_DB.yarn.getProductionLogs(div),
+              window.VF_DB.yarn.getSales(div)
+            ]);
+            if (Array.isArray(pLogs)) {
+              localStorage.setItem(`yarn_${div}_production_logs`, JSON.stringify(pLogs));
+            }
+            if (Array.isArray(sLogs)) {
+              localStorage.setItem(`yarn_${div}_sales_logs`, JSON.stringify(sLogs));
+            }
+          }));
+        }
+
+        fetchAllYarnData();
+        refreshAnalyticsView(false);
+        updateSyncBadge('live', 'Live Cloud Realtime');
+      } catch (err) {
+        console.warn('Realtime cloud sync notice:', err);
+        fetchAllYarnData();
+        refreshAnalyticsView(false);
+        updateSyncBadge('error', 'Cloud Offline / Local');
+      } finally {
+        isCloudSyncing = false;
+      }
     }
 
     // Filter by Date Range
@@ -2400,7 +2592,7 @@
       }, delay);
     }
 
-    function triggerRefreshWithAnimation() {
+    async function triggerRefreshWithAnimation() {
       const btn = document.querySelector('.btn-primary');
       if (btn) {
         const icon = btn.querySelector('svg');
@@ -2413,7 +2605,17 @@
           }, 600);
         }
       }
-      refreshAnalyticsView(false);
+      await syncLatestDataFromCloud(false);
+    }
+
+    let realtimePollingTimer = null;
+    function startRealtimePolling() {
+      if (realtimePollingTimer) clearInterval(realtimePollingTimer);
+      realtimePollingTimer = setInterval(() => {
+        if (!document.hidden && navigator.onLine) {
+          syncLatestDataFromCloud(true);
+        }
+      }, 3500);
     }
 
     // ==========================================================================
@@ -2503,11 +2705,20 @@
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
       const todayStr = now.toISOString().split('T')[0];
-      document.getElementById('customDateFrom').value = firstDay;
-      document.getElementById('customDateTo').value = todayStr;
+      const customFromEl = document.getElementById('customDateFrom');
+      const customToEl = document.getElementById('customDateTo');
+      if (customFromEl) customFromEl.value = firstDay;
+      if (customToEl) customToEl.value = todayStr;
 
+      // 1. Zero-latency instant initial render from local cache
       refreshAnalyticsView(false);
       setSkeletonsVisible(false);
+
+      // 2. Fetch live data from Supabase Cloud immediately
+      syncLatestDataFromCloud(false);
+
+      // 3. Start background live polling
+      startRealtimePolling();
 
       // Listen to theme switch to re-theme Chart.js automatically
       window.addEventListener('themeChanged', () => {
@@ -2515,19 +2726,37 @@
         scheduleRefresh(20);
       });
 
-      // Storage sync (debounced)
+      // Storage sync across tabs in same browser
       window.addEventListener('storage', (e) => {
-        if (!e.key || e.key.startsWith('yarn_') || e.key === 'yarn-fp-qualities' || e.key === 'vf_deleted_entity_ids') {
-          scheduleRefresh(60);
+        if (!e.key || e.key.startsWith('yarn_') || e.key === 'yarn-fp-qualities' || e.key === 'yarn-qualities' || e.key === 'vf_deleted_entity_ids') {
+          fetchAllYarnData();
+          scheduleRefresh(40);
         }
       });
 
-      // Supabase real-time sync listeners (debounced)
+      // Supabase real-time sync listeners
       window.addEventListener('supabase-sync', () => {
-        scheduleRefresh(60);
+        fetchAllYarnData();
+        scheduleRefresh(40);
       });
       window.addEventListener('supabase-ready', () => {
-        scheduleRefresh(60);
+        syncLatestDataFromCloud(true);
+      });
+
+      // Window focus and visibility listeners to pull freshest data on return
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          syncLatestDataFromCloud(true);
+        }
+      });
+      window.addEventListener('focus', () => {
+        syncLatestDataFromCloud(true);
+      });
+      window.addEventListener('online', () => {
+        syncLatestDataFromCloud(false);
+      });
+      window.addEventListener('offline', () => {
+        updateSyncBadge('error', 'Offline');
       });
     });
   </script>
