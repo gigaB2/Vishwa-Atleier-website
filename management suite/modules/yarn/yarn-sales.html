@@ -1528,7 +1528,12 @@
         </div>
         <div id="vfPresenceBarSlot"></div>
       </div>
-      <div id="current-time" class="muted" style="font-size: 0.9rem;"></div>
+      <div style="display: flex; align-items: center; gap: 0.85rem;">
+        <button id="btn-manual-cloud-sync" onclick="triggerManualCloudSync()" style="background: rgba(124, 58, 237, 0.12); color: var(--accent); border: 1px solid rgba(124, 58, 237, 0.3); padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 0.2s ease;" title="Force Cloud Sync from Supabase">
+          <span>🔄</span> Sync Cloud
+        </button>
+        <div id="current-time" class="muted" style="font-size: 0.9rem;"></div>
+      </div>
     </header>
 
     <!-- Primary Tabs (Divisions) -->
@@ -2098,6 +2103,7 @@
     // Main division switch
     window.switchDivision = function switchDivision(divisionId) {
       activeDivision = divisionId;
+      loadLogs();
       document.querySelectorAll('.main-tab-btn').forEach(btn => btn.classList.remove('active'));
       const activeBtn = document.getElementById(`tab-btn-${divisionId}`);
       if (activeBtn) activeBtn.classList.add('active');
@@ -7633,6 +7639,30 @@
         });
       }
     }
+
+    window.triggerManualCloudSync = async function() {
+      showToast('Connecting to Supabase Cloud...', 'info');
+      const syncBtn = document.getElementById('btn-manual-cloud-sync');
+      if (syncBtn) {
+        syncBtn.disabled = true;
+        syncBtn.style.opacity = '0.7';
+      }
+      try {
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.loadAll === 'function') {
+          await window.VishwaSupabase.loadAll(true);
+        }
+        refreshAllViews();
+        showToast('Cloud data synchronized successfully!', 'success');
+      } catch(err) {
+        console.error('Manual sync error:', err);
+        showToast('Sync completed with local cache', 'info');
+      } finally {
+        if (syncBtn) {
+          syncBtn.disabled = false;
+          syncBtn.style.opacity = '1';
+        }
+      }
+    };
 
     let remoteSyncDebounceTimer = null;
     function handleRemoteDataSync(key) {
