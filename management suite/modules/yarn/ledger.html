@@ -1120,15 +1120,20 @@
         display: none !important;
       }
 
-      /* If Party Statement Modal is Open, ONLY print Party Statement */
+      /* If Party Statement or Challan Details Modal is Open, ONLY print that Modal */
       body.printing-statement .ledger-container,
       body.printing-statement .page-header,
       body.printing-statement .kpi-grid,
-      body.printing-statement .sheet-wrapper {
+      body.printing-statement .sheet-wrapper,
+      body.printing-challan .ledger-container,
+      body.printing-challan .page-header,
+      body.printing-challan .kpi-grid,
+      body.printing-challan .sheet-wrapper {
         display: none !important;
       }
 
-      body.printing-statement .modal-overlay {
+      body.printing-statement .modal-overlay,
+      body.printing-challan .modal-overlay {
         position: static !important;
         background: transparent !important;
         padding: 0 !important;
@@ -1136,7 +1141,8 @@
         z-index: auto !important;
       }
 
-      body.printing-statement .modal-card {
+      body.printing-statement .modal-card,
+      body.printing-challan .modal-card {
         max-width: 100% !important;
         max-height: none !important;
         border: none !important;
@@ -1144,11 +1150,13 @@
         display: block !important;
       }
 
-      body.printing-statement .modal-header {
+      body.printing-statement .modal-header,
+      body.printing-challan .modal-header {
         display: none !important;
       }
 
-      body.printing-statement .modal-body {
+      body.printing-statement .modal-body,
+      body.printing-challan .modal-body {
         padding: 0 !important;
         overflow: visible !important;
       }
@@ -1634,16 +1642,8 @@
     </div>
   </div>
 
-  <!-- Yarn RM Order / Sales Challan Iframe Modal (Opens in-page without navigation) -->
-  <div class="modal-overlay" id="modal-order-iframe-overlay" style="display: none; z-index: 2500;">
-    <div class="modal-card" style="max-width: 1280px; width: 96%; height: 92vh; padding: 0; overflow: hidden; position: relative; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
-      <button class="modal-close-btn" onclick="closeOrderIframeModal()" style="position: absolute; top: 12px; right: 16px; z-index: 100; background: var(--surface); border: 1px solid var(--border); border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-md); color: var(--fg); font-size: 1.4rem; cursor: pointer;">&times;</button>
-      <iframe id="order-details-iframe" src="about:blank" style="width: 100%; height: 100%; border: none; background: var(--bg);"></iframe>
-    </div>
-  </div>
-
   <!-- In-Page Challan & Bill Details Breakdown Modal -->
-  <div class="modal-overlay" id="modal-challan-details" style="display: none; z-index: 2600;">
+  <div class="modal-overlay" id="modal-challan-details" style="display: none; z-index: 2600;" onclick="if(event.target === this) closeChallanDetailsModal();">
     <div class="modal-card" style="max-width: 840px;">
       <div class="modal-header">
         <div class="modal-title">
@@ -1655,11 +1655,12 @@
       <div class="modal-body" id="challan-modal-body">
         <!-- Rendered dynamically -->
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" id="challan-modal-footer">
         <button class="btn btn-secondary" onclick="printChallanDetails()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print Details
         </button>
+        <span id="challan-modal-source-btn-wrap"></span>
         <button class="btn btn-primary" onclick="closeChallanDetailsModal()">Close</button>
       </div>
     </div>
@@ -2870,9 +2871,8 @@
 
             <td class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
-                ? `<div class="cell-readonly font-mono bold challan-clickable" onclick="openChallanModal('${row.id}')" title="Click to view challan &amp; order details" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                ? `<div class="cell-readonly font-mono bold challan-clickable" onclick="openChallanModal('${row.id}')" title="Click to view details">
                     <span class="challan-link-text">${escapeHtml(row.challanNo || '-')}</span>
-                    <span class="badge-synced" title="Auto-synced from orders/sales">Synced</span>
                    </div>`
                 : `<input type="text" data-field="challanNo" class="cell-input" value="${escapeHtml(row.challanNo || '')}" placeholder="Challan #" oninput="handleCellChange('${row.id}', 'challanNo', this.value, false)" onchange="handleCellChange('${row.id}', 'challanNo', this.value, true)">`
               }
@@ -2978,14 +2978,13 @@
             <td class="center-col actions-col cell-locked-bg">
               <div class="actions-cell-wrap">
                 ${isLocked 
-                  ? `<button class="btn-action-icon btn-view-row" onclick="openChallanModal('${row.id}')" title="View Challan &amp; Order Details">
+                  ? `<button class="btn-action-icon btn-view-row" onclick="openChallanModal('${row.id}')" title="View Bill / Challan Details">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                      </button>`
-                  : ''
+                  : `<button class="btn-action-icon btn-delete-row" onclick="deleteRow('${row.id}')" title="Delete custom row">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                     </button>`
                 }
-                <button class="btn-action-icon btn-delete-row" onclick="deleteRow('${row.id}')" title="${isLocked ? 'Remove synced entry from ledger' : 'Delete custom row'}">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                </button>
               </div>
             </td>
           </tr>
@@ -3193,110 +3192,10 @@
       }, 500);
     }
 
-    // Open Yarn RM Order / Sales Challan Modal or in-page Breakdown Modal
-    async function openChallanModal(rowId) {
+    // Open Yarn RM Order / Sales Challan Details Modal
+    function openChallanModal(rowId) {
       const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
       if (!row) return;
-
-      const challan = (row.challanNo || '').trim();
-      const party = (row.partyName || '').trim();
-
-      // 1. Purchase Ledger or Yarn RM Order Source
-      if (activeTab === 'purchase' || row.source === 'yarn-rm-orders') {
-        try {
-          let orders = [];
-          if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
-            try {
-              orders = (await window.VishwaSupabase.get('yarn-rm-orders')) || [];
-            } catch(e) {}
-          }
-          if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
-            orders = window.VishwaSupabase.filterDeletedEntities(orders);
-          }
-
-          let matchingOrder = null;
-          let matchedBatchId = '';
-          let matchedLot = '';
-
-          if (challan) {
-            matchingOrder = (orders || []).find(o => 
-              (o.batches || []).some(b => {
-                if (String(b.challanNumber || '').trim() === challan) {
-                  matchedBatchId = b.id || '';
-                  matchedLot = b.lotNumber || '';
-                  return true;
-                }
-                return false;
-              })
-            );
-          }
-
-          if (!matchingOrder && challan.startsWith('ORD-')) {
-            const orderNum = challan.replace('ORD-', '').trim();
-            matchingOrder = (orders || []).find(o => String(o.orderNumber || o.id) === orderNum);
-          }
-
-          if (!matchingOrder && challan) {
-            matchingOrder = (orders || []).find(o => String(o.orderNumber || o.id) === challan);
-          }
-
-          if (!matchingOrder && party) {
-            matchingOrder = (orders || []).find(o => (o.supplier || '').trim().toLowerCase() === party.toLowerCase());
-          }
-
-          if (matchingOrder) {
-            const overlay = document.getElementById('modal-order-iframe-overlay');
-            const iframe = document.getElementById('order-details-iframe');
-            if (overlay && iframe) {
-              iframe.src = `yarn-rm-orders.html?view=orders&orderId=${encodeURIComponent(matchingOrder.id)}&batchId=${encodeURIComponent(matchedBatchId)}&challan=${encodeURIComponent(challan)}&lot=${encodeURIComponent(matchedLot)}&openModal=1&embedded=1`;
-              overlay.style.display = 'flex';
-              return;
-            }
-          }
-        } catch (e) {
-          console.error("Error finding yarn-rm-order:", e);
-        }
-      }
-
-      // 2. Sales Ledger or Yarn Sales Logs Source
-      if (activeTab === 'sales' || (row.source && row.source.includes('sales'))) {
-        try {
-          let matchedSale = null;
-          let matchedDiv = 'covering';
-
-          for (const div of ['covering', 'tfo', 'doubler']) {
-            if (matchedSale) break;
-            try {
-              let sales = [];
-              if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
-                sales = (await window.VishwaSupabase.get(`yarn_${div}_sales_logs`)) || [];
-              }
-              if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
-                sales = window.VishwaSupabase.filterDeletedEntities(sales);
-              }
-              const s = (sales || []).find(item => String(item.challanNo || item.challanNumber || item.id).trim() === challan);
-              if (s) {
-                matchedSale = s;
-                matchedDiv = div;
-              }
-            } catch(e) {}
-          }
-
-          if (matchedSale) {
-            const overlay = document.getElementById('modal-order-iframe-overlay');
-            const iframe = document.getElementById('order-details-iframe');
-            if (overlay && iframe) {
-              iframe.src = `yarn-sales.html?division=${encodeURIComponent(matchedDiv)}&tab=sales&challan=${encodeURIComponent(challan)}&embedded=1`;
-              overlay.style.display = 'flex';
-              return;
-            }
-          }
-        } catch (e) {
-          console.error("Error finding yarn sales log:", e);
-        }
-      }
-
-      // 3. Fallback: Always open rich in-page Challan Details breakdown modal
       openChallanDetailsModal(row);
     }
 
@@ -3305,11 +3204,32 @@
       const modal = document.getElementById('modal-challan-details');
       const body = document.getElementById('challan-modal-body');
       const title = document.getElementById('challan-modal-title');
+      const sourceWrap = document.getElementById('challan-modal-source-btn-wrap');
       if (!modal || !body) return;
 
       const comp = computeRowFinancials(row);
       const isSales = activeTab === 'sales' || (row.source && row.source.includes('sales'));
       title.textContent = `${isSales ? 'Sales Invoice' : 'Purchase Challan'}: ${row.challanNo || 'Entry Details'}`;
+
+      if (sourceWrap) {
+        if (row.source === 'yarn-rm-orders') {
+          sourceWrap.innerHTML = `
+            <a href="yarn-rm-orders.html" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;" title="View in Yarn RM Orders">
+              <span>Open RM Orders</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          `;
+        } else if (row.source && row.source.includes('sales')) {
+          sourceWrap.innerHTML = `
+            <a href="yarn-sales.html" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;" title="View in Yarn Sales Book">
+              <span>Open Sales Book</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          `;
+        } else {
+          sourceWrap.innerHTML = '';
+        }
+      }
 
       body.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 1.25rem;">
@@ -3407,30 +3327,12 @@
     }
 
     function printChallanDetails() {
+      document.body.classList.add('printing-challan');
       window.print();
+      setTimeout(() => {
+        document.body.classList.remove('printing-challan');
+      }, 500);
     }
-
-    // Close in-page Yarn RM Order / Challan Iframe Modal
-    function closeOrderIframeModal() {
-      const overlay = document.getElementById('modal-order-iframe-overlay');
-      const iframe = document.getElementById('order-details-iframe');
-      if (overlay) overlay.style.display = 'none';
-      if (iframe) iframe.src = 'about:blank';
-      syncSourceData(false);
-      renderTable();
-    }
-
-    // Listen for iframe modal messages
-    window.addEventListener('message', (e) => {
-      if (e.data && typeof e.data === 'object') {
-        if (e.data.type === 'CLOSE_YARN_ORDER_MODAL') {
-          closeOrderIframeModal();
-        } else if (e.data.type === 'YARN_ORDER_UPDATED') {
-          syncSourceData(false);
-          renderTable();
-        }
-      }
-    });
 
     // Export Current Table to CSV
     function exportToCSV() {
