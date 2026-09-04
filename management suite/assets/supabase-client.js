@@ -580,6 +580,7 @@
       // the remote server snapshot is the single source of truth. Deleted items must NOT be resurrected!
       const MASTER_ENTITY_KEYS = [
         'yarn-rm-orders', 'vishwa_yarn_rm_stock_data',
+        'yarn_sales_ledger_data', 'yarn_purchase_ledger_data',
         'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
         'manage-jalas', 'manage-fanis', 'machines', 'warp-beams', 'warp-issues',
         'yarn-issues', 'costing-products-v4', 'costing-tfo-products-v1',
@@ -1854,6 +1855,7 @@
 
         // Clean from all known entity keys in cache immediately
         const entityKeys = [
+          'yarn_sales_ledger_data', 'yarn_purchase_ledger_data',
           'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines',
           'yarn_covering_production_logs', 'yarn_tfo_production_logs', 'yarn_doubler_production_logs',
           'yarn_covering_sales_logs', 'yarn_tfo_sales_logs', 'yarn_doubler_sales_logs',
@@ -3578,6 +3580,7 @@
 
         // Clean from all known entity keys in cache and localStorage immediately
         const entityKeys = [
+          'yarn_sales_ledger_data', 'yarn_purchase_ledger_data',
           'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines',
           'yarn_covering_production_logs', 'yarn_tfo_production_logs', 'yarn_doubler_production_logs',
           'yarn_covering_sales_logs', 'yarn_tfo_sales_logs', 'yarn_doubler_sales_logs',
