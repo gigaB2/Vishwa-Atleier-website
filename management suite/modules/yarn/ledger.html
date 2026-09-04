@@ -1676,6 +1676,23 @@
     let defaultCreditDays = 30; // 30 days
     let liveSaveTimer = null;
     let isLocalSaving = false;
+    let lastLocalSaveTime = 0;
+    let lastUserInteractionTime = 0;
+
+    // Helper: Detect if user is actively focused or typing in any input/filter/modal
+    function isUserActivelyEditing() {
+      if (isLocalSaving || Date.now() - lastLocalSaveTime < 1500) return true;
+      const activeEl = document.activeElement;
+      if (!activeEl) return false;
+      const tag = activeEl.tagName ? activeEl.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+        return true;
+      }
+      if (Date.now() - lastUserInteractionTime < 2500) {
+        return true;
+      }
+      return false;
+    }
 
     // Data Storage for Ledgers
     let ledgerData = {
@@ -1780,9 +1797,14 @@
       populatePartyFilter();
       renderTable();
 
+      // User interaction activity trackers to protect active inputs & cursor
+      document.addEventListener('focusin', () => { lastUserInteractionTime = Date.now(); }, true);
+      document.addEventListener('input', () => { lastUserInteractionTime = Date.now(); }, true);
+      document.addEventListener('keydown', () => { lastUserInteractionTime = Date.now(); }, true);
+
       // Cloud & Real-time Event Listeners
       const handleRemoteSync = async (e) => {
-        if (isLocalSaving) return; // Ignore own local writes
+        if (isUserActivelyEditing()) return; // Never disrupt active user editing
         if (e && e.detail) {
           if (e.detail.isRemote === false) return; // Skip non-remote events
           if (e.detail.key) {
@@ -1792,35 +1814,36 @@
             }
           }
         }
-        const activeEl = document.activeElement;
-        const isEditingInTable = activeEl && document.getElementById('excel-table-body')?.contains(activeEl);
 
-        // If the user is currently focused/typing anywhere in the table, DO NOT trigger full sync/render
-        if (isEditingInTable) {
-          return;
-        }
+        if (isUserActivelyEditing()) return;
 
         await loadLedgers();
         await syncSourceData(false);
+
+        // Guard again after async await completes
+        if (isUserActivelyEditing()) return;
+
         populatePartyFilter();
         renderTable(false);
       };
 
       window.addEventListener('storage', async (e) => {
+        if (isUserActivelyEditing()) return;
         if (!e.key || e.key.startsWith('yarn') || e.key === 'yarn-rm-orders' || e.key === 'yarn_ledger_deleted_keys' || e.key === 'vf_deleted_entity_ids') {
           handleRemoteSync(e);
         }
       });
 
       window.addEventListener('supabase-sync', handleRemoteSync);
-      window.addEventListener('supabase-ready', handleRemoteSync);
       window.addEventListener('supabase-item-deleted', handleRemoteSync);
 
       window.addEventListener('focus', async () => {
+        if (isUserActivelyEditing()) return;
         const activeEl = document.activeElement;
         if (!activeEl || !document.getElementById('excel-table-body')?.contains(activeEl)) {
           await loadLedgers();
           await syncSourceData(false);
+          if (isUserActivelyEditing()) return;
           populatePartyFilter();
           renderTable(false);
         }
@@ -1957,6 +1980,7 @@
     function saveLedgers(showToastMsg = false, forceImmediate = false) {
       recordStateSnapshot();
       isLocalSaving = true;
+      lastLocalSaveTime = Date.now();
       try {
         const nowIso = new Date().toISOString();
         ['sales', 'purchase'].forEach(tab => {
@@ -1980,7 +2004,7 @@
       } finally {
         setTimeout(() => {
           isLocalSaving = false;
-        }, 400);
+        }, 1500);
       }
     }
 
@@ -2386,6 +2410,7 @@
 
       // Focus first input
       setTimeout(() => {
+        lastUserInteractionTime = Date.now();
         const firstInput = document.querySelector('#excel-table-body tr:first-child input');
         if (firstInput) firstInput.focus();
       }, 50);
@@ -2393,6 +2418,7 @@
 
     // Delete a row with Universal Tombstone Deletion across Supabase Cloud
     function deleteRow(rowId) {
+      lastUserInteractionTime = Date.now();
       const targetArray = ledgerData[activeTab] || [];
       const row = targetArray.find(r => r.id === rowId);
       if (!row) return;
@@ -2427,6 +2453,7 @@
 
     // Direct In-Cell Edit Handler (Live Typing & Immediate Change Broadcasting)
     function handleCellChange(rowId, field, value, isImmediate = false) {
+      lastUserInteractionTime = Date.now();
       const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
       if (!row) return;
 
@@ -2707,6 +2734,25 @@
       const fromDate = document.getElementById('filter-from-date').value;
       const toDate = document.getElementById('filter-to-date').value;
 
+      // Capture currently focused element before re-rendering
+      const activeEl = document.activeElement;
+      let focusedRowId = null;
+      let focusedField = null;
+      let selStart = null;
+      let selEnd = null;
+
+      if (activeEl && tbody && tbody.contains(activeEl)) {
+        const tr = activeEl.closest('tr');
+        if (tr && tr.id && tr.id.startsWith('ledger-row-')) {
+          focusedRowId = tr.id.replace('ledger-row-', '');
+          focusedField = activeEl.dataset.field || '';
+          try {
+            selStart = activeEl.selectionStart;
+            selEnd = activeEl.selectionEnd;
+          } catch(e) {}
+        }
+      }
+
       // Filter Current Active Ledger
       let rows = (ledgerData[activeTab] || []).filter(row => {
         if (!row) return false;
@@ -2818,7 +2864,7 @@
             <td class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked 
                 ? `<div class="cell-readonly font-mono" title="Date">${formatDateDisplay(row.date)}</div>`
-                : `<input type="date" class="cell-input date-picker-input" value="${row.date || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'date', this.value, false)" onchange="handleCellChange('${row.id}', 'date', this.value, true)">`
+                : `<input type="date" data-field="date" class="cell-input date-picker-input" value="${row.date || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'date', this.value, false)" onchange="handleCellChange('${row.id}', 'date', this.value, true)">`
               }
             </td>
 
@@ -2828,35 +2874,35 @@
                     <span class="challan-link-text">${escapeHtml(row.challanNo || '-')}</span>
                     <span class="badge-synced" title="Auto-synced from orders/sales">Synced</span>
                    </div>`
-                : `<input type="text" class="cell-input" value="${escapeHtml(row.challanNo || '')}" placeholder="Challan #" oninput="handleCellChange('${row.id}', 'challanNo', this.value, false)" onchange="handleCellChange('${row.id}', 'challanNo', this.value, true)">`
+                : `<input type="text" data-field="challanNo" class="cell-input" value="${escapeHtml(row.challanNo || '')}" placeholder="Challan #" oninput="handleCellChange('${row.id}', 'challanNo', this.value, false)" onchange="handleCellChange('${row.id}', 'challanNo', this.value, true)">`
               }
             </td>
 
             <td class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly bold" style="color: var(--fg);" title="Party Name">${escapeHtml(row.partyName || '-')}</div>`
-                : `<input type="text" class="cell-input" value="${escapeHtml(row.partyName || '')}" placeholder="${activeTab === 'sales' ? 'Customer Name' : 'Supplier Name'}" oninput="handleCellChange('${row.id}', 'partyName', this.value, false)" onchange="handleCellChange('${row.id}', 'partyName', this.value, true)">`
+                : `<input type="text" data-field="partyName" class="cell-input" value="${escapeHtml(row.partyName || '')}" placeholder="${activeTab === 'sales' ? 'Customer Name' : 'Supplier Name'}" oninput="handleCellChange('${row.id}', 'partyName', this.value, false)" onchange="handleCellChange('${row.id}', 'partyName', this.value, true)">`
               }
             </td>
 
             <td class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly" style="color: var(--muted);" title="Quality / Specs">${escapeHtml(row.quality || '-')}</div>`
-                : `<input type="text" class="cell-input" value="${escapeHtml(row.quality || '')}" placeholder="Quality / Specs" oninput="handleCellChange('${row.id}', 'quality', this.value, false)" onchange="handleCellChange('${row.id}', 'quality', this.value, true)">`
+                : `<input type="text" data-field="quality" class="cell-input" value="${escapeHtml(row.quality || '')}" placeholder="Quality / Specs" oninput="handleCellChange('${row.id}', 'quality', this.value, false)" onchange="handleCellChange('${row.id}', 'quality', this.value, true)">`
               }
             </td>
 
             <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly num bold" title="Quantity (Kg)">${Number(row.qty || 0).toFixed(2)}</div>`
-                : `<input type="number" step="0.01" class="cell-input num-font" value="${row.qty || 0}" oninput="handleCellChange('${row.id}', 'qty', this.value, false)" onchange="handleCellChange('${row.id}', 'qty', this.value, true)">`
+                : `<input type="number" step="0.01" data-field="qty" class="cell-input num-font" value="${row.qty || 0}" oninput="handleCellChange('${row.id}', 'qty', this.value, false)" onchange="handleCellChange('${row.id}', 'qty', this.value, true)">`
               }
             </td>
 
             <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly num font-mono" title="Rate (₹/Kg)">${Number(row.rate || 0).toFixed(2)}</div>`
-                : `<input type="number" step="0.01" class="cell-input num-font" value="${row.rate || 0}" oninput="handleCellChange('${row.id}', 'rate', this.value, false)" onchange="handleCellChange('${row.id}', 'rate', this.value, true)">`
+                : `<input type="number" step="0.01" data-field="rate" class="cell-input num-font" value="${row.rate || 0}" oninput="handleCellChange('${row.id}', 'rate', this.value, false)" onchange="handleCellChange('${row.id}', 'rate', this.value, true)">`
               }
             </td>
 
@@ -2867,7 +2913,7 @@
             <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly num font-mono" title="GST %">${Number(row.gstPercent !== undefined ? row.gstPercent : 5.0).toFixed(1)}%</div>`
-                : `<input type="number" step="0.1" class="cell-input num-font" style="width: 75px;" value="${row.gstPercent !== undefined ? row.gstPercent : 5.0}" oninput="handleCellChange('${row.id}', 'gstPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'gstPercent', this.value, true)">`
+                : `<input type="number" step="0.1" data-field="gstPercent" class="cell-input num-font" style="width: 75px;" value="${row.gstPercent !== undefined ? row.gstPercent : 5.0}" oninput="handleCellChange('${row.id}', 'gstPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'gstPercent', this.value, true)">`
               }
             </td>
 
@@ -2877,17 +2923,17 @@
 
             <!-- Editable Paid / Received Principal Amount -->
             <td class="num-col" style="background: rgba(16, 185, 129, 0.05);">
-              <input type="number" step="0.01" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Enter paid/received principal amount">
+              <input type="number" step="0.01" data-field="paidAmount" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Enter paid/received principal amount">
             </td>
 
             <!-- Editable Payment Date (Expanded & Click anywhere to open calendar) -->
             <td style="min-width: 185px;">
-              <input type="date" class="cell-input date-picker-input" style="width: 100%; min-width: 170px; cursor: pointer;" value="${row.paymentDate || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'paymentDate', this.value, false)" onchange="handleCellChange('${row.id}', 'paymentDate', this.value, true)" title="Click to pick payment date">
+              <input type="date" data-field="paymentDate" class="cell-input date-picker-input" style="width: 100%; min-width: 170px; cursor: pointer;" value="${row.paymentDate || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'paymentDate', this.value, false)" onchange="handleCellChange('${row.id}', 'paymentDate', this.value, true)" title="Click to pick payment date">
             </td>
 
             <!-- Editable Credit Days -->
             <td class="num-col">
-              <input type="number" step="1" class="cell-input num-font" style="width: 80px;" value="${row.creditDays || defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
+              <input type="number" step="1" data-field="creditDays" class="cell-input num-font" style="width: 80px;" value="${row.creditDays || defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
             </td>
 
             <td class="cell-locked-bg">
@@ -2904,7 +2950,7 @@
 
             <!-- Editable Interest Rate -->
             <td class="num-col interest-col" style="${calculateInterest ? '' : 'display:none;'}">
-              <input type="number" step="0.1" class="cell-input num-font" style="width: 85px;" value="${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestRate', this.value, false)" onchange="handleCellChange('${row.id}', 'interestRate', this.value, true)" title="Annual late interest %">
+              <input type="number" step="0.1" data-field="interestRate" class="cell-input num-font" style="width: 85px;" value="${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestRate', this.value, false)" onchange="handleCellChange('${row.id}', 'interestRate', this.value, true)" title="Annual late interest %">
             </td>
 
             <td class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
@@ -2917,7 +2963,7 @@
 
             <!-- Editable Paid Interest (Settlement of Late Interest!) -->
             <td class="num-col interest-col" style="background: rgba(245, 158, 11, 0.05); ${calculateInterest ? '' : 'display:none;'}">
-              <input type="number" step="0.01" class="cell-input num-font col-input-interest-paid" style="color: var(--warning); font-weight: 700; width: 110px;" value="${row.interestPaid || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestPaid', this.value, false)" onchange="handleCellChange('${row.id}', 'interestPaid', this.value, true)" title="Enter paid/settled late interest amount">
+              <input type="number" step="0.01" data-field="interestPaid" class="cell-input num-font col-input-interest-paid" style="color: var(--warning); font-weight: 700; width: 110px;" value="${row.interestPaid || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestPaid', this.value, false)" onchange="handleCellChange('${row.id}', 'interestPaid', this.value, true)" title="Enter paid/settled late interest amount">
             </td>
 
             <td class="num-col cell-locked-bg">
@@ -2926,7 +2972,7 @@
 
             <!-- Editable Remarks -->
             <td>
-              <input type="text" class="cell-input" value="${escapeHtml(row.remarks || '')}" placeholder="Payment notes / Cheque #" oninput="handleCellChange('${row.id}', 'remarks', this.value, false)" onchange="handleCellChange('${row.id}', 'remarks', this.value, true)">
+              <input type="text" data-field="remarks" class="cell-input" value="${escapeHtml(row.remarks || '')}" placeholder="Payment notes / Cheque #" oninput="handleCellChange('${row.id}', 'remarks', this.value, false)" onchange="handleCellChange('${row.id}', 'remarks', this.value, true)">
             </td>
 
             <td class="center-col actions-col cell-locked-bg">
@@ -2945,6 +2991,22 @@
           </tr>
         `;
       }).join('');
+
+      // Restore focus and cursor position smoothly if an input was focused
+      if (focusedRowId && focusedField) {
+        const tr = document.getElementById(`ledger-row-${focusedRowId}`);
+        if (tr) {
+          const targetInput = tr.querySelector(`input[data-field="${focusedField}"]`);
+          if (targetInput) {
+            targetInput.focus();
+            try {
+              if (selStart !== null && selEnd !== null) {
+                targetInput.setSelectionRange(selStart, selEnd);
+              }
+            } catch(e) {}
+          }
+        }
+      }
     }
 
     // Toggle Late Payment Interest Calculation
