@@ -175,6 +175,50 @@
       min-height: 100vh;
     }
 
+    /* Embedded Mode Styles (when embedded inside ledger.html modal iframe) */
+    body.is-embedded {
+      background: var(--bg) !important;
+      overflow: auto !important;
+    }
+
+    body.is-embedded #vf-sidebar,
+    body.is-embedded header,
+    body.is-embedded .ambient-bg {
+      display: none !important;
+    }
+
+    body.is-embedded .app-container {
+      padding: 0 !important;
+      margin: 0 !important;
+      min-height: 100vh !important;
+      max-width: 100% !important;
+    }
+
+    body.is-embedded .modal-overlay {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      background: var(--bg) !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      padding: 0.5rem !important;
+      z-index: 100005 !important;
+      display: flex !important;
+      align-items: flex-start !important;
+    }
+
+    body.is-embedded .modal {
+      max-height: calc(100vh - 1rem) !important;
+      max-width: 100% !important;
+      width: 100% !important;
+      box-shadow: none !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 16px !important;
+      padding: 1.5rem !important;
+    }
+
     header {
       display: flex;
       justify-content: space-between;
@@ -1618,10 +1662,11 @@
         const batchIdParam = params.get('batchId');
         const challanParam = params.get('challan');
         const lotParam = params.get('lot');
+        const supplierParam = params.get('supplier') || params.get('party');
         const shouldOpenModal = params.get('openModal') === '1';
 
-        if (orderIdParam || batchIdParam || challanParam || lotParam) {
-          // Match with priority: 1. Batch ID or exact (Lot + Challan), 2. Challan or Lot, 3. Order ID
+        if (orderIdParam || batchIdParam || challanParam || lotParam || supplierParam) {
+          // Match with priority: 1. Batch ID or exact (Lot + Challan), 2. Challan or Lot, 3. Order ID, 4. Supplier
           let match = orders.find(o => 
             (o.batches || []).some(b => 
               (batchIdParam && String(b.id) === String(batchIdParam)) ||
@@ -1629,17 +1674,21 @@
             )
           );
 
+          if (!match && (challanParam || lotParam)) {
+            match = orders.find(o => 
+              (o.batches || []).some(b => 
+                (challanParam && String(b.challanNumber).trim() === String(challanParam).trim()) ||
+                (lotParam && String(b.lotNumber).trim() === String(lotParam).trim())
+              )
+            );
+          }
+
           if (!match && orderIdParam) {
             match = orders.find(o => String(o.id) === String(orderIdParam) || String(o.orderNumber) === String(orderIdParam));
           }
 
-          if (!match && (challanParam || lotParam)) {
-            match = orders.find(o => 
-              (o.batches || []).some(b => 
-                (lotParam && String(b.lotNumber).trim() === String(lotParam).trim()) ||
-                (challanParam && String(b.challanNumber).trim() === String(challanParam).trim())
-              )
-            );
+          if (!match && supplierParam) {
+            match = orders.find(o => String(o.supplier || '').trim().toLowerCase() === String(supplierParam).trim().toLowerCase());
           }
 
           if (match) {
@@ -2730,24 +2779,29 @@
         });
       }, [order.id, order.orderedWeight, order.price, order.quality, order.supplier, order.code, order.color, order.category, order.orderDate]);
 
-      // Auto-open specific batch in edit mode if requested via URL (e.g. Right Click Edit Lot from Stock Book)
+      // Auto-open specific batch in edit mode if requested via URL (e.g. Right Click Edit Lot from Stock Book or Eye from Ledger)
       useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const batchIdParam = params.get('batchId');
         const challanParam = params.get('challan');
         const lotParam = params.get('lot');
+        const openBatchParam = params.get('openBatch') === '1' || params.get('newBatch') === '1';
 
         if (batchIdParam || challanParam || lotParam) {
           const targetBatch = (order.batches || []).find(b => 
             (batchIdParam && String(b.id) === String(batchIdParam)) ||
             (challanParam && lotParam && String(b.challanNumber).trim() === String(challanParam).trim() && String(b.lotNumber).trim() === String(lotParam).trim()) ||
-            (lotParam && String(b.lotNumber).trim() === String(lotParam).trim()) ||
-            (challanParam && String(b.challanNumber).trim() === String(challanParam).trim())
+            (challanParam && String(b.challanNumber).trim() === String(challanParam).trim()) ||
+            (lotParam && String(b.lotNumber).trim() === String(lotParam).trim())
           );
           if (targetBatch) {
             setEditingBatch(targetBatch);
             setShowBatchForm(true);
+          } else if (openBatchParam) {
+            setShowBatchForm(true);
           }
+        } else if (openBatchParam) {
+          setShowBatchForm(true);
         }
       }, [order.id]);
 
