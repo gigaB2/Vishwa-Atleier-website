@@ -3137,8 +3137,11 @@
       const salesDate = document.getElementById('modal-sales-date').value;
       document.getElementById('modal-sales-challan').value = generateNextChallanNumber(activeDivision, salesDate);
 
-      // Reset customer, hsn and address
+      // Reset customer, agent, hsn and address
       document.getElementById('modal-sales-customer').value = '';
+      if (document.getElementById('modal-sales-agent')) {
+        document.getElementById('modal-sales-agent').value = '';
+      }
       if (document.getElementById('modal-sales-hsn')) {
         document.getElementById('modal-sales-hsn').value = '5402';
       }
@@ -3271,6 +3274,8 @@
       if (hsnEl) hsnEl.innerText = sale.hsnCode || '5402';
       document.getElementById('details-sales-date').innerText = formatDate(sale.date);
       document.getElementById('details-sales-customer').innerText = sale.customerName;
+      const agentEl = document.getElementById('details-sales-agent');
+      if (agentEl) agentEl.innerText = sale.agentName || sale.agent || '-';
       
       const addrEl = document.getElementById('details-sales-address');
       if (addrEl) addrEl.innerText = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
@@ -3729,6 +3734,7 @@
                   <div class="info-item"><span>Lot No:</span> <strong>${lotNo}</strong></div>
                   <div class="info-item"><span>HSN / SAC:</span> <strong>${sale.hsnCode || '5402'}</strong></div>
                   <div class="info-item"><span>Date:</span> <strong>${formatDate(sale.date)}</strong></div>
+                  <div class="info-item"><span>Agent Name:</span> <strong>${sale.agentName || sale.agent || '-'}</strong></div>
                 </td>
               </tr>
             </table>
@@ -4118,6 +4124,7 @@
                   <div class="info-item"><span>Lot No:</span> <strong>${lotNo}</strong></div>
                   <div class="info-item"><span>HSN / SAC:</span> <strong>${sale.hsnCode || '5402'}</strong></div>
                   <div class="info-item"><span>Date:</span> <strong>${formatDate(sale.date)}</strong></div>
+                  <div class="info-item"><span>Agent Name:</span> <strong>${sale.agentName || sale.agent || '-'}</strong></div>
                 </td>
               </tr>
             </table>
@@ -4142,11 +4149,19 @@
             </table>
 
             <div class="bottom-section">
-              <div class="declarations">
-                <div style="font-weight: 700; margin-bottom: 5px; text-transform: uppercase;">Delivery Terms & Conditions</div>
-                1. Goods dispatched as per delivery challan.<br>
-                2. Please verify goods at delivery; discrepancies must be reported immediately.<br>
-                3. Received above goods in good order and condition.
+              <div style="width: 53%; display: flex; flex-direction: column; gap: 8px;">
+                <div class="declarations" style="width: 100%; box-sizing: border-box; padding: 8px 10px;">
+                  <div style="font-weight: 700; margin-bottom: 4px; text-transform: uppercase;">Delivery Terms & Conditions</div>
+                  1. Goods dispatched as per delivery challan.<br>
+                  2. Please verify goods at delivery; discrepancies must be reported immediately.<br>
+                  3. Received above goods in good order and condition.
+                </div>
+                <div style="width: 100%; box-sizing: border-box; border: 1px solid #000000; padding: 7px 10px; border-radius: 4px; background-color: #fafafa; font-size: 9.5px; line-height: 1.35; color: #111111;">
+                  <div style="font-weight: 800; text-transform: uppercase; color: #000000; margin-bottom: 3px; font-size: 9.5px; letter-spacing: 0.3px; display: flex; align-items: center; gap: 4px;">
+                    <span>⚠️</span> <span>QUALITY & LOT INTEGRITY ADVISORY:</span>
+                  </div>
+                  Strictly do not mix different yarn lot numbers during warping, weaving, knitting, dyeing, or finishing operations. Each lot possesses unique physical, tension, and dye-affinity properties. The supplier / company accepts no responsibility or claims for shade variation, streak defects, or processing irregularities resulting from intermixing different lots.
+                </div>
               </div>
               <table class="summary-table">
                 <tr>
@@ -4324,6 +4339,10 @@
                     <span class="metric-lbl">NET WEIGHT</span>
                     <span class="metric-num">${netValNum.toFixed(2)} <small>Kg</small></span>
                   </div>
+                </div>
+
+                <div class="slip-lot-notice">
+                  ⚠️ <strong>Notice:</strong> Strictly do not mix different lots in weaving/processing. Supplier is not liable for shade variation or defects arising from intermixed lots.
                 </div>
 
                 <div class="slip-footer">
@@ -4667,6 +4686,20 @@
               font-weight: 700;
               color: #000000;
             }
+            .slip-lot-notice {
+              border: 1px dashed #000000;
+              background: #ffffff;
+              padding: 2px 6px;
+              border-radius: 3px;
+              font-size: 7.2px;
+              line-height: 1.25;
+              color: #000000;
+              text-transform: uppercase;
+              letter-spacing: 0.2px;
+              margin-top: 2px;
+              margin-bottom: 2px;
+              box-sizing: border-box;
+            }
             .slip-footer {
               display: flex;
               justify-content: space-between;
@@ -4881,6 +4914,7 @@
       const date = document.getElementById('modal-sales-date').value;
       const hsnCode = document.getElementById('modal-sales-hsn') ? document.getElementById('modal-sales-hsn').value.trim() : '5402';
       const customerName = document.getElementById('modal-sales-customer').value.trim();
+      const agentName = document.getElementById('modal-sales-agent') ? document.getElementById('modal-sales-agent').value.trim() : '';
       const customerAddress = (document.getElementById('modal-sales-address') ? document.getElementById('modal-sales-address').value.trim() : '') || 'Industrial Area, Surat, Gujarat, India';
       
       const selectedCompId = document.getElementById('modal-sales-company') ? document.getElementById('modal-sales-company').value : '';
@@ -4911,6 +4945,7 @@
         date: date,
         hsnCode: hsnCode || '5402',
         customerName: customerName,
+        agentName: agentName,
         customerAddress: customerAddress,
         sellerCompanyId: selectedComp ? selectedComp.id : '',
         sellerName: selectedComp ? selectedComp.sellerName : 'Vishwa Fashions',
@@ -5793,6 +5828,9 @@
       document.getElementById('modal-sales-challan').value = generateNextChallanNumber(activeDivision, salesDate);
 
       document.getElementById('modal-sales-customer').value = '';
+      if (document.getElementById('modal-sales-agent')) {
+        document.getElementById('modal-sales-agent').value = '';
+      }
       if (document.getElementById('modal-sales-address')) {
         document.getElementById('modal-sales-address').value = 'Industrial Area, Surat, Gujarat, India';
       }
@@ -5856,7 +5894,7 @@
           const itemsComp = s.items ? s.items.map(i => i.composition).join(' ') : '';
           const itemsColor = s.items ? s.items.map(i => i.color).join(' ') : '';
           const itemsBori = s.items ? s.items.map(i => i.boriNo).join(' ') : '';
-          const searchable = `${s.challanNo || ''} ${s.customerName || ''} ${s.boriNo || ''} ${s.composition || ''} ${s.color || ''} ${itemsComp} ${itemsColor} ${itemsBori}`.toLowerCase();
+          const searchable = `${s.challanNo || ''} ${s.customerName || ''} ${s.agentName || s.agent || ''} ${s.boriNo || ''} ${s.composition || ''} ${s.color || ''} ${itemsComp} ${itemsColor} ${itemsBori}`.toLowerCase();
           return searchTerms.every(term => searchable.includes(term));
         }
 
@@ -5894,7 +5932,10 @@
           <td><strong>${s.challanNo}</strong></td>
           <td>${formatDate(s.date)}</td>
           <td>${boriDisplay}</td>
-          <td>${s.customerName}</td>
+          <td>
+            <div style="font-weight: 600;">${s.customerName}</div>
+            ${(s.agentName || s.agent) ? `<div style="font-size: 0.75rem; color: var(--muted); display: flex; align-items: center; gap: 3px; margin-top: 2px;"><span style="font-size: 0.7rem; opacity: 0.8;">Agent:</span> <span style="color: var(--accent); font-weight: 500;">${s.agentName || s.agent}</span></div>` : ''}
+          </td>
           <td>${rollsTotal}</td>
           <td>${qtyTotal.toFixed(2)} Kg</td>
           <td>₹${s.rate ? s.rate.toFixed(2) : '-'}</td>
@@ -6131,6 +6172,9 @@
         document.getElementById('modal-sales-hsn').value = sale.hsnCode || '5402';
       }
       document.getElementById('modal-sales-customer').value = sale.customerName;
+      if (document.getElementById('modal-sales-agent')) {
+        document.getElementById('modal-sales-agent').value = sale.agentName || sale.agent || '';
+      }
       if (document.getElementById('modal-sales-address')) {
         document.getElementById('modal-sales-address').value = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
       }
@@ -6224,6 +6268,9 @@
       document.getElementById('modal-sales-challan').value = nextChallan;
 
       document.getElementById('modal-sales-customer').value = sale.customerName;
+      if (document.getElementById('modal-sales-agent')) {
+        document.getElementById('modal-sales-agent').value = sale.agentName || sale.agent || '';
+      }
       if (document.getElementById('modal-sales-address')) {
         document.getElementById('modal-sales-address').value = sale.customerAddress || 'Industrial Area, Surat, Gujarat, India';
       }
@@ -6536,17 +6583,21 @@
             </div>
           </div>
 
-          <!-- Top Row 2: Customer Name, Shipment Address & Rate & GST & Discount -->
+          <!-- Top Row 2: Customer Name, Agent Name, Shipment Address & Rate & GST & Discount -->
           <div class="form-inline" style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; gap: 0.75rem; flex-wrap: wrap;">
-            <div class="form-group" style="flex: 2 1 180px;">
+            <div class="form-group" style="flex: 1.8 1 170px;">
               <label for="modal-sales-customer">Customer / Buyer Name</label>
               <input type="text" id="modal-sales-customer" placeholder="Enter Buyer Name" required>
             </div>
-            <div class="form-group" style="flex: 2 1 200px;">
+            <div class="form-group" style="flex: 1.4 1 140px;">
+              <label for="modal-sales-agent">Agent / Broker Name</label>
+              <input type="text" id="modal-sales-agent" placeholder="Agent Name (optional)">
+            </div>
+            <div class="form-group" style="flex: 2 1 190px;">
               <label for="modal-sales-address">Shipment / Delivery Address</label>
               <input type="text" id="modal-sales-address" placeholder="Delivery destination address" value="Industrial Area, Surat, Gujarat, India">
             </div>
-            <div class="form-group" style="flex: 1 1 80px;">
+            <div class="form-group" style="flex: 0.8 1 75px;">
               <label for="modal-sales-gst">GST (%)</label>
               <select id="modal-sales-gst" onchange="calculateModalTotals()" required>
                 <option value="12" selected>12%</option>
@@ -6555,11 +6606,11 @@
                 <option value="0">0%</option>
               </select>
             </div>
-            <div class="form-group" style="flex: 1 1 110px;">
+            <div class="form-group" style="flex: 1 1 100px;">
               <label for="modal-sales-rate">Rate/Kg (₹)</label>
               <input type="number" id="modal-sales-rate" step="0.01" min="0.01" placeholder="Rate/Kg" oninput="updateCommonRate(this.value)" style="padding: 4px 8px; font-size: 0.85rem;" required>
             </div>
-            <div class="form-group" style="flex: 1.5 1 150px;">
+            <div class="form-group" style="flex: 1.4 1 140px;">
               <label for="modal-sales-discount-value">Discount <span id="modal-discount-calc-display" style="font-size: 0.75rem; color: #ef4444;"></span></label>
               <div style="display: flex; gap: 4px;">
                 <select id="modal-sales-discount-type" onchange="calculateModalTotals()" style="width: 75px; padding: 4px 6px; font-size: 0.82rem;">
@@ -6648,6 +6699,10 @@
           <div style="flex: 1.5 1 160px;">
             <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Customer Name</span>
             <strong id="details-sales-customer" style="font-size: 1.05rem;"></strong>
+          </div>
+          <div style="flex: 1.2 1 130px;">
+            <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Agent Name</span>
+            <strong id="details-sales-agent" style="font-size: 1.05rem; color: var(--fg);">-</strong>
           </div>
           <div style="flex: 2 1 200px;">
             <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px;">Shipment Address</span>
