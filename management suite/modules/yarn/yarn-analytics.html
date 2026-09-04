@@ -573,6 +573,15 @@
       min-height: 260px;
     }
 
+    .bento-chart-wrap canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+
     /* Bento Skeleton Loading Animation */
     .bento-skeleton-overlay {
       position: absolute;
@@ -586,13 +595,19 @@
       flex-direction: column;
       gap: 12px;
       border-radius: var(--radius-lg);
-      transition: opacity 0.3s ease, visibility 0.3s;
+      transition: opacity 0.2s ease, visibility 0.2s;
       pointer-events: none;
     }
 
     .bento-skeleton-overlay.hidden {
       opacity: 0;
       visibility: hidden;
+      display: none !important;
+    }
+
+    .quality-select {
+      max-width: 240px;
+      text-overflow: ellipsis;
     }
 
     .skeleton-box {
@@ -702,6 +717,17 @@
 
       <!-- Time Period & Range Controls -->
       <div class="filter-group">
+        <!-- Quality Filter Dropdown -->
+        <div class="quality-filter-wrap" style="display: flex; align-items: center; gap: 6px;">
+          <label for="qualityFilterSelect" style="font-size: 0.82rem; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: 4px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+            Quality:
+          </label>
+          <select class="time-select quality-select" id="qualityFilterSelect" onchange="handleQualityChange(this.value)">
+            <option value="all" selected>All Qualities</option>
+          </select>
+        </div>
+
         <select class="time-select" id="timePeriodSelect" onchange="handleTimePeriodChange(this.value)">
           <option value="all" selected>All Time</option>
           <option value="this-month">This Month</option>
@@ -804,14 +830,14 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
               Production Output Momentum
             </h3>
-            <p class="bento-desc">Daily and cumulative finished yarn production trends across machine lines.</p>
+            <p class="bento-desc">Comparative daily trajectory across Raw Yarn Purchases, Mill Production, and Dispatched Sales.</p>
           </div>
           <div class="bento-actions">
-            <span class="bento-badge" id="badge-prod-unit">Kg Output</span>
+            <span class="bento-badge" id="badge-prod-unit">Purchase • Production • Sales (Kg)</span>
           </div>
         </div>
         <div class="bento-chart-wrap">
-          <div class="bento-skeleton-overlay" id="skel-prod-momentum">
+          <div class="bento-skeleton-overlay hidden" id="skel-prod-momentum">
             <div class="skeleton-bars">
               <div class="skeleton-box skeleton-bar" style="height: 35%;"></div>
               <div class="skeleton-box skeleton-bar" style="height: 60%;"></div>
@@ -841,7 +867,7 @@
           </div>
         </div>
         <div class="bento-chart-wrap">
-          <div class="bento-skeleton-overlay" id="skel-div-share">
+          <div class="bento-skeleton-overlay hidden" id="skel-div-share">
             <div style="height: 100%; display: flex; align-items: center; justify-content: center;">
               <div class="skeleton-box" style="width: 170px; height: 170px; border-radius: 50%;"></div>
             </div>
@@ -865,7 +891,7 @@
           </div>
         </div>
         <div class="bento-chart-wrap">
-          <div class="bento-skeleton-overlay" id="skel-prod-sales">
+          <div class="bento-skeleton-overlay hidden" id="skel-prod-sales">
             <div class="skeleton-bars">
               <div class="skeleton-box skeleton-bar" style="height: 40%;"></div>
               <div class="skeleton-box skeleton-bar" style="height: 70%;"></div>
@@ -893,7 +919,7 @@
           </div>
         </div>
         <div class="bento-chart-wrap">
-          <div class="bento-skeleton-overlay" id="skel-top-qualities">
+          <div class="bento-skeleton-overlay hidden" id="skel-top-qualities">
             <div style="display: flex; flex-direction: column; gap: 14px; height: 100%; justify-content: center;">
               <div class="skeleton-box" style="height: 24px; width: 85%;"></div>
               <div class="skeleton-box" style="height: 24px; width: 68%;"></div>
@@ -921,7 +947,7 @@
           </div>
         </div>
         <div class="bento-chart-wrap">
-          <div class="bento-skeleton-overlay" id="skel-revenue">
+          <div class="bento-skeleton-overlay hidden" id="skel-revenue">
             <div class="skeleton-bars">
               <div class="skeleton-box skeleton-bar" style="height: 30%;"></div>
               <div class="skeleton-box skeleton-bar" style="height: 50%;"></div>
@@ -950,7 +976,7 @@
           </div>
         </div>
         <div class="bento-chart-wrap">
-          <div class="bento-skeleton-overlay" id="skel-top-buyers">
+          <div class="bento-skeleton-overlay hidden" id="skel-top-buyers">
             <div style="height: 100%; display: flex; align-items: center; justify-content: center;">
               <div class="skeleton-box" style="width: 170px; height: 170px; border-radius: 50%;"></div>
             </div>
@@ -974,7 +1000,7 @@
           </div>
         </div>
         <div class="bento-chart-wrap">
-          <div class="bento-skeleton-overlay" id="skel-stock-health">
+          <div class="bento-skeleton-overlay hidden" id="skel-stock-health">
             <div class="skeleton-bars">
               <div class="skeleton-box skeleton-bar" style="height: 80%;"></div>
               <div class="skeleton-box skeleton-bar" style="height: 45%;"></div>
@@ -1001,7 +1027,7 @@
           </div>
         </div>
         <div class="bento-chart-wrap">
-          <div class="bento-skeleton-overlay" id="skel-machinery">
+          <div class="bento-skeleton-overlay hidden" id="skel-machinery">
             <div style="display: flex; flex-direction: column; gap: 14px; height: 100%; justify-content: center;">
               <div class="skeleton-box" style="height: 22px; width: 75%;"></div>
               <div class="skeleton-box" style="height: 22px; width: 90%;"></div>
@@ -1024,8 +1050,11 @@
 
     let currentDivision = 'all'; // 'all', 'covering', 'tfo', 'doubler'
     let currentPeriod = 'all'; // 'all', 'this-month', 'last-30', 'last-7', 'custom'
+    let currentQuality = 'all'; // 'all' or specific quality name
     let customFrom = null;
     let customTo = null;
+    let refreshDebounceTimer = null;
+    let isInitialLoad = true;
 
     // Chart Instances registry
     const chartInstances = {};
@@ -1036,10 +1065,17 @@
       tfo: { production: [], sales: [] },
       doubler: { production: [], sales: [] }
     };
+    let rawPurchases = [];
 
     // Helper: Determine if dark mode is active
     function isDarkMode() {
       return document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+    }
+
+    // Escape HTML for safe rendering
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     // Chart Theme Palette
@@ -1137,6 +1173,100 @@
       return { productName: prodName };
     }
 
+    // Fetch Purchase Inward Data from Yarn RM Stock and Orders
+    function fetchPurchaseData() {
+      let purchases = [];
+      const seenBatchOrLot = new Set();
+
+      // 1. From vishwa_yarn_rm_stock_data (inward stock lots)
+      try {
+        let rawStock = JSON.parse(localStorage.getItem('vishwa_yarn_rm_stock_data') || '[]');
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+          rawStock = window.VishwaSupabase.filterDeletedEntities(rawStock);
+        }
+        if (Array.isArray(rawStock)) {
+          rawStock.forEach(lot => {
+            if (!lot) return;
+            const d = (lot.receiveDate || lot.date || '').split('T')[0];
+            const q = String(lot.quality || lot.itemType || '').trim();
+            let wt = 0;
+            if (Array.isArray(lot.boxes)) {
+              lot.boxes.forEach(b => {
+                wt += Number(b.grossWeight || b.weight || 0);
+              });
+            }
+            if (wt <= 0) wt = Number(lot.weight || lot.quantity || 0);
+            if (d && wt > 0) {
+              const key = lot.batchId || lot.id || (lot.lotNumber && lot.challanNo ? `${lot.lotNumber}__${lot.challanNo}` : null);
+              if (key) seenBatchOrLot.add(String(key));
+              purchases.push({
+                date: d,
+                quality: q,
+                weight: wt,
+                lotNo: lot.lotNumber || '',
+                supplier: lot.supplier || '',
+                challanNo: lot.challanNo || lot.challanNumber || ''
+              });
+            }
+          });
+        }
+      } catch(e) {
+        console.error("Error reading rm stock for analytics:", e);
+      }
+
+      // 2. From yarn-rm-orders (inward batches/orders)
+      try {
+        let rawOrders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+          rawOrders = window.VishwaSupabase.filterDeletedEntities(rawOrders);
+        }
+        if (Array.isArray(rawOrders)) {
+          rawOrders.forEach(order => {
+            if (!order) return;
+            const q = String(order.quality || order.itemType || '').trim();
+            if (Array.isArray(order.batches) && order.batches.length > 0) {
+              order.batches.forEach(b => {
+                const bId = String(b.id || '');
+                if (bId && seenBatchOrLot.has(bId)) return;
+                const d = (b.receiveDate || b.date || order.orderDate || '').split('T')[0];
+                let wt = 0;
+                if (Array.isArray(b.boxes)) {
+                  b.boxes.forEach(bx => { wt += Number(bx.weight || bx.grossWeight || 0); });
+                }
+                if (wt <= 0) wt = Number(b.receivedWeight || b.receivedQuantity || b.weight || 0);
+                if (d && wt > 0) {
+                  if (bId) seenBatchOrLot.add(bId);
+                  purchases.push({
+                    date: d,
+                    quality: q,
+                    weight: wt,
+                    lotNo: b.lotNumber || '',
+                    supplier: order.supplier || '',
+                    challanNo: b.challanNumber || ''
+                  });
+                }
+              });
+            } else if (order.quantity && order.orderDate) {
+              const oId = String(order.id || order.orderNumber || '');
+              if (oId && seenBatchOrLot.has(oId)) return;
+              purchases.push({
+                date: (order.orderDate || '').split('T')[0],
+                quality: q,
+                weight: Number(order.quantity) || 0,
+                lotNo: '',
+                supplier: order.supplier || '',
+                challanNo: ''
+              });
+            }
+          });
+        }
+      } catch(e) {
+        console.error("Error reading rm orders for analytics:", e);
+      }
+
+      return purchases;
+    }
+
     // Load logs from localStorage and Supabase
     function fetchAllYarnData() {
       ['covering', 'tfo', 'doubler'].forEach(div => {
@@ -1157,6 +1287,8 @@
         rawData[div].production = Array.isArray(prod) ? prod : [];
         rawData[div].sales = Array.isArray(sales) ? sales : [];
       });
+
+      rawPurchases = fetchPurchaseData();
     }
 
     // Filter by Date Range
@@ -1201,17 +1333,38 @@
       return true;
     }
 
-    // Filter and Aggregate Data according to active Division & Time Range
+    // Filter and Aggregate Data according to active Division, Quality & Time Range
     function getAggregatedDataset() {
       const activeDivisions = currentDivision === 'all' ? ['covering', 'tfo', 'doubler'] : [currentDivision];
 
       let allProduction = [];
       let allSales = [];
       let rawProdListForStock = [];
+      let allPurchases = [];
+
+      const availableQualitiesSet = new Set();
 
       activeDivisions.forEach(div => {
         const fullProd = (rawData[div].production || []).map(p => ({ ...p, _division: div }));
         const fullSales = (rawData[div].sales || []).map(s => ({ ...s, _division: div }));
+
+        // Collect all qualities present in the division raw data
+        fullProd.forEach(p => {
+          const q = (getDynamicProductInfo(p, div).productName || p.productName || p.composition || p.name || '').trim();
+          if (q && q !== '-') availableQualitiesSet.add(q);
+        });
+
+        fullSales.forEach(s => {
+          if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+            s.items.forEach(i => {
+              const q = String(i.productName || i.composition || i.name || '').trim();
+              if (q && q !== '-') availableQualitiesSet.add(q);
+            });
+          } else {
+            const q = String(s.productName || s.composition || s.name || '').trim();
+            if (q && q !== '-') availableQualitiesSet.add(q);
+          }
+        });
 
         rawProdListForStock = rawProdListForStock.concat(fullProd);
 
@@ -1229,24 +1382,107 @@
         allSales = allSales.concat(sList);
       });
 
+      // Purchases
+      (rawPurchases || []).forEach(pur => {
+        const q = String(pur.quality || '').trim();
+        if (q && q !== '-') availableQualitiesSet.add(q);
+        if (isDateWithinSelectedRange(pur.date)) {
+          allPurchases.push(pur);
+        }
+      });
+
+      // Stock
+      rawProdListForStock.forEach(prod => {
+        const q = (getDynamicProductInfo(prod, prod._division).productName || prod.productName || prod.composition || prod.name || '').trim();
+        if (q && q !== '-') availableQualitiesSet.add(q);
+      });
+
+      const sortedQualities = Array.from(availableQualitiesSet).sort((a, b) => a.localeCompare(b));
+
+      // Apply Quality Filter if a specific quality is chosen
+      if (currentQuality !== 'all') {
+        const targetQ = currentQuality.trim().toLowerCase();
+        const matchQ = (val) => String(val || '').trim().toLowerCase() === targetQ;
+
+        allProduction = allProduction.filter(p => {
+          const q = getDynamicProductInfo(p, p._division).productName || p.productName || p.composition || p.name || '';
+          return matchQ(q);
+        });
+
+        const filteredSales = [];
+        allSales.forEach(s => {
+          if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+            const matchingItems = s.items.filter(i => {
+              const q = i.productName || i.composition || i.name || '';
+              return matchQ(q);
+            });
+            if (matchingItems.length > 0) {
+              filteredSales.push({ ...s, items: matchingItems });
+            }
+          } else {
+            const q = s.productName || s.composition || s.name || '';
+            if (matchQ(q)) {
+              filteredSales.push(s);
+            }
+          }
+        });
+        allSales = filteredSales;
+
+        allPurchases = allPurchases.filter(pur => matchQ(pur.quality));
+
+        rawProdListForStock = rawProdListForStock.filter(prod => {
+          const q = getDynamicProductInfo(prod, prod._division).productName || prod.productName || prod.composition || prod.name || '';
+          return matchQ(q);
+        });
+      }
+
       // Sort chronological
       allProduction.sort((a, b) => new Date(a.date || a.createdAt || 0) - new Date(b.date || b.createdAt || 0));
       allSales.sort((a, b) => new Date(a.date || a.saleDate || a.createdAt || 0) - new Date(b.date || b.saleDate || b.createdAt || 0));
+      allPurchases.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
 
       return {
         production: allProduction,
         sales: allSales,
-        rawProdListForStock: rawProdListForStock
+        purchases: allPurchases,
+        rawProdListForStock: rawProdListForStock,
+        availableQualities: sortedQualities
       };
     }
 
-    // Update KPI Header Cards
+    // Populate or sync Quality Dropdown options
+    function updateQualityDropdownUI(availableQualities) {
+      const select = document.getElementById('qualityFilterSelect');
+      if (!select) return;
+
+      const previousVal = currentQuality;
+      const options = ['<option value="all">All Qualities</option>'];
+      availableQualities.forEach(q => {
+        const isSelected = (q === previousVal) ? 'selected' : '';
+        options.push(`<option value="${escapeHtml(q)}" ${isSelected}>${escapeHtml(q)}</option>`);
+      });
+
+      select.innerHTML = options.join('');
+
+      if (previousVal !== 'all' && !availableQualities.includes(previousVal)) {
+        currentQuality = 'all';
+        select.value = 'all';
+      } else {
+        select.value = currentQuality;
+      }
+    }
+
+    // Update KPI Header Cards with 100% accurate weighted average realization
     function renderKPICards(dataset) {
       let totalProdWeight = 0;
       let totalProdBori = dataset.production.length;
       let totalSalesWeight = 0;
       let totalSalesBori = 0;
       let totalSalesRevenue = 0;
+
+      let weightedRateSumAmount = 0;
+      let weightedRateSumWeight = 0;
+
       const qualitiesSet = new Set();
       const lotsSet = new Set();
 
@@ -1259,28 +1495,50 @@
       });
 
       dataset.sales.forEach(s => {
-        let billWeight = 0;
-        let billAmount = parseFloat(s.totalAmount || s.subtotalAmount || s.taxableAmount || s.amount || 0);
-
         if (s.items && Array.isArray(s.items) && s.items.length > 0) {
           totalSalesBori += s.items.length;
           s.items.forEach(i => {
             const w = parseFloat(i.saleQty || i.qty || i.weight || 0);
-            billWeight += w;
+            const rate = parseFloat(i.rate || 0);
+            const amt = parseFloat(i.amount !== undefined ? i.amount : (w * rate) || 0);
+
+            totalSalesWeight += w;
+            totalSalesRevenue += amt;
+
+            if (rate > 0 && w > 0) {
+              weightedRateSumAmount += (rate * w);
+              weightedRateSumWeight += w;
+            } else if (amt > 0 && w > 0) {
+              weightedRateSumAmount += amt;
+              weightedRateSumWeight += w;
+            }
+
             const q = i.productName || i.composition || i.name;
-            if (q) qualitiesSet.add(q);
+            if (q && q !== '-') qualitiesSet.add(q);
             if (i.lotNo || i.lot) lotsSet.add(i.lotNo || i.lot);
           });
         } else {
           totalSalesBori += 1;
-          billWeight = parseFloat(s.saleQty || s.totalQty || s.qty || s.weight || 0);
+          const w = parseFloat(s.saleQty || s.totalQty || s.qty || s.weight || 0);
+          const rate = parseFloat(s.rate || 0);
+          let amt = parseFloat(s.taxableAmount !== undefined ? s.taxableAmount : (s.subtotalAmount || s.amount || (w * rate) || 0));
+          if (!amt && s.totalAmount) amt = parseFloat(s.totalAmount);
+
+          totalSalesWeight += w;
+          totalSalesRevenue += amt;
+
+          if (rate > 0 && w > 0) {
+            weightedRateSumAmount += (rate * w);
+            weightedRateSumWeight += w;
+          } else if (amt > 0 && w > 0) {
+            weightedRateSumAmount += amt;
+            weightedRateSumWeight += w;
+          }
+
           const q = s.productName || s.composition || s.name;
-          if (q) qualitiesSet.add(q);
+          if (q && q !== '-') qualitiesSet.add(q);
           if (s.lotNo || s.lot) lotsSet.add(s.lotNo || s.lot);
         }
-
-        totalSalesWeight += billWeight;
-        totalSalesRevenue += billAmount;
       });
 
       // Calculate Live In-Hand Stock using getBoriStock
@@ -1295,8 +1553,8 @@
         }
       });
 
-      // Avg Rate
-      const avgRate = totalSalesWeight > 0 ? (totalSalesRevenue / totalSalesWeight) : 0;
+      // True Weighted Average Realization per Kg (excl. non-commercial zero-rate challans)
+      const avgRate = weightedRateSumWeight > 0 ? (weightedRateSumAmount / weightedRateSumWeight) : 0;
 
       // Update DOM
       document.getElementById('kpi-prod-weight').textContent = formatWeight(totalProdWeight);
@@ -1309,10 +1567,20 @@
       document.getElementById('kpi-stock-bori').textContent = `${netStockBori.toLocaleString()} Boris Available`;
 
       document.getElementById('kpi-revenue-val').textContent = formatCurrency(totalSalesRevenue);
-      document.getElementById('kpi-avg-rate').textContent = `₹ ${avgRate.toFixed(2)} /kg`;
+      document.getElementById('kpi-revenue-sub').textContent = 'Commercial Realization (Ex-GST)';
 
-      document.getElementById('kpi-qualities-count').textContent = qualitiesSet.size.toString();
-      document.getElementById('kpi-lots-count').textContent = `${lotsSet.size} Distinct Lots`;
+      document.getElementById('kpi-avg-rate').textContent = `₹ ${avgRate.toFixed(2)} /kg`;
+      document.getElementById('kpi-avg-rate-sub').textContent = weightedRateSumWeight > 0
+        ? `Weighted Rate (${formatWeight(weightedRateSumWeight)} billed)`
+        : 'Weighted Avg Rate';
+
+      if (currentQuality !== 'all') {
+        document.getElementById('kpi-qualities-count').textContent = '1 Quality';
+        document.getElementById('kpi-lots-count').textContent = `${lotsSet.size} Running Lots (${currentQuality})`;
+      } else {
+        document.getElementById('kpi-qualities-count').textContent = qualitiesSet.size.toString();
+        document.getElementById('kpi-lots-count').textContent = `${lotsSet.size} Distinct Lots`;
+      }
     }
 
     // Toggle Skeletons
@@ -1327,30 +1595,79 @@
     // Destroy Chart
     function destroyChart(key) {
       if (chartInstances[key]) {
-        chartInstances[key].destroy();
+        try {
+          chartInstances[key].destroy();
+        } catch(e) {}
         delete chartInstances[key];
       }
     }
 
+    // Update existing chart in-place without destroying and flickering canvas
+    function updateOrCreateChart(key, canvas, config) {
+      if (!canvas) return null;
+      if (chartInstances[key]) {
+        try {
+          const chart = chartInstances[key];
+          chart.data.labels = config.data.labels;
+          chart.data.datasets = config.data.datasets;
+          if (config.options) {
+            chart.options = config.options;
+          }
+          chart.update('none');
+          return chart;
+        } catch(e) {
+          destroyChart(key);
+        }
+      }
+      chartInstances[key] = new Chart(canvas, config);
+      return chartInstances[key];
+    }
+
     // ==========================================================================
-    // CHART 1: Production Momentum (Area Line Chart)
+    // CHART 1: Production Output Momentum (Multi-Line: Purchase vs Prod vs Sales)
     // ==========================================================================
     function renderProdMomentumChart(dataset) {
       const canvas = document.getElementById('chartProdMomentum');
-      destroyChart('prodMomentum');
       if (!canvas) return;
 
       const theme = getChartTheme();
 
-      // Aggregate daily output
-      const dayMap = new Map();
-      dataset.production.forEach(p => {
-        const d = (p.date || p.createdAt || '').substring(0, 10) || 'Unknown';
-        const w = parseFloat(p.qty || p.weight || p.netWeight || 0);
-        dayMap.set(d, (dayMap.get(d) || 0) + w);
+      // Aggregate daily data for Purchases, Production, and Sales
+      const purchaseDayMap = new Map();
+      const prodDayMap = new Map();
+      const salesDayMap = new Map();
+      const allDatesSet = new Set();
+
+      (dataset.purchases || []).forEach(p => {
+        const d = (p.date || '').substring(0, 10);
+        if (!d) return;
+        const w = parseFloat(p.weight || 0);
+        purchaseDayMap.set(d, (purchaseDayMap.get(d) || 0) + w);
+        allDatesSet.add(d);
       });
 
-      const sortedDates = Array.from(dayMap.keys()).sort();
+      (dataset.production || []).forEach(p => {
+        const d = (p.date || p.createdAt || '').substring(0, 10);
+        if (!d) return;
+        const w = parseFloat(p.qty || p.weight || p.netWeight || 0);
+        prodDayMap.set(d, (prodDayMap.get(d) || 0) + w);
+        allDatesSet.add(d);
+      });
+
+      (dataset.sales || []).forEach(s => {
+        const d = (s.date || s.saleDate || s.createdAt || '').substring(0, 10);
+        if (!d) return;
+        let w = 0;
+        if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+          w = s.items.reduce((sum, i) => sum + (parseFloat(i.saleQty || i.qty || i.weight || 0) || 0), 0);
+        } else {
+          w = parseFloat(s.saleQty || s.totalQty || s.qty || s.weight || 0);
+        }
+        salesDayMap.set(d, (salesDayMap.get(d) || 0) + w);
+        allDatesSet.add(d);
+      });
+
+      const sortedDates = Array.from(allDatesSet).sort();
       let labels = sortedDates.map(d => {
         try {
           const parts = d.split('-');
@@ -1359,41 +1676,85 @@
         } catch(e) { return d; }
       });
 
-      let dailyData = sortedDates.map(d => Number((dayMap.get(d) || 0).toFixed(2)));
+      let purchaseData = sortedDates.map(d => Number((purchaseDayMap.get(d) || 0).toFixed(2)));
+      let prodData = sortedDates.map(d => Number((prodDayMap.get(d) || 0).toFixed(2)));
+      let salesData = sortedDates.map(d => Number((salesDayMap.get(d) || 0).toFixed(2)));
 
       if (labels.length === 0) {
-        labels = ['No Data'];
-        dailyData = [0];
+        labels = ['No Activity'];
+        purchaseData = [0];
+        prodData = [0];
+        salesData = [0];
       }
 
-      const ctx = canvas.getContext('2d');
-      const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-      gradient.addColorStop(0, 'rgba(124, 58, 237, 0.35)');
-      gradient.addColorStop(1, 'rgba(124, 58, 237, 0.00)');
-
-      chartInstances.prodMomentum = new Chart(canvas, {
+      const config = {
         type: 'line',
         data: {
           labels: labels,
-          datasets: [{
-            label: 'Daily Output (Kg)',
-            data: dailyData,
-            borderColor: theme.accent1,
-            backgroundColor: gradient,
-            borderWidth: 2.5,
-            pointBackgroundColor: theme.accent1,
-            pointBorderColor: '#ffffff',
-            pointRadius: labels.length > 25 ? 2 : 4,
-            pointHoverRadius: 6,
-            fill: true,
-            tension: 0.35
-          }]
+          datasets: [
+            {
+              label: 'Purchase Inward (Kg)',
+              data: purchaseData,
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.08)',
+              borderWidth: 2.5,
+              pointBackgroundColor: '#f59e0b',
+              pointBorderColor: '#ffffff',
+              pointRadius: labels.length > 25 ? 2 : 4,
+              pointHoverRadius: 6,
+              fill: true,
+              tension: 0.35
+            },
+            {
+              label: 'Production Output (Kg)',
+              data: prodData,
+              borderColor: '#8b5cf6',
+              backgroundColor: 'rgba(139, 92, 246, 0.08)',
+              borderWidth: 2.5,
+              pointBackgroundColor: '#8b5cf6',
+              pointBorderColor: '#ffffff',
+              pointRadius: labels.length > 25 ? 2 : 4,
+              pointHoverRadius: 6,
+              fill: true,
+              tension: 0.35
+            },
+            {
+              label: 'Sales Dispatched (Kg)',
+              data: salesData,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.08)',
+              borderWidth: 2.5,
+              pointBackgroundColor: '#10b981',
+              pointBorderColor: '#ffffff',
+              pointRadius: labels.length > 25 ? 2 : 4,
+              pointHoverRadius: 6,
+              fill: true,
+              tension: 0.35
+            }
+          ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
           plugins: {
-            legend: { display: false },
+            legend: {
+              display: true,
+              position: 'top',
+              align: 'end',
+              labels: {
+                color: theme.textColor,
+                font: { family: 'Inter', size: 11, weight: 600 },
+                boxWidth: 10,
+                boxHeight: 10,
+                usePointStyle: true,
+                pointStyle: 'circle',
+                padding: 14
+              }
+            },
             tooltip: {
               backgroundColor: theme.tooltipBg,
               titleColor: theme.tooltipFg,
@@ -1402,7 +1763,7 @@
               borderWidth: 1,
               padding: 10,
               callbacks: {
-                label: (ctx) => ` Output: ${ctx.parsed.y.toLocaleString()} kg`
+                label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} kg`
               }
             }
           },
@@ -1422,7 +1783,9 @@
             }
           }
         }
-      });
+      };
+
+      updateOrCreateChart('prodMomentum', canvas, config);
     }
 
     // ==========================================================================
@@ -1430,7 +1793,6 @@
     // ==========================================================================
     function renderDivShareChart(dataset) {
       const canvas = document.getElementById('chartDivShare');
-      destroyChart('divShare');
       if (!canvas) return;
 
       const theme = getChartTheme();
@@ -1450,7 +1812,7 @@
       const data = total > 0 ? [covWeight, tfoWeight, doublerWeight] : [1, 1, 1];
       const labels = ['Covering', 'TFO', 'Doubler/MX'];
 
-      chartInstances.divShare = new Chart(canvas, {
+      const config = {
         type: 'doughnut',
         data: {
           labels: labels,
@@ -1494,7 +1856,9 @@
             }
           }
         }
-      });
+      };
+
+      updateOrCreateChart('divShare', canvas, config);
     }
 
     // ==========================================================================
@@ -1502,7 +1866,6 @@
     // ==========================================================================
     function renderProdVsSalesChart(dataset) {
       const canvas = document.getElementById('chartProdVsSales');
-      destroyChart('prodVsSales');
       if (!canvas) return;
 
       const theme = getChartTheme();
@@ -1541,7 +1904,7 @@
         salesData = [0];
       }
 
-      chartInstances.prodVsSales = new Chart(canvas, {
+      const config = {
         type: 'bar',
         data: {
           labels: labels,
@@ -1603,7 +1966,9 @@
             }
           }
         }
-      });
+      };
+
+      updateOrCreateChart('prodVsSales', canvas, config);
     }
 
     // ==========================================================================
@@ -1611,7 +1976,6 @@
     // ==========================================================================
     function renderTopQualitiesChart(dataset) {
       const canvas = document.getElementById('chartTopQualities');
-      destroyChart('topQualities');
       if (!canvas) return;
 
       const theme = getChartTheme();
@@ -1621,34 +1985,37 @@
       dataset.sales.forEach(s => {
         if (s.items && Array.isArray(s.items) && s.items.length > 0) {
           s.items.forEach(i => {
-            const q = String(i.productName || i.composition || i.name || 'Standard Yarn').trim();
+            const key = (currentQuality !== 'all')
+              ? (i.lotNo ? `Lot: ${i.lotNo}` : (s.customerName || 'Standard Lot'))
+              : String(i.productName || i.composition || i.name || 'Standard Yarn').trim();
             const w = parseFloat(i.saleQty || i.qty || i.weight || 0);
-            qualityMap.set(q, (qualityMap.get(q) || 0) + w);
+            qualityMap.set(key, (qualityMap.get(key) || 0) + w);
           });
         } else {
-          const q = String(s.productName || s.composition || s.name || 'Standard Yarn').trim();
+          const key = (currentQuality !== 'all')
+            ? (s.lotNo ? `Lot: ${s.lotNo}` : (s.customerName || 'Standard Lot'))
+            : String(s.productName || s.composition || s.name || 'Standard Yarn').trim();
           const w = parseFloat(s.saleQty || s.totalQty || s.qty || s.weight || 0);
-          qualityMap.set(q, (qualityMap.get(q) || 0) + w);
+          qualityMap.set(key, (qualityMap.get(key) || 0) + w);
         }
       });
 
-      // Sort descending and take top 6
       const sorted = Array.from(qualityMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
 
       let labels = sorted.map(item => item[0]);
       let data = sorted.map(item => Number(item[1].toFixed(2)));
 
       if (labels.length === 0) {
-        labels = ['No Sales Quality Data'];
+        labels = [currentQuality !== 'all' ? `No Dispatches for ${currentQuality}` : 'No Sales Quality Data'];
         data = [0];
       }
 
-      chartInstances.topQualities = new Chart(canvas, {
+      const config = {
         type: 'bar',
         data: {
           labels: labels,
           datasets: [{
-            label: 'Sales Volume (Kg)',
+            label: currentQuality !== 'all' ? `Lot Sales Volume (Kg)` : 'Sales Volume (Kg)',
             data: data,
             backgroundColor: [
               '#7c3aed',
@@ -1699,7 +2066,9 @@
             }
           }
         }
-      });
+      };
+
+      updateOrCreateChart('topQualities', canvas, config);
     }
 
     // ==========================================================================
@@ -1707,7 +2076,6 @@
     // ==========================================================================
     function renderRevenueChart(dataset) {
       const canvas = document.getElementById('chartRevenue');
-      destroyChart('revenue');
       if (!canvas) return;
 
       const theme = getChartTheme();
@@ -1716,7 +2084,13 @@
 
       dataset.sales.forEach(s => {
         const d = (s.date || s.saleDate || s.createdAt || '').substring(0, 7) || 'Unknown';
-        const val = parseFloat(s.totalAmount || s.subtotalAmount || s.taxableAmount || s.amount || 0);
+        let val = 0;
+        if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+          val = s.items.reduce((sum, i) => sum + (parseFloat(i.amount !== undefined ? i.amount : (parseFloat(i.saleQty || 0) * parseFloat(i.rate || 0))) || 0), 0);
+        } else {
+          val = parseFloat(s.taxableAmount !== undefined ? s.taxableAmount : (s.subtotalAmount || s.amount || 0));
+          if (!val && s.totalAmount) val = parseFloat(s.totalAmount);
+        }
         revMap.set(d, (revMap.get(d) || 0) + val);
       });
 
@@ -1729,7 +2103,7 @@
         values = [0];
       }
 
-      chartInstances.revenue = new Chart(canvas, {
+      const config = {
         type: 'bar',
         data: {
           labels: labels,
@@ -1774,7 +2148,9 @@
             }
           }
         }
-      });
+      };
+
+      updateOrCreateChart('revenue', canvas, config);
     }
 
     // ==========================================================================
@@ -1782,7 +2158,6 @@
     // ==========================================================================
     function renderTopBuyersChart(dataset) {
       const canvas = document.getElementById('chartTopBuyers');
-      destroyChart('topBuyers');
       if (!canvas) return;
 
       const theme = getChartTheme();
@@ -1810,7 +2185,7 @@
         data = [1];
       }
 
-      chartInstances.topBuyers = new Chart(canvas, {
+      const config = {
         type: 'doughnut',
         data: {
           labels: labels,
@@ -1855,7 +2230,9 @@
             }
           }
         }
-      });
+      };
+
+      updateOrCreateChart('topBuyers', canvas, config);
     }
 
     // ==========================================================================
@@ -1863,7 +2240,6 @@
     // ==========================================================================
     function renderStockHealthChart(dataset) {
       const canvas = document.getElementById('chartStockHealth');
-      destroyChart('stockHealth');
       if (!canvas) return;
 
       const theme = getChartTheme();
@@ -1874,8 +2250,10 @@
         const stock = getBoriStock(prod, '', prod._division);
         if (stock.remainingRolls > 0 && stock.remainingQty > 0.001) {
           const dyn = getDynamicProductInfo(prod, prod._division);
-          const qName = dyn.productName || prod.productName || prod.composition || 'Finished Yarn';
-          stockMap.set(qName, (stockMap.get(qName) || 0) + stock.remainingQty);
+          const key = (currentQuality !== 'all')
+            ? (prod.boriNo ? `Bori: ${prod.boriNo}` : (prod.lotNo || 'Available Lot'))
+            : (dyn.productName || prod.productName || prod.composition || 'Finished Yarn');
+          stockMap.set(key, (stockMap.get(key) || 0) + stock.remainingQty);
         }
       });
 
@@ -1885,16 +2263,16 @@
       let data = sorted.map(item => Number(item[1].toFixed(2)));
 
       if (labels.length === 0) {
-        labels = ['No Available Stock'];
+        labels = [currentQuality !== 'all' ? `No In-Hand Stock for ${currentQuality}` : 'No Available Stock'];
         data = [0];
       }
 
-      chartInstances.stockHealth = new Chart(canvas, {
+      const config = {
         type: 'bar',
         data: {
           labels: labels,
           datasets: [{
-            label: 'Net In-Hand Stock (Kg)',
+            label: currentQuality !== 'all' ? 'Lot Stock (Kg)' : 'Net In-Hand Stock (Kg)',
             data: data,
             backgroundColor: theme.accent4,
             borderRadius: 6,
@@ -1934,7 +2312,9 @@
             }
           }
         }
-      });
+      };
+
+      updateOrCreateChart('stockHealth', canvas, config);
     }
 
     // ==========================================================================
@@ -1942,7 +2322,6 @@
     // ==========================================================================
     function renderMachineryChart(dataset) {
       const canvas = document.getElementById('chartMachinery');
-      destroyChart('machinery');
       if (!canvas) return;
 
       const theme = getChartTheme();
@@ -1965,7 +2344,7 @@
         data = [0];
       }
 
-      chartInstances.machinery = new Chart(canvas, {
+      const config = {
         type: 'bar',
         data: {
           labels: labels,
@@ -2014,23 +2393,26 @@
             }
           }
         }
-      });
+      };
+
+      updateOrCreateChart('machinery', canvas, config);
     }
 
     // ==========================================================================
-    // REFRESH & RENDER CONTROLLER
+    // REFRESH & RENDER CONTROLLER (Debounced & Flicker-Free)
     // ==========================================================================
     function refreshAnalyticsView(showSkeleton = false) {
-      if (showSkeleton) {
+      if (showSkeleton && isInitialLoad) {
         setSkeletonsVisible(true);
       }
 
       fetchAllYarnData();
       const dataset = getAggregatedDataset();
 
+      updateQualityDropdownUI(dataset.availableQualities);
       renderKPICards(dataset);
 
-      // Render all 8 bento graphs
+      // Render all 8 bento graphs in-place
       renderProdMomentumChart(dataset);
       renderDivShareChart(dataset);
       renderProdVsSalesChart(dataset);
@@ -2040,17 +2422,36 @@
       renderStockHealthChart(dataset);
       renderMachineryChart(dataset);
 
-      if (showSkeleton) {
-        setTimeout(() => {
-          setSkeletonsVisible(false);
-        }, 250);
+      if (isInitialLoad) {
+        isInitialLoad = false;
+        setTimeout(() => setSkeletonsVisible(false), 80);
       } else {
         setSkeletonsVisible(false);
       }
     }
 
+    // Debounced Refresh to prevent rapid storage/sync event spam
+    function scheduleRefresh(delay = 50) {
+      if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
+      refreshDebounceTimer = setTimeout(() => {
+        refreshAnalyticsView(false);
+      }, delay);
+    }
+
     function triggerRefreshWithAnimation() {
-      refreshAnalyticsView(true);
+      const btn = document.querySelector('.btn-primary');
+      if (btn) {
+        const icon = btn.querySelector('svg');
+        if (icon) {
+          icon.style.transition = 'transform 0.6s ease';
+          icon.style.transform = 'rotate(360deg)';
+          setTimeout(() => {
+            icon.style.transition = '';
+            icon.style.transform = '';
+          }, 600);
+        }
+      }
+      refreshAnalyticsView(false);
     }
 
     // ==========================================================================
@@ -2063,7 +2464,12 @@
         if (b.getAttribute('data-div') === div) b.classList.add('active');
         else b.classList.remove('active');
       });
-      triggerRefreshWithAnimation();
+      refreshAnalyticsView(false);
+    }
+
+    function handleQualityChange(val) {
+      currentQuality = val;
+      refreshAnalyticsView(false);
     }
 
     function handleTimePeriodChange(val) {
@@ -2073,7 +2479,7 @@
         customBox.classList.add('show');
       } else {
         customBox.classList.remove('show');
-        triggerRefreshWithAnimation();
+        refreshAnalyticsView(false);
       }
     }
 
@@ -2081,16 +2487,21 @@
       customFrom = document.getElementById('customDateFrom').value;
       customTo = document.getElementById('customDateTo').value;
       if (customFrom && customTo) {
-        triggerRefreshWithAnimation();
+        refreshAnalyticsView(false);
       }
     }
 
     // ==========================================================================
-    // CSV EXPORT
+    // CSV EXPORT (Division & Quality Aware)
     // ==========================================================================
     function exportAnalyticsCSV() {
       const dataset = getAggregatedDataset();
-      let csv = 'Type,Division,Date,Product / Quality,Lot No,Weight (Kg),Boris/Boxes,Customer / Machine,Rate (₹),Amount (₹)\n';
+      let csv = 'Type,Division,Date,Product / Quality,Lot No,Weight (Kg),Boris/Boxes,Customer / Machine / Supplier,Rate (₹),Amount (₹)\n';
+
+      (dataset.purchases || []).forEach(pur => {
+        const w = parseFloat(pur.weight || 0);
+        csv += `"Purchase","${currentDivision}","${pur.date || ''}","${pur.quality || ''}","${pur.lotNo || ''}",${w},1,"${pur.supplier || ''}",0,0\n`;
+      });
 
       dataset.production.forEach(p => {
         const w = parseFloat(p.qty || p.weight || p.netWeight || 0);
@@ -2105,13 +2516,13 @@
           s.items.forEach(i => {
             const w = parseFloat(i.saleQty || i.qty || 0);
             const r = parseFloat(i.rate || 0);
-            const a = parseFloat(i.amount || (w * r) || 0);
+            const a = parseFloat(i.amount !== undefined ? i.amount : (w * r) || 0);
             csv += `"Sales","${s._division || ''}","${d}","${i.productName || i.composition || i.name || ''}","${i.lotNo || i.lot || ''}",${w},1,"${c}",${r},${a}\n`;
           });
         } else {
           const w = parseFloat(s.saleQty || s.totalQty || s.qty || 0);
           const r = parseFloat(s.rate || 0);
-          const a = parseFloat(s.totalAmount || s.amount || (w * r) || 0);
+          const a = parseFloat(s.taxableAmount !== undefined ? s.taxableAmount : (s.subtotalAmount || s.amount || (w * r) || 0));
           csv += `"Sales","${s._division || ''}","${d}","${s.productName || s.composition || s.name || ''}","${s.lotNo || s.lot || ''}",${w},1,"${c}",${r},${a}\n`;
         }
       });
@@ -2120,7 +2531,8 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Yarn_Analytics_${currentDivision}_${new Date().toISOString().split('T')[0]}.csv`;
+      const qPrefix = currentQuality !== 'all' ? `${currentQuality.replace(/\W+/g, '_')}_` : '';
+      a.download = `Yarn_Analytics_${currentDivision}_${qPrefix}${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -2137,26 +2549,28 @@
       document.getElementById('customDateFrom').value = firstDay;
       document.getElementById('customDateTo').value = todayStr;
 
-      refreshAnalyticsView(true);
+      refreshAnalyticsView(false);
+      setSkeletonsVisible(false);
 
       // Listen to theme switch to re-theme Chart.js automatically
       window.addEventListener('themeChanged', () => {
-        refreshAnalyticsView(false);
+        Object.keys(chartInstances).forEach(k => destroyChart(k));
+        scheduleRefresh(20);
       });
 
-      // Storage sync
+      // Storage sync (debounced)
       window.addEventListener('storage', (e) => {
-        if (!e.key || e.key.startsWith('yarn_') || e.key.startsWith('costing-') || e.key === 'vf_deleted_entity_ids') {
-          refreshAnalyticsView(false);
+        if (!e.key || e.key.startsWith('yarn_') || e.key.startsWith('costing-') || e.key === 'yarn-rm-orders' || e.key === 'vishwa_yarn_rm_stock_data' || e.key === 'vf_deleted_entity_ids') {
+          scheduleRefresh(60);
         }
       });
 
-      // Supabase real-time sync listeners
+      // Supabase real-time sync listeners (debounced)
       window.addEventListener('supabase-sync', () => {
-        refreshAnalyticsView(false);
+        scheduleRefresh(60);
       });
       window.addEventListener('supabase-ready', () => {
-        refreshAnalyticsView(false);
+        scheduleRefresh(60);
       });
     });
   </script>
