@@ -1644,18 +1644,28 @@
 
     // Initialize application state
     async function init() {
-      // Load user settings
+      // Load user settings strictly from Supabase Cloud
       try {
-        const settings = JSON.parse(localStorage.getItem('yarn_ledger_settings') || '{}');
-        if (settings.defaultInterestRate !== undefined) defaultInterestRate = Number(settings.defaultInterestRate) || 18.0;
-        if (settings.defaultCreditDays !== undefined) defaultCreditDays = Number(settings.defaultCreditDays) || 30;
-        if (settings.calculateInterest !== undefined) calculateInterest = !!settings.calculateInterest;
+        let settings = {};
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+          try {
+            settings = (await window.VishwaSupabase.get('yarn_ledger_settings')) || {};
+          } catch (e) {
+            console.error("Error reading yarn_ledger_settings from Supabase:", e);
+          }
+        }
+
+        if (settings && typeof settings === 'object') {
+          if (settings.defaultInterestRate !== undefined) defaultInterestRate = Number(settings.defaultInterestRate) || 18.0;
+          if (settings.defaultCreditDays !== undefined) defaultCreditDays = Number(settings.defaultCreditDays) || 30;
+          if (settings.calculateInterest !== undefined) calculateInterest = !!settings.calculateInterest;
+        }
         
         document.getElementById('toggle-interest').checked = calculateInterest;
         document.getElementById('settings-default-interest-rate').value = defaultInterestRate;
         document.getElementById('settings-default-credit-days').value = defaultCreditDays;
       } catch (e) {
-        console.error("Error reading yarn_ledger_settings:", e);
+        console.error("Error initializing yarn_ledger_settings:", e);
       }
 
       // URL parameters (e.g. ?tab=purchase)
@@ -1667,7 +1677,7 @@
 
       // Sync FY Engine
       if (typeof FYEngine !== 'undefined') {
-        const initialFY = localStorage.getItem('vishwa_fashions_selected_fy');
+        const initialFY = typeof FYEngine.getSelectedFY === 'function' ? FYEngine.getSelectedFY() : '';
         if (initialFY) {
           const { start, end } = FYEngine.getFYDateRange(initialFY);
           if (start) document.getElementById('filter-from-date').value = start;
@@ -1690,24 +1700,25 @@
         updateSyncStatusUI(e?.detail?.status);
       });
 
-      // Load Saved Ledgers from Cloud / Local
+      // Load Saved Ledgers strictly from Supabase Cloud
       await loadLedgers();
 
-      // Automatically sync latest orders and sales
-      syncSourceData(false);
+      // Automatically sync latest orders and sales from Supabase
+      await syncSourceData(false);
 
       // Render UI
       updateTabUI();
       populatePartyFilter();
       renderTable();
 
-      // Cloud & Storage Real-time Event Listeners
+      // Cloud & Real-time Event Listeners
       const handleRemoteSync = async (e) => {
         const activeEl = document.activeElement;
         const activeRowEl = activeEl ? activeEl.closest('tr[id^="ledger-row-"]') : null;
         const activeRowId = activeRowEl ? activeRowEl.id.replace('ledger-row-', '') : null;
 
         await loadLedgers();
+        await syncSourceData(false);
 
         if (activeRowId) {
           // User is actively editing row activeRowId: update all OTHER rows in-place and update KPIs without resetting caret
@@ -1737,7 +1748,7 @@
         const activeEl = document.activeElement;
         if (!activeEl || !document.getElementById('excel-table-body')?.contains(activeEl)) {
           await loadLedgers();
-          syncSourceData(false);
+          await syncSourceData(false);
           populatePartyFilter();
           renderTable(false);
         }
@@ -1814,52 +1825,37 @@
         return Array.from(rowMap.values());
       }
 
-    // Load Ledgers with Cloud-First Supabase & Tombstone Deletion Filtering
+    // Load Ledgers directly and strictly from Supabase Cloud
     async function loadLedgers() {
       try {
-        let cloudSales = null;
-        let cloudPurchase = null;
+        let cloudSales = [];
+        let cloudPurchase = [];
 
         if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
           try {
-            cloudSales = await window.VishwaSupabase.get('yarn_sales_ledger_data');
-            cloudPurchase = await window.VishwaSupabase.get('yarn_purchase_ledger_data');
-          } catch (e) {}
+            cloudSales = (await window.VishwaSupabase.get('yarn_sales_ledger_data')) || [];
+            cloudPurchase = (await window.VishwaSupabase.get('yarn_purchase_ledger_data')) || [];
+          } catch (e) {
+            console.error("Error loading ledgers from Supabase:", e);
+          }
         }
-
-        let localSales = [];
-        let localPurchase = [];
-        try {
-          localSales = JSON.parse(localStorage.getItem('yarn_sales_ledger_data') || '[]');
-        } catch(e) {}
-        try {
-          localPurchase = JSON.parse(localStorage.getItem('yarn_purchase_ledger_data') || '[]');
-        } catch(e) {}
-
-        let finalSales = Array.isArray(cloudSales) ? mergeLedgerDatasets(localSales, cloudSales) : localSales;
-        let finalPurchase = Array.isArray(cloudPurchase) ? mergeLedgerDatasets(localPurchase, cloudPurchase) : localPurchase;
 
         if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
-          finalSales = window.VishwaSupabase.filterDeletedEntities(finalSales);
-          finalPurchase = window.VishwaSupabase.filterDeletedEntities(finalPurchase);
+          cloudSales = window.VishwaSupabase.filterDeletedEntities(cloudSales);
+          cloudPurchase = window.VishwaSupabase.filterDeletedEntities(cloudPurchase);
         }
 
-        ledgerData.sales = Array.isArray(finalSales) ? finalSales : [];
-        ledgerData.purchase = Array.isArray(finalPurchase) ? finalPurchase : [];
+        ledgerData.sales = Array.isArray(cloudSales) ? cloudSales : [];
+        ledgerData.purchase = Array.isArray(cloudPurchase) ? cloudPurchase : [];
       } catch (e) {
-        console.error("Error loading ledgers:", e);
+        console.error("Error in loadLedgers:", e);
       }
     }
 
-    // Save Ledgers to localStorage & Supabase Cloud with Realtime Broadcast
+    // Save Ledgers directly and strictly to Supabase Cloud with Realtime Broadcast
     function saveLedgers(showToastMsg = false, forceImmediate = false) {
       recordStateSnapshot();
       try {
-        const salesJson = JSON.stringify(ledgerData.sales);
-        const purchaseJson = JSON.stringify(ledgerData.purchase);
-        localStorage.setItem('yarn_sales_ledger_data', salesJson);
-        localStorage.setItem('yarn_purchase_ledger_data', purchaseJson);
-
         if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
           window.VishwaSupabase.set('yarn_sales_ledger_data', ledgerData.sales, forceImmediate);
           window.VishwaSupabase.set('yarn_purchase_ledger_data', ledgerData.purchase, forceImmediate);
@@ -1869,9 +1865,9 @@
           window.VishwaSupabase.saveToSupabase('yarn_purchase_ledger_data', ledgerData.purchase);
         }
 
-        if (showToastMsg) showToast('Ledger saved and synced to cloud', 'success');
+        if (showToastMsg) showToast('Ledger saved to Supabase cloud', 'success');
       } catch (e) {
-        console.error("Error saving ledger data:", e);
+        console.error("Error saving ledger data to Supabase:", e);
       }
     }
 
@@ -1892,8 +1888,6 @@
       try {
         redoStack.push(JSON.parse(JSON.stringify(ledgerData)));
         ledgerData = undoStack.pop();
-        localStorage.setItem('yarn_sales_ledger_data', JSON.stringify(ledgerData.sales));
-        localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(ledgerData.purchase));
         if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
           window.VishwaSupabase.set('yarn_sales_ledger_data', ledgerData.sales, true);
           window.VishwaSupabase.set('yarn_purchase_ledger_data', ledgerData.purchase, true);
@@ -1914,8 +1908,6 @@
       try {
         undoStack.push(JSON.parse(JSON.stringify(ledgerData)));
         ledgerData = redoStack.pop();
-        localStorage.setItem('yarn_sales_ledger_data', JSON.stringify(ledgerData.sales));
-        localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(ledgerData.purchase));
         if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
           window.VishwaSupabase.set('yarn_sales_ledger_data', ledgerData.sales, true);
           window.VishwaSupabase.set('yarn_purchase_ledger_data', ledgerData.purchase, true);
@@ -1927,20 +1919,23 @@
       }
     }
 
-    // Sync Data from Yarn Orders & Sales Logs
-    function syncSourceData(showNotification = true) {
+    // Sync Data directly from Yarn Orders & Sales Logs in Supabase
+    async function syncSourceData(showNotification = true) {
       let syncAdded = 0;
       let syncUpdated = 0;
 
       // 1. Sync Purchase Ledger from fulfilled delivery batches in yarn-rm-orders
       try {
-        let rawOrders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
+        let rawOrders = [];
         let rawStock = [];
         let rawQualities = [];
-        try {
-          rawStock = JSON.parse(localStorage.getItem('vishwa_yarn_rm_stock_data') || '[]');
-          rawQualities = JSON.parse(localStorage.getItem('yarn-qualities') || '[]');
-        } catch (e) {}
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+          try {
+            rawOrders = (await window.VishwaSupabase.get('yarn-rm-orders')) || [];
+            rawStock = (await window.VishwaSupabase.get('vishwa_yarn_rm_stock_data')) || [];
+            rawQualities = (await window.VishwaSupabase.get('yarn-qualities')) || [];
+          } catch (e) {}
+        }
 
         if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
           rawOrders = window.VishwaSupabase.filterDeletedEntities(rawOrders);
@@ -2069,10 +2064,15 @@
         console.error("Error syncing yarn-rm-orders:", err);
       }
 
-      // 2. Sync Sales Ledger from yarn_*_sales_logs
+      // 2. Sync Sales Ledger directly from yarn_*_sales_logs in Supabase
       try {
-        ['covering', 'tfo', 'doubler'].forEach(div => {
-          let rawSales = JSON.parse(localStorage.getItem(`yarn_${div}_sales_logs`) || '[]');
+        for (const div of ['covering', 'tfo', 'doubler']) {
+          let rawSales = [];
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+            try {
+              rawSales = (await window.VishwaSupabase.get(`yarn_${div}_sales_logs`)) || [];
+            } catch(e) {}
+          }
           if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
             rawSales = window.VishwaSupabase.filterDeletedEntities(rawSales);
           }
@@ -2125,7 +2125,7 @@
               }
             });
           }
-        });
+        }
       } catch (err) {
         console.error("Error syncing yarn sales logs:", err);
       }
@@ -2348,7 +2348,7 @@
       if (elGrandTotal) elGrandTotal.textContent = formatCurrency(row.grandTotal);
 
       const elDueDate = tr.querySelector('.col-val-due-date');
-      if (elDueDate) elDueDate.textContent = comp.dueDate || '-';
+      if (elDueDate) elDueDate.textContent = formatDateDisplay(comp.dueDate);
 
       const elOutstanding = tr.querySelector('.col-val-outstanding');
       if (elOutstanding) {
@@ -2538,6 +2538,20 @@
       return '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    // Format Date to DD/MM/YYYY
+    function formatDateDisplay(dStr, fallback = '-') {
+      if (!dStr) return fallback;
+      try {
+        const clean = String(dStr).split('T')[0].trim();
+        const parts = clean.split('-');
+        if (parts.length === 3 && parts[0].length === 4) {
+          return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+        }
+        if (clean.includes('/')) return clean;
+      } catch (e) {}
+      return dStr || fallback;
+    }
+
     // Render Main Spreadsheet Table & KPI Metrics
     function renderTable(rebuildFocus = true) {
       const tbody = document.getElementById('excel-table-body');
@@ -2657,7 +2671,7 @@
             
             <td class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked 
-                ? `<div class="cell-readonly font-mono" title="Date">${row.date || '-'}</div>`
+                ? `<div class="cell-readonly font-mono" title="Date">${formatDateDisplay(row.date)}</div>`
                 : `<input type="date" class="cell-input date-picker-input" value="${row.date || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'date', this.value, false)" onchange="handleCellChange('${row.id}', 'date', this.value, true)">`
               }
             </td>
@@ -2730,7 +2744,7 @@
             </td>
 
             <td class="cell-locked-bg">
-              <div class="cell-readonly font-mono col-val-due-date" style="font-size: 0.85rem; color: var(--muted);">${comp.dueDate || '-'}</div>
+              <div class="cell-readonly font-mono col-val-due-date" style="font-size: 0.85rem; color: var(--muted);">${formatDateDisplay(comp.dueDate)}</div>
             </td>
 
             <td class="num-col cell-locked-bg" style="background: rgba(239, 68, 68, 0.05);">
@@ -2782,12 +2796,17 @@
     }
 
     // Toggle Late Payment Interest Calculation
-    function toggleInterestCalc() {
+    async function toggleInterestCalc() {
       calculateInterest = document.getElementById('toggle-interest').checked;
       try {
-        const settings = JSON.parse(localStorage.getItem('yarn_ledger_settings') || '{}');
+        let settings = {};
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+          settings = (await window.VishwaSupabase.get('yarn_ledger_settings')) || {};
+        }
         settings.calculateInterest = calculateInterest;
-        localStorage.setItem('yarn_ledger_settings', JSON.stringify(settings));
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+          window.VishwaSupabase.set('yarn_ledger_settings', settings, true);
+        }
       } catch (e) {}
       renderTable();
       showToast(calculateInterest ? 'Late interest calculation enabled' : 'Late interest calculation disabled', 'info');
@@ -2802,7 +2821,7 @@
       document.getElementById('modal-interest-settings').style.display = 'none';
     }
 
-    function saveInterestSettings() {
+    async function saveInterestSettings() {
       const rateVal = Number(document.getElementById('settings-default-interest-rate').value) || 18.0;
       const daysVal = Number(document.getElementById('settings-default-credit-days').value) || 30;
 
@@ -2815,7 +2834,9 @@
           defaultCreditDays,
           calculateInterest
         };
-        localStorage.setItem('yarn_ledger_settings', JSON.stringify(settings));
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+          window.VishwaSupabase.set('yarn_ledger_settings', settings, true);
+        }
       } catch (e) {}
 
       closeInterestSettingsModal();
@@ -2843,9 +2864,7 @@
         select.value = parties[0];
       }
 
-      document.getElementById('statement-print-date').textContent = new Date().toLocaleDateString('en-IN', {
-        day: '2-digit', month: 'short', year: 'numeric'
-      });
+      document.getElementById('statement-print-date').textContent = formatDateDisplay(new Date().toISOString().split('T')[0]);
 
       document.getElementById('statement-print-type').textContent = activeTab === 'sales' ? 'Sales Customer Account' : 'Supplier RM Account';
 
@@ -2904,7 +2923,7 @@
         return `
           <tr>
             <td class="center-col" style="font-family: var(--font-mono); color: var(--muted); font-size: 0.8rem;">${idx + 1}</td>
-            <td style="font-family: var(--font-mono); white-space: nowrap;">${row.date || '-'}</td>
+            <td style="font-family: var(--font-mono); white-space: nowrap;">${formatDateDisplay(row.date)}</td>
             <td style="font-weight: 700; font-family: var(--font-mono); white-space: nowrap;">${escapeHtml(row.challanNo || '-')}</td>
             <td style="word-break: break-word; line-height: 1.4;">${escapeHtml(row.quality || '-')}</td>
             <td class="num-col font-mono bold">${qty > 0 ? qty.toFixed(2) : '-'}</td>
@@ -2912,7 +2931,7 @@
             <td class="num-col font-mono bold">${formatCurrency(billed)}</td>
             <td class="num-col font-mono" style="color: var(--success); font-weight: 700;">${paid > 0 ? formatCurrency(paid) : '-'}</td>
             <td class="num-col font-mono bold" style="color: ${comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.principalOutstanding)}</td>
-            <td style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); white-space: nowrap;">${comp.dueDate || '-'}</td>
+            <td style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); white-space: nowrap;">${formatDateDisplay(comp.dueDate)}</td>
             <td class="num-col font-mono" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</td>
             <td class="num-col font-mono bold" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</td>
             <td class="num-col font-mono" style="color: var(--warning); font-weight: 700;">${comp.interestPaid > 0 ? formatCurrency(comp.interestPaid) : '-'}</td>
@@ -2961,7 +2980,7 @@
     }
 
     // Open Yarn RM Order / Sales Challan Modal or in-page Breakdown Modal
-    function openChallanModal(rowId) {
+    async function openChallanModal(rowId) {
       const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
       if (!row) return;
 
@@ -2972,9 +2991,11 @@
       if (activeTab === 'purchase' || row.source === 'yarn-rm-orders') {
         try {
           let orders = [];
-          try {
-            orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
-          } catch(e) {}
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+            try {
+              orders = (await window.VishwaSupabase.get('yarn-rm-orders')) || [];
+            } catch(e) {}
+          }
           if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
             orders = window.VishwaSupabase.filterDeletedEntities(orders);
           }
@@ -3029,10 +3050,13 @@
           let matchedSale = null;
           let matchedDiv = 'covering';
 
-          ['covering', 'tfo', 'doubler'].forEach(div => {
-            if (matchedSale) return;
+          for (const div of ['covering', 'tfo', 'doubler']) {
+            if (matchedSale) break;
             try {
-              let sales = JSON.parse(localStorage.getItem(`yarn_${div}_sales_logs`) || '[]');
+              let sales = [];
+              if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+                sales = (await window.VishwaSupabase.get(`yarn_${div}_sales_logs`)) || [];
+              }
               if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
                 sales = window.VishwaSupabase.filterDeletedEntities(sales);
               }
@@ -3042,7 +3066,7 @@
                 matchedDiv = div;
               }
             } catch(e) {}
-          });
+          }
 
           if (matchedSale) {
             const overlay = document.getElementById('modal-order-iframe-overlay');
@@ -3089,7 +3113,7 @@
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; background: var(--surface-subtle); padding: 1.15rem; border-radius: 12px; border: 1px solid var(--border);">
             <div>
               <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Transaction Date</div>
-              <div style="font-family: var(--font-mono); font-weight: 700; font-size: 0.95rem;">${row.date || '-'}</div>
+              <div style="font-family: var(--font-mono); font-weight: 700; font-size: 0.95rem;">${formatDateDisplay(row.date)}</div>
             </div>
             <div>
               <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Quality / Specs</div>
@@ -3126,12 +3150,12 @@
               <div style="background: rgba(16, 185, 129, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
                 <div style="font-size: 0.72rem; color: var(--success); font-weight: 700; text-transform: uppercase;">Paid Principal</div>
                 <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--success);">${formatCurrency(row.paidAmount)}</div>
-                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">${row.paymentDate ? `Date: ${row.paymentDate}` : 'Unpaid'}</div>
+                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">${row.paymentDate ? `Date: ${formatDateDisplay(row.paymentDate)}` : 'Unpaid'}</div>
               </div>
               <div style="background: rgba(239, 68, 68, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
                 <div style="font-size: 0.72rem; color: var(--error); font-weight: 700; text-transform: uppercase;">Principal Due</div>
                 <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--error);">${formatCurrency(comp.principalOutstanding)}</div>
-                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Due: ${comp.dueDate || '-'}</div>
+                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Due: ${formatDateDisplay(comp.dueDate)}</div>
               </div>
               <div style="background: rgba(245, 158, 11, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
                 <div style="font-size: 0.72rem; color: var(--warning); font-weight: 700; text-transform: uppercase;">Accrued Interest</div>
@@ -3214,7 +3238,7 @@
       rows.forEach(r => {
         const comp = computeRowFinancials(r);
         const values = [
-          `"${r.date || ''}"`,
+          `"${formatDateDisplay(r.date, '')}"`,
           `"${(r.challanNo || '').replace(/"/g, '""')}"`,
           `"${(r.partyName || '').replace(/"/g, '""')}"`,
           `"${(r.quality || '').replace(/"/g, '""')}"`,
@@ -3224,9 +3248,9 @@
           r.gstPercent || 0,
           r.grandTotal || 0,
           r.paidAmount || 0,
-          `"${r.paymentDate || ''}"`,
+          `"${formatDateDisplay(r.paymentDate, '')}"`,
           r.creditDays || defaultCreditDays,
-          `"${comp.dueDate || ''}"`,
+          `"${formatDateDisplay(comp.dueDate, '')}"`,
           comp.principalOutstanding,
           `"${comp.status}"`,
           r.interestRate || defaultInterestRate,
