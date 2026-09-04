@@ -828,12 +828,12 @@
           <div class="bento-title-box">
             <h3 class="bento-title">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              Production Output Momentum
+              Production Output & Sales Momentum
             </h3>
-            <p class="bento-desc">Comparative daily trajectory across Raw Yarn Purchases, Mill Production, and Dispatched Sales.</p>
+            <p class="bento-desc">Comparative daily trajectory of Finished Product (FP) Mill Production vs. Dispatched Sales.</p>
           </div>
           <div class="bento-actions">
-            <span class="bento-badge" id="badge-prod-unit">Purchase • Production • Sales (Kg)</span>
+            <span class="bento-badge" id="badge-prod-unit">Production • Sales (Kg)</span>
           </div>
         </div>
         <div class="bento-chart-wrap">
@@ -1065,7 +1065,6 @@
       tfo: { production: [], sales: [] },
       doubler: { production: [], sales: [] }
     };
-    let rawPurchases = [];
 
     // Helper: Determine if dark mode is active
     function isDarkMode() {
@@ -1173,100 +1172,6 @@
       return { productName: prodName };
     }
 
-    // Fetch Purchase Inward Data from Yarn RM Stock and Orders
-    function fetchPurchaseData() {
-      let purchases = [];
-      const seenBatchOrLot = new Set();
-
-      // 1. From vishwa_yarn_rm_stock_data (inward stock lots)
-      try {
-        let rawStock = JSON.parse(localStorage.getItem('vishwa_yarn_rm_stock_data') || '[]');
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
-          rawStock = window.VishwaSupabase.filterDeletedEntities(rawStock);
-        }
-        if (Array.isArray(rawStock)) {
-          rawStock.forEach(lot => {
-            if (!lot) return;
-            const d = (lot.receiveDate || lot.date || '').split('T')[0];
-            const q = String(lot.quality || lot.itemType || '').trim();
-            let wt = 0;
-            if (Array.isArray(lot.boxes)) {
-              lot.boxes.forEach(b => {
-                wt += Number(b.grossWeight || b.weight || 0);
-              });
-            }
-            if (wt <= 0) wt = Number(lot.weight || lot.quantity || 0);
-            if (d && wt > 0) {
-              const key = lot.batchId || lot.id || (lot.lotNumber && lot.challanNo ? `${lot.lotNumber}__${lot.challanNo}` : null);
-              if (key) seenBatchOrLot.add(String(key));
-              purchases.push({
-                date: d,
-                quality: q,
-                weight: wt,
-                lotNo: lot.lotNumber || '',
-                supplier: lot.supplier || '',
-                challanNo: lot.challanNo || lot.challanNumber || ''
-              });
-            }
-          });
-        }
-      } catch(e) {
-        console.error("Error reading rm stock for analytics:", e);
-      }
-
-      // 2. From yarn-rm-orders (inward batches/orders)
-      try {
-        let rawOrders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
-          rawOrders = window.VishwaSupabase.filterDeletedEntities(rawOrders);
-        }
-        if (Array.isArray(rawOrders)) {
-          rawOrders.forEach(order => {
-            if (!order) return;
-            const q = String(order.quality || order.itemType || '').trim();
-            if (Array.isArray(order.batches) && order.batches.length > 0) {
-              order.batches.forEach(b => {
-                const bId = String(b.id || '');
-                if (bId && seenBatchOrLot.has(bId)) return;
-                const d = (b.receiveDate || b.date || order.orderDate || '').split('T')[0];
-                let wt = 0;
-                if (Array.isArray(b.boxes)) {
-                  b.boxes.forEach(bx => { wt += Number(bx.weight || bx.grossWeight || 0); });
-                }
-                if (wt <= 0) wt = Number(b.receivedWeight || b.receivedQuantity || b.weight || 0);
-                if (d && wt > 0) {
-                  if (bId) seenBatchOrLot.add(bId);
-                  purchases.push({
-                    date: d,
-                    quality: q,
-                    weight: wt,
-                    lotNo: b.lotNumber || '',
-                    supplier: order.supplier || '',
-                    challanNo: b.challanNumber || ''
-                  });
-                }
-              });
-            } else if (order.quantity && order.orderDate) {
-              const oId = String(order.id || order.orderNumber || '');
-              if (oId && seenBatchOrLot.has(oId)) return;
-              purchases.push({
-                date: (order.orderDate || '').split('T')[0],
-                quality: q,
-                weight: Number(order.quantity) || 0,
-                lotNo: '',
-                supplier: order.supplier || '',
-                challanNo: ''
-              });
-            }
-          });
-        }
-      } catch(e) {
-        console.error("Error reading rm orders for analytics:", e);
-      }
-
-      return purchases;
-    }
-
     // Load logs from localStorage and Supabase
     function fetchAllYarnData() {
       ['covering', 'tfo', 'doubler'].forEach(div => {
@@ -1287,8 +1192,6 @@
         rawData[div].production = Array.isArray(prod) ? prod : [];
         rawData[div].sales = Array.isArray(sales) ? sales : [];
       });
-
-      rawPurchases = fetchPurchaseData();
     }
 
     // Filter by Date Range
@@ -1333,27 +1236,48 @@
       return true;
     }
 
-    // Filter and Aggregate Data according to active Division, Quality & Time Range
+    // Filter and Aggregate Data according to active Division, FP Quality & Time Range
     function getAggregatedDataset() {
       const activeDivisions = currentDivision === 'all' ? ['covering', 'tfo', 'doubler'] : [currentDivision];
 
       let allProduction = [];
       let allSales = [];
       let rawProdListForStock = [];
-      let allPurchases = [];
 
       const availableQualitiesSet = new Set();
+      const storageKeys = {
+        covering: 'costing-covering-products-v1',
+        tfo: 'costing-tfo-products-v1',
+        doubler: 'costing-doubler-products-v1'
+      };
 
       activeDivisions.forEach(div => {
-        const fullProd = (rawData[div].production || []).map(p => ({ ...p, _division: div }));
-        const fullSales = (rawData[div].sales || []).map(s => ({ ...s, _division: div }));
+        // 1. Finished Product (FP) master catalog for division
+        const storeKey = storageKeys[div];
+        if (storeKey) {
+          try {
+            let fpProds = JSON.parse(localStorage.getItem(storeKey) || '[]');
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+              fpProds = window.VishwaSupabase.filterDeletedEntities(fpProds);
+            }
+            if (Array.isArray(fpProds)) {
+              fpProds.forEach(p => {
+                const name = String(p.name || p.productName || '').trim();
+                if (name && name !== '-') availableQualitiesSet.add(name);
+              });
+            }
+          } catch(e) {}
+        }
 
-        // Collect all qualities present in the division raw data
+        // 2. Finished Product Production Logs
+        const fullProd = (rawData[div].production || []).map(p => ({ ...p, _division: div }));
         fullProd.forEach(p => {
           const q = (getDynamicProductInfo(p, div).productName || p.productName || p.composition || p.name || '').trim();
           if (q && q !== '-') availableQualitiesSet.add(q);
         });
 
+        // 3. Finished Product Sales Logs
+        const fullSales = (rawData[div].sales || []).map(s => ({ ...s, _division: div }));
         fullSales.forEach(s => {
           if (s.items && Array.isArray(s.items) && s.items.length > 0) {
             s.items.forEach(i => {
@@ -1382,16 +1306,7 @@
         allSales = allSales.concat(sList);
       });
 
-      // Purchases
-      (rawPurchases || []).forEach(pur => {
-        const q = String(pur.quality || '').trim();
-        if (q && q !== '-') availableQualitiesSet.add(q);
-        if (isDateWithinSelectedRange(pur.date)) {
-          allPurchases.push(pur);
-        }
-      });
-
-      // Stock
+      // 4. Finished Product Stock items
       rawProdListForStock.forEach(prod => {
         const q = (getDynamicProductInfo(prod, prod._division).productName || prod.productName || prod.composition || prod.name || '').trim();
         if (q && q !== '-') availableQualitiesSet.add(q);
@@ -1399,7 +1314,7 @@
 
       const sortedQualities = Array.from(availableQualitiesSet).sort((a, b) => a.localeCompare(b));
 
-      // Apply Quality Filter if a specific quality is chosen
+      // Apply FP Quality Filter if a specific quality is chosen
       if (currentQuality !== 'all') {
         const targetQ = currentQuality.trim().toLowerCase();
         const matchQ = (val) => String(val || '').trim().toLowerCase() === targetQ;
@@ -1428,8 +1343,6 @@
         });
         allSales = filteredSales;
 
-        allPurchases = allPurchases.filter(pur => matchQ(pur.quality));
-
         rawProdListForStock = rawProdListForStock.filter(prod => {
           const q = getDynamicProductInfo(prod, prod._division).productName || prod.productName || prod.composition || prod.name || '';
           return matchQ(q);
@@ -1439,12 +1352,10 @@
       // Sort chronological
       allProduction.sort((a, b) => new Date(a.date || a.createdAt || 0) - new Date(b.date || b.createdAt || 0));
       allSales.sort((a, b) => new Date(a.date || a.saleDate || a.createdAt || 0) - new Date(b.date || b.saleDate || b.createdAt || 0));
-      allPurchases.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
 
       return {
         production: allProduction,
         sales: allSales,
-        purchases: allPurchases,
         rawProdListForStock: rawProdListForStock,
         availableQualities: sortedQualities
       };
@@ -1632,19 +1543,10 @@
 
       const theme = getChartTheme();
 
-      // Aggregate daily data for Purchases, Production, and Sales
-      const purchaseDayMap = new Map();
+      // Aggregate daily data for Production and Sales
       const prodDayMap = new Map();
       const salesDayMap = new Map();
       const allDatesSet = new Set();
-
-      (dataset.purchases || []).forEach(p => {
-        const d = (p.date || '').substring(0, 10);
-        if (!d) return;
-        const w = parseFloat(p.weight || 0);
-        purchaseDayMap.set(d, (purchaseDayMap.get(d) || 0) + w);
-        allDatesSet.add(d);
-      });
 
       (dataset.production || []).forEach(p => {
         const d = (p.date || p.createdAt || '').substring(0, 10);
@@ -1676,13 +1578,11 @@
         } catch(e) { return d; }
       });
 
-      let purchaseData = sortedDates.map(d => Number((purchaseDayMap.get(d) || 0).toFixed(2)));
       let prodData = sortedDates.map(d => Number((prodDayMap.get(d) || 0).toFixed(2)));
       let salesData = sortedDates.map(d => Number((salesDayMap.get(d) || 0).toFixed(2)));
 
       if (labels.length === 0) {
         labels = ['No Activity'];
-        purchaseData = [0];
         prodData = [0];
         salesData = [0];
       }
@@ -1692,19 +1592,6 @@
         data: {
           labels: labels,
           datasets: [
-            {
-              label: 'Purchase Inward (Kg)',
-              data: purchaseData,
-              borderColor: '#f59e0b',
-              backgroundColor: 'rgba(245, 158, 11, 0.08)',
-              borderWidth: 2.5,
-              pointBackgroundColor: '#f59e0b',
-              pointBorderColor: '#ffffff',
-              pointRadius: labels.length > 25 ? 2 : 4,
-              pointHoverRadius: 6,
-              fill: true,
-              tension: 0.35
-            },
             {
               label: 'Production Output (Kg)',
               data: prodData,
@@ -2496,12 +2383,7 @@
     // ==========================================================================
     function exportAnalyticsCSV() {
       const dataset = getAggregatedDataset();
-      let csv = 'Type,Division,Date,Product / Quality,Lot No,Weight (Kg),Boris/Boxes,Customer / Machine / Supplier,Rate (₹),Amount (₹)\n';
-
-      (dataset.purchases || []).forEach(pur => {
-        const w = parseFloat(pur.weight || 0);
-        csv += `"Purchase","${currentDivision}","${pur.date || ''}","${pur.quality || ''}","${pur.lotNo || ''}",${w},1,"${pur.supplier || ''}",0,0\n`;
-      });
+      let csv = 'Type,Division,Date,Product / Quality,Lot No,Weight (Kg),Boris/Boxes,Customer / Machine,Rate (₹),Amount (₹)\n';
 
       dataset.production.forEach(p => {
         const w = parseFloat(p.qty || p.weight || p.netWeight || 0);
@@ -2560,7 +2442,7 @@
 
       // Storage sync (debounced)
       window.addEventListener('storage', (e) => {
-        if (!e.key || e.key.startsWith('yarn_') || e.key.startsWith('costing-') || e.key === 'yarn-rm-orders' || e.key === 'vishwa_yarn_rm_stock_data' || e.key === 'vf_deleted_entity_ids') {
+        if (!e.key || e.key.startsWith('yarn_') || e.key.startsWith('costing-') || e.key === 'vf_deleted_entity_ids') {
           scheduleRefresh(60);
         }
       });
