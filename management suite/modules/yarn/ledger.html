@@ -1642,28 +1642,28 @@
       }, 3000);
     }
 
-    // Initialize State & Storage
+    // Initialize application state
     async function init() {
-      // Check query parameter for active tab
-      const urlParams = new URLSearchParams(window.location.search);
-      const tabParam = urlParams.get('tab');
-      if (tabParam === 'purchase' || tabParam === 'sales') {
-        activeTab = tabParam;
-      }
-
-      // Load Settings
+      // Load user settings
       try {
-        const savedSettings = JSON.parse(localStorage.getItem('yarn_ledger_settings') || '{}');
-        if (savedSettings.defaultInterestRate !== undefined) defaultInterestRate = Number(savedSettings.defaultInterestRate) || 18.0;
-        if (savedSettings.defaultCreditDays !== undefined) defaultCreditDays = Number(savedSettings.defaultCreditDays) || 30;
-        if (savedSettings.calculateInterest !== undefined) calculateInterest = !!savedSettings.calculateInterest;
+        const settings = JSON.parse(localStorage.getItem('yarn_ledger_settings') || '{}');
+        if (settings.defaultInterestRate !== undefined) defaultInterestRate = Number(settings.defaultInterestRate) || 18.0;
+        if (settings.defaultCreditDays !== undefined) defaultCreditDays = Number(settings.defaultCreditDays) || 30;
+        if (settings.calculateInterest !== undefined) calculateInterest = !!settings.calculateInterest;
+        
+        document.getElementById('toggle-interest').checked = calculateInterest;
+        document.getElementById('settings-default-interest-rate').value = defaultInterestRate;
+        document.getElementById('settings-default-credit-days').value = defaultCreditDays;
       } catch (e) {
         console.error("Error reading yarn_ledger_settings:", e);
       }
 
-      document.getElementById('toggle-interest').checked = calculateInterest;
-      document.getElementById('settings-default-interest-rate').value = defaultInterestRate;
-      document.getElementById('settings-default-credit-days').value = defaultCreditDays;
+      // URL parameters (e.g. ?tab=purchase)
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'purchase' || tabParam === 'sales') {
+        activeTab = tabParam;
+      }
 
       // Sync FY Engine
       if (typeof FYEngine !== 'undefined') {
@@ -1684,99 +1684,76 @@
         });
       }
 
-      let liveSaveTimer = null;
+      // Sync status indicator
+      updateSyncStatusUI();
+      window.addEventListener('supabase-status', (e) => {
+        updateSyncStatusUI(e?.detail?.status);
+      });
 
-      // Initialize application state
-      async function init() {
-        // Load user settings
-        try {
-          const settings = JSON.parse(localStorage.getItem('yarn_ledger_settings') || '{}');
-          if (settings.defaultInterestRate !== undefined) defaultInterestRate = Number(settings.defaultInterestRate);
-          if (settings.defaultCreditDays !== undefined) defaultCreditDays = Number(settings.defaultCreditDays);
-          if (settings.calculateInterest !== undefined) calculateInterest = Boolean(settings.calculateInterest);
-          
-          document.getElementById('toggle-interest').checked = calculateInterest;
-          document.getElementById('settings-default-interest-rate').value = defaultInterestRate;
-          document.getElementById('settings-default-credit-days').value = defaultCreditDays;
-        } catch (e) {}
+      // Load Saved Ledgers from Cloud / Local
+      await loadLedgers();
 
-        // URL parameters (e.g. ?tab=purchase)
-        const params = new URLSearchParams(window.location.search);
-        const tabParam = params.get('tab');
-        if (tabParam === 'purchase' || tabParam === 'sales') {
-          activeTab = tabParam;
-        }
+      // Automatically sync latest orders and sales
+      syncSourceData(false);
 
-        // Sync status indicator
-        updateSyncStatusUI();
-        window.addEventListener('supabase-status', (e) => {
-          updateSyncStatusUI(e?.detail?.status);
-        });
+      // Render UI
+      updateTabUI();
+      populatePartyFilter();
+      renderTable();
 
-        // Load Saved Ledgers from Cloud / Local
+      // Cloud & Storage Real-time Event Listeners
+      const handleRemoteSync = async (e) => {
+        const activeEl = document.activeElement;
+        const activeRowEl = activeEl ? activeEl.closest('tr[id^="ledger-row-"]') : null;
+        const activeRowId = activeRowEl ? activeRowEl.id.replace('ledger-row-', '') : null;
+
         await loadLedgers();
 
-        // Automatically sync latest orders and sales
-        syncSourceData(false);
+        if (activeRowId) {
+          // User is actively editing row activeRowId: update all OTHER rows in-place and update KPIs without resetting caret
+          (ledgerData[activeTab] || []).forEach(r => {
+            if (r.id !== activeRowId) {
+              updateRowDOM(r.id);
+            }
+          });
+          updateFooterAndKPISummaries();
+        } else {
+          populatePartyFilter();
+          renderTable(false);
+        }
+      };
 
-        // Render UI
-        updateTabUI();
-        populatePartyFilter();
-        renderTable();
+      window.addEventListener('storage', async (e) => {
+        if (!e.key || e.key.startsWith('yarn') || e.key === 'yarn-rm-orders' || e.key === 'vf_deleted_entity_ids') {
+          handleRemoteSync(e);
+        }
+      });
 
-        // Cloud & Storage Real-time Event Listeners
-        const handleRemoteSync = async (e) => {
-          const activeEl = document.activeElement;
-          const activeRowEl = activeEl ? activeEl.closest('tr[id^="ledger-row-"]') : null;
-          const activeRowId = activeRowEl ? activeRowEl.id.replace('ledger-row-', '') : null;
+      window.addEventListener('supabase-sync', handleRemoteSync);
+      window.addEventListener('supabase-ready', handleRemoteSync);
+      window.addEventListener('supabase-item-deleted', handleRemoteSync);
 
+      window.addEventListener('focus', async () => {
+        const activeEl = document.activeElement;
+        if (!activeEl || !document.getElementById('excel-table-body')?.contains(activeEl)) {
           await loadLedgers();
+          syncSourceData(false);
+          populatePartyFilter();
+          renderTable(false);
+        }
+      });
 
-          if (activeRowId) {
-            // User is actively editing row activeRowId: update all OTHER rows in-place and update KPIs without resetting caret
-            (ledgerData[activeTab] || []).forEach(r => {
-              if (r.id !== activeRowId) {
-                updateRowDOM(r.id);
-              }
-            });
-            updateFooterAndKPISummaries();
-          } else {
-            populatePartyFilter();
-            renderTable(false);
-          }
-        };
-
-        window.addEventListener('storage', async (e) => {
-          if (!e.key || e.key.startsWith('yarn') || e.key === 'yarn-rm-orders' || e.key === 'vf_deleted_entity_ids') {
-            handleRemoteSync(e);
-          }
-        });
-
-        window.addEventListener('supabase-sync', handleRemoteSync);
-        window.addEventListener('supabase-ready', handleRemoteSync);
-        window.addEventListener('supabase-item-deleted', handleRemoteSync);
-
-        window.addEventListener('focus', async () => {
-          const activeEl = document.activeElement;
-          if (!activeEl || !document.getElementById('excel-table-body')?.contains(activeEl)) {
-            await loadLedgers();
-            syncSourceData(false);
-            populatePartyFilter();
-            renderTable(false);
-          }
-        });
-
-        // Keyboard Shortcuts for Undo/Redo
-        window.addEventListener('keydown', (e) => {
-          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-            e.preventDefault();
-            triggerUndo();
-          } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
-            e.preventDefault();
-            triggerRedo();
-          }
-        });
-      }
+      // Keyboard Shortcuts for Undo/Redo
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          triggerUndo();
+        } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+          e.preventDefault();
+          triggerRedo();
+        }
+      });
+    }
 
       // Update Supabase Sync Status Indicator
       function updateSyncStatusUI(status) {
