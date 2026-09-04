@@ -157,9 +157,9 @@
     .ledger-container {
       position: relative;
       z-index: 1;
-      max-width: 1800px;
-      margin: 0 auto;
-      padding: 1.5rem 1.75rem 4rem 1.75rem;
+      max-width: 100%;
+      margin: 0;
+      padding: 1.25rem 1.75rem 3rem 1.75rem;
       width: 100%;
     }
 
@@ -587,7 +587,8 @@
     .sheet-scroll-container {
       width: 100%;
       overflow-x: auto;
-      max-height: 680px;
+      max-height: calc(100vh - 260px);
+      min-height: 520px;
       overflow-y: auto;
       position: relative;
     }
