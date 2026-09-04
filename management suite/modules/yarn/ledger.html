@@ -342,7 +342,7 @@
       font-family: var(--font-mono);
     }
 
-    /* KPI Summary Cards Grid */
+    /* KPI Summary Cards Grid (Interactive Filter Toggles) */
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -352,18 +352,25 @@
 
     .kpi-card {
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: 1.5px solid var(--border);
       border-radius: var(--radius-md);
       padding: 1.15rem 1.25rem;
       position: relative;
       overflow: hidden;
       box-shadow: var(--shadow-sm);
-      transition: transform 0.2s ease, border-color 0.2s ease;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     }
 
     .kpi-card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(124, 58, 237, 0.4);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: rgba(124, 58, 237, 0.45);
+    }
+
+    .kpi-card:active {
+      transform: translateY(-1px);
     }
 
     .kpi-card::before {
@@ -374,12 +381,39 @@
       width: 4px;
       height: 100%;
       background: var(--accent);
+      transition: width 0.2s ease;
     }
 
     .kpi-card.kpi-success::before { background: var(--success); }
     .kpi-card.kpi-danger::before { background: var(--error); }
     .kpi-card.kpi-warning::before { background: var(--warning); }
     .kpi-card.kpi-info::before { background: var(--accent4); }
+
+    /* Active Filter State for KPI Cards */
+    .kpi-card.is-active-filter {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 2.5px var(--accent), 0 8px 24px rgba(124, 58, 237, 0.25) !important;
+      background: var(--surface) !important;
+    }
+
+    .kpi-card.is-active-filter::before {
+      width: 6px;
+    }
+
+    .kpi-card.kpi-success.is-active-filter {
+      border-color: var(--success) !important;
+      box-shadow: 0 0 0 2.5px var(--success), 0 8px 24px rgba(16, 185, 129, 0.25) !important;
+    }
+
+    .kpi-card.kpi-danger.is-active-filter {
+      border-color: var(--error) !important;
+      box-shadow: 0 0 0 2.5px var(--error), 0 8px 24px rgba(239, 68, 68, 0.25) !important;
+    }
+
+    .kpi-card.kpi-warning.is-active-filter {
+      border-color: var(--warning) !important;
+      box-shadow: 0 0 0 2.5px var(--warning), 0 8px 24px rgba(245, 158, 11, 0.25) !important;
+    }
 
     .kpi-label {
       font-size: 0.8rem;
@@ -391,10 +425,37 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 6px;
     }
+
+    .kpi-card-filter-tag {
+      display: none;
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      background: var(--accent);
+      color: #ffffff;
+      margin-left: auto;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .kpi-card.is-active-filter .kpi-card-filter-tag {
+      display: inline-flex;
+    }
+
+    .kpi-card.kpi-success.is-active-filter .kpi-card-filter-tag { background: var(--success); }
+    .kpi-card.kpi-danger.is-active-filter .kpi-card-filter-tag { background: var(--error); }
+    .kpi-card.kpi-warning.is-active-filter .kpi-card-filter-tag { background: var(--warning); }
+    .kpi-card.kpi-info.is-active-filter .kpi-card-filter-tag { background: var(--accent4); }
 
     .kpi-value {
       font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums lining-nums;
+      -webkit-font-feature-settings: "tnum" 1, "lnum" 1;
+      font-feature-settings: "tnum" 1, "lnum" 1;
       font-size: 1.65rem;
       font-weight: 700;
       color: var(--fg);
@@ -624,11 +685,70 @@
       border-right: 1px solid var(--grid-line);
       user-select: none;
       white-space: nowrap;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     }
 
+    /* Interactive Sortable Headers */
+    .excel-table th.sortable {
+      cursor: pointer;
+    }
+
+    .excel-table th.sortable:hover {
+      background: var(--surface);
+      color: var(--fg);
+    }
+
+    .th-content-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .excel-table th.num-col .th-content-wrap {
+      justify-content: flex-end;
+    }
+
+    .excel-table th.center-col .th-content-wrap {
+      justify-content: center;
+    }
+
+    .th-sort-indicator {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      color: var(--muted-light);
+      opacity: 0.4;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      flex-shrink: 0;
+    }
+
+    .excel-table th.sortable:hover .th-sort-indicator {
+      opacity: 0.9;
+      color: var(--accent);
+    }
+
+    .excel-table th.is-sorted {
+      color: var(--accent) !important;
+      background: rgba(124, 58, 237, 0.08) !important;
+      border-bottom-color: var(--accent) !important;
+    }
+
+    .excel-table th.is-sorted .th-sort-indicator {
+      opacity: 1 !important;
+      color: var(--accent) !important;
+      transform: scale(1.1);
+    }
+
+    /* Tabular Numeral Enforcement across Columns */
     .excel-table th.num-col,
     .excel-table td.num-col {
       text-align: right;
+      font-variant-numeric: tabular-nums lining-nums;
+      -webkit-font-feature-settings: "tnum" 1, "lnum" 1;
+      font-feature-settings: "tnum" 1, "lnum" 1;
     }
 
     .excel-table th.center-col,
@@ -644,10 +764,28 @@
       color: var(--fg);
       position: relative;
       vertical-align: middle;
+      transition: background-color 0.12s ease;
     }
 
-    .excel-table tr:hover td {
-      background: var(--cell-bg-hover);
+    /* Contextual Row Focus & Left-Edge Accent Line */
+    .excel-table tbody tr {
+      transition: background-color 0.12s ease;
+    }
+
+    .excel-table tbody tr:hover td {
+      background-color: var(--cell-bg-hover);
+    }
+
+    .excel-table tbody tr:hover td:first-child {
+      box-shadow: inset 4px 0 0 0 var(--accent);
+    }
+
+    .excel-table tbody tr.is-overdue:hover td:first-child {
+      box-shadow: inset 4px 0 0 0 var(--error);
+    }
+
+    .excel-table tbody tr.is-paid:hover td:first-child {
+      box-shadow: inset 4px 0 0 0 var(--success);
     }
 
     .excel-table tr.is-locked td.cell-locked-bg {
@@ -687,6 +825,9 @@
     .cell-input[type="date"] {
       min-width: 165px;
       font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums lining-nums;
+      -webkit-font-feature-settings: "tnum" 1, "lnum" 1;
+      font-feature-settings: "tnum" 1, "lnum" 1;
       font-size: 0.9rem;
       font-weight: 600;
       padding: 0.45rem 0.65rem;
@@ -707,8 +848,12 @@
       background: rgba(124, 58, 237, 0.12);
     }
 
-    .cell-input.num-font {
+    .cell-input.num-font,
+    .num-font {
       font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums lining-nums;
+      -webkit-font-feature-settings: "tnum" 1, "lnum" 1;
+      font-feature-settings: "tnum" 1, "lnum" 1;
       text-align: right;
       font-weight: 600;
     }
@@ -729,6 +874,9 @@
     .cell-readonly.num {
       justify-content: flex-end;
       font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums lining-nums;
+      -webkit-font-feature-settings: "tnum" 1, "lnum" 1;
+      font-feature-settings: "tnum" 1, "lnum" 1;
       font-weight: 600;
       white-space: nowrap;
       word-break: normal;
@@ -840,50 +988,226 @@
       border-color: rgba(239, 68, 68, 0.35);
     }
 
-    /* Badges */
+    /* Semantic Status Pill Badges with SVG Icons */
     .status-badge {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 0.74rem;
+      gap: 5px;
+      padding: 3.5px 9px;
+      border-radius: 9999px;
+      font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.03em;
       text-transform: uppercase;
-      font-family: var(--font-mono);
+      font-family: var(--font-body);
       white-space: nowrap;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      transition: all 0.15s ease;
     }
 
-    .status-paid {
+    .status-badge svg {
+      flex-shrink: 0;
+    }
+
+    .status-badge.status-paid {
       background: rgba(16, 185, 129, 0.12);
-      color: var(--success);
+      color: #059669;
       border: 1px solid rgba(16, 185, 129, 0.3);
     }
 
-    .status-int-due {
+    body.dark-mode .status-badge.status-paid {
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.18);
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .status-badge.status-int-due {
       background: rgba(249, 115, 22, 0.14);
-      color: #f97316;
+      color: #ea580c;
       border: 1px solid rgba(249, 115, 22, 0.35);
     }
 
-    .status-partial {
-      background: rgba(245, 158, 11, 0.12);
-      color: var(--warning);
-      border: 1px solid rgba(245, 158, 11, 0.3);
+    body.dark-mode .status-badge.status-int-due {
+      color: #fb923c;
+      background: rgba(249, 115, 22, 0.2);
     }
 
-    .status-pending {
+    .status-badge.status-partial {
+      background: rgba(245, 158, 11, 0.14);
+      color: #d97706;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    body.dark-mode .status-badge.status-partial {
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.18);
+    }
+
+    .status-badge.status-pending {
       background: rgba(59, 130, 246, 0.12);
-      color: var(--accent4);
+      color: #2563eb;
       border: 1px solid rgba(59, 130, 246, 0.3);
     }
 
-    .status-overdue {
-      background: rgba(239, 68, 68, 0.12);
-      color: var(--error);
-      border: 1px solid rgba(239, 68, 68, 0.3);
+    body.dark-mode .status-badge.status-pending {
+      color: #60a5fa;
+      background: rgba(59, 130, 246, 0.2);
+    }
+
+    .status-badge.status-overdue {
+      background: rgba(239, 68, 68, 0.14);
+      color: #dc2626;
+      border: 1px solid rgba(239, 68, 68, 0.35);
       animation: subtle-pulse 2s infinite;
+    }
+
+    body.dark-mode .status-badge.status-overdue {
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.22);
+    }
+
+    @keyframes subtle-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+
+    /* Active Filter Chips Bar */
+    .active-filter-chips-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 1rem;
+      padding: 0.65rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      animation: fadeInDown 0.2s ease;
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .filter-chips-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-right: 4px;
+    }
+
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      font-size: 0.78rem;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+
+    .filter-chip-label {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .filter-chip-remove {
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      font-size: 0.95rem;
+      line-height: 1;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip-remove:hover {
+      background: var(--error);
+      color: #ffffff;
+    }
+
+    .filter-chips-clear-all {
+      margin-left: auto;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 3px 8px;
+      border-radius: 6px;
+      transition: background 0.15s ease;
+    }
+
+    .filter-chips-clear-all:hover {
+      color: var(--accent-light);
+      background: rgba(124, 58, 237, 0.08);
+    }
+
+    /* Illustrated Empty State */
+    .table-empty-state-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4.5rem 1.5rem;
+      text-align: center;
+      gap: 1rem;
+    }
+
+    .table-empty-icon-circle {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: rgba(124, 58, 237, 0.08);
+      border: 1px solid rgba(124, 58, 237, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
+    }
+
+    .table-empty-title {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--fg);
+    }
+
+    .table-empty-subtitle {
+      font-size: 0.88rem;
+      color: var(--muted);
+      max-width: 440px;
+      line-height: 1.5;
+    }
+
+    .table-empty-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     @keyframes subtle-pulse {
@@ -1352,47 +1676,52 @@
       </div>
     </div>
 
-    <!-- Top KPI Metric Cards -->
+    <!-- Top KPI Metric Cards (Interactive Instant Filter Toggles) -->
     <div class="kpi-grid">
-      <div class="kpi-card kpi-info">
+      <div class="kpi-card kpi-info" id="kpi-card-total" onclick="toggleKpiFilter('all')" title="Click to view all transactions">
         <div class="kpi-label">
           <span id="kpi-label-total-billed">Total Billed (₹)</span>
+          <span class="kpi-card-filter-tag">All</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
         <div class="kpi-value" id="kpi-val-total-billed">₹0.00</div>
         <div class="kpi-sub" id="kpi-sub-total-billed">0 transactions</div>
       </div>
 
-      <div class="kpi-card kpi-success">
+      <div class="kpi-card kpi-success" id="kpi-card-settled" onclick="toggleKpiFilter('settled')" title="Click to filter settled / paid in full records">
         <div class="kpi-label">
           <span id="kpi-label-total-settled">Total Settled (₹)</span>
+          <span class="kpi-card-filter-tag">Settled</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div class="kpi-value" id="kpi-val-total-settled">₹0.00</div>
         <div class="kpi-sub" id="kpi-sub-total-settled">0% recovery</div>
       </div>
 
-      <div class="kpi-card kpi-danger">
+      <div class="kpi-card kpi-danger" id="kpi-card-outstanding" onclick="toggleKpiFilter('outstanding')" title="Click to filter outstanding principal balances">
         <div class="kpi-label">
           <span id="kpi-label-total-outstanding">Outstanding Balance (₹)</span>
+          <span class="kpi-card-filter-tag">Unpaid</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
         <div class="kpi-value" id="kpi-val-total-outstanding" style="color: var(--error);">₹0.00</div>
         <div class="kpi-sub" id="kpi-sub-total-outstanding">Principal balance</div>
       </div>
 
-      <div class="kpi-card kpi-warning">
+      <div class="kpi-card kpi-warning" id="kpi-card-interest" onclick="toggleKpiFilter('interest')" title="Click to filter entries with accrued late interest">
         <div class="kpi-label">
           <span>Late Interest Accrued (₹)</span>
+          <span class="kpi-card-filter-tag">Interest</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         </div>
         <div class="kpi-value" id="kpi-val-total-interest" style="color: var(--warning);">₹0.00</div>
         <div class="kpi-sub" id="kpi-sub-total-interest">At configured rate p.a.</div>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card kpi-danger" id="kpi-card-overdue" onclick="toggleKpiFilter('overdue')" title="Click to filter overdue accounts">
         <div class="kpi-label">
           <span>Overdue Bills</span>
+          <span class="kpi-card-filter-tag">Overdue</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </div>
         <div class="kpi-value" id="kpi-val-overdue-count">0</div>
@@ -1443,6 +1772,9 @@
       </div>
     </div>
 
+    <!-- Active Filter Chips Bar -->
+    <div class="active-filter-chips-bar" id="active-filter-chips" style="display: none;"></div>
+
     <!-- Excel Spreadsheet Table Grid -->
     <div class="sheet-wrapper">
       <div class="sheet-scroll-container">
@@ -1450,27 +1782,69 @@
           <thead>
             <tr>
               <th style="width: 48px; min-width: 48px;" class="center-col">#</th>
-              <th style="width: 135px; min-width: 135px;">Date</th>
-              <th style="width: 180px; min-width: 180px;">Bill / Challan No</th>
-              <th style="width: 280px; min-width: 260px;" id="th-party-header">Customer Name</th>
-              <th style="width: 260px; min-width: 240px;">Quality / Item</th>
-              <th style="width: 120px; min-width: 115px;" class="num-col">Qty (Kg)</th>
-              <th style="width: 115px; min-width: 110px;" class="num-col">Rate (₹/Kg)</th>
-              <th style="width: 145px; min-width: 140px;" class="num-col">Subtotal (₹)</th>
-              <th style="width: 90px; min-width: 85px;" class="num-col">GST %</th>
-              <th style="width: 160px; min-width: 155px;" class="num-col">Grand Total (₹)</th>
-              <th style="width: 160px; min-width: 155px;" class="num-col" style="background: rgba(16, 185, 129, 0.08);">Paid Principal (₹)</th>
-              <th style="width: 190px; min-width: 185px;">Payment Date</th>
-              <th style="width: 95px; min-width: 90px;" class="num-col">Cr. Days</th>
-              <th style="width: 130px; min-width: 125px;">Due Date</th>
-              <th style="width: 160px; min-width: 155px;" class="num-col" style="background: rgba(239, 68, 68, 0.08);">Principal Bal (₹)</th>
-              <th style="width: 120px; min-width: 115px;" class="center-col">Status</th>
-              <th style="width: 105px; min-width: 100px;" class="num-col interest-col">Int. % p.a.</th>
-              <th style="width: 100px; min-width: 95px;" class="num-col interest-col">Late Days</th>
-              <th style="width: 145px; min-width: 140px;" class="num-col interest-col">Accrued Int. (₹)</th>
-              <th style="width: 145px; min-width: 140px;" class="num-col interest-col" style="background: rgba(245, 158, 11, 0.08);">Paid Int. (₹)</th>
-              <th style="width: 165px; min-width: 160px;" class="num-col">Net Bal (₹)</th>
-              <th style="width: 280px; min-width: 260px;">Remarks / Cheque No</th>
+              <th style="width: 135px; min-width: 135px;" class="sortable" data-sort-key="date" onclick="requestTableSort('date', event)" title="Click to sort by Date (Shift+Click for multi-column)">
+                <div class="th-content-wrap"><span>Date</span><span class="th-sort-indicator" id="sort-ind-date">↕</span></div>
+              </th>
+              <th style="width: 180px; min-width: 180px;" class="sortable" data-sort-key="challanNo" onclick="requestTableSort('challanNo', event)" title="Click to sort by Bill / Challan No">
+                <div class="th-content-wrap"><span>Bill / Challan No</span><span class="th-sort-indicator" id="sort-ind-challanNo">↕</span></div>
+              </th>
+              <th style="width: 280px; min-width: 260px;" id="th-party-header" class="sortable" data-sort-key="partyName" onclick="requestTableSort('partyName', event)" title="Click to sort by Party Name">
+                <div class="th-content-wrap"><span id="th-party-title">Customer Name</span><span class="th-sort-indicator" id="sort-ind-partyName">↕</span></div>
+              </th>
+              <th style="width: 260px; min-width: 240px;" class="sortable" data-sort-key="quality" onclick="requestTableSort('quality', event)" title="Click to sort by Quality / Item">
+                <div class="th-content-wrap"><span>Quality / Item</span><span class="th-sort-indicator" id="sort-ind-quality">↕</span></div>
+              </th>
+              <th style="width: 120px; min-width: 115px;" class="num-col sortable" data-sort-key="qty" onclick="requestTableSort('qty', event)" title="Click to sort by Quantity">
+                <div class="th-content-wrap"><span>Qty (Kg)</span><span class="th-sort-indicator" id="sort-ind-qty">↕</span></div>
+              </th>
+              <th style="width: 115px; min-width: 110px;" class="num-col sortable" data-sort-key="rate" onclick="requestTableSort('rate', event)" title="Click to sort by Unit Rate">
+                <div class="th-content-wrap"><span>Rate (₹/Kg)</span><span class="th-sort-indicator" id="sort-ind-rate">↕</span></div>
+              </th>
+              <th style="width: 145px; min-width: 140px;" class="num-col sortable" data-sort-key="subtotal" onclick="requestTableSort('subtotal', event)" title="Click to sort by Subtotal">
+                <div class="th-content-wrap"><span>Subtotal (₹)</span><span class="th-sort-indicator" id="sort-ind-subtotal">↕</span></div>
+              </th>
+              <th style="width: 90px; min-width: 85px;" class="num-col sortable" data-sort-key="gstPercent" onclick="requestTableSort('gstPercent', event)" title="Click to sort by GST %">
+                <div class="th-content-wrap"><span>GST %</span><span class="th-sort-indicator" id="sort-ind-gstPercent">↕</span></div>
+              </th>
+              <th style="width: 160px; min-width: 155px;" class="num-col sortable" data-sort-key="grandTotal" onclick="requestTableSort('grandTotal', event)" title="Click to sort by Grand Total">
+                <div class="th-content-wrap"><span>Grand Total (₹)</span><span class="th-sort-indicator" id="sort-ind-grandTotal">↕</span></div>
+              </th>
+              <th style="width: 160px; min-width: 155px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="paidAmount" onclick="requestTableSort('paidAmount', event)" title="Click to sort by Paid Principal">
+                <div class="th-content-wrap"><span>Paid Principal (₹)</span><span class="th-sort-indicator" id="sort-ind-paidAmount">↕</span></div>
+              </th>
+              <th style="width: 190px; min-width: 185px;" class="sortable" data-sort-key="paymentDate" onclick="requestTableSort('paymentDate', event)" title="Click to sort by Payment Date">
+                <div class="th-content-wrap"><span>Payment Date</span><span class="th-sort-indicator" id="sort-ind-paymentDate">↕</span></div>
+              </th>
+              <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="creditDays" onclick="requestTableSort('creditDays', event)" title="Click to sort by Credit Days">
+                <div class="th-content-wrap"><span>Cr. Days</span><span class="th-sort-indicator" id="sort-ind-creditDays">↕</span></div>
+              </th>
+              <th style="width: 130px; min-width: 125px;" class="sortable" data-sort-key="dueDate" onclick="requestTableSort('dueDate', event)" title="Click to sort by Due Date">
+                <div class="th-content-wrap"><span>Due Date</span><span class="th-sort-indicator" id="sort-ind-dueDate">↕</span></div>
+              </th>
+              <th style="width: 160px; min-width: 155px; background: rgba(239, 68, 68, 0.08);" class="num-col sortable" data-sort-key="principalOutstanding" onclick="requestTableSort('principalOutstanding', event)" title="Click to sort by Principal Balance">
+                <div class="th-content-wrap"><span>Principal Bal (₹)</span><span class="th-sort-indicator" id="sort-ind-principalOutstanding">↕</span></div>
+              </th>
+              <th style="width: 120px; min-width: 115px;" class="center-col sortable" data-sort-key="status" onclick="requestTableSort('status', event)" title="Click to sort by Payment Status">
+                <div class="th-content-wrap"><span>Status</span><span class="th-sort-indicator" id="sort-ind-status">↕</span></div>
+              </th>
+              <th style="width: 105px; min-width: 100px;" class="num-col interest-col sortable" data-sort-key="interestRate" onclick="requestTableSort('interestRate', event)" title="Click to sort by Interest Rate">
+                <div class="th-content-wrap"><span>Int. % p.a.</span><span class="th-sort-indicator" id="sort-ind-interestRate">↕</span></div>
+              </th>
+              <th style="width: 100px; min-width: 95px;" class="num-col interest-col sortable" data-sort-key="overdueDays" onclick="requestTableSort('overdueDays', event)" title="Click to sort by Overdue Days">
+                <div class="th-content-wrap"><span>Late Days</span><span class="th-sort-indicator" id="sort-ind-overdueDays">↕</span></div>
+              </th>
+              <th style="width: 145px; min-width: 140px;" class="num-col interest-col sortable" data-sort-key="interestAmount" onclick="requestTableSort('interestAmount', event)" title="Click to sort by Accrued Interest">
+                <div class="th-content-wrap"><span>Accrued Int. (₹)</span><span class="th-sort-indicator" id="sort-ind-interestAmount">↕</span></div>
+              </th>
+              <th style="width: 145px; min-width: 140px; background: rgba(245, 158, 11, 0.08);" class="num-col interest-col sortable" data-sort-key="interestPaid" onclick="requestTableSort('interestPaid', event)" title="Click to sort by Paid Interest">
+                <div class="th-content-wrap"><span>Paid Int. (₹)</span><span class="th-sort-indicator" id="sort-ind-interestPaid">↕</span></div>
+              </th>
+              <th style="width: 165px; min-width: 160px;" class="num-col sortable" data-sort-key="netOutstanding" onclick="requestTableSort('netOutstanding', event)" title="Click to sort by Net Balance">
+                <div class="th-content-wrap"><span>Net Bal (₹)</span><span class="th-sort-indicator" id="sort-ind-netOutstanding">↕</span></div>
+              </th>
+              <th style="width: 280px; min-width: 260px;" class="sortable" data-sort-key="remarks" onclick="requestTableSort('remarks', event)" title="Click to sort by Remarks">
+                <div class="th-content-wrap"><span>Remarks / Cheque No</span><span class="th-sort-indicator" id="sort-ind-remarks">↕</span></div>
+              </th>
               <th style="width: 100px; min-width: 100px;" class="center-col actions-col">Actions</th>
             </tr>
           </thead>
@@ -1697,6 +2071,8 @@
     let isLocalSaving = false;
     let lastLocalSaveTime = 0;
     let lastUserInteractionTime = 0;
+    let tableSort = [{ key: 'date', direction: 'desc' }];
+    let activeKpiFilter = null; // null | 'all' | 'settled' | 'outstanding' | 'interest' | 'overdue'
 
     // Helper: Detect if user is actively focused or typing in any input/filter/modal
     function isUserActivelyEditing() {
@@ -1727,6 +2103,241 @@
 
     // Allowed editable fields for auto-synced rows
     const SYNCED_EDITABLE_FIELDS = ['paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
+
+    // Semantic Status Badge Renderer with SVG Icons
+    function renderStatusBadge(status) {
+      if (status === 'paid') {
+        return `<span class="status-badge status-paid"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Paid</span>`;
+      }
+      if (status === 'overdue') {
+        return `<span class="status-badge status-overdue"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Overdue</span>`;
+      }
+      if (status === 'int-due') {
+        return `<span class="status-badge status-int-due"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Int. Due</span>`;
+      }
+      if (status === 'partial') {
+        return `<span class="status-badge status-partial"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20v-20z" fill="currentColor"/></svg> Partial</span>`;
+      }
+      return `<span class="status-badge status-pending"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Pending</span>`;
+    }
+
+    // Dynamic Multi-Column Sort Comparator
+    function compareLedgerRows(a, b) {
+      for (const sortItem of tableSort) {
+        const key = sortItem.key;
+        const dir = sortItem.direction === 'desc' ? -1 : 1;
+        let valA, valB;
+
+        if (key === 'dueDate' || key === 'principalOutstanding' || key === 'status' || key === 'overdueDays' || key === 'interestAmount' || key === 'interestOutstanding' || key === 'netOutstanding') {
+          const compA = computeRowFinancials(a);
+          const compB = computeRowFinancials(b);
+          valA = compA[key];
+          valB = compB[key];
+        } else {
+          valA = a[key];
+          valB = b[key];
+        }
+
+        if (valA === undefined || valA === null) valA = '';
+        if (valB === undefined || valB === null) valB = '';
+
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          if (valA !== valB) {
+            return (valA - valB) * dir;
+          }
+        } else if (key === 'date' || key === 'paymentDate' || key === 'dueDate') {
+          const timeA = valA ? new Date(valA).getTime() : 0;
+          const timeB = valB ? new Date(valB).getTime() : 0;
+          if (timeA !== timeB) {
+            return (timeA - timeB) * dir;
+          }
+        } else {
+          const strA = String(valA).toLowerCase();
+          const strB = String(valB).toLowerCase();
+          const cmp = strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
+          if (cmp !== 0) {
+            return cmp * dir;
+          }
+        }
+      }
+      return 0;
+    }
+
+    // Request Column Sort Handler with Multi-Column (Shift+Click) Support
+    function requestTableSort(key, event) {
+      const isMulti = event && (event.shiftKey || event.metaKey);
+      const existingIdx = tableSort.findIndex(s => s.key === key);
+
+      if (isMulti) {
+        if (existingIdx !== -1) {
+          if (tableSort[existingIdx].direction === 'asc') {
+            tableSort[existingIdx].direction = 'desc';
+          } else {
+            tableSort.splice(existingIdx, 1);
+            if (tableSort.length === 0) {
+              tableSort = [{ key: 'date', direction: 'desc' }];
+            }
+          }
+        } else {
+          tableSort.push({ key, direction: 'asc' });
+        }
+      } else {
+        if (existingIdx === 0 && tableSort.length === 1) {
+          tableSort[0].direction = tableSort[0].direction === 'asc' ? 'desc' : 'asc';
+        } else {
+          tableSort = [{ key, direction: 'asc' }];
+        }
+      }
+
+      renderTable();
+    }
+
+    // Interactive Top KPI Filter Toggle Handler
+    function toggleKpiFilter(filterType) {
+      if (filterType === 'all') {
+        activeKpiFilter = null;
+      } else if (activeKpiFilter === filterType) {
+        activeKpiFilter = null;
+      } else {
+        activeKpiFilter = filterType;
+      }
+      updateKpiCardStyles();
+      renderTable();
+    }
+
+    function updateKpiCardStyles() {
+      const cards = [
+        { id: 'kpi-card-total', type: 'all' },
+        { id: 'kpi-card-settled', type: 'settled' },
+        { id: 'kpi-card-outstanding', type: 'outstanding' },
+        { id: 'kpi-card-interest', type: 'interest' },
+        { id: 'kpi-card-overdue', type: 'overdue' }
+      ];
+
+      cards.forEach(c => {
+        const el = document.getElementById(c.id);
+        if (!el) return;
+        if (activeKpiFilter === c.type) {
+          el.classList.add('is-active-filter');
+        } else {
+          el.classList.remove('is-active-filter');
+        }
+      });
+    }
+
+    // Render Dismissible Active Filter Chips Bar
+    function renderActiveFilterChips() {
+      const container = document.getElementById('active-filter-chips');
+      if (!container) return;
+
+      const search = (document.getElementById('sheet-search')?.value || '').trim();
+      const party = document.getElementById('filter-party')?.value || 'all';
+      const status = document.getElementById('filter-status')?.value || 'all';
+      const fromDate = document.getElementById('filter-from-date')?.value || '';
+      const toDate = document.getElementById('filter-to-date')?.value || '';
+
+      const chips = [];
+
+      if (search) {
+        chips.push({
+          id: 'search',
+          label: 'Search',
+          val: `"${search}"`,
+          onRemove: "document.getElementById('sheet-search').value=''; renderTable();"
+        });
+      }
+
+      if (party !== 'all') {
+        chips.push({
+          id: 'party',
+          label: activeTab === 'sales' ? 'Customer' : 'Supplier',
+          val: party,
+          onRemove: "document.getElementById('filter-party').value='all'; renderTable();"
+        });
+      }
+
+      if (status !== 'all') {
+        const statusLabels = {
+          'overdue': 'Overdue',
+          'pending': 'Pending',
+          'partial': 'Partial',
+          'int-due': 'Interest Due',
+          'paid': 'Paid'
+        };
+        chips.push({
+          id: 'status',
+          label: 'Status',
+          val: statusLabels[status] || status,
+          onRemove: "document.getElementById('filter-status').value='all'; renderTable();"
+        });
+      }
+
+      if (fromDate || toDate) {
+        const rangeText = `${fromDate ? formatDateDisplay(fromDate) : 'Start'} to ${toDate ? formatDateDisplay(toDate) : 'End'}`;
+        chips.push({
+          id: 'dateRange',
+          label: 'Period',
+          val: rangeText,
+          onRemove: "document.getElementById('filter-from-date').value=''; document.getElementById('filter-to-date').value=''; renderTable();"
+        });
+      }
+
+      if (activeKpiFilter) {
+        const kpiNames = {
+          'settled': 'Settled (Paid in Full)',
+          'outstanding': 'Outstanding Balances',
+          'interest': 'Late Interest Accrued',
+          'overdue': 'Overdue Bills'
+        };
+        chips.push({
+          id: 'kpiFilter',
+          label: 'Quick Filter',
+          val: kpiNames[activeKpiFilter] || activeKpiFilter,
+          onRemove: "toggleKpiFilter(null);"
+        });
+      }
+
+      const isCustomSort = tableSort.length > 1 || (tableSort.length === 1 && (tableSort[0].key !== 'date' || tableSort[0].direction !== 'desc'));
+      if (isCustomSort) {
+        const sortLabels = {
+          date: 'Date', challanNo: 'Bill No', partyName: 'Party', quality: 'Quality', qty: 'Qty',
+          rate: 'Rate', subtotal: 'Subtotal', gstPercent: 'GST %', grandTotal: 'Grand Total',
+          paidAmount: 'Paid', paymentDate: 'Payment Date', creditDays: 'Credit Days', dueDate: 'Due Date',
+          principalOutstanding: 'Principal Bal', status: 'Status', interestRate: 'Int. %',
+          overdueDays: 'Late Days', interestAmount: 'Accrued Int.', interestPaid: 'Paid Int.',
+          netOutstanding: 'Net Bal', remarks: 'Remarks'
+        };
+        const sortSummary = tableSort.map(s => `${sortLabels[s.key] || s.key} (${s.direction === 'asc' ? '▲ ASC' : '▼ DESC'})`).join(', ');
+        chips.push({
+          id: 'sort',
+          label: 'Sorted By',
+          val: sortSummary,
+          onRemove: "tableSort=[{key:'date',direction:'desc'}]; renderTable();"
+        });
+      }
+
+      if (chips.length === 0) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+      }
+
+      container.style.display = 'flex';
+      container.innerHTML = `
+        <span class="filter-chips-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Active Filters (${chips.length}):
+        </span>
+        ${chips.map(c => `
+          <span class="filter-chip">
+            <span class="filter-chip-label">${escapeHtml(c.label)}:</span>
+            <span>${escapeHtml(c.val)}</span>
+            <button class="filter-chip-remove" onclick="${c.onRemove}" title="Remove this filter">&times;</button>
+          </span>
+        `).join('')}
+        <button class="filter-chips-clear-all" onclick="clearFilters()">Clear All</button>
+      `;
+    }
 
     // Toast Notification helper
     function showToast(message, type = 'info') {
@@ -2354,7 +2965,7 @@
     function updateTabUI() {
       const salesBtn = document.getElementById('tab-btn-sales');
       const purchaseBtn = document.getElementById('tab-btn-purchase');
-      const partyHeader = document.getElementById('th-party-header');
+      const partyTitle = document.getElementById('th-party-title');
       const kpiBilledLabel = document.getElementById('kpi-label-total-billed');
       const kpiSettledLabel = document.getElementById('kpi-label-total-settled');
       const kpiOutstandingLabel = document.getElementById('kpi-label-total-outstanding');
@@ -2362,14 +2973,14 @@
       if (activeTab === 'sales') {
         salesBtn.classList.add('active');
         purchaseBtn.classList.remove('active');
-        partyHeader.textContent = 'Customer Name';
+        if (partyTitle) partyTitle.textContent = 'Customer Name';
         kpiBilledLabel.textContent = 'Total Sales Invoiced (₹)';
         kpiSettledLabel.textContent = 'Total Collections (₹)';
         kpiOutstandingLabel.textContent = 'Principal Balance (₹)';
       } else {
         purchaseBtn.classList.add('active');
         salesBtn.classList.remove('active');
-        partyHeader.textContent = 'Supplier Name';
+        if (partyTitle) partyTitle.textContent = 'Supplier Name';
         kpiBilledLabel.textContent = 'Total Purchase Billed (₹)';
         kpiSettledLabel.textContent = 'Total Supplier Payments (₹)';
         kpiOutstandingLabel.textContent = 'Principal Balance (₹)';
@@ -2558,8 +3169,7 @@
 
       const elStatus = tr.querySelector('.col-val-status');
       if (elStatus) {
-        const badgeLabel = comp.status === 'int-due' ? 'Int. Due' : comp.status;
-        elStatus.innerHTML = `<span class="status-badge status-${comp.status}">${badgeLabel}</span>`;
+        elStatus.innerHTML = `<div class="cell-readonly" style="justify-content: center;">${renderStatusBadge(comp.status)}</div>`;
       }
 
       const elOverdueDays = tr.querySelector('.col-val-overdue-days');
@@ -2583,11 +3193,11 @@
 
     // Live update KPI summary metrics and footer aggregates without full table re-render
     function updateFooterAndKPISummaries() {
-      const search = (document.getElementById('sheet-search').value || '').toLowerCase().trim();
-      const partyFilter = document.getElementById('filter-party').value;
-      const statusFilter = document.getElementById('filter-status').value;
-      const fromDate = document.getElementById('filter-from-date').value;
-      const toDate = document.getElementById('filter-to-date').value;
+      const search = (document.getElementById('sheet-search')?.value || '').toLowerCase().trim();
+      const partyFilter = document.getElementById('filter-party')?.value || 'all';
+      const statusFilter = document.getElementById('filter-status')?.value || 'all';
+      const fromDate = document.getElementById('filter-from-date')?.value || '';
+      const toDate = document.getElementById('filter-to-date')?.value || '';
 
       let rows = (ledgerData[activeTab] || []).filter(row => {
         if (!row) return false;
@@ -2598,10 +3208,18 @@
         if (partyFilter !== 'all' && (row.partyName || '').trim() !== partyFilter) return false;
         if (fromDate && row.date && row.date < fromDate) return false;
         if (toDate && row.date && row.date > toDate) return false;
-        if (statusFilter !== 'all') {
-          const computed = computeRowFinancials(row);
-          if (computed.status !== statusFilter) return false;
+        
+        const computed = computeRowFinancials(row);
+        if (statusFilter !== 'all' && computed.status !== statusFilter) return false;
+
+        // KPI Filter Check
+        if (activeKpiFilter) {
+          if (activeKpiFilter === 'settled' && computed.status !== 'paid') return false;
+          if (activeKpiFilter === 'outstanding' && computed.principalOutstanding <= 0) return false;
+          if (activeKpiFilter === 'interest' && computed.interestAmount <= 0) return false;
+          if (activeKpiFilter === 'overdue' && computed.status !== 'overdue' && computed.status !== 'int-due') return false;
         }
+
         return true;
       });
 
@@ -2627,30 +3245,50 @@
       });
 
       // Update KPI Cards
-      document.getElementById('kpi-val-total-billed').textContent = formatCurrency(totalBilled);
-      document.getElementById('kpi-sub-total-billed').textContent = `${rows.length} transactions`;
+      const kpiBilled = document.getElementById('kpi-val-total-billed');
+      if (kpiBilled) kpiBilled.textContent = formatCurrency(totalBilled);
+      const kpiSubBilled = document.getElementById('kpi-sub-total-billed');
+      if (kpiSubBilled) kpiSubBilled.textContent = `${rows.length} transactions`;
 
-      document.getElementById('kpi-val-total-settled').textContent = formatCurrency(totalSettled);
+      const kpiSettled = document.getElementById('kpi-val-total-settled');
+      if (kpiSettled) kpiSettled.textContent = formatCurrency(totalSettled);
       const recoveryPct = totalBilled > 0 ? ((totalSettled / totalBilled) * 100).toFixed(1) : 0;
-      document.getElementById('kpi-sub-total-settled').textContent = `${recoveryPct}% settled (incl. interest)`;
+      const kpiSubSettled = document.getElementById('kpi-sub-total-settled');
+      if (kpiSubSettled) kpiSubSettled.textContent = `${recoveryPct}% settled (incl. interest)`;
 
-      document.getElementById('kpi-val-total-outstanding').textContent = formatCurrency(totalPrincipalOutstanding);
-      document.getElementById('kpi-sub-total-outstanding').textContent = `${((totalPrincipalOutstanding / (totalBilled || 1)) * 100).toFixed(1)}% unpaid`;
+      const kpiOutstanding = document.getElementById('kpi-val-total-outstanding');
+      if (kpiOutstanding) kpiOutstanding.textContent = formatCurrency(totalPrincipalOutstanding);
+      const kpiSubOutstanding = document.getElementById('kpi-sub-total-outstanding');
+      if (kpiSubOutstanding) kpiSubOutstanding.textContent = `${((totalPrincipalOutstanding / (totalBilled || 1)) * 100).toFixed(1)}% unpaid`;
 
-      document.getElementById('kpi-val-total-interest').textContent = formatCurrency(totalInterest);
-      document.getElementById('kpi-sub-total-interest').textContent = calculateInterest ? `Settled: ${formatCurrency(totalInterestPaid)}` : 'Disabled';
+      const kpiInterest = document.getElementById('kpi-val-total-interest');
+      if (kpiInterest) kpiInterest.textContent = formatCurrency(totalInterest);
+      const kpiSubInterest = document.getElementById('kpi-sub-total-interest');
+      if (kpiSubInterest) kpiSubInterest.textContent = calculateInterest ? `Settled: ${formatCurrency(totalInterestPaid)}` : 'Disabled';
 
-      document.getElementById('kpi-val-overdue-count').textContent = overdueCount;
-      document.getElementById('kpi-sub-overdue-count').textContent = overdueCount > 0 ? 'Action needed' : 'All accounts healthy';
+      const kpiOverdue = document.getElementById('kpi-val-overdue-count');
+      if (kpiOverdue) kpiOverdue.textContent = overdueCount;
+      const kpiSubOverdue = document.getElementById('kpi-sub-overdue-count');
+      if (kpiSubOverdue) kpiSubOverdue.textContent = overdueCount > 0 ? 'Action needed' : 'All accounts healthy';
 
       // Update Footer Stats
-      document.getElementById('stat-row-count').textContent = rows.length;
-      document.getElementById('stat-total-weight').textContent = `${totalWeight.toFixed(2)} Kg`;
-      document.getElementById('stat-total-invoiced').textContent = formatCurrency(totalBilled);
-      document.getElementById('stat-total-paid').textContent = formatCurrency(totalSettled);
-      document.getElementById('stat-total-outstanding').textContent = formatCurrency(totalPrincipalOutstanding);
-      document.getElementById('stat-total-interest').textContent = formatCurrency(totalInterest);
-      document.getElementById('stat-net-total').textContent = formatCurrency(totalNetOutstanding);
+      const statRowCount = document.getElementById('stat-row-count');
+      if (statRowCount) statRowCount.textContent = rows.length;
+      const statWeight = document.getElementById('stat-total-weight');
+      if (statWeight) statWeight.textContent = `${totalWeight.toFixed(2)} Kg`;
+      const statInvoiced = document.getElementById('stat-total-invoiced');
+      if (statInvoiced) statInvoiced.textContent = formatCurrency(totalBilled);
+      const statPaid = document.getElementById('stat-total-paid');
+      if (statPaid) statPaid.textContent = formatCurrency(totalSettled);
+      const statOutstanding = document.getElementById('stat-total-outstanding');
+      if (statOutstanding) statOutstanding.textContent = formatCurrency(totalPrincipalOutstanding);
+      const statInterest = document.getElementById('stat-total-interest');
+      if (statInterest) statInterest.textContent = formatCurrency(totalInterest);
+      const statNet = document.getElementById('stat-net-total');
+      if (statNet) statNet.textContent = formatCurrency(totalNetOutstanding);
+
+      updateKpiCardStyles();
+      renderActiveFilterChips();
     }
 
     // Date math: add days to a date string YYYY-MM-DD
@@ -2755,11 +3393,13 @@
     // Render Main Spreadsheet Table & KPI Metrics
     function renderTable(rebuildFocus = true) {
       const tbody = document.getElementById('excel-table-body');
-      const search = (document.getElementById('sheet-search').value || '').toLowerCase().trim();
-      const partyFilter = document.getElementById('filter-party').value;
-      const statusFilter = document.getElementById('filter-status').value;
-      const fromDate = document.getElementById('filter-from-date').value;
-      const toDate = document.getElementById('filter-to-date').value;
+      if (!tbody) return;
+
+      const search = (document.getElementById('sheet-search')?.value || '').toLowerCase().trim();
+      const partyFilter = document.getElementById('filter-party')?.value || 'all';
+      const statusFilter = document.getElementById('filter-status')?.value || 'all';
+      const fromDate = document.getElementById('filter-from-date')?.value || '';
+      const toDate = document.getElementById('filter-to-date')?.value || '';
 
       // Capture currently focused element before re-rendering
       const activeEl = document.activeElement;
@@ -2768,7 +3408,7 @@
       let selStart = null;
       let selEnd = null;
 
-      if (activeEl && tbody && tbody.contains(activeEl)) {
+      if (activeEl && tbody.contains(activeEl)) {
         const tr = activeEl.closest('tr');
         if (tr && tr.id && tr.id.startsWith('ledger-row-')) {
           focusedRowId = tr.id.replace('ledger-row-', '');
@@ -2799,17 +3439,46 @@
         if (fromDate && row.date && row.date < fromDate) return false;
         if (toDate && row.date && row.date > toDate) return false;
 
+        const computed = computeRowFinancials(row);
+
         // Status filter
-        if (statusFilter !== 'all') {
-          const computed = computeRowFinancials(row);
-          if (computed.status !== statusFilter) return false;
+        if (statusFilter !== 'all' && computed.status !== statusFilter) {
+          return false;
+        }
+
+        // Quick KPI Card Filter
+        if (activeKpiFilter) {
+          if (activeKpiFilter === 'settled' && computed.status !== 'paid') return false;
+          if (activeKpiFilter === 'outstanding' && computed.principalOutstanding <= 0) return false;
+          if (activeKpiFilter === 'interest' && computed.interestAmount <= 0) return false;
+          if (activeKpiFilter === 'overdue' && computed.status !== 'overdue' && computed.status !== 'int-due') return false;
         }
 
         return true;
       });
 
-      // Sort chronological descending by date
-      rows.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+      // Dynamic Multi-Column Sort
+      rows.sort(compareLedgerRows);
+
+      // Update Sort Indicators & Visual Highlighting in Header
+      const allSortThs = document.querySelectorAll('th.sortable');
+      allSortThs.forEach(th => {
+        const key = th.dataset.sortKey;
+        const ind = th.querySelector('.th-sort-indicator');
+        const sortIndex = tableSort.findIndex(s => s.key === key);
+        if (sortIndex !== -1) {
+          const sortItem = tableSort[sortIndex];
+          th.classList.add('is-sorted');
+          if (ind) {
+            const arrow = sortItem.direction === 'asc' ? '▲' : '▼';
+            const multiBadge = tableSort.length > 1 ? `<span style="font-size: 0.68rem; font-weight: 800; opacity: 0.85; margin-left: 2px;">${sortIndex + 1}</span>` : '';
+            ind.innerHTML = `${arrow}${multiBadge}`;
+          }
+        } else {
+          th.classList.remove('is-sorted');
+          if (ind) ind.textContent = '↕';
+        }
+      });
 
       // Calculate KPI Aggregates
       let totalBilled = 0;
@@ -2834,30 +3503,47 @@
       });
 
       // Update KPI Cards
-      document.getElementById('kpi-val-total-billed').textContent = formatCurrency(totalBilled);
-      document.getElementById('kpi-sub-total-billed').textContent = `${rows.length} transactions`;
+      const kpiBilled = document.getElementById('kpi-val-total-billed');
+      if (kpiBilled) kpiBilled.textContent = formatCurrency(totalBilled);
+      const kpiSubBilled = document.getElementById('kpi-sub-total-billed');
+      if (kpiSubBilled) kpiSubBilled.textContent = `${rows.length} transactions`;
 
-      document.getElementById('kpi-val-total-settled').textContent = formatCurrency(totalSettled);
+      const kpiSettled = document.getElementById('kpi-val-total-settled');
+      if (kpiSettled) kpiSettled.textContent = formatCurrency(totalSettled);
       const recoveryPct = totalBilled > 0 ? ((totalSettled / totalBilled) * 100).toFixed(1) : 0;
-      document.getElementById('kpi-sub-total-settled').textContent = `${recoveryPct}% settled (incl. interest)`;
+      const kpiSubSettled = document.getElementById('kpi-sub-total-settled');
+      if (kpiSubSettled) kpiSubSettled.textContent = `${recoveryPct}% settled (incl. interest)`;
 
-      document.getElementById('kpi-val-total-outstanding').textContent = formatCurrency(totalPrincipalOutstanding);
-      document.getElementById('kpi-sub-total-outstanding').textContent = `${((totalPrincipalOutstanding / (totalBilled || 1)) * 100).toFixed(1)}% unpaid`;
+      const kpiOutstanding = document.getElementById('kpi-val-total-outstanding');
+      if (kpiOutstanding) kpiOutstanding.textContent = formatCurrency(totalPrincipalOutstanding);
+      const kpiSubOutstanding = document.getElementById('kpi-sub-total-outstanding');
+      if (kpiSubOutstanding) kpiSubOutstanding.textContent = `${((totalPrincipalOutstanding / (totalBilled || 1)) * 100).toFixed(1)}% unpaid`;
 
-      document.getElementById('kpi-val-total-interest').textContent = formatCurrency(totalInterest);
-      document.getElementById('kpi-sub-total-interest').textContent = calculateInterest ? `Settled: ${formatCurrency(totalInterestPaid)}` : 'Disabled';
+      const kpiInterest = document.getElementById('kpi-val-total-interest');
+      if (kpiInterest) kpiInterest.textContent = formatCurrency(totalInterest);
+      const kpiSubInterest = document.getElementById('kpi-sub-total-interest');
+      if (kpiSubInterest) kpiSubInterest.textContent = calculateInterest ? `Settled: ${formatCurrency(totalInterestPaid)}` : 'Disabled';
 
-      document.getElementById('kpi-val-overdue-count').textContent = overdueCount;
-      document.getElementById('kpi-sub-overdue-count').textContent = overdueCount > 0 ? 'Action needed' : 'All accounts healthy';
+      const kpiOverdue = document.getElementById('kpi-val-overdue-count');
+      if (kpiOverdue) kpiOverdue.textContent = overdueCount;
+      const kpiSubOverdue = document.getElementById('kpi-sub-overdue-count');
+      if (kpiSubOverdue) kpiSubOverdue.textContent = overdueCount > 0 ? 'Action needed' : 'All accounts healthy';
 
       // Update Footer Stats
-      document.getElementById('stat-row-count').textContent = rows.length;
-      document.getElementById('stat-total-weight').textContent = `${totalWeight.toFixed(2)} Kg`;
-      document.getElementById('stat-total-invoiced').textContent = formatCurrency(totalBilled);
-      document.getElementById('stat-total-paid').textContent = formatCurrency(totalSettled);
-      document.getElementById('stat-total-outstanding').textContent = formatCurrency(totalPrincipalOutstanding);
-      document.getElementById('stat-total-interest').textContent = formatCurrency(totalInterest);
-      document.getElementById('stat-net-total').textContent = formatCurrency(totalNetOutstanding);
+      const statRowCount = document.getElementById('stat-row-count');
+      if (statRowCount) statRowCount.textContent = rows.length;
+      const statWeight = document.getElementById('stat-total-weight');
+      if (statWeight) statWeight.textContent = `${totalWeight.toFixed(2)} Kg`;
+      const statInvoiced = document.getElementById('stat-total-invoiced');
+      if (statInvoiced) statInvoiced.textContent = formatCurrency(totalBilled);
+      const statPaid = document.getElementById('stat-total-paid');
+      if (statPaid) statPaid.textContent = formatCurrency(totalSettled);
+      const statOutstanding = document.getElementById('stat-total-outstanding');
+      if (statOutstanding) statOutstanding.textContent = formatCurrency(totalPrincipalOutstanding);
+      const statInterest = document.getElementById('stat-total-interest');
+      if (statInterest) statInterest.textContent = formatCurrency(totalInterest);
+      const statNet = document.getElementById('stat-net-total');
+      if (statNet) statNet.textContent = formatCurrency(totalNetOutstanding);
 
       // Interest Column Visibility Toggle
       const intCols = document.querySelectorAll('.interest-col');
@@ -2865,13 +3551,49 @@
         el.style.display = calculateInterest ? '' : 'none';
       });
 
-      // Render Rows
+      // Update KPI Selection Styles & Active Filter Chips
+      updateKpiCardStyles();
+      renderActiveFilterChips();
+
+      // Render Empty State
       if (rows.length === 0) {
+        const hasAnyFilters = !!(search || partyFilter !== 'all' || statusFilter !== 'all' || fromDate || toDate || activeKpiFilter);
         tbody.innerHTML = `
           <tr>
-            <td colspan="23" style="text-align: center; padding: 3.5rem 1rem; color: var(--muted);">
-              <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; color: var(--fg);">No ledger entries found</div>
-              <div style="font-size: 0.875rem;">Click <strong>+ Add Row</strong> to insert manual bills or click <strong>Re-sync</strong> to fetch latest orders/sales.</div>
+            <td colspan="23" style="padding: 0;">
+              <div class="table-empty-state-wrap">
+                <div class="table-empty-icon-circle">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M3 9h18"/>
+                    <path d="M9 21V9"/>
+                    <line x1="14" y1="13" x2="18" y2="13" stroke-dasharray="2 2"/>
+                    <line x1="14" y1="17" x2="17" y2="17" stroke-dasharray="2 2"/>
+                  </svg>
+                </div>
+                <div class="table-empty-title">${hasAnyFilters ? 'No matching transactions found' : 'No ledger entries yet'}</div>
+                <div class="table-empty-subtitle">
+                  ${hasAnyFilters 
+                    ? 'None of your entries match the selected filters or search criteria. Try adjusting or clearing your active filters.'
+                    : 'Get started by creating a new manual transaction or syncing from your yarn orders and sales logs.'}
+                </div>
+                <div class="table-empty-actions">
+                  ${hasAnyFilters
+                    ? `<button class="btn btn-secondary" onclick="clearFilters()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                        Clear All Filters
+                       </button>`
+                    : `<button class="btn btn-primary" onclick="addNewRow()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        + Add First Row
+                       </button>
+                       <button class="btn btn-secondary" onclick="syncSourceData(true)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                        Re-sync Source Logs
+                       </button>`
+                  }
+                </div>
+              </div>
             </td>
           </tr>
         `;
@@ -2881,8 +3603,6 @@
       tbody.innerHTML = rows.map((row, idx) => {
         const comp = computeRowFinancials(row);
         const isLocked = (row.source && row.source !== 'manual') && !row.isManual;
-        const badgeLabel = comp.status === 'int-due' ? 'Int. Due' : comp.status;
-        let statusBadge = `<span class="status-badge status-${comp.status}">${badgeLabel}</span>`;
 
         return `
           <tr id="ledger-row-${row.id}" class="${comp.status === 'overdue' ? 'is-overdue' : (comp.status === 'paid' ? 'is-paid' : '')} ${isLocked ? 'is-locked' : ''}">
@@ -2971,7 +3691,7 @@
             </td>
 
             <td class="center-col cell-locked-bg col-val-status">
-              <div class="cell-readonly" style="justify-content: center;">${statusBadge}</div>
+              <div class="cell-readonly" style="justify-content: center;">${renderStatusBadge(comp.status)}</div>
             </td>
 
             <!-- Editable Interest Rate -->
@@ -3175,7 +3895,7 @@
             <td class="num-col font-mono bold" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</td>
             <td class="num-col font-mono" style="color: var(--warning); font-weight: 700;">${comp.interestPaid > 0 ? formatCurrency(comp.interestPaid) : '-'}</td>
             <td class="num-col font-mono bold" style="color: ${comp.netOutstanding > 0 ? 'var(--accent)' : 'var(--success)'};">${formatCurrency(comp.netOutstanding)}</td>
-            <td class="center-col"><span class="status-badge status-${comp.status}">${badgeLabel}</span></td>
+            <td class="center-col">${renderStatusBadge(comp.status)}</td>
           </tr>
         `;
       }).join('');
@@ -3488,13 +4208,21 @@
 
     // Reset Filters
     function clearFilters() {
-      document.getElementById('sheet-search').value = '';
-      document.getElementById('filter-party').value = 'all';
-      document.getElementById('filter-status').value = 'all';
-      document.getElementById('filter-from-date').value = '';
-      document.getElementById('filter-to-date').value = '';
+      const s = document.getElementById('sheet-search');
+      if (s) s.value = '';
+      const p = document.getElementById('filter-party');
+      if (p) p.value = 'all';
+      const st = document.getElementById('filter-status');
+      if (st) st.value = 'all';
+      const fd = document.getElementById('filter-from-date');
+      if (fd) fd.value = '';
+      const td = document.getElementById('filter-to-date');
+      if (td) td.value = '';
+      activeKpiFilter = null;
+      tableSort = [{ key: 'date', direction: 'desc' }];
+      updateKpiCardStyles();
       renderTable();
-      showToast('Filters reset', 'info');
+      showToast('Filters and sorting reset', 'info');
     }
 
     // Utility: HTML Escape
