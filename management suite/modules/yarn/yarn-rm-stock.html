@@ -2390,7 +2390,7 @@
       }
     }
 
-    // Listen for iframe modal messages (Close / Update from Yarn RM Orders)
+    // Listen for iframe modal messages (Close / Update from Yarn RM Orders & Ledger)
     window.addEventListener('message', (e) => {
       if (e.data && typeof e.data === 'object') {
         if (e.data.type === 'CLOSE_YARN_ORDER_MODAL') {
@@ -2398,14 +2398,23 @@
           const iframe = document.getElementById('order-details-iframe');
           if (overlay) overlay.classList.remove('active');
           if (iframe) iframe.src = 'about:blank';
-          // Re-sync stock data
           initSeedData();
           renderStockBook();
-        } else if (e.data.type === 'YARN_ORDER_UPDATED') {
+        } else if (e.data.type === 'YARN_ORDER_UPDATED' || e.data.type === 'YARN_STOCK_UPDATED' || e.data.type === 'STORAGE_SYNC') {
           initSeedData();
           renderStockBook();
         }
       }
+    });
+
+    window.addEventListener('yarn-order-updated', () => {
+      initSeedData();
+      renderStockBook();
+    });
+
+    window.addEventListener('yarn-stock-updated', () => {
+      initSeedData();
+      renderStockBook();
     });
 
     function deleteContextLot() {
@@ -2436,9 +2445,31 @@
           console.error("Error clearing quality from yarn-rm-orders:", e);
         }
 
+        // Clean from purchase ledger
+        try {
+          const rawLedger = localStorage.getItem('yarn_purchase_ledger_data');
+          let purchaseLedger = rawLedger ? JSON.parse(rawLedger) : [];
+          if (Array.isArray(purchaseLedger)) {
+            purchaseLedger = purchaseLedger.filter(r => !(r.quality && r.quality.startsWith(contextQualityName)));
+            localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(purchaseLedger));
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+              window.VishwaSupabase.saveToSupabase('yarn_purchase_ledger_data', purchaseLedger);
+            }
+          }
+        } catch(e) {}
+
         stockData = stockData.filter(l => l.quality !== contextQualityName);
         saveStockData();
         renderStockBook();
+
+        try {
+          window.dispatchEvent(new CustomEvent('yarn-order-updated'));
+          window.dispatchEvent(new CustomEvent('yarn-stock-updated'));
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn-rm-orders' } }));
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: STORAGE_KEY } }));
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn_purchase_ledger_data' } }));
+          window.postMessage({ type: 'YARN_ORDER_UPDATED' }, '*');
+        } catch(e) {}
         return;
       }
 
@@ -2498,6 +2529,24 @@
         console.error("Error removing challan from yarn-rm-orders:", e);
       }
 
+      // Delete from purchase ledger
+      try {
+        const rawLedger = localStorage.getItem('yarn_purchase_ledger_data');
+        let purchaseLedger = rawLedger ? JSON.parse(rawLedger) : [];
+        if (Array.isArray(purchaseLedger)) {
+          purchaseLedger = purchaseLedger.filter(r => 
+            String(r.batchId) !== String(lot.batchId) &&
+            String(r.id) !== String(lot.batchId) &&
+            !(lot.challanNo && String(r.challanNo).trim() === String(lot.challanNo).trim() && String(r.partyName).trim().toLowerCase() === String(lot.supplier || '').trim().toLowerCase()) &&
+            !(lot.lotNumber && String(r.lotNumber).trim() === String(lot.lotNumber).trim() && String(r.partyName).trim().toLowerCase() === String(lot.supplier || '').trim().toLowerCase())
+          );
+          localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(purchaseLedger));
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+            window.VishwaSupabase.saveToSupabase('yarn_purchase_ledger_data', purchaseLedger);
+          }
+        }
+      } catch(e) {}
+
       // Relational database cascade deletion
       if (window.VishwaSupabase && typeof window.VishwaSupabase.deleteYarnLotRelational === 'function') {
         window.VishwaSupabase.deleteYarnLotRelational(contextLotId);
@@ -2507,6 +2556,15 @@
       stockData = stockData.filter(l => String(l.id) !== String(contextLotId));
       saveStockData();
       renderStockBook();
+
+      try {
+        window.dispatchEvent(new CustomEvent('yarn-order-updated'));
+        window.dispatchEvent(new CustomEvent('yarn-stock-updated'));
+        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn-rm-orders' } }));
+        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: STORAGE_KEY } }));
+        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn_purchase_ledger_data' } }));
+        window.postMessage({ type: 'YARN_ORDER_UPDATED' }, '*');
+      } catch(e) {}
     }
 
     // Modal Handlers
@@ -2897,6 +2955,100 @@
       } else if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
         window.VishwaSupabase.set('yarn-rm-orders', orders);
       }
+
+      // Sync to purchase ledger
+      try {
+        const rawLedger = localStorage.getItem('yarn_purchase_ledger_data');
+        let purchaseLedger = rawLedger ? JSON.parse(rawLedger) : [];
+        if (!Array.isArray(purchaseLedger)) purchaseLedger = [];
+
+        const bGross = totalWtSum;
+        const bGR = batchBoxes.reduce((acc, b) => acc + (b.returnedWeight || 0), 0);
+        const bNet = Math.max(0, Number((bGross - bGR).toFixed(2)));
+        const bRate = Number(matchingOrder.price) || 0;
+        const uniqueSyncKey = `order_${matchingOrder.id || matchingOrder.orderNumber}_batch_${newBatch.id}_${challanNo}`;
+        const deterministicId = 'PUR-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+        const existingRowIdx = purchaseLedger.findIndex(r => 
+          (r.id && r.id === deterministicId) ||
+          (r.syncKey && r.syncKey === uniqueSyncKey) ||
+          (newBatch.id && String(r.batchId) === String(newBatch.id)) ||
+          (challanNo && String(r.challanNo).trim() === challanNo && String(r.partyName).trim().toLowerCase() === supplier.toLowerCase())
+        );
+
+        const subtotal = Number((bNet * bRate).toFixed(2));
+        const existingRow = existingRowIdx >= 0 ? purchaseLedger[existingRowIdx] : null;
+        const gstPct = existingRow && existingRow.gstPercent !== undefined ? Number(existingRow.gstPercent) : 5.0;
+        const gstAmt = Number(((subtotal * gstPct) / 100).toFixed(2));
+        const grandTotal = Number((subtotal + gstAmt).toFixed(2));
+        const nowIso = new Date().toISOString();
+
+        const grBoxesAlloc = batchBoxes.filter(b => (b.returnedWeight || 0) > 0).map(b => ({
+          boxNumber: b.boxNumber,
+          cones: b.cones || 0,
+          weight: b.weight,
+          returnedWeight: b.returnedWeight,
+          date: b.returnedDate || receiveDate,
+          remarks: b.returnedRemarks || (bGR > 0 ? `GR (-${Number(b.returnedWeight).toFixed(2)} Kg)` : '')
+        }));
+
+        const ledgerRow = {
+          id: existingRow ? existingRow.id : deterministicId,
+          syncKey: uniqueSyncKey,
+          orderId: matchingOrder.id || '',
+          orderNumber: matchingOrder.orderNumber || '',
+          batchId: newBatch.id,
+          lotNumber: lotNumber,
+          source: 'yarn-rm-orders',
+          date: receiveDate,
+          challanNo: challanNo || ('ORD-' + matchingOrder.orderNumber),
+          partyName: supplier || 'Unknown Supplier',
+          quality: quality + (lotNumber ? ` (Lot: ${lotNumber})` : ''),
+          grossQty: Number(bGross.toFixed(2)),
+          grQty: Number(bGR.toFixed(2)),
+          qty: Number(bNet.toFixed(2)),
+          grAmount: Number((bGR * bRate).toFixed(2)),
+          grossAmount: Number((bGross * bRate).toFixed(2)),
+          grBoxes: grBoxesAlloc,
+          grDate: bGR > 0 ? (grBoxesAlloc[0]?.date || receiveDate) : null,
+          grRemarks: bGR > 0 ? (grBoxesAlloc[0]?.remarks || `GR (-${bGR.toFixed(2)} Kg)`) : null,
+          rate: bRate,
+          subtotal: subtotal,
+          gstPercent: gstPct,
+          grandTotal: grandTotal,
+          paidAmount: existingRow ? Number(existingRow.paidAmount) || 0 : 0,
+          paymentDate: existingRow ? (existingRow.paymentDate || '') : '',
+          creditDays: existingRow ? (Number(existingRow.creditDays) || 30) : 30,
+          interestRate: existingRow && existingRow.interestRate !== undefined ? Number(existingRow.interestRate) : 18.0,
+          interestPaid: existingRow ? Number(existingRow.interestPaid) || 0 : 0,
+          remarks: bGR > 0 ? `Auto-synced from Inward Challan #${challanNo} (-${bGR.toFixed(2)} Kg GR)` : `Auto-synced from Inward Challan #${challanNo}`,
+          isManual: false,
+          created_at: existingRow ? (existingRow.created_at || nowIso) : nowIso,
+          updated_at: nowIso
+        };
+
+        if (existingRowIdx >= 0) {
+          purchaseLedger[existingRowIdx] = ledgerRow;
+        } else {
+          purchaseLedger.unshift(ledgerRow);
+        }
+
+        localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(purchaseLedger));
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+          window.VishwaSupabase.saveToSupabase('yarn_purchase_ledger_data', purchaseLedger);
+        }
+      } catch(err) {
+        console.error("Ledger sync error from Challan entry:", err);
+      }
+
+      try {
+        window.dispatchEvent(new CustomEvent('yarn-order-updated', { detail: { orders } }));
+        window.dispatchEvent(new CustomEvent('yarn-stock-updated'));
+        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn-rm-orders' } }));
+        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: STORAGE_KEY } }));
+        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn_purchase_ledger_data' } }));
+        window.postMessage({ type: 'YARN_ORDER_UPDATED', orders }, '*');
+      } catch(e) {}
 
       initSeedData();
       closeModal('modal-challan');

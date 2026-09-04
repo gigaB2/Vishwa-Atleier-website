@@ -1278,16 +1278,36 @@
           handleStorageChange({ key });
         };
 
+        const handleOrderUpdated = () => {
+          if (key === YARN_ORDERS_STORAGE_KEY) {
+            handleStorageChange({ key });
+          }
+        };
+
+        const handleMessage = (e) => {
+          if (e && e.data && typeof e.data === 'object') {
+            if ((e.data.type === 'YARN_ORDER_UPDATED' && key === YARN_ORDERS_STORAGE_KEY) ||
+                (e.data.type === 'YARN_STOCK_UPDATED' && key === YARN_STOCK_STORAGE_KEY) ||
+                (e.data.type === 'STORAGE_SYNC' && e.data.key === key)) {
+              handleStorageChange({ key });
+            }
+          }
+        };
+
         window.addEventListener('storage', handleStorageChange);
         window.addEventListener('supabase-sync', handleSupabaseSync);
         window.addEventListener('supabase-ready', handleSupabaseReady);
         window.addEventListener('supabase-item-deleted', handleItemDeleted);
+        window.addEventListener('yarn-order-updated', handleOrderUpdated);
+        window.addEventListener('message', handleMessage);
 
         return () => {
           window.removeEventListener('storage', handleStorageChange);
           window.removeEventListener('supabase-sync', handleSupabaseSync);
           window.removeEventListener('supabase-ready', handleSupabaseReady);
           window.removeEventListener('supabase-item-deleted', handleItemDeleted);
+          window.removeEventListener('yarn-order-updated', handleOrderUpdated);
+          window.removeEventListener('message', handleMessage);
         };
       }, [key, initialValue]);
 
@@ -2164,12 +2184,40 @@
             let stockList = rawStock ? JSON.parse(rawStock) : [];
             if (Array.isArray(stockList)) {
               const orderRef = targetOrder.orderNumber || targetOrder.id;
-              stockList = stockList.filter(s => s.orderRef !== orderRef);
+              stockList = stockList.filter(s => s.orderRef !== orderRef && s.id !== orderRef);
               localStorage.setItem(YARN_STOCK_STORAGE_KEY, JSON.stringify(stockList));
               if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
                 window.VishwaSupabase.saveToSupabase(YARN_STOCK_STORAGE_KEY, stockList, true);
               }
             }
+          } catch(e) {}
+
+          // Remove linked purchase ledger rows
+          try {
+            const rawLedger = localStorage.getItem('yarn_purchase_ledger_data');
+            let purchaseLedger = rawLedger ? JSON.parse(rawLedger) : [];
+            if (Array.isArray(purchaseLedger)) {
+              const orderRef = targetOrder.orderNumber || targetOrder.id;
+              purchaseLedger = purchaseLedger.filter(r => 
+                String(r.orderId) !== String(targetOrder.id) && 
+                String(r.orderNumber) !== String(targetOrder.orderNumber) &&
+                String(r.orderId) !== String(orderRef) &&
+                String(r.orderNumber) !== String(orderRef)
+              );
+              localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(purchaseLedger));
+              if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                window.VishwaSupabase.saveToSupabase('yarn_purchase_ledger_data', purchaseLedger, true);
+              }
+            }
+          } catch(e) {}
+
+          try {
+            window.dispatchEvent(new CustomEvent('yarn-order-updated', { detail: { orders: updatedList } }));
+            window.dispatchEvent(new CustomEvent('yarn-stock-updated'));
+            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: YARN_ORDERS_STORAGE_KEY } }));
+            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: YARN_STOCK_STORAGE_KEY } }));
+            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn_purchase_ledger_data' } }));
+            window.postMessage({ type: 'YARN_ORDER_UPDATED', orders: updatedList }, '*');
           } catch(e) {}
         }
       };
@@ -3149,6 +3197,119 @@
           console.error("Stock sync error:", e);
         }
 
+        // Sync directly into Yarn Purchase Ledger (yarn_purchase_ledger_data)
+        try {
+          const rawLedger = localStorage.getItem('yarn_purchase_ledger_data');
+          let purchaseLedger = rawLedger ? JSON.parse(rawLedger) : [];
+          if (!Array.isArray(purchaseLedger)) {
+            try {
+              const vishwaLedger = localStorage.getItem('vishwa_yarn_ledger_data');
+              if (vishwaLedger) {
+                const parsed = JSON.parse(vishwaLedger);
+                purchaseLedger = Array.isArray(parsed) ? parsed : (parsed.purchase || []);
+              }
+            } catch(e) {}
+          }
+          if (!Array.isArray(purchaseLedger)) purchaseLedger = [];
+
+          const bBoxes = processed.boxes || [];
+          const bGross = bBoxes.reduce((acc, bx) => acc + (Number(bx.weight) || 0), 0) || (Number(processed.grossWeight) || Number(processed.totalWeight) || 0);
+          const bGR = bBoxes.reduce((acc, bx) => acc + (Number(bx.returnedWeight) || 0), 0) || (Number(processed.returnedWeight) || 0);
+          const bNet = Math.max(0, Number((bGross - bGR).toFixed(2)));
+          const bRate = Number(processed.rate) || Number(order.price) || 0;
+          const bChallan = String(processed.challanNumber || '').trim();
+          const bLot = String(processed.lotNumber || '').trim();
+          const bBatchId = String(processed.id || (editingBatch ? editingBatch.id : '')).trim();
+          const orderNum = String(order.orderNumber || order.id || '').trim();
+          const supplierName = (order.supplier || '').trim();
+          const recDateOnly = (processed.receiveDate || new Date().toISOString().split('T')[0]).split('T')[0];
+
+          const uniqueSyncKey = `order_${order.id || orderNum}_batch_${bBatchId}_${bChallan}`;
+          const deterministicId = 'PUR-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+          const grBoxesAlloc = bBoxes.filter(bx => (Number(bx.returnedWeight) || 0) > 0).map(bx => ({
+            boxNumber: bx.boxNumber || bx.id || '',
+            cones: Number(bx.cones) || 0,
+            weight: Number(bx.weight) || 0,
+            returnedWeight: Number(bx.returnedWeight) || 0,
+            date: bx.returnedDate ? bx.returnedDate.split('T')[0] : recDateOnly,
+            remarks: bx.returnedRemarks || (bGR > 0 ? `GR (-${Number(bx.returnedWeight).toFixed(2)} Kg)` : '')
+          }));
+
+          const existingRowIdx = purchaseLedger.findIndex(r => 
+            (r.id && r.id === deterministicId) ||
+            (r.syncKey && r.syncKey === uniqueSyncKey) ||
+            (bBatchId && String(r.batchId) === bBatchId) ||
+            (bChallan && String(r.challanNo).trim() === bChallan && String(r.partyName).trim().toLowerCase() === supplierName.toLowerCase()) ||
+            (bLot && String(r.lotNumber).trim() === bLot && bChallan && String(r.challanNo).trim() === bChallan)
+          );
+
+          const subtotal = Number((bNet * bRate).toFixed(2));
+          const existingRow = existingRowIdx >= 0 ? purchaseLedger[existingRowIdx] : null;
+          const gstPct = existingRow && existingRow.gstPercent !== undefined ? Number(existingRow.gstPercent) : 5.0;
+          const gstAmt = Number(((subtotal * gstPct) / 100).toFixed(2));
+          const grandTotal = Number((subtotal + gstAmt).toFixed(2));
+          const nowIso = new Date().toISOString();
+
+          const ledgerRow = {
+            id: existingRow ? existingRow.id : deterministicId,
+            syncKey: uniqueSyncKey,
+            orderId: order.id || '',
+            orderNumber: orderNum || '',
+            batchId: bBatchId || (existingRow ? existingRow.batchId : ''),
+            lotNumber: bLot,
+            source: 'yarn-rm-orders',
+            date: recDateOnly,
+            challanNo: bChallan || ('ORD-' + orderNum),
+            partyName: supplierName || 'Unknown Supplier',
+            quality: (order.quality || 'Yarn') + (bLot ? ` (Lot: ${bLot})` : ''),
+            grossQty: Number(bGross.toFixed(2)),
+            grQty: Number(bGR.toFixed(2)),
+            qty: Number(bNet.toFixed(2)),
+            grAmount: Number((bGR * bRate).toFixed(2)),
+            grossAmount: Number((bGross * bRate).toFixed(2)),
+            grBoxes: grBoxesAlloc,
+            grDate: bGR > 0 ? (grBoxesAlloc[0]?.date || recDateOnly) : null,
+            grRemarks: bGR > 0 ? (grBoxesAlloc[0]?.remarks || `GR issued in RM Orders (-${bGR.toFixed(2)} Kg)`) : null,
+            rate: bRate,
+            subtotal: subtotal,
+            gstPercent: gstPct,
+            grandTotal: grandTotal,
+            paidAmount: existingRow ? Number(existingRow.paidAmount) || 0 : 0,
+            paymentDate: existingRow ? (existingRow.paymentDate || '') : '',
+            creditDays: existingRow ? (Number(existingRow.creditDays) || Number(order.creditDays) || 30) : (Number(order.creditDays) || 30),
+            interestRate: existingRow && existingRow.interestRate !== undefined ? Number(existingRow.interestRate) : 18.0,
+            interestPaid: existingRow ? Number(existingRow.interestPaid) || 0 : 0,
+            remarks: bGR > 0 ? `Auto-synced from RM Order #${orderNum} (-${bGR.toFixed(2)} Kg GR deducted)` : `Auto-synced from Yarn RM Order #${orderNum}`,
+            isManual: false,
+            created_at: existingRow ? (existingRow.created_at || nowIso) : nowIso,
+            updated_at: nowIso
+          };
+
+          if (existingRowIdx >= 0) {
+            purchaseLedger[existingRowIdx] = ledgerRow;
+          } else {
+            purchaseLedger.unshift(ledgerRow);
+          }
+
+          localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(purchaseLedger));
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+            window.VishwaSupabase.saveToSupabase('yarn_purchase_ledger_data', purchaseLedger);
+          }
+        } catch(e) {
+          console.error("Ledger sync error:", e);
+        }
+
+        try {
+          window.dispatchEvent(new CustomEvent('yarn-order-updated'));
+          window.dispatchEvent(new CustomEvent('yarn-stock-updated'));
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: YARN_ORDERS_STORAGE_KEY } }));
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: YARN_STOCK_STORAGE_KEY } }));
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn_purchase_ledger_data' } }));
+          window.postMessage({ type: 'YARN_ORDER_UPDATED' }, '*');
+          window.postMessage({ type: 'YARN_STOCK_UPDATED' }, '*');
+        } catch(e) {}
+
         onUpdate({ ...order, batches: updatedBatches }); 
         setShowBatchForm(false); 
         setEditingBatch(null);
@@ -3179,6 +3340,33 @@
               }
             } catch(e) {}
           }
+
+          // Clean from purchase ledger
+          try {
+            const rawLedger = localStorage.getItem('yarn_purchase_ledger_data');
+            let purchaseLedger = rawLedger ? JSON.parse(rawLedger) : [];
+            if (Array.isArray(purchaseLedger)) {
+              purchaseLedger = purchaseLedger.filter(r => 
+                String(r.batchId) !== String(batchId) &&
+                String(r.id) !== String(batchId) &&
+                !(delBatch && String(r.challanNo).trim() === String(delBatch.challanNumber).trim() && String(r.partyName).trim().toLowerCase() === String(order.supplier || '').trim().toLowerCase())
+              );
+              localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(purchaseLedger));
+              if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                window.VishwaSupabase.saveToSupabase('yarn_purchase_ledger_data', purchaseLedger);
+              }
+            }
+          } catch(e) {}
+
+          try {
+            window.dispatchEvent(new CustomEvent('yarn-order-updated'));
+            window.dispatchEvent(new CustomEvent('yarn-stock-updated'));
+            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: YARN_ORDERS_STORAGE_KEY } }));
+            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: YARN_STOCK_STORAGE_KEY } }));
+            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn_purchase_ledger_data' } }));
+            window.postMessage({ type: 'YARN_ORDER_UPDATED' }, '*');
+            window.postMessage({ type: 'YARN_STOCK_UPDATED' }, '*');
+          } catch(e) {}
 
           onUpdate({ ...order, batches: updatedBatches });
         }

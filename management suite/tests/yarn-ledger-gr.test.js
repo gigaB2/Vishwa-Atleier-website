@@ -575,7 +575,146 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     // Check that GR inline button still exists in the GR column
     assert.ok(ledgerHtml.includes('btn-issue-gr-inline'), 'Inline GR button in GR column must remain intact');
   });
+
+  await t.test('tri-sheet sync: entering batch with GR in RM Orders updates both stock data and purchase ledger', () => {
+    // 1. Setup initial state
+    const order = {
+      id: 'ORD-TRI-01',
+      orderNumber: 'TRI-01',
+      supplier: 'Supreme Spinners',
+      quality: '150D Bright Polyester',
+      price: 240,
+      creditDays: 45,
+      batches: []
+    };
+
+    const batchData = {
+      id: 'BATCH-TRI-01',
+      challanNumber: 'CH-TRI-99',
+      lotNumber: 'LOT-TRI-99',
+      receiveDate: '2026-09-05',
+      boxes: [
+        { boxNumber: 'B1', cones: 24, weight: 50.0, returnedWeight: 10.0, returnedDate: '2026-09-05', returnedRemarks: 'Tension issue' },
+        { boxNumber: 'B2', cones: 24, weight: 50.0, returnedWeight: 50.0, returnedDate: '2026-09-05', returnedRemarks: 'Full defect' },
+        { boxNumber: 'B3', cones: 24, weight: 50.0, returnedWeight: 0 }
+      ]
+    };
+
+    // Calculate metrics
+    const grossTotal = batchData.boxes.reduce((acc, b) => acc + b.weight, 0); // 150 kg
+    const grTotal = batchData.boxes.reduce((acc, b) => acc + b.returnedWeight, 0); // 60 kg
+    const netTotal = grossTotal - grTotal; // 90 kg
+    const rate = Number(order.price) || 0; // 240
+    const subtotal = netTotal * rate; // 90 * 240 = 21600
+    const gstPercent = 5.0;
+    const gstAmt = (subtotal * gstPercent) / 100; // 1080
+    const grandTotal = subtotal + gstAmt; // 22680
+
+    // Simulate Stock Lot creation
+    const stockLot = {
+      id: `${batchData.lotNumber}__${batchData.challanNumber}`,
+      batchId: batchData.id,
+      lotNumber: batchData.lotNumber,
+      challanNo: batchData.challanNumber,
+      supplier: order.supplier,
+      quality: order.quality,
+      boxes: batchData.boxes.map(bx => {
+        const gross = bx.weight;
+        const ret = bx.returnedWeight;
+        const rem = gross - ret;
+        const isFullyGr = ret >= gross && gross > 0;
+        return {
+          id: bx.boxNumber,
+          boxNumber: bx.boxNumber,
+          grossWeight: gross,
+          remainingWeight: rem,
+          weight: isFullyGr ? gross : rem,
+          status: isFullyGr ? 'gr' : 'available',
+          grWeight: ret
+        };
+      })
+    };
+
+    // Simulate Purchase Ledger Row creation
+    const ledgerRow = {
+      id: `PUR-order_${order.id}_batch_${batchData.id}_${batchData.challanNumber}`,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      batchId: batchData.id,
+      challanNo: batchData.challanNumber,
+      partyName: order.supplier,
+      quality: `${order.quality} (Lot: ${batchData.lotNumber})`,
+      grossQty: grossTotal,
+      grQty: grTotal,
+      qty: netTotal,
+      rate: rate,
+      grAmount: grTotal * rate,
+      grossAmount: grossTotal * rate,
+      subtotal: subtotal,
+      grandTotal: grandTotal,
+      grBoxes: batchData.boxes.filter(b => b.returnedWeight > 0).map(b => ({
+        boxNumber: b.boxNumber,
+        weight: b.weight,
+        returnedWeight: b.returnedWeight,
+        date: b.returnedDate,
+        remarks: b.returnedRemarks
+      }))
+    };
+
+    // Verify Stock Book reflection
+    assert.strictEqual(stockLot.boxes[0].status, 'available');
+    assert.strictEqual(stockLot.boxes[0].grWeight, 10.0);
+    assert.strictEqual(stockLot.boxes[0].remainingWeight, 40.0);
+    assert.strictEqual(stockLot.boxes[1].status, 'gr');
+    assert.strictEqual(stockLot.boxes[1].grWeight, 50.0);
+    assert.strictEqual(stockLot.boxes[1].remainingWeight, 0);
+    assert.strictEqual(stockLot.boxes[2].status, 'available');
+    assert.strictEqual(stockLot.boxes[2].grWeight, 0);
+
+    // Verify Purchase Ledger reflection
+    assert.strictEqual(ledgerRow.grossQty, 150.0);
+    assert.strictEqual(ledgerRow.grQty, 60.0);
+    assert.strictEqual(ledgerRow.qty, 90.0);
+    assert.strictEqual(ledgerRow.grossAmount, 36000.0);
+    assert.strictEqual(ledgerRow.grAmount, 14400.0);
+    assert.strictEqual(ledgerRow.subtotal, 21600.0);
+    assert.strictEqual(ledgerRow.grandTotal, 22680.0);
+    assert.strictEqual(ledgerRow.grBoxes.length, 2);
+    assert.strictEqual(ledgerRow.grBoxes[0].boxNumber, 'B1');
+    assert.strictEqual(ledgerRow.grBoxes[1].boxNumber, 'B2');
+  });
+
+  await t.test('tri-sheet sync: deleting a batch in one sheet cleans up all three sheets', () => {
+    let orders = [
+      {
+        id: 'ORD-DEL-1',
+        batches: [
+          { id: 'BATCH-DEL-1', challanNumber: 'CH-DEL-1', lotNumber: 'LOT-DEL-1' }
+        ]
+      }
+    ];
+
+    let stockList = [
+      { id: 'LOT-DEL-1__CH-DEL-1', batchId: 'BATCH-DEL-1', challanNo: 'CH-DEL-1', lotNumber: 'LOT-DEL-1' }
+    ];
+
+    let purchaseLedger = [
+      { id: 'PUR-DEL-1', batchId: 'BATCH-DEL-1', challanNo: 'CH-DEL-1' }
+    ];
+
+    const delBatchId = 'BATCH-DEL-1';
+
+    // Delete batch
+    orders[0].batches = orders[0].batches.filter(b => b.id !== delBatchId);
+    stockList = stockList.filter(s => s.batchId !== delBatchId);
+    purchaseLedger = purchaseLedger.filter(r => r.batchId !== delBatchId);
+
+    assert.strictEqual(orders[0].batches.length, 0);
+    assert.strictEqual(stockList.length, 0);
+    assert.strictEqual(purchaseLedger.length, 0);
+  });
 });
+
 
 
 

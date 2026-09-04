@@ -5020,6 +5020,75 @@
       }
 
       let grBoxesResult = [];
+      if (!matchedBatch && (targetChallan || targetLot || row.partyName)) {
+        const supplierName = row.partyName || 'Unknown Supplier';
+        const qualityName = row.quality || 'Yarn';
+        let ord = orders.find(o => 
+          (targetOrderId && (String(o.id) === targetOrderId || String(o.orderNumber) === targetOrderId)) ||
+          (String(o.supplier || '').trim().toLowerCase() === supplierName.trim().toLowerCase() && String(o.quality || '').trim().toLowerCase() === qualityName.trim().toLowerCase())
+        );
+        const grossTotal = Number(row.grossQty) || (Number(row.qty || 0) + Number(newGrQty || 0));
+        const netTotal = Math.max(0, Number((grossTotal - newGrQty).toFixed(2)));
+        const batchIdVal = targetBatchId || `BATCH-${Date.now()}`;
+        const newBatchBoxes = Array.isArray(boxAllocations) && boxAllocations.length > 0 ? boxAllocations.map((alloc, idx) => ({
+          boxNumber: alloc.boxNumber || `B${idx + 1}`,
+          cones: Number(alloc.cones) || 0,
+          weight: Number(alloc.grossWeight || alloc.weight) || (grossTotal / boxAllocations.length),
+          returnedWeight: Number(alloc.returnedWeight) || 0,
+          returnedDate: Number(alloc.returnedWeight) > 0 ? (alloc.date || effectiveGrDate) : null,
+          returnedRemarks: Number(alloc.returnedWeight) > 0 ? (alloc.remarks || effectiveGrRemarks) : null,
+          status: (Number(alloc.returnedWeight) >= (Number(alloc.grossWeight || alloc.weight) || (grossTotal / boxAllocations.length))) ? 'gr' : 'available'
+        })) : [{
+          boxNumber: 'B1',
+          cones: 1,
+          weight: grossTotal,
+          returnedWeight: newGrQty,
+          returnedDate: newGrQty > 0 ? effectiveGrDate : null,
+          returnedRemarks: newGrQty > 0 ? effectiveGrRemarks : null,
+          status: newGrQty >= grossTotal ? 'gr' : 'available'
+        }];
+
+        matchedBatch = {
+          id: batchIdVal,
+          receiveDate: row.date || effectiveGrDate,
+          challanNumber: targetChallan || ('CH-' + Date.now().toString().slice(-4)),
+          lotNumber: targetLot || ('LOT-' + Date.now().toString().slice(-4)),
+          grossWeight: grossTotal,
+          returnedWeight: Number(newGrQty.toFixed(2)),
+          totalWeight: netTotal,
+          receivedQty: netTotal,
+          boxes: newBatchBoxes,
+          updated_at: new Date().toISOString()
+        };
+
+        if (ord) {
+          if (!Array.isArray(ord.batches)) ord.batches = [];
+          ord.batches.unshift(matchedBatch);
+          ord.updated_at = new Date().toISOString();
+        } else {
+          const newOrderId = targetOrderId || ('ORD-' + Date.now().toString().slice(-4));
+          ord = {
+            id: newOrderId,
+            orderNumber: newOrderId,
+            orderDate: row.date || effectiveGrDate,
+            supplier: supplierName,
+            category: 'Polyester',
+            quality: qualityName,
+            orderedWeight: grossTotal,
+            price: row.rate || '',
+            status: netTotal >= grossTotal ? 'Completed' : 'Active',
+            batches: [matchedBatch],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          orders.unshift(ord);
+        }
+        row.orderId = ord.id;
+        row.orderNumber = ord.orderNumber;
+        row.batchId = matchedBatch.id;
+        ordersChanged = true;
+      }
+
       if (matchedBatch) {
         let grossTotal = (matchedBatch.boxes || []).reduce((acc, bx) => acc + (Number(bx.grossWeight) || Number(bx.weight) || 0), 0);
         if (grossTotal === 0) {
@@ -5104,12 +5173,57 @@
         ordersChanged = true;
       }
 
-      const matchedStockLot = stock.find(lot => 
+      let matchedStockLot = stock.find(lot => 
         (targetBatchId && String(lot.batchId) === targetBatchId) ||
         (targetChallan && String(lot.challanNo || lot.challanNumber).trim() === targetChallan) ||
         (targetLot && String(lot.lotNumber).trim() === targetLot) ||
         (targetOrderId && (String(lot.orderRef) === targetOrderId))
       );
+
+      if (!matchedStockLot && matchedBatch) {
+        const lotIdVal = matchedBatch.lotNumber ? `${matchedBatch.lotNumber}__${matchedBatch.challanNumber || matchedBatch.id}` : `LOT-${Date.now().toString().slice(-4)}`;
+        const grossTotal = Number(row.grossQty) || (Number(row.qty || 0) + Number(newGrQty || 0));
+        const newStockBoxes = (matchedBatch.boxes || []).map((bx, idx) => {
+          const bNum = String(bx.boxNumber || bx.id || `B${idx + 1}`).trim();
+          const gross = Number(bx.grossWeight) || Number(bx.weight) || 0;
+          const ret = Number(bx.returnedWeight) || 0;
+          const rem = Math.max(0, Number((gross - ret).toFixed(2)));
+          const isFullyGr = ret >= gross && gross > 0;
+          return {
+            id: bNum,
+            boxNumber: bNum,
+            cones: Number(bx.cones) || 0,
+            grossWeight: gross,
+            remainingWeight: rem,
+            weight: isFullyGr ? gross : rem,
+            status: isFullyGr ? 'gr' : 'available',
+            grWeight: ret,
+            grDate: ret > 0 ? (bx.returnedDate || effectiveGrDate) : null,
+            grRemarks: ret > 0 ? (bx.returnedRemarks || effectiveGrRemarks) : null
+          };
+        });
+
+        matchedStockLot = {
+          id: lotIdVal,
+          batchId: matchedBatch.id,
+          lotNumber: matchedBatch.lotNumber,
+          challanNo: matchedBatch.challanNumber,
+          challanNumber: matchedBatch.challanNumber,
+          receiveDate: row.date || effectiveGrDate,
+          date: row.date || effectiveGrDate,
+          supplier: row.partyName || '',
+          quality: row.quality || '',
+          itemType: 'Polyester',
+          code: '',
+          color: '',
+          rate: row.rate || '',
+          orderRef: row.orderId || row.orderNumber || '',
+          boxes: newStockBoxes,
+          updated_at: new Date().toISOString()
+        };
+        stock.unshift(matchedStockLot);
+        stockChanged = true;
+      }
 
       if (matchedStockLot && Array.isArray(matchedStockLot.boxes)) {
         const boxAllocMap = new Map();
@@ -5202,10 +5316,12 @@
         window.dispatchEvent(new CustomEvent('yarn-stock-updated', { detail: { stock } }));
         window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn-rm-orders' } }));
         window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'vishwa_yarn_rm_stock_data' } }));
+        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn_purchase_ledger_data' } }));
         window.postMessage({ type: 'YARN_ORDER_UPDATED', orders }, '*');
         window.postMessage({ type: 'YARN_STOCK_UPDATED', stock }, '*');
         window.postMessage({ type: 'STORAGE_SYNC', key: 'yarn-rm-orders', value: orders }, '*');
         window.postMessage({ type: 'STORAGE_SYNC', key: 'vishwa_yarn_rm_stock_data', value: stock }, '*');
+        window.postMessage({ type: 'STORAGE_SYNC', key: 'yarn_purchase_ledger_data', value: ledgerData.purchase }, '*');
       } catch(e) {}
     }
 
