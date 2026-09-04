@@ -2887,12 +2887,12 @@
               const existingRow = ledgerData.sales.find(r => r.id === deterministicId || r.syncKey === uniqueSyncKey || (r.challanNo === challanNo && challanNo !== ''));
 
               if (!existingRow && challanNo) {
-                const qty = Number(sale.totalQty) || Number(sale.weight) || 0;
+                const qty = Number(sale.totalQty) || Number(sale.saleQty) || Number(sale.weight) || Number(sale.qty) || 0;
                 const rate = Number(sale.rate) || 0;
-                const subtotal = Number(sale.subtotal) || Number((qty * rate).toFixed(2));
-                const gstAmount = Number(sale.gstAmount) || 0;
-                const grandTotal = Number(sale.grandTotal) || Number((subtotal + gstAmount).toFixed(2));
-                const gstPercent = subtotal > 0 ? Number(((gstAmount / subtotal) * 100).toFixed(1)) : 0;
+                const subtotal = Number(sale.taxableAmount) || Number(sale.subtotalAmount) || Number(sale.subtotal) || Number((qty * rate).toFixed(2));
+                const gstAmount = Number(sale.gstAmount) || Number(sale.gst) || 0;
+                const grandTotal = Number(sale.totalAmount) || Number(sale.grandTotal) || Number(sale.amount) || Number((subtotal + gstAmount).toFixed(2));
+                const gstPercent = (sale.gstRate !== undefined && sale.gstRate !== null) ? Number(sale.gstRate) : (subtotal > 0 ? Number(((gstAmount / subtotal) * 100).toFixed(1)) : 0);
                 const nowIso = new Date().toISOString();
 
                 ledgerData.sales.push({

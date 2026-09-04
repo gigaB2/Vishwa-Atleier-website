@@ -5267,6 +5267,7 @@
                     const totalGross = (ys.total_gross_weight !== null && ys.total_gross_weight !== undefined) ? Number(ys.total_gross_weight) : ((raw.totalGrossWeight !== undefined && raw.totalGrossWeight !== null) ? Number(raw.totalGrossWeight) : (Number(raw.grossWeight) || 0));
                     const totalTare = (ys.total_tare_weight !== null && ys.total_tare_weight !== undefined) ? Number(ys.total_tare_weight) : ((raw.totalTareWeight !== undefined && raw.totalTareWeight !== null) ? Number(raw.totalTareWeight) : (Number(raw.tareWeight) || 0));
                     return {
+                      ...raw,
                       id: ys.id,
                       saleDate: ys.sale_date,
                       date: ys.sale_date,
@@ -5293,8 +5294,7 @@
                       totalAmount: Number(ys.total_amount || raw.totalAmount || raw.amount) || 0,
                       amount: Number(ys.total_amount || raw.totalAmount || raw.amount) || 0,
                       gstAmount: Number(ys.gst_amount || raw.gstAmount || raw.gst) || 0,
-                      gst: Number(ys.gst_amount || raw.gstAmount || raw.gst) || 0,
-                      ...raw
+                      gst: Number(ys.gst_amount || raw.gstAmount || raw.gst) || 0
                     };
                   });
 
