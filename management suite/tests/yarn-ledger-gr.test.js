@@ -559,14 +559,14 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(received, 810.0, 'Net received should be 360 + 450 = 810 kg');
   });
 
-  await t.test('ledger.html actions column contains only the Eye button and Delete button, not the GR button', () => {
+  await t.test('yarn-ledger.html actions column contains only the Eye button and Delete button, not the GR button', () => {
     const fs = require('fs');
     const path = require('path');
-    const ledgerHtml = fs.readFileSync(path.join(__dirname, '../modules/yarn/ledger.html'), 'utf8');
+    const ledgerHtml = fs.readFileSync(path.join(__dirname, '../modules/yarn/yarn-ledger.html'), 'utf8');
 
     // Find the actions-cell-wrap block
     const actionsBlockMatch = ledgerHtml.match(/<div class="actions-cell-wrap">([\s\S]*?)<\/div>/);
-    assert.ok(actionsBlockMatch, 'actions-cell-wrap must exist in ledger.html');
+    assert.ok(actionsBlockMatch, 'actions-cell-wrap must exist in yarn-ledger.html');
     const actionsContent = actionsBlockMatch[1];
 
     assert.ok(actionsContent.includes('openChallanModal'), 'Actions column must include openChallanModal (the Eye)');
