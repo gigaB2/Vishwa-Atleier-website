@@ -4984,9 +4984,13 @@
                                 <input type="date" id="dash-filter-date-to" class="dash-date-input" onchange="renderDashboardOverview()">
                             </div>
 
-                            <div class="dash-btn-group" style="display: flex; align-items: center; gap: 0.6rem;">
+                            <div class="dash-btn-group" style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
                                 <button type="button" class="btn btn-primary" onclick="renderDashboardOverview()" style="height: 44px; padding: 0 1.35rem; border-radius: 10px; font-weight: 800; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 0.4rem;">
                                     <i class="ri-flashlight-line"></i> Apply Filter
+                                </button>
+
+                                <button type="button" class="btn btn-secondary" onclick="exportDashboardCSV()" style="height: 44px; padding: 0 1.25rem; border-radius: 10px; font-weight: 700; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 0.4rem; border: 1.5px solid rgba(59, 130, 246, 0.4); color: #3b82f6; background: rgba(59, 130, 246, 0.08); cursor: pointer;" title="Export Dashboard Salary & KPI Summary CSV for selected period">
+                                    <i class="ri-file-excel-2-line" style="font-size: 1rem;"></i> Export CSV
                                 </button>
 
                                 <button type="button" class="btn btn-secondary" onclick="clearDashboardDates()" style="height: 44px; padding: 0 1.1rem; border-radius: 10px; font-weight: 700; font-size: 0.84rem;">
@@ -11317,6 +11321,492 @@
             if (toInput) toInput.value = `${yr}-${pad(mo)}-${pad(lastDay)}`;
             renderDashboardOverview();
         }
+
+        window.exportDashboardCSV = function () {
+            const fromInput = document.getElementById('dash-filter-date-from');
+            const toInput = document.getElementById('dash-filter-date-to');
+            const fromDate = fromInput ? fromInput.value : '';
+            const toDate = toInput ? toInput.value : '';
+
+            const productionLogsList = getProductionLogs();
+            let filteredLogs = [...productionLogsList].filter(l => {
+                const hasDay = l.dayWorker && String(l.dayWorker).trim() !== '';
+                const hasNight = l.nightWorker && String(l.nightWorker).trim() !== '';
+                return hasDay || hasNight;
+            });
+
+            if (typeof selectedFY !== 'undefined' && selectedFY && selectedFY !== 'All') {
+                const range = (typeof FYEngine !== 'undefined' && FYEngine.getFYDateRange) ? FYEngine.getFYDateRange(selectedFY) : { start: null, end: null };
+                if (range.start && range.end) {
+                    filteredLogs = filteredLogs.filter(l => {
+                        if (!l.productionDate) return false;
+                        return l.productionDate >= range.start && l.productionDate <= range.end;
+                    });
+                }
+            }
+
+            if (fromDate) {
+                filteredLogs = filteredLogs.filter(l => l.productionDate && l.productionDate >= fromDate);
+            }
+            if (toDate) {
+                filteredLogs = filteredLogs.filter(l => l.productionDate && l.productionDate <= toDate);
+            }
+
+            // Beam loadings in range
+            const loadingsList = typeof getBeamLoadings === 'function' ? getBeamLoadings() : [];
+            const beamLoadingPayments = {};
+            let grandTotalBeamLoading = 0;
+            const activeDates = new Set();
+
+            filteredLogs.forEach(l => {
+                if (l.productionDate) activeDates.add(l.productionDate);
+            });
+
+            loadingsList.forEach(l => {
+                if (!l.date) return;
+                if (fromDate && l.date < fromDate) return;
+                if (toDate && l.date > toDate) return;
+                activeDates.add(l.date);
+
+                const piecein = (l.piecein || '').trim();
+                const drawing = (l.drawingIn || '').trim();
+                const fani = (l.fani || '').trim();
+                const dropPin = (l.dropPinJog || '').trim();
+                const amt = parseFloat(l.paymentAmount) || 0;
+
+                if (piecein) beamLoadingPayments[piecein] = (beamLoadingPayments[piecein] || 0) + amt;
+                if (drawing) beamLoadingPayments[drawing] = (beamLoadingPayments[drawing] || 0) + amt;
+                if (fani) beamLoadingPayments[fani] = (beamLoadingPayments[fani] || 0) + amt;
+                if (dropPin) beamLoadingPayments[dropPin] = (beamLoadingPayments[dropPin] || 0) + amt;
+                grandTotalBeamLoading += amt;
+            });
+
+            // Compute log worker stats
+            const logWorkerStats = {};
+            let grandTotalMeters = 0;
+            let grandTotalLogSalary = 0;
+
+            const workerDayShifts = {};
+            const workerNightShifts = {};
+
+            filteredLogs.forEach(log => {
+                const picks = log.picks || 0;
+                const ratePerMeter = getRateForPicks(picks);
+                const logDate = log.productionDate || log.date || 'unknown_date';
+
+                if (log.dayWorker) {
+                    const w = String(log.dayWorker).trim();
+                    if (!logWorkerStats[w]) {
+                        logWorkerStats[w] = { shifts: 0, hours: 0, meters: 0, salary: 0 };
+                        workerDayShifts[w] = {};
+                        workerNightShifts[w] = {};
+                    }
+                    const mtr = parseFloat(log.dayMeters) || 0;
+                    const hrs = parseFloat(log.dayShiftHours) || 12;
+                    const sal = log.daySalary || (mtr * ratePerMeter);
+
+                    workerDayShifts[w][logDate] = Math.max(workerDayShifts[w][logDate] || 0, hrs);
+                    logWorkerStats[w].meters += mtr;
+                    logWorkerStats[w].salary += sal;
+                    grandTotalMeters += mtr;
+                    grandTotalLogSalary += sal;
+                }
+
+                if (log.nightWorker) {
+                    const w = String(log.nightWorker).trim();
+                    if (!logWorkerStats[w]) {
+                        logWorkerStats[w] = { shifts: 0, hours: 0, meters: 0, salary: 0 };
+                        workerDayShifts[w] = {};
+                        workerNightShifts[w] = {};
+                    }
+                    const mtr = parseFloat(log.nightMeters) || 0;
+                    const hrs = parseFloat(log.nightShiftHours) || 12;
+                    const sal = log.nightSalary || (mtr * ratePerMeter);
+
+                    workerNightShifts[w][logDate] = Math.max(workerNightShifts[w][logDate] || 0, hrs);
+                    logWorkerStats[w].meters += mtr;
+                    logWorkerStats[w].salary += sal;
+                    grandTotalMeters += mtr;
+                    grandTotalLogSalary += sal;
+                }
+            });
+
+            Object.keys(logWorkerStats).forEach(w => {
+                const dayDates = Object.keys(workerDayShifts[w] || {});
+                const nightDates = Object.keys(workerNightShifts[w] || {});
+                const dayHrs = Object.values(workerDayShifts[w] || {}).reduce((a, b) => a + b, 0);
+                const nightHrs = Object.values(workerNightShifts[w] || {}).reduce((a, b) => a + b, 0);
+
+                logWorkerStats[w].shifts = dayDates.length + nightDates.length;
+                logWorkerStats[w].hours = dayHrs + nightHrs;
+            });
+
+            // Process all employees
+            const staffList = (state && Array.isArray(state.employees) && state.employees.length > 0) ? state.employees : [];
+            const processedEmployees = [];
+            const processedNames = new Set();
+
+            const isSingleMonth = fromDate && toDate && fromDate.substring(0, 7) === toDate.substring(0, 7);
+            const singleMonthKey = isSingleMonth ? fromDate.substring(0, 7) : null;
+
+            let daysCount = 0;
+            if (fromDate && toDate) {
+                const d1 = new Date(fromDate);
+                const d2 = new Date(toDate);
+                daysCount = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
+            } else {
+                daysCount = activeDates.size;
+            }
+
+            staffList.forEach(emp => {
+                if (!emp || emp.status === 'Terminated') return;
+                const name = emp.name;
+                processedNames.add(name);
+
+                const logStats = logWorkerStats[name] || { shifts: 0, hours: 0, meters: 0, salary: 0 };
+                const blPay = beamLoadingPayments[name] || 0;
+                const salaryStyle = emp.salaryStyle || 'Per Month Fixed';
+                const baseAmount = parseFloat(emp.salaryAmount || 0);
+
+                let role = getEmpDisplayRole(emp) || emp.role || 'Staff';
+                if (blPay > 0 && logStats.salary === 0 && role.toLowerCase().includes('karigar')) {
+                    role = 'Beam Loading';
+                }
+
+                const attStats = (typeof getEmployeeDateRangeAttendanceStats === 'function')
+                    ? getEmployeeDateRangeAttendanceStats(emp.name, fromDate, toDate)
+                    : null;
+                const hasAttLogs = attStats && attStats.loggedDates && attStats.loggedDates.length > 0;
+                const presentDays = hasAttLogs ? attStats.presentDays : 0;
+                const totalAttShifts = hasAttLogs ? attStats.totalShifts : 0;
+
+                let calculatedSalary = 0;
+                let workMetricsStr = '';
+
+                if (salaryStyle === 'Per Shift' || salaryStyle === 'Per Day') {
+                    const effectiveShifts = hasAttLogs ? totalAttShifts : (logStats.shifts > 0 ? logStats.shifts : 0);
+                    calculatedSalary = effectiveShifts * baseAmount;
+                    workMetricsStr = hasAttLogs 
+                        ? `${totalAttShifts} Shifts (Att Logged)` 
+                        : (logStats.shifts > 0 ? `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h)` : `0 Shifts Logged`);
+                } else if (salaryStyle === 'Per Month Fixed') {
+                    if (hasAttLogs && typeof calculateProRataSalary === 'function' && singleMonthKey) {
+                        calculatedSalary = calculateProRataSalary(emp, singleMonthKey);
+                        workMetricsStr = `${presentDays} Days Present (Pro-Rata)`;
+                    } else if (hasAttLogs) {
+                        const dailyRate = baseAmount / 26;
+                        calculatedSalary = Math.round(dailyRate * presentDays);
+                        workMetricsStr = `${presentDays} Days Present (Pro-Rata)`;
+                    } else {
+                        calculatedSalary = 0;
+                        workMetricsStr = '0 Days Logged';
+                    }
+                } else if (salaryStyle === 'Per Machine/Month') {
+                    const machineCount = (emp.machines && emp.machines.length > 0) ? emp.machines.length : 1;
+                    if (hasAttLogs && typeof calculateProRataSalary === 'function' && singleMonthKey) {
+                        calculatedSalary = calculateProRataSalary(emp, singleMonthKey);
+                        workMetricsStr = `${machineCount} Machines • ${presentDays}d (Pro-Rata)`;
+                    } else if (hasAttLogs) {
+                        const dailyRate = (machineCount * baseAmount) / 26;
+                        calculatedSalary = Math.round(dailyRate * presentDays);
+                        workMetricsStr = `${machineCount} Machines • ${presentDays}d (Pro-Rata)`;
+                    } else {
+                        calculatedSalary = 0;
+                        workMetricsStr = `${machineCount} Assigned Machine${machineCount > 1 ? 's' : ''} (0 Days)`;
+                    }
+                } else if (salaryStyle === 'Per Spindle/Month') {
+                    if (hasAttLogs && typeof calculateProRataSalary === 'function' && singleMonthKey) {
+                        calculatedSalary = calculateProRataSalary(emp, singleMonthKey);
+                        workMetricsStr = `${presentDays} Days Present (Pro-Rata)`;
+                    } else if (hasAttLogs) {
+                        const dailyRate = baseAmount / 26;
+                        calculatedSalary = Math.round(dailyRate * presentDays);
+                        workMetricsStr = `${presentDays} Days Present (Pro-Rata)`;
+                    } else {
+                        calculatedSalary = 0;
+                        workMetricsStr = '0 Days Logged';
+                    }
+                } else if (salaryStyle.includes('Piece Rate') || salaryStyle.includes('Pick') || salaryStyle === 'Per Meter/Month') {
+                    calculatedSalary = logStats.salary;
+                    workMetricsStr = `${logStats.shifts} Shifts (${logStats.hours.toFixed(1)}h, ${logStats.meters.toFixed(1)}m)`;
+                } else {
+                    if (hasAttLogs) {
+                        const dailyRate = baseAmount / 26;
+                        calculatedSalary = Math.round(dailyRate * presentDays);
+                        workMetricsStr = `${presentDays} Days Present`;
+                    } else {
+                        calculatedSalary = 0;
+                        workMetricsStr = '0 Days Logged';
+                    }
+                }
+
+                calculatedSalary += blPay;
+                if (blPay > 0) {
+                    if (workMetricsStr) {
+                        workMetricsStr += ` + ₹${blPay.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Beam Loading`;
+                    } else {
+                        workMetricsStr = `Beam Loading Pay: ₹${blPay.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+                    }
+                }
+
+                processedEmployees.push({
+                    name: name,
+                    role: role,
+                    salaryStyle: salaryStyle,
+                    salaryAmount: baseAmount,
+                    shifts: hasAttLogs ? totalAttShifts : logStats.shifts,
+                    hours: hasAttLogs ? attStats.totalHours : logStats.hours,
+                    meters: logStats.meters,
+                    calculatedSalary: calculatedSalary,
+                    workMetricsStr: workMetricsStr,
+                    isRegistered: true
+                });
+            });
+
+            // Unregistered workers
+            const allWorkerNames = new Set([
+                ...Object.keys(logWorkerStats),
+                ...Object.keys(beamLoadingPayments)
+            ]);
+
+            allWorkerNames.forEach(wName => {
+                if (!processedNames.has(wName)) {
+                    processedNames.add(wName);
+                    const stats = logWorkerStats[wName] || { shifts: 0, hours: 0, meters: 0, salary: 0 };
+                    const blPay = beamLoadingPayments[wName] || 0;
+
+                    let workStr = '';
+                    if (stats.shifts > 0) {
+                        workStr = `${stats.shifts} Shifts (${stats.hours.toFixed(1)}h, ${stats.meters.toFixed(1)}m)`;
+                        if (blPay > 0) workStr += ` + ₹${blPay.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Beam Loading`;
+                    } else if (blPay > 0) {
+                        workStr = `Beam Loading Pay: ₹${blPay.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+                    }
+
+                    let unregisteredRole = 'Karigar (Weaving)';
+                    if (blPay > 0 && stats.salary === 0) unregisteredRole = 'Beam Loading';
+
+                    processedEmployees.push({
+                        name: wName,
+                        role: unregisteredRole,
+                        salaryStyle: stats.salary > 0 ? 'Piece Rate (Pick-Wise)' : 'Beam Loading Pay',
+                        salaryAmount: 0,
+                        shifts: stats.shifts,
+                        hours: stats.hours,
+                        meters: stats.meters,
+                        calculatedSalary: stats.salary + blPay,
+                        workMetricsStr: workStr,
+                        isRegistered: false
+                    });
+                }
+            });
+
+            const roleGroups = {};
+            processedEmployees.forEach(emp => {
+                const r = emp.role;
+                if (!roleGroups[r]) roleGroups[r] = [];
+                roleGroups[r].push(emp);
+            });
+
+            const roleOrderPriority = [
+                'Supervisor', 'Master', 'Textile Designer', 'Business Analyst',
+                'Accountant Sr.', 'Accountant Jr.', 'QC', 'Beam Loading',
+                'Beam Loading - Piece In', 'Beam Loading - Drawing In', 'Beam Loading - Fani', 'Beam Loading - Drop pin/Jog',
+                'Karigar (Weaving)', 'Karigar (Yarn)', 'Karigar', 'Maintenance Engineer', 'Sizing Operator',
+                'Store Keeper', 'Cleaner', 'Helper', 'Folder', 'Mender', 'Security'
+            ];
+
+            const sortedRoles = Object.keys(roleGroups).sort((a, b) => {
+                let idxA = roleOrderPriority.indexOf(a);
+                let idxB = roleOrderPriority.indexOf(b);
+                if (idxA === -1) idxA = 99;
+                if (idxB === -1) idxB = 99;
+                if (idxA !== idxB) return idxA - idxB;
+                return a.localeCompare(b);
+            });
+
+            // CSV Escape Helper
+            const csvCell = (val) => {
+                if (val === undefined || val === null) return '""';
+                const str = String(val).replace(/"/g, '""');
+                return `"${str}"`;
+            };
+
+            const csvRows = [];
+
+            // Title & Meta Info
+            let periodLabel = 'All Time';
+            if (fromDate && toDate) {
+                periodLabel = `${fromDate} to ${toDate}`;
+            } else if (fromDate) {
+                periodLabel = `From ${fromDate}`;
+            } else if (toDate) {
+                periodLabel = `Up to ${toDate}`;
+            }
+
+            csvRows.push(['Vishwa Fashions - Dashboard Salary & Payroll Summary'].map(csvCell).join(','));
+            csvRows.push([`Period: ${periodLabel}`, `Generated: ${new Date().toLocaleString('en-IN')}`].map(csvCell).join(','));
+            csvRows.push([]); // blank line
+
+            // Table Header
+            const headers = [
+                'Employee Name',
+                'Role / Department',
+                'Work Metrics / Salary Basis',
+                'Salary Amount (₹)',
+                'Advance (₹)',
+                'Loan Repayment (₹)',
+                'Salary Payment (₹)',
+                'Remaining Salary (₹)',
+                'Status'
+            ];
+            csvRows.push(headers.map(csvCell).join(','));
+
+            let grandTotalPayroll = 0;
+            let grandTotalAdvance = 0;
+            let grandTotalLoan = 0;
+            let grandTotalSalaryPayment = 0;
+            let grandTotalRemaining = 0;
+            let grandTotalEmployees = 0;
+
+            sortedRoles.forEach(roleName => {
+                const emps = roleGroups[roleName];
+                let roleSubtotalSalary = 0;
+                let roleSubtotalAdvance = 0;
+                let roleSubtotalLoan = 0;
+                let roleSubtotalSalaryPayment = 0;
+                let roleSubtotalRemaining = 0;
+
+                // Role Category Row
+                csvRows.push([`--- ${roleName} (${emps.length} ${emps.length === 1 ? 'Employee' : 'Employees'}) ---`, '', '', '', '', '', '', '', ''].map(csvCell).join(','));
+
+                emps.forEach(emp => {
+                    let advance = 0;
+                    let loan = 0;
+                    let salaryPayment = '';
+                    let status = 'Pending';
+                    let remaining = 0;
+
+                    if (singleMonthKey) {
+                        if (state.salaryPayments && state.salaryPayments[singleMonthKey] && state.salaryPayments[singleMonthKey][emp.name]) {
+                            const pm = state.salaryPayments[singleMonthKey][emp.name];
+                            advance = pm.advance || 0;
+                            loan = pm.loan !== undefined && pm.loan !== null && pm.loan !== '' ? parseFloat(pm.loan) : getMonthlyLoanDeduction(emp.name, singleMonthKey);
+                            salaryPayment = pm.salaryPayment || '';
+                        } else {
+                            loan = getMonthlyLoanDeduction(emp.name, singleMonthKey);
+                        }
+                        remaining = emp.calculatedSalary - advance - loan - (parseFloat(salaryPayment) || 0);
+                        status = (remaining <= 0) ? 'Paid' : 'Pending';
+                    } else {
+                        const monthsInRange = new Set();
+                        if (fromDate && toDate) {
+                            let curr = new Date(fromDate);
+                            const end = new Date(toDate);
+                            while (curr <= end) {
+                                monthsInRange.add(`${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}`);
+                                curr.setMonth(curr.getMonth() + 1);
+                                curr.setDate(1);
+                            }
+                        }
+
+                        if (state.salaryPayments) {
+                            Object.keys(state.salaryPayments).forEach(mKey => {
+                                if (monthsInRange.size === 0 || monthsInRange.has(mKey)) {
+                                    if (state.salaryPayments[mKey] && state.salaryPayments[mKey][emp.name]) {
+                                        const pm = state.salaryPayments[mKey][emp.name];
+                                        advance += pm.advance || 0;
+                                        loan += pm.loan !== undefined && pm.loan !== null && pm.loan !== '' ? parseFloat(pm.loan) : getMonthlyLoanDeduction(emp.name, mKey);
+                                        salaryPayment = (salaryPayment === '' ? 0 : salaryPayment) + (parseFloat(pm.salaryPayment) || 0);
+                                    }
+                                }
+                            });
+                        }
+                        remaining = emp.calculatedSalary - advance - loan - (parseFloat(salaryPayment) || 0);
+                        status = (remaining <= 0) ? 'Paid' : 'Pending';
+                    }
+
+                    const salPaymentNum = parseFloat(salaryPayment) || 0;
+
+                    roleSubtotalSalary += emp.calculatedSalary;
+                    roleSubtotalAdvance += advance;
+                    roleSubtotalLoan += loan;
+                    roleSubtotalSalaryPayment += salPaymentNum;
+                    roleSubtotalRemaining += remaining;
+
+                    grandTotalPayroll += emp.calculatedSalary;
+                    grandTotalAdvance += advance;
+                    grandTotalLoan += loan;
+                    grandTotalSalaryPayment += salPaymentNum;
+                    grandTotalRemaining += remaining;
+                    grandTotalEmployees += 1;
+
+                    csvRows.push([
+                        emp.name,
+                        emp.role,
+                        emp.workMetricsStr || emp.salaryStyle || '',
+                        emp.calculatedSalary.toFixed(2),
+                        advance.toFixed(2),
+                        loan.toFixed(2),
+                        salPaymentNum.toFixed(2),
+                        remaining.toFixed(2),
+                        status
+                    ].map(csvCell).join(','));
+                });
+
+                // Role Subtotal Row
+                csvRows.push([
+                    `Subtotal ${roleName}`,
+                    '',
+                    '',
+                    roleSubtotalSalary.toFixed(2),
+                    roleSubtotalAdvance.toFixed(2),
+                    roleSubtotalLoan.toFixed(2),
+                    roleSubtotalSalaryPayment.toFixed(2),
+                    roleSubtotalRemaining.toFixed(2),
+                    ''
+                ].map(csvCell).join(','));
+            });
+
+            // Grand Total Row
+            csvRows.push([
+                'GRAND TOTAL (All Personnel)',
+                '',
+                `${grandTotalEmployees} Personnel`,
+                grandTotalPayroll.toFixed(2),
+                grandTotalAdvance.toFixed(2),
+                grandTotalLoan.toFixed(2),
+                grandTotalSalaryPayment.toFixed(2),
+                grandTotalRemaining.toFixed(2),
+                ''
+            ].map(csvCell).join(','));
+
+            // KPI Summary Section
+            const avgCostPerMeter = grandTotalMeters > 0 ? (grandTotalPayroll / grandTotalMeters) : 0;
+            csvRows.push([]); // blank line
+            csvRows.push(['--- DASHBOARD KPI SUMMARY ---'].map(csvCell).join(','));
+            csvRows.push(['Total Period Payroll (₹)', grandTotalPayroll.toFixed(2)].map(csvCell).join(','));
+            csvRows.push(['Active Personnel Count', grandTotalEmployees].map(csvCell).join(','));
+            csvRows.push(['Period Fabric Production (Meters)', grandTotalMeters.toFixed(2)].map(csvCell).join(','));
+            csvRows.push(['Average Labor Cost per Meter (₹)', avgCostPerMeter.toFixed(2)].map(csvCell).join(','));
+            csvRows.push(['Calendar Days in Period', daysCount > 0 ? daysCount : 'All Time'].map(csvCell).join(','));
+
+            // Download CSV
+            const csvString = '\uFEFF' + csvRows.join('\r\n');
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const fileName = `Dashboard_Salary_Summary_${fromDate || 'Start'}_to_${toDate || 'End'}.csv`;
+
+            if (navigator.msSaveBlob) {
+                navigator.msSaveBlob(blob, fileName);
+            } else {
+                link.href = URL.createObjectURL(blob);
+                link.setAttribute('download', fileName);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        };
 
 
 
