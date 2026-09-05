@@ -18599,6 +18599,22 @@
                 saveState();
                 closeBulkAttendanceModal();
                 renderAttendanceSummaryTable();
+
+                // Instantly update Master Attendance View if open or rendered
+                const masterModal = document.getElementById('master-attendance-modal');
+                if (masterModal && (masterModal.style.display === 'flex' || masterModal.style.display === 'block' || document.body.classList.contains('master-att-modal-open'))) {
+                    if (dateStr) {
+                        const loggedMonth = dateStr.substring(0, 7); // YYYY-MM
+                        const monthInput = document.getElementById('master-att-month-filter');
+                        if (monthInput && loggedMonth && currentMasterAttMonth !== loggedMonth) {
+                            monthInput.value = loggedMonth;
+                            currentMasterAttMonth = loggedMonth;
+                        }
+                    }
+                    if (typeof renderMasterAttendanceGrid === 'function') {
+                        renderMasterAttendanceGrid();
+                    }
+                }
                 
                 // Show floating notification
                 const indicator = document.getElementById('att-save-indicator');
@@ -18634,6 +18650,11 @@
 
                 closeBulkAttendanceModal();
                 renderAttendanceSummaryTable();
+
+                // Instantly refresh Master Attendance View if open
+                if (typeof renderMasterAttendanceGrid === 'function') {
+                    renderMasterAttendanceGrid();
+                }
 
                 alert(`Attendance records for ${dateStr} have been successfully deleted.`);
             };
