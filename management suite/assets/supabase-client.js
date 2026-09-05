@@ -649,12 +649,10 @@
               issuedBox.updated_at ? new Date(issuedBox.updated_at).getTime() : 0,
               issuedBox.issueDate ? new Date(issuedBox.issueDate).getTime() : 0
             );
-            const availTime = Math.max(
-              availBox.unissued_at ? new Date(availBox.unissued_at).getTime() : 0,
-              availBox.updated_at ? new Date(availBox.updated_at).getTime() : 0
-            );
+            const unissuedTime = availBox.unissued_at ? new Date(availBox.unissued_at).getTime() : 0;
 
-            if (availTime >= issuedTime) {
+            // An available box ONLY overwrites an issued box if it was explicitly unissued after the issuance
+            if (unissuedTime > 0 && unissuedTime >= issuedTime) {
               boxMap.set(bId, {
                 ...issuedBox,
                 ...availBox,
@@ -663,7 +661,7 @@
                 issuedTo: null,
                 previousIssueDate: null,
                 previousIssuedTo: null,
-                unissued_at: availBox.unissued_at || availBox.updated_at,
+                unissued_at: availBox.unissued_at,
                 updated_at: availBox.updated_at || new Date().toISOString()
               });
             } else {
@@ -917,12 +915,10 @@
                     issuedBx.updated_at ? new Date(issuedBx.updated_at).getTime() : 0,
                     issuedBx.issueDate ? new Date(issuedBx.issueDate).getTime() : 0
                   );
-                  const availTime = Math.max(
-                    availBx.unissued_at ? new Date(availBx.unissued_at).getTime() : 0,
-                    availBx.updated_at ? new Date(availBx.updated_at).getTime() : 0
-                  );
+                  const unissuedTime = availBx.unissued_at ? new Date(availBx.unissued_at).getTime() : 0;
 
-                  if (availTime >= issuedTime) {
+                  // An available box ONLY overwrites an issued box if it was explicitly unissued after the issuance
+                  if (unissuedTime > 0 && unissuedTime >= issuedTime) {
                     bBoxMap.set(bxId, {
                       ...issuedBx,
                       ...availBx,
@@ -931,7 +927,7 @@
                       issuedTo: null,
                       previousIssueDate: null,
                       previousIssuedTo: null,
-                      unissued_at: availBx.unissued_at || availBx.updated_at,
+                      unissued_at: availBx.unissued_at,
                       updated_at: availBx.updated_at || new Date().toISOString()
                     });
                   } else {
@@ -5034,6 +5030,10 @@
                     status: b.status === 'gr' ? 'gr' : (isIssued ? 'issued' : 'available'),
                     issueDate: isIssued ? issueDate : null,
                     issuedTo: isIssued ? issuedTo : null,
+                    previousIssueDate: isIssued ? issueDate : null,
+                    previousIssuedTo: isIssued ? issuedTo : null,
+                    updated_at: b.updated_at || null,
+                    unissued_at: isIssued ? null : (b.unissued_at || null),
                     grDate: b.gr_date || null,
                     grWeight: Number(b.gr_weight) || 0,
                     grRemarks: b.gr_remarks || null
@@ -5124,8 +5124,32 @@
                     const kvOrders = JSON.parse(kvMap[oKey] || cache[oKey] || '[]');
                     if (Array.isArray(kvOrders)) {
                       const kvOrder = kvOrders.find(x => x.id === o.id);
-                      if (kvOrder) {
-                        if (Array.isArray(kvOrder.batches) && kvOrder.batches.length > finalBatches.length) {
+                      if (kvOrder && Array.isArray(kvOrder.batches)) {
+                        finalBatches = finalBatches.map(fb => {
+                          const kvBatch = kvOrder.batches.find(kb => kb && (kb.id === fb.id || (kb.lotNumber === fb.lotNumber && kb.challanNumber === fb.challanNumber)));
+                          if (!kvBatch || !Array.isArray(kvBatch.boxes)) return fb;
+                          const kvBoxMap = new Map(kvBatch.boxes.map(kbx => [String(kbx.boxNumber || kbx.id), kbx]));
+                          const mergedBoxes = (fb.boxes || []).map(bx => {
+                            const kvBx = kvBoxMap.get(String(bx.boxNumber || bx.id));
+                            if (!kvBx) return bx;
+                            return {
+                              ...bx,
+                              status: kvBx.status || bx.status || 'available',
+                              issueDate: kvBx.issueDate || null,
+                              issuedTo: kvBx.issuedTo || null,
+                              previousIssueDate: kvBx.previousIssueDate || null,
+                              previousIssuedTo: kvBx.previousIssuedTo || null,
+                              unissued_at: kvBx.unissued_at || null,
+                              updated_at: kvBx.updated_at || bx.updated_at || null
+                            };
+                          });
+                          return {
+                            ...fb,
+                            boxes: mergedBoxes,
+                            updated_at: kvBatch.updated_at || fb.updated_at
+                          };
+                        });
+                        if (kvOrder.batches.length > finalBatches.length) {
                           finalBatches = kvOrder.batches;
                         }
                         const kvTime = (kvOrder.updated_at || kvOrder.updatedAt) ? new Date(kvOrder.updated_at || kvOrder.updatedAt).getTime() : 0;

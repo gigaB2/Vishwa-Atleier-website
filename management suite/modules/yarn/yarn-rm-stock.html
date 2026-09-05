@@ -1840,7 +1840,7 @@
         if (modified) {
           localStorage.setItem('yarn-rm-orders', JSON.stringify(orders));
           if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
-            window.VishwaSupabase.set('yarn-rm-orders', orders);
+            window.VishwaSupabase.set('yarn-rm-orders', orders, true);
           }
         }
       } catch(e) {
@@ -1944,29 +1944,27 @@
 
                   if (oldB && oldB.status === 'issued' && bx.status === 'issued') {
                     isIssued = true;
-                    issueDate = oldB.issueDate || bx.issueDate || null;
-                    issuedTo = oldB.issuedTo || bx.issuedTo || null;
+                    issueDate = oldB.issueDate || bx.issueDate || prevIssueDate;
+                    issuedTo = oldB.issuedTo || bx.issuedTo || prevIssuedTo;
                   } else if (oldB && oldB.status === 'issued' && bx.status !== 'issued') {
                     const oldBTime = Math.max(oldB.updated_at ? new Date(oldB.updated_at).getTime() : 0, oldB.issueDate ? new Date(oldB.issueDate).getTime() : 0);
-                    const bxAvailTime = Math.max(bx.unissued_at ? new Date(bx.unissued_at).getTime() : 0, bx.updated_at ? new Date(bx.updated_at).getTime() : 0);
-                    if (bxAvailTime >= oldBTime && bxAvailTime > 0) {
+                    const bxUnissueTime = bx.unissued_at ? new Date(bx.unissued_at).getTime() : 0;
+                    if (bxUnissueTime > 0 && bxUnissueTime >= oldBTime) {
                       isIssued = false;
                     } else {
                       isIssued = true;
-                      issueDate = oldB.issueDate || null;
-                      issuedTo = oldB.issuedTo || null;
+                      issueDate = oldB.issueDate || prevIssueDate;
+                      issuedTo = oldB.issuedTo || prevIssuedTo;
                     }
                   } else if (bx.status === 'issued' && (!oldB || oldB.status !== 'issued')) {
                     const bxIssueTime = Math.max(bx.updated_at ? new Date(bx.updated_at).getTime() : 0, bx.issueDate ? new Date(bx.issueDate).getTime() : 0);
-                    const oldBAvailTime = Math.max(oldB?.unissued_at ? new Date(oldB.unissued_at).getTime() : 0, oldB?.updated_at ? new Date(oldB.updated_at).getTime() : 0);
-                    if (oldBAvailTime >= bxIssueTime && oldBAvailTime > 0) {
+                    const oldBUnissueTime = oldB?.unissued_at ? new Date(oldB.unissued_at).getTime() : 0;
+                    if (oldBUnissueTime > 0 && oldBUnissueTime >= bxIssueTime) {
                       isIssued = false;
-                    } else if (!oldB || !oldB.status) {
-                      isIssued = true;
-                      issueDate = bx.issueDate || null;
-                      issuedTo = bx.issuedTo || null;
                     } else {
-                      isIssued = false;
+                      isIssued = true;
+                      issueDate = bx.issueDate || prevIssueDate;
+                      issuedTo = bx.issuedTo || prevIssuedTo;
                     }
                   } else if (!isFullyGr && (prevIssueDate || prevIssuedTo)) {
                     const issueTime = prevIssueDate ? new Date(prevIssueDate).getTime() : 0;
@@ -2049,7 +2047,7 @@
     function saveStockData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stockData));
       if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
-        window.VishwaSupabase.set(STORAGE_KEY, stockData);
+        window.VishwaSupabase.set(STORAGE_KEY, stockData, true);
       }
     }
 

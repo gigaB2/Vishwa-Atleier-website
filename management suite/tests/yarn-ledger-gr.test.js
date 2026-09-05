@@ -1035,13 +1035,7 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
         setItem(k, v) { this._data[k] = String(v); },
         removeItem(k) { delete this._data[k]; }
       },
-      navigator: { onLine: true },
-      console: console,
-      setTimeout: setTimeout,
-      clearTimeout: clearTimeout,
-      setInterval: setInterval,
-      clearInterval: clearInterval,
-      Date: Date
+      navigator: { onLine: true }, console: console, setTimeout: (fn) => {}, clearTimeout: () => {}, setInterval: () => ({ unref: () => {} }), clearInterval: () => {}, Date: Date
     };
 
     const fn = new Function('window', 'document', 'localStorage', 'navigator', 'console', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date', clientCode);
@@ -1107,6 +1101,170 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(box.issueDate, '2026-08-10', 'Issue date preserved');
     assert.strictEqual(box.issuedTo, 'TFO Plant 1', 'Issued to preserved');
     assert.strictEqual(box.grWeight, 0, 'GR is 0');
+  });
+
+  await t.test('multi-PC: issued box on PC 1 is not deleted when PC 2 logs in with fresh/default available state', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.join(__dirname, '../assets/supabase-client.js');
+    const clientCode = fs.readFileSync(filePath, 'utf8');
+
+    const sandbox = {
+      window: { location: { pathname: '/management%20suite/modules/yarn/yarn-rm-stock.html', href: 'http://localhost/yarn-rm-stock.html' }, addEventListener: () => {}, dispatchEvent: () => {}, CustomEvent: function(n, o) { this.name = n; this.detail = o?.detail; }, StorageEvent: function(n, o) { this.name = n; this.key = o?.key; this.newValue = o?.newValue; }, HTMLInputElement: function() {}, HTMLTextAreaElement: function() {}, HTMLSelectElement: function() {} },
+      document: { location: { pathname: '/management%20suite/modules/yarn/yarn-rm-stock.html', href: 'http://localhost/yarn-rm-stock.html' }, addEventListener: () => {}, getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] },
+      localStorage: { _data: {}, getItem(k) { return this._data[k] || null; }, setItem(k, v) { this._data[k] = String(v); }, removeItem(k) { delete this._data[k]; } },
+      navigator: { onLine: true }, console: console, setTimeout: (fn) => {}, clearTimeout: () => {}, setInterval: () => ({ unref: () => {} }), clearInterval: () => {}, Date: Date
+    };
+
+    const fn = new Function('window', 'document', 'localStorage', 'navigator', 'console', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date', clientCode);
+    fn(sandbox.window, sandbox.document, sandbox.localStorage, sandbox.navigator, sandbox.console, sandbox.setTimeout, sandbox.clearTimeout, sandbox.setInterval, sandbox.clearInterval, sandbox.Date);
+    const vSupabase = sandbox.window.VishwaSupabase;
+
+    // PC 1 (Local): Box B1 was issued on 2026-09-02
+    const pc1Stock = [
+      {
+        id: 'LOT-100__CH-100',
+        lotNumber: 'LOT-100',
+        challanNo: 'CH-100',
+        updated_at: '2026-09-02T10:00:00.000Z',
+        boxes: [
+          {
+            id: 'B1',
+            boxNumber: 'B1',
+            grossWeight: 50.0,
+            weight: 50.0,
+            remainingWeight: 50.0,
+            grWeight: 0,
+            status: 'issued',
+            issueDate: '2026-09-02',
+            issuedTo: 'Weaving Unit 1',
+            previousIssueDate: '2026-09-02',
+            previousIssuedTo: 'Weaving Unit 1',
+            updated_at: '2026-09-02T10:00:00.000Z'
+          }
+        ]
+      }
+    ];
+
+    // PC 2 (Remote): Freshly created / default state on PC 2 with today's timestamp (2026-09-05) and available status (no unissued_at)
+    const pc2Stock = [
+      {
+        id: 'LOT-100__CH-100',
+        lotNumber: 'LOT-100',
+        challanNo: 'CH-100',
+        updated_at: '2026-09-05T05:00:00.000Z',
+        boxes: [
+          {
+            id: 'B1',
+            boxNumber: 'B1',
+            grossWeight: 50.0,
+            weight: 50.0,
+            remainingWeight: 50.0,
+            grWeight: 0,
+            status: 'available',
+            issueDate: null,
+            issuedTo: null,
+            previousIssueDate: null,
+            previousIssuedTo: null,
+            unissued_at: null,
+            updated_at: '2026-09-05T05:00:00.000Z'
+          }
+        ]
+      }
+    ];
+
+    const merged = vSupabase.mergeYarnStockDatasets(pc1Stock, pc2Stock);
+    assert.strictEqual(merged.length, 1);
+    const box = merged[0].boxes[0];
+    assert.strictEqual(box.status, 'issued', 'Issued box from PC 1 must NOT be overwritten by default available on PC 2');
+    assert.strictEqual(box.issueDate, '2026-09-02');
+    assert.strictEqual(box.issuedTo, 'Weaving Unit 1');
+
+    // Also test the reverse direction (PC 2 local merging PC 1 remote)
+    const reverseMerged = vSupabase.mergeYarnStockDatasets(pc2Stock, pc1Stock);
+    assert.strictEqual(reverseMerged.length, 1);
+    const revBox = reverseMerged[0].boxes[0];
+    assert.strictEqual(revBox.status, 'issued', 'Reverse merge must also preserve issued status');
+    assert.strictEqual(revBox.issueDate, '2026-09-02');
+    assert.strictEqual(revBox.issuedTo, 'Weaving Unit 1');
+  });
+
+  await t.test('multi-PC: explicit unissuance (with unissued_at) properly reverts issued box to available across PCs', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.join(__dirname, '../assets/supabase-client.js');
+    const clientCode = fs.readFileSync(filePath, 'utf8');
+
+    const sandbox = {
+      window: { location: { pathname: '/management%20suite/modules/yarn/yarn-rm-stock.html', href: 'http://localhost/yarn-rm-stock.html' }, addEventListener: () => {}, dispatchEvent: () => {}, CustomEvent: function(n, o) { this.name = n; this.detail = o?.detail; }, StorageEvent: function(n, o) { this.name = n; this.key = o?.key; this.newValue = o?.newValue; }, HTMLInputElement: function() {}, HTMLTextAreaElement: function() {}, HTMLSelectElement: function() {} },
+      document: { location: { pathname: '/management%20suite/modules/yarn/yarn-rm-stock.html', href: 'http://localhost/yarn-rm-stock.html' }, addEventListener: () => {}, getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] },
+      localStorage: { _data: {}, getItem(k) { return this._data[k] || null; }, setItem(k, v) { this._data[k] = String(v); }, removeItem(k) { delete this._data[k]; } },
+      navigator: { onLine: true }, console: console, setTimeout: (fn) => {}, clearTimeout: () => {}, setInterval: () => ({ unref: () => {} }), clearInterval: () => {}, Date: Date
+    };
+
+    const fn = new Function('window', 'document', 'localStorage', 'navigator', 'console', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date', clientCode);
+    fn(sandbox.window, sandbox.document, sandbox.localStorage, sandbox.navigator, sandbox.console, sandbox.setTimeout, sandbox.clearTimeout, sandbox.setInterval, sandbox.clearInterval, sandbox.Date);
+    const vSupabase = sandbox.window.VishwaSupabase;
+
+    // PC 1: Box was issued on 2026-09-01
+    const issuedStock = [
+      {
+        id: 'LOT-200__CH-200',
+        lotNumber: 'LOT-200',
+        challanNo: 'CH-200',
+        updated_at: '2026-09-01T10:00:00.000Z',
+        boxes: [
+          {
+            id: 'B1',
+            boxNumber: 'B1',
+            grossWeight: 50.0,
+            weight: 50.0,
+            remainingWeight: 50.0,
+            grWeight: 0,
+            status: 'issued',
+            issueDate: '2026-09-01',
+            issuedTo: 'Weaving Unit 2',
+            previousIssueDate: '2026-09-01',
+            previousIssuedTo: 'Weaving Unit 2',
+            updated_at: '2026-09-01T10:00:00.000Z'
+          }
+        ]
+      }
+    ];
+
+    // PC 2: Operator explicitly clicked "Revert to Available" on 2026-09-05
+    const unissuedStock = [
+      {
+        id: 'LOT-200__CH-200',
+        lotNumber: 'LOT-200',
+        challanNo: 'CH-200',
+        updated_at: '2026-09-05T06:00:00.000Z',
+        boxes: [
+          {
+            id: 'B1',
+            boxNumber: 'B1',
+            grossWeight: 50.0,
+            weight: 50.0,
+            remainingWeight: 50.0,
+            grWeight: 0,
+            status: 'available',
+            issueDate: null,
+            issuedTo: null,
+            previousIssueDate: null,
+            previousIssuedTo: null,
+            unissued_at: '2026-09-05T06:00:00.000Z',
+            updated_at: '2026-09-05T06:00:00.000Z'
+          }
+        ]
+      }
+    ];
+
+    const merged = vSupabase.mergeYarnStockDatasets(issuedStock, unissuedStock);
+    assert.strictEqual(merged.length, 1);
+    const box = merged[0].boxes[0];
+    assert.strictEqual(box.status, 'available', 'Explicit unissuing with unissued_at must successfully revert box to available');
+    assert.strictEqual(box.issueDate, null);
+    assert.strictEqual(box.issuedTo, null);
   });
 });
 
