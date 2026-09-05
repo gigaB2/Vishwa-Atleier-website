@@ -1715,6 +1715,9 @@
           ? parseFloat(b.remainingWeight) 
           : Math.max(0, actualGross - grWeight);
 
+        const isFullyGr = (b.status === 'gr') || (grWeight > 0 && grWeight >= actualGross && actualGross > 0);
+        const isPartialGr = grWeight > 0 && !isFullyGr;
+
         const prevIssueDate = b.previousIssueDate || (b.status === 'issued' ? b.issueDate : null);
         const prevIssuedTo = b.previousIssuedTo || (b.status === 'issued' ? b.issuedTo : null);
         const wasIssued = Boolean((b.status === 'issued' || b.issueDate || b.issuedTo || prevIssueDate || prevIssuedTo) && !b.unissued_at);
@@ -2035,7 +2038,11 @@
         console.error('Error auto-syncing from orders:', e);
       }
 
-      stockData = [];
+      if (existingStockList.length > 0) {
+        stockData = existingStockList.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
+      } else {
+        stockData = [];
+      }
       saveStockData();
     }
 
