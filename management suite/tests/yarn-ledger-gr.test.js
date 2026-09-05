@@ -1395,7 +1395,107 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
       assert.strictEqual(box.weight, 24.0);
     });
   });
+
+  await t.test('AI Vision Scanner: boxes with empty/blank dates in the slip are NOT selected by default and remain available in stock', () => {
+    // Scanned challan with 10 total boxes: 4 have dates written, 6 have empty/null dates
+    const scannedChallan = {
+      quality: '80/72 Polyester DTY',
+      totalWeight: 240.0,
+      lotNumber: 'M009920/26',
+      challanNumber: 'CH-9920',
+      supplier: 'Supreme Poly Mills',
+      boxes: [
+        { boxNumber: 'M009920/01', cones: 12, weight: 24.0, issueDate: '2026-08-16' },
+        { boxNumber: 'M009920/02', cones: 12, weight: 24.0, issueDate: '2026-08-16' },
+        { boxNumber: 'M009920/03', cones: 12, weight: 24.0, issueDate: null }, // empty in slip
+        { boxNumber: 'M009920/04', cones: 12, weight: 24.0, issueDate: '' },   // blank in slip
+        { boxNumber: 'M009920/05', cones: 12, weight: 24.0, issueDate: '2026-08-08' },
+        { boxNumber: 'M009920/06', cones: 12, weight: 24.0, issueDate: null },
+        { boxNumber: 'M009920/07', cones: 12, weight: 24.0, issueDate: null },
+        { boxNumber: 'M009920/08', cones: 12, weight: 24.0, issueDate: '2026-08-08' },
+        { boxNumber: 'M009920/09', cones: 12, weight: 24.0, issueDate: '' },
+        { boxNumber: 'M009920/10', cones: 12, weight: 24.0, issueDate: null }
+      ]
+    };
+
+    // 1. Checkbox selection logic: only boxes with non-empty issueDate are checked
+    const tableRows = scannedChallan.boxes.map(b => {
+      const isChecked = Boolean(b.issueDate);
+      return {
+        boxNumber: b.boxNumber,
+        cones: b.cones,
+        weight: b.weight,
+        isChecked: isChecked,
+        issueDate: b.issueDate || null,
+        statusBadge: isChecked ? '● Ready to Issue' : '○ No Date (Unselected)'
+      };
+    });
+
+    const checkedRows = tableRows.filter(r => r.isChecked);
+    const uncheckedRows = tableRows.filter(r => !r.isChecked);
+
+    assert.strictEqual(checkedRows.length, 4, '4 boxes with dates are checked');
+    assert.strictEqual(uncheckedRows.length, 6, '6 un-dated boxes are unselected');
+
+    // Selected metrics
+    const selectedWeight = checkedRows.reduce((acc, r) => acc + r.weight, 0);
+    assert.strictEqual(selectedWeight, 96.0, 'Selected weight = 4 * 24.0 = 96.0 kg');
+
+    // 2. Issuance simulation
+    const targetDepartment = 'TFO';
+    const nowIso = new Date().toISOString();
+    const newLotId = 'LOT-8072POLY-9920';
+
+    const registeredBoxes = tableRows.map(r => {
+      if (r.isChecked) {
+        return {
+          id: r.boxNumber,
+          boxNumber: r.boxNumber,
+          cones: r.cones,
+          weight: r.weight,
+          grossWeight: r.weight,
+          remainingWeight: r.weight,
+          status: 'issued',
+          issueDate: r.issueDate,
+          issuedTo: targetDepartment,
+          previousIssueDate: r.issueDate,
+          previousIssuedTo: targetDepartment,
+          unissued_at: null,
+          updated_at: nowIso
+        };
+      } else {
+        return {
+          id: r.boxNumber,
+          boxNumber: r.boxNumber,
+          cones: r.cones,
+          weight: r.weight,
+          grossWeight: r.weight,
+          remainingWeight: r.weight,
+          status: 'available',
+          issueDate: null,
+          issuedTo: null,
+          previousIssueDate: null,
+          previousIssuedTo: null,
+          unissued_at: null,
+          updated_at: nowIso
+        };
+      }
+    });
+
+    const issuedBoxes = registeredBoxes.filter(b => b.status === 'issued');
+    const availableBoxes = registeredBoxes.filter(b => b.status === 'available');
+
+    assert.strictEqual(issuedBoxes.length, 4, '4 boxes are marked issued');
+    assert.strictEqual(availableBoxes.length, 6, '6 boxes remain available in stock');
+
+    const totalLotWeight = registeredBoxes.reduce((acc, b) => acc + b.weight, 0);
+    assert.strictEqual(totalLotWeight, 240.0, 'Full challan weight of 240.0 kg is preserved in inventory');
+
+    const availableWeight = availableBoxes.reduce((acc, b) => acc + b.remainingWeight, 0);
+    assert.strictEqual(availableWeight, 144.0, 'Available stock weight is 144.0 kg');
+  });
 });
+
 
 
 

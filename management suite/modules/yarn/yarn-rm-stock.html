@@ -3623,13 +3623,13 @@ Return ONLY a valid JSON object matching this schema:
   "lotNumber": "Lot number or box batch prefix if visible (e.g. 'LOT-26', '26', 'M005336')",
   "challanNumber": "Challan number if visible",
   "supplier": "Supplier / Mill name if visible",
-  "defaultIssueDate": "YYYY-MM-DD",
+  "defaultIssueDate": "YYYY-MM-DD or null if no overall date",
   "boxes": [
     {
       "boxNumber": "M005336/26",
       "cones": 12,
       "weight": 24.0,
-      "issueDate": "2026-08-16"
+      "issueDate": "2026-08-16 or null if empty/blank"
     }
   ],
   "remarks": "Any additional notes or header labels"
@@ -3637,7 +3637,7 @@ Return ONLY a valid JSON object matching this schema:
 
 Extraction Rules:
 1. Extract EVERY single box row in the table with its exact box no (e.g. 'M005336/26', 'M005540/26', 'M006325/26'), number of cones (e.g. 12), net weight (e.g. 24.000), and individual issue date.
-2. Note that different boxes in the same challan/register can have different issue dates (e.g. some boxes are issued on 08-08-2026 and others on 16-08-2026). Convert each date to ISO 'YYYY-MM-DD' format (e.g. '2026-08-08' and '2026-08-16').
+2. IMPORTANT FOR ISSUE DATES: Note that in delivery challans or registers, only SOME boxes have an issue date written (e.g. 08-08-2026 or 16-08-2026). If a box row has NO date written (the date column or cell is empty / blank / un-dated), you MUST return "issueDate": null (or ""). DO NOT invent, assume, or copy dates to blank box rows! Convert written dates to ISO 'YYYY-MM-DD' format.
 3. Extract the yarn quality name from the top header (e.g. '20/1 BRT POLY').
 4. Extract the total weight from the header if present (e.g. 240.000).`;
 
@@ -3751,21 +3751,21 @@ Extraction Rules:
       const rawLot = (data.lotNumber || '').trim();
       const rawChallan = (data.challanNumber || '').trim();
       
-      // Normalize boxes array
+      // Normalize boxes array (preserve blank dates when image has no date)
       let rawBoxes = [];
       if (Array.isArray(data.boxes) && data.boxes.length > 0) {
         rawBoxes = data.boxes.map((b, idx) => ({
           boxNumber: String(b.boxNumber || b.boxNo || `Box-${idx + 1}`).trim(),
           cones: Number(b.cones) || 12,
           weight: Number(b.weight || b.netWeight) || 24.0,
-          issueDate: normalizeIsoDate(b.issueDate) || normalizeIsoDate(data.defaultIssueDate) || new Date().toISOString().split('T')[0]
+          issueDate: normalizeIsoDate(b.issueDate) || ''
         }));
       } else if (Array.isArray(data.boxNumbers) && data.boxNumbers.length > 0) {
         rawBoxes = data.boxNumbers.map((bNum, idx) => ({
           boxNumber: String(bNum).trim(),
           cones: 12,
           weight: 24.0,
-          issueDate: normalizeIsoDate(data.defaultIssueDate) || new Date().toISOString().split('T')[0]
+          issueDate: normalizeIsoDate(data.defaultIssueDate) || ''
         }));
       }
 
@@ -3773,6 +3773,7 @@ Extraction Rules:
       const totalBoxesWeight = rawBoxes.reduce((acc, b) => acc + (b.weight || 0), 0) || Number(data.totalWeight) || 0;
       const avgCones = rawBoxes.length > 0 ? (rawBoxes[0].cones || 12) : 12;
       const distinctDates = [...new Set(rawBoxes.map(b => b.issueDate).filter(Boolean))];
+      const datedBoxesCount = rawBoxes.filter(b => b.issueDate).length;
 
       // Update Summary Banner
       if (qualityTextEl) qualityTextEl.textContent = rawQuality;
@@ -3781,11 +3782,11 @@ Extraction Rules:
       if (conesPillEl) conesPillEl.textContent = `🧵 ${avgCones} Cones/bx`;
       if (datesPillEl) {
         if (distinctDates.length > 1) {
-          datesPillEl.textContent = `📅 ${distinctDates.length} Dates`;
+          datesPillEl.textContent = `📅 ${distinctDates.length} Dates (${datedBoxesCount}/${totalBoxesCount} dated)`;
         } else if (distinctDates.length === 1) {
-          datesPillEl.textContent = `📅 ${distinctDates[0]}`;
+          datesPillEl.textContent = `📅 ${distinctDates[0]} (${datedBoxesCount}/${totalBoxesCount} dated)`;
         } else {
-          datesPillEl.textContent = `📅 Auto Dates`;
+          datesPillEl.textContent = `📅 0 Dates (${datedBoxesCount}/${totalBoxesCount} dated)`;
         }
       }
 
@@ -3915,7 +3916,7 @@ Extraction Rules:
       const isNewLot = (!lotId || lotId === '__NEW_LOT__');
       const todayIso = new Date().toISOString().split('T')[0];
 
-      // Prepare parsed boxes from AI
+      // Prepare parsed boxes from AI (preserve empty date when no date written)
       let slipBoxes = [];
       if (parsedData) {
         if (Array.isArray(parsedData.boxes) && parsedData.boxes.length > 0) {
@@ -3923,14 +3924,14 @@ Extraction Rules:
             boxNumber: String(b.boxNumber || b.boxNo || `Box-${idx + 1}`).trim(),
             cones: Number(b.cones) || 12,
             weight: Number(b.weight || b.netWeight) || 24.0,
-            issueDate: normalizeIsoDate(b.issueDate) || normalizeIsoDate(parsedData.defaultIssueDate) || todayIso
+            issueDate: normalizeIsoDate(b.issueDate) || ''
           }));
         } else if (Array.isArray(parsedData.boxNumbers) && parsedData.boxNumbers.length > 0) {
           slipBoxes = parsedData.boxNumbers.map((bNum, idx) => ({
             boxNumber: String(bNum).trim(),
             cones: 12,
             weight: 24.0,
-            issueDate: normalizeIsoDate(parsedData.defaultIssueDate) || todayIso
+            issueDate: normalizeIsoDate(parsedData.defaultIssueDate) || ''
           }));
         }
       }
@@ -3953,20 +3954,24 @@ Extraction Rules:
           const tr = document.createElement('tr');
           const wt = Number(b.weight).toFixed(2);
           const cones = Number(b.cones) || 12;
-          const boxDate = b.issueDate || todayIso;
+          const hasDate = Boolean(b.issueDate);
+          const isChecked = hasDate;
+          const boxDate = b.issueDate || '';
 
           tr.innerHTML = `
             <td style="text-align: center;">
-              <input type="checkbox" class="ai-box-checkbox" data-box-num="${b.boxNumber}" data-cones="${cones}" data-weight="${wt}" data-is-new="true" checked onchange="updateAiSelectedBoxesMetrics()">
+              <input type="checkbox" class="ai-box-checkbox" data-box-num="${b.boxNumber}" data-cones="${cones}" data-weight="${wt}" data-is-new="true" ${isChecked ? 'checked' : ''} onchange="handleAiBoxRowCheckboxChanged(this)">
             </td>
             <td style="font-weight: 700; font-family: var(--font-mono);">${b.boxNumber}</td>
             <td style="text-align: center; font-weight: 600;" class="ai-row-cones">${cones}</td>
             <td style="text-align: right; font-weight: 700;">${wt} kg</td>
             <td>
-              <input type="date" class="ai-row-date-input" value="${boxDate}" title="Box Issue Date (Auto-detected)">
+              <input type="date" class="ai-row-date-input" value="${boxDate}" onchange="handleAiRowDateChanged(this)" title="Box Issue Date (${hasDate ? 'Auto-detected from slip' : 'Empty in slip - fill date to issue'})">
             </td>
             <td style="text-align: center;">
-              <span class="status-badge available">● Ready to Issue</span>
+              <span class="status-badge ${isChecked ? 'available' : 'unselected'}" style="${isChecked ? '' : 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);'}">
+                ${isChecked ? '● Ready to Issue' : '○ No Date (Unselected)'}
+              </span>
             </td>
           `;
           tableBody.appendChild(tr);
@@ -4001,30 +4006,47 @@ Extraction Rules:
           const numOnly = boxIdClean.replace(/[^0-9]/g, '');
 
           let matchedSlipBox = slipBoxMap.get(boxIdClean) || (numOnly ? slipBoxMap.get(numOnly) : null);
-          const isDetected = slipBoxes.length === 0 ? (box.status === 'available') : Boolean(matchedSlipBox);
           const isAvailable = (box.status === 'available');
-          const isChecked = isDetected && isAvailable;
+          const hasSlipDate = Boolean(matchedSlipBox && matchedSlipBox.issueDate);
+          
+          // Boxes with no date in the slip should NOT be selected
+          const isChecked = isAvailable && (matchedSlipBox ? hasSlipDate : false);
+          const boxDate = matchedSlipBox?.issueDate || (isChecked ? todayIso : '');
 
           const gross = Number(box.grossWeight || box.weight || 0).toFixed(2);
           const remaining = Number(box.remainingWeight !== undefined ? box.remainingWeight : box.weight || 0).toFixed(2);
           const cones = box.cones || (matchedSlipBox ? matchedSlipBox.cones : 12);
-          const boxDate = matchedSlipBox?.issueDate || box.issueDate || todayIso;
 
-          const statusClass = box.status === 'issued' ? 'issued' : (box.status === 'gr' ? 'gr' : 'available');
-          const statusLabel = box.status === 'issued' ? 'Issued' : (box.status === 'gr' ? 'GR (Returned)' : 'Available');
+          let statusClass = 'available';
+          let statusLabel = '● Ready to Issue';
+          let statusStyle = '';
+
+          if (box.status === 'issued') {
+            statusClass = 'issued';
+            statusLabel = 'Issued';
+          } else if (box.status === 'gr') {
+            statusClass = 'gr';
+            statusLabel = 'GR (Returned)';
+          } else if (!isChecked) {
+            statusClass = 'unselected';
+            statusLabel = '○ No Date (Unselected)';
+            statusStyle = 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
+          }
 
           tr.innerHTML = `
             <td style="text-align: center;">
-              <input type="checkbox" class="ai-box-checkbox" data-box-id="${box.id}" data-box-num="${box.boxNumber || box.id}" data-cones="${cones}" data-weight="${remaining}" ${isChecked ? 'checked' : ''} onchange="updateAiSelectedBoxesMetrics()">
+              <input type="checkbox" class="ai-box-checkbox" data-box-id="${box.id}" data-box-num="${box.boxNumber || box.id}" data-cones="${cones}" data-weight="${remaining}" ${isChecked ? 'checked' : ''} ${isAvailable ? '' : 'disabled'} onchange="handleAiBoxRowCheckboxChanged(this)">
             </td>
             <td style="font-weight: 700; font-family: var(--font-mono);">${box.boxNumber || box.id}</td>
             <td style="text-align: center; font-weight: 600;" class="ai-row-cones">${cones}</td>
             <td style="text-align: right; font-weight: 700;">${remaining} kg</td>
             <td>
-              <input type="date" class="ai-row-date-input" value="${boxDate}" title="Box Issue Date (Auto-detected)">
+              <input type="date" class="ai-row-date-input" value="${boxDate}" ${isAvailable ? '' : 'disabled'} onchange="handleAiRowDateChanged(this)" title="Box Issue Date">
             </td>
             <td style="text-align: center;">
-              <span class="status-badge ${statusClass}">● ${statusLabel}</span>
+              <span class="status-badge ${statusClass}" style="${statusStyle}">
+                ${statusLabel}
+              </span>
             </td>
           `;
           tableBody.appendChild(tr);
@@ -4034,9 +4056,87 @@ Extraction Rules:
       updateAiSelectedBoxesMetrics();
     }
 
+    function handleAiBoxRowCheckboxChanged(checkbox) {
+      const tr = checkbox.closest('tr');
+      if (tr) {
+        const dateInput = tr.querySelector('.ai-row-date-input');
+        const badge = tr.querySelector('.status-badge');
+        const todayIso = new Date().toISOString().split('T')[0];
+
+        if (checkbox.checked) {
+          if (dateInput && !dateInput.value) {
+            dateInput.value = todayIso;
+          }
+          if (badge) {
+            badge.className = 'status-badge available';
+            badge.style = '';
+            badge.textContent = '● Ready to Issue';
+          }
+        } else {
+          if (badge) {
+            badge.className = 'status-badge unselected';
+            badge.style = 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
+            badge.textContent = '○ No Date (Unselected)';
+          }
+        }
+      }
+      updateAiSelectedBoxesMetrics();
+    }
+
+    function handleAiRowDateChanged(dateInput) {
+      const tr = dateInput.closest('tr');
+      if (tr) {
+        const checkbox = tr.querySelector('.ai-box-checkbox');
+        const badge = tr.querySelector('.status-badge');
+        if (dateInput.value && dateInput.value.trim() !== '') {
+          if (checkbox && !checkbox.disabled) {
+            checkbox.checked = true;
+          }
+          if (badge) {
+            badge.className = 'status-badge available';
+            badge.style = '';
+            badge.textContent = '● Ready to Issue';
+          }
+        } else {
+          if (checkbox) {
+            checkbox.checked = false;
+          }
+          if (badge) {
+            badge.className = 'status-badge unselected';
+            badge.style = 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
+            badge.textContent = '○ No Date (Unselected)';
+          }
+        }
+      }
+      updateAiSelectedBoxesMetrics();
+    }
+
     function toggleAllAiBoxes(checked) {
-      document.querySelectorAll('.ai-box-checkbox').forEach(cb => {
-        cb.checked = checked;
+      const todayIso = new Date().toISOString().split('T')[0];
+      document.querySelectorAll('#ai-boxes-table-body tr').forEach(tr => {
+        const cb = tr.querySelector('.ai-box-checkbox');
+        const dateInput = tr.querySelector('.ai-row-date-input');
+        const badge = tr.querySelector('.status-badge');
+
+        if (cb && !cb.disabled) {
+          cb.checked = checked;
+          if (checked) {
+            if (dateInput && !dateInput.value) {
+              dateInput.value = todayIso;
+            }
+            if (badge) {
+              badge.className = 'status-badge available';
+              badge.style = '';
+              badge.textContent = '● Ready to Issue';
+            }
+          } else {
+            if (badge) {
+              badge.className = 'status-badge unselected';
+              badge.style = 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
+              badge.textContent = '○ No Date (Unselected)';
+            }
+          }
+        }
       });
       updateAiSelectedBoxesMetrics();
     }
@@ -4045,8 +4145,15 @@ Extraction Rules:
       const selectedPill = document.getElementById('ai-boxes-selected-pill');
       const confirmBtn = document.getElementById('btn-confirm-ai-issue');
       const machineInput = document.getElementById('ai-issue-to');
-      const checkboxes = document.querySelectorAll('.ai-box-checkbox:checked');
+      const allCheckboxes = document.querySelectorAll('#ai-boxes-table-body .ai-box-checkbox:not(:disabled)');
+      const checkboxes = document.querySelectorAll('#ai-boxes-table-body .ai-box-checkbox:checked');
+      const masterCb = document.getElementById('ai-master-box-cb');
       
+      if (masterCb) {
+        masterCb.checked = (allCheckboxes.length > 0 && allCheckboxes.length === checkboxes.length);
+        masterCb.indeterminate = (checkboxes.length > 0 && checkboxes.length < allCheckboxes.length);
+      }
+
       let totalKg = 0;
       checkboxes.forEach(cb => {
         const wt = Number(cb.getAttribute('data-weight')) || 0;
@@ -4078,22 +4185,24 @@ Extraction Rules:
         return;
       }
 
-      // Collect all checked table rows
-      const checkedRows = [];
+      // Collect all rows in the register
+      const allRows = [];
       const rows = document.querySelectorAll('#ai-boxes-table-body tr');
       rows.forEach(tr => {
         const cb = tr.querySelector('.ai-box-checkbox');
-        if (cb && cb.checked) {
+        if (cb) {
           const dateInput = tr.querySelector('.ai-row-date-input');
           const boxNum = cb.getAttribute('data-box-num') || '';
           const boxId = cb.getAttribute('data-box-id') || boxNum;
           const weight = Number(cb.getAttribute('data-weight')) || 24.0;
           const cones = Number(cb.getAttribute('data-cones')) || 12;
-          const issueDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
-          checkedRows.push({ boxId, boxNum, weight, cones, issueDate });
+          const isChecked = cb.checked;
+          const issueDate = (dateInput && dateInput.value) ? dateInput.value : (isChecked ? new Date().toISOString().split('T')[0] : null);
+          allRows.push({ boxId, boxNum, weight, cones, isChecked, issueDate });
         }
       });
 
+      const checkedRows = allRows.filter(r => r.isChecked);
       if (checkedRows.length === 0) {
         alert('Please select at least one box to issue.');
         return;
@@ -4106,34 +4215,55 @@ Extraction Rules:
       let issuedCount = 0;
 
       if (!lotId || lotId === '__NEW_LOT__') {
-        // Create new registered lot
+        // Create new registered lot containing ALL boxes from challan (checked ones as issued, unchecked as available)
         const newLotId = `LOT-${rawQuality.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
         const challanNo = currentAiExtractedData?.challanNumber || `CH-${Date.now().toString().slice(-4)}`;
         const lotNumber = currentAiExtractedData?.lotNumber || `LOT-${Date.now().toString().slice(-4)}`;
         const supplier = currentAiExtractedData?.supplier || 'Mill Supplier';
         const itemType = rawQuality.toLowerCase().includes('poly') ? 'Polyester' : (rawQuality.toLowerCase().includes('nylon') ? 'Nylon' : 'Viscose');
         
-        const newBoxes = checkedRows.map(r => {
-          issuedCount++;
-          boxUids.push(`${newLotId}__${r.boxNum}`);
-          return {
-            id: r.boxNum,
-            boxNumber: r.boxNum,
-            cones: r.cones,
-            grossWeight: r.weight,
-            remainingWeight: r.weight,
-            weight: r.weight,
-            status: 'issued',
-            issueDate: r.issueDate,
-            issuedTo: departmentName,
-            previousIssueDate: r.issueDate,
-            previousIssuedTo: departmentName,
-            unissued_at: null,
-            updated_at: nowIso,
-            grWeight: 0,
-            grDate: null,
-            grRemarks: null
-          };
+        const newBoxes = allRows.map(r => {
+          if (r.isChecked) {
+            issuedCount++;
+            boxUids.push(`${newLotId}__${r.boxNum}`);
+            return {
+              id: r.boxNum,
+              boxNumber: r.boxNum,
+              cones: r.cones,
+              grossWeight: r.weight,
+              remainingWeight: r.weight,
+              weight: r.weight,
+              status: 'issued',
+              issueDate: r.issueDate,
+              issuedTo: departmentName,
+              previousIssueDate: r.issueDate,
+              previousIssuedTo: departmentName,
+              unissued_at: null,
+              updated_at: nowIso,
+              grWeight: 0,
+              grDate: null,
+              grRemarks: null
+            };
+          } else {
+            return {
+              id: r.boxNum,
+              boxNumber: r.boxNum,
+              cones: r.cones,
+              grossWeight: r.weight,
+              remainingWeight: r.weight,
+              weight: r.weight,
+              status: 'available',
+              issueDate: null,
+              issuedTo: null,
+              previousIssueDate: null,
+              previousIssuedTo: null,
+              unissued_at: null,
+              updated_at: nowIso,
+              grWeight: 0,
+              grDate: null,
+              grRemarks: null
+            };
+          }
         });
 
         targetLot = {
@@ -4162,7 +4292,7 @@ Extraction Rules:
           let orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
           if (!Array.isArray(orders)) orders = [];
           const newOrderId = `ORD-${Date.now().toString().slice(-4)}`;
-          const totalBatchWt = checkedRows.reduce((acc, b) => acc + b.weight, 0);
+          const totalBatchWt = allRows.reduce((acc, b) => acc + b.weight, 0);
 
           orders.unshift({
             id: newOrderId,
@@ -4188,11 +4318,11 @@ Extraction Rules:
                 weight: b.weight,
                 returnedWeight: 0,
                 returnedDate: '',
-                status: 'issued',
+                status: b.status,
                 issueDate: b.issueDate,
-                issuedTo: departmentName,
-                previousIssueDate: b.issueDate,
-                previousIssuedTo: departmentName,
+                issuedTo: b.issuedTo,
+                previousIssueDate: b.previousIssueDate,
+                previousIssuedTo: b.previousIssuedTo,
                 updated_at: nowIso
               }))
             }]
