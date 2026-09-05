@@ -3275,9 +3275,50 @@
       }
     });
 
+    function getStoredGeminiConfig() {
+      let apiKey = '';
+      let selectedModel = 'gemini-2.0-flash';
+
+      // 1. Resolve API Key from Settings localStorage or window.APP_CONFIG
+      try {
+        const rawKey = localStorage.getItem('gemini-api-key');
+        if (rawKey) {
+          try {
+            apiKey = JSON.parse(rawKey);
+          } catch (_) {
+            apiKey = rawKey;
+          }
+        }
+      } catch (e) {}
+
+      if (!apiKey && typeof window !== 'undefined' && window.APP_CONFIG && window.APP_CONFIG.GEMINI_API_KEY) {
+        apiKey = window.APP_CONFIG.GEMINI_API_KEY;
+      }
+
+      // 2. Resolve Selected Model from Settings localStorage
+      try {
+        const rawModel = localStorage.getItem('selected-gemini-model');
+        if (rawModel) {
+          try {
+            selectedModel = JSON.parse(rawModel);
+          } catch (_) {
+            selectedModel = rawModel;
+          }
+        }
+      } catch (e) {}
+
+      if (!selectedModel && typeof window !== 'undefined' && window.APP_CONFIG && window.APP_CONFIG.SELECTED_GEMINI_MODEL) {
+        selectedModel = window.APP_CONFIG.SELECTED_GEMINI_MODEL;
+      }
+
+      apiKey = (apiKey || '').trim();
+      selectedModel = (selectedModel || 'gemini-2.0-flash').trim();
+
+      return { apiKey, selectedModel };
+    }
+
     async function startAiImageScan(dataUrl) {
-      const apiKey = (localStorage.getItem('gemini-api-key') || '').trim();
-      const selectedModel = (localStorage.getItem('selected-gemini-model') || 'gemini-2.0-flash').trim();
+      const { apiKey, selectedModel } = getStoredGeminiConfig();
 
       const uploadStep = document.getElementById('ai-scan-step-upload');
       const progressStep = document.getElementById('ai-scan-step-progress');
