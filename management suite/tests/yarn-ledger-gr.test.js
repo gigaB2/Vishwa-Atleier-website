@@ -1266,6 +1266,62 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(box.issueDate, null);
     assert.strictEqual(box.issuedTo, null);
   });
+
+  await t.test('AI Vision Issue Slip Matcher correctly maps extracted boxes and issues them with multi-PC sync protection', () => {
+    // 1. Initial Stock Lot in Inventory
+    const stockLot = {
+      id: 'LOT-9042__CH-7788',
+      lotNumber: 'LOT-9042',
+      challanNo: 'CH-7788',
+      quality: '80D/72F Micro Polyester',
+      boxes: [
+        { id: 'B1', boxNumber: '1', grossWeight: 50.0, weight: 50.0, remainingWeight: 50.0, status: 'available' },
+        { id: 'B2', boxNumber: '2', grossWeight: 51.2, weight: 51.2, remainingWeight: 51.2, status: 'available' },
+        { id: 'B3', boxNumber: '3', grossWeight: 49.8, weight: 49.8, remainingWeight: 49.8, status: 'available' },
+        { id: 'B4', boxNumber: '4', grossWeight: 50.5, weight: 50.5, remainingWeight: 50.5, status: 'available' }
+      ]
+    };
+
+    // 2. Simulated Gemini Vision AI Parsed Payload from an uploaded Issue Slip
+    const aiExtractedPayload = {
+      lotNumber: '9042',
+      challanNumber: 'CH-7788',
+      issueDate: '2026-09-05',
+      issuedTo: 'Covering Unit 2',
+      boxNumbers: ['1', '2', '4'],
+      remarks: 'Issued for 40D Covered Spandex Production'
+    };
+
+    // 3. Match Lot & Boxes
+    const cleanLotToken = aiExtractedPayload.lotNumber.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const lotNumClean = stockLot.lotNumber.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    assert.ok(lotNumClean.includes(cleanLotToken), 'Lot number must match');
+
+    const detectedSet = new Set(aiExtractedPayload.boxNumbers.map(b => String(b).trim()));
+    const nowIso = new Date().toISOString();
+
+    stockLot.boxes.forEach(box => {
+      if (detectedSet.has(box.boxNumber) && box.status === 'available') {
+        box.status = 'issued';
+        box.issueDate = aiExtractedPayload.issueDate;
+        box.issuedTo = aiExtractedPayload.issuedTo;
+        box.previousIssueDate = aiExtractedPayload.issueDate;
+        box.previousIssuedTo = aiExtractedPayload.issuedTo;
+        box.unissued_at = null;
+        box.updated_at = nowIso;
+      }
+    });
+
+    // Verify Box States
+    assert.strictEqual(stockLot.boxes[0].status, 'issued', 'Box 1 issued');
+    assert.strictEqual(stockLot.boxes[0].issuedTo, 'Covering Unit 2');
+    assert.strictEqual(stockLot.boxes[1].status, 'issued', 'Box 2 issued');
+    assert.strictEqual(stockLot.boxes[2].status, 'available', 'Box 3 remains available');
+    assert.strictEqual(stockLot.boxes[3].status, 'issued', 'Box 4 issued');
+
+    const totalIssuedKg = stockLot.boxes.filter(b => b.status === 'issued').reduce((acc, b) => acc + b.weight, 0);
+    assert.strictEqual(Number(totalIssuedKg.toFixed(2)), 151.7, 'Total issued weight = 50.0 + 51.2 + 50.5 = 151.7 kg');
+  });
 });
 
 

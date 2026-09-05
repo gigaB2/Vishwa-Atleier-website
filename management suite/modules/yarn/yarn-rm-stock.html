@@ -1298,6 +1298,263 @@
       color: var(--fg);
       margin-bottom: 0.35rem;
     }
+
+    /* AI Scan Header Button & Modal Styles */
+    .btn-ai-scan {
+      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #ec4899 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(168, 85, 247, 0.35);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .btn-ai-scan:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
+      color: #ffffff;
+    }
+    .btn-ai-scan::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(60deg, transparent, rgba(255,255,255,0.25), transparent);
+      transform: rotate(30deg);
+      animation: aiSparkleSweep 4s infinite linear;
+      pointer-events: none;
+    }
+    @keyframes aiSparkleSweep {
+      0% { transform: translate(-100%, -100%) rotate(30deg); }
+      100% { transform: translate(100%, 100%) rotate(30deg); }
+    }
+    .ai-sparkle-icon {
+      font-size: 1.1rem;
+      animation: pulseSparkle 2s infinite ease-in-out;
+    }
+    @keyframes pulseSparkle {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(255,255,255,0.8)); }
+      50% { transform: scale(1.2); filter: drop-shadow(0 0 6px rgba(255,255,255,1)); }
+    }
+    .ai-kbd-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-family: var(--font-mono);
+      letter-spacing: 0.5px;
+      margin-left: 0.35rem;
+    }
+
+    /* Modal Layout & Dropzone */
+    .ai-modal-card {
+      max-width: 1040px !important;
+      width: 95vw !important;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .ai-dropzone-wrap {
+      border: 2px dashed rgba(168, 85, 247, 0.4);
+      background: rgba(168, 85, 247, 0.03);
+      border-radius: 14px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .ai-dropzone-wrap:hover, .ai-dropzone-wrap.dragover {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.08);
+      transform: scale(1.005);
+    }
+    .ai-dropzone-icon {
+      font-size: 2.75rem;
+      margin-bottom: 0.75rem;
+      display: inline-block;
+      animation: floatIcon 3s ease-in-out infinite;
+    }
+    @keyframes floatIcon {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    /* AI Progress Bar */
+    .ai-scan-progress-wrap {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      text-align: center;
+    }
+    .ai-progress-track {
+      height: 8px;
+      background: rgba(0,0,0,0.06);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 1rem 0 0.5rem 0;
+      position: relative;
+    }
+    .dark-mode .ai-progress-track {
+      background: rgba(255,255,255,0.08);
+    }
+    .ai-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #7c3aed, #ec4899, #f97316);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+      box-shadow: 0 0 12px rgba(236, 72, 153, 0.6);
+    }
+    .ai-stage-text {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    /* Split Review Screen */
+    .ai-review-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 1.25rem;
+      min-height: 440px;
+    }
+    @media (max-width: 860px) {
+      .ai-review-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .ai-img-preview-card {
+      border: 1px solid var(--border);
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-height: 520px;
+    }
+    .ai-img-container {
+      flex: 1;
+      overflow: auto;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.03);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+    }
+    .ai-img-container img {
+      max-width: 100%;
+      max-height: 450px;
+      object-fit: contain;
+      border-radius: 6px;
+      box-shadow: var(--shadow-sm);
+    }
+    .ai-review-form-card {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-height: 520px;
+      overflow-y: auto;
+      padding-right: 0.35rem;
+    }
+    .ai-lot-match-banner {
+      background: rgba(139, 92, 246, 0.08);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .ai-chips-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.35rem;
+    }
+    .ai-chip {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .ai-chip:hover, .ai-chip.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .ai-box-table-wrap {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .ai-box-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+    .ai-box-table th {
+      background: var(--bg);
+      padding: 0.55rem 0.75rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .ai-box-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .ai-box-table tr:last-child td {
+      border-bottom: none;
+    }
+    .ai-box-table tr:hover {
+      background: rgba(139, 92, 246, 0.04);
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+    .status-badge.available {
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--success);
+    }
+    .status-badge.issued {
+      background: rgba(59, 130, 246, 0.12);
+      color: #3b82f6;
+    }
+    .status-badge.gr {
+      background: rgba(249, 115, 22, 0.12);
+      color: var(--accent3);
+    }
   </style>
 </head>
 <body>
@@ -1310,6 +1567,16 @@
       <div class="rm-header-info">
         <h1 id="rm-page-title">Yarn RM Stock Book</h1>
         <p id="rm-page-subtitle">Raw material stock ledger — Track incoming challans & box-level yarn issuance</p>
+      </div>
+      <div class="rm-header-actions" id="rm-header-actions-bar" style="display: flex;">
+        <button type="button" class="btn btn-ai-scan" onclick="openAiScanModal()" id="btn-ai-scan" title="Upload or Paste (Ctrl+V) Challan/Issue Slip for AI Box Issuance">
+          <span class="ai-sparkle-icon">✨</span>
+          <span>Scan Issue Slip (AI)</span>
+          <span class="ai-kbd-badge">Ctrl+V</span>
+        </button>
+        <button type="button" class="btn btn-primary" onclick="openModal('modal-challan')">
+          <span style="font-size: 1.1rem; font-weight: bold;">+</span> Add Incoming Challan
+        </button>
       </div>
     </div>
 
@@ -1496,6 +1763,163 @@
       </div>
     </div>
 
+  <!-- MODAL: AI Issue Slip / Delivery Challan Scanner & Matcher -->
+  <div class="modal-overlay" id="modal-ai-scan" style="z-index: 100015;">
+    <div class="modal-card ai-modal-card">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <span style="font-size: 1.35rem; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(236, 72, 153, 0.2));">✨</span>
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem;">AI Issue Slip & Challan Scanner</h3>
+            <p style="margin: 0; font-size: 0.8rem; color: var(--muted);">Upload or paste a photo/scan of an issue slip or delivery challan to auto-issue yarn boxes</p>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeAiScanModal()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem 1.5rem; overflow-y: auto; max-height: calc(92vh - 140px);">
+        
+        <!-- STEP 1: Upload / Dropzone Screen -->
+        <div id="ai-scan-step-upload">
+          <div class="ai-dropzone-wrap" id="ai-dropzone" onclick="document.getElementById('ai-file-input').click()">
+            <input type="file" id="ai-file-input" accept="image/*" style="display: none;" onchange="handleAiFileSelected(this.files)">
+            <div class="ai-dropzone-icon">📄</div>
+            <h3 style="font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; margin-bottom: 0.35rem;">Click to Upload or Drag & Drop Issue Slip</h3>
+            <p style="color: var(--muted); font-size: 0.88rem; margin-bottom: 1.25rem;">Supports JPG, PNG, WEBP — Delivery Challans, Gate Passes, Handwritten Issue Slips, or Box Stickers</p>
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface); padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid var(--border); font-size: 0.8rem; font-weight: 600; color: var(--fg); box-shadow: var(--shadow-sm);">
+              <span>💡 Tip: You can also press <kbd style="background: var(--bg); padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid var(--border); font-family: var(--font-mono);">Ctrl + V</kbd> to paste an image directly from clipboard</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Scanning / Progress Animation -->
+        <div id="ai-scan-step-progress" style="display: none;">
+          <div class="ai-scan-progress-wrap">
+            <div style="font-size: 2.2rem; margin-bottom: 0.5rem;" class="ai-sparkle-icon">✨</div>
+            <div class="ai-stage-text" id="ai-stage-label">Initializing Gemini AI Vision Engine...</div>
+            <div class="ai-progress-track">
+              <div class="ai-progress-fill" id="ai-progress-bar"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); font-family: var(--font-mono); margin-top: 0.35rem;">
+              <span>AI Multimodal Vision</span>
+              <span id="ai-progress-pct">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3: Review & Verification Screen -->
+        <div id="ai-scan-step-review" style="display: none;">
+          <div class="ai-review-grid">
+            <!-- Left: Document Image Preview -->
+            <div class="ai-img-preview-card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Scanned Document</span>
+                <button type="button" class="btn btn-secondary" onclick="resetAiScanDropzone()" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; min-height: 28px;">
+                  ↺ Re-upload
+                </button>
+              </div>
+              <div class="ai-img-container">
+                <img id="ai-preview-img" src="" alt="Scanned Document">
+              </div>
+            </div>
+
+            <!-- Right: Extracted Fields & Box Selection -->
+            <div class="ai-review-form-card">
+              <!-- Matched Lot Banner -->
+              <div class="ai-lot-match-banner">
+                <div style="flex: 1;">
+                  <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px;">Matched Stock Lot</div>
+                  <select class="form-control" id="ai-match-lot-select" onchange="handleAiLotSelectionChanged(this.value)" style="font-weight: 700; margin-top: 0.25rem;">
+                    <!-- Auto-populated with matched and available stock lots -->
+                  </select>
+                </div>
+                <div style="text-align: right; min-width: 110px;">
+                  <div style="font-size: 0.75rem; color: var(--muted);">Detected in Slip</div>
+                  <div style="font-family: var(--font-mono); font-weight: 700; font-size: 0.9rem;" id="ai-detected-lot-text">-</div>
+                </div>
+              </div>
+
+              <!-- Issue Parameters Grid -->
+              <div class="form-grid" style="grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+                <div class="form-group">
+                  <label>Issue Date *</label>
+                  <input type="date" class="form-control" id="ai-issue-date" required>
+                </div>
+                <div class="form-group">
+                  <label>Issued To (Department / Party) *</label>
+                  <input type="text" class="form-control" id="ai-issue-to" placeholder="e.g. Covering Unit 1" required>
+                  <div class="ai-chips-group">
+                    <span class="ai-chip" onclick="setAiDepartmentChip('TFO')">TFO</span>
+                    <span class="ai-chip" onclick="setAiDepartmentChip('Doubler')">Doubler</span>
+                    <span class="ai-chip" onclick="setAiDepartmentChip('Covering')">Covering</span>
+                    <span class="ai-chip" onclick="setAiDepartmentChip('Weaving')">Weaving</span>
+                    <span class="ai-chip" onclick="setAiDepartmentChip('MX')">MX</span>
+                  </div>
+                </div>
+                <div class="form-group full">
+                  <label>Remarks / Issue Slip No.</label>
+                  <input type="text" class="form-control" id="ai-issue-remarks" placeholder="Optional notes extracted from slip...">
+                </div>
+              </div>
+
+              <!-- Boxes Selection Table -->
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label style="font-weight: 700; font-size: 0.9rem;">Select Boxes to Issue</label>
+                    <span class="cones-pill" id="ai-boxes-selected-pill">0 boxes (0.00 kg)</span>
+                  </div>
+                  <div style="display: flex; gap: 0.4rem;">
+                    <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(true)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; min-height: 26px;">Select All</button>
+                    <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(false)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; min-height: 26px;">Deselect All</button>
+                  </div>
+                </div>
+
+                <div class="ai-box-table-wrap" style="max-height: 240px; overflow-y: auto;">
+                  <table class="ai-box-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 40px; text-align: center;">
+                          <input type="checkbox" id="ai-master-box-cb" onchange="toggleAllAiBoxes(this.checked)" checked>
+                        </th>
+                        <th>Box #</th>
+                        <th>Gross Wt</th>
+                        <th>Remaining</th>
+                        <th>Current Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ai-boxes-table-body">
+                      <!-- Dynamic box rows -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error Banner -->
+        <div id="ai-scan-error-banner" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1.5px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 1rem; color: var(--error); margin-top: 1rem; font-size: 0.88rem;">
+          <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+            <span style="font-size: 1.2rem;">⚠️</span>
+            <div style="flex: 1;">
+              <strong id="ai-scan-error-title">Extraction Notice</strong>
+              <div id="ai-scan-error-msg" style="margin-top: 0.25rem;"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-secondary" onclick="closeAiScanModal()">Cancel</button>
+        <div style="display: flex; gap: 0.75rem;">
+          <button type="button" class="btn btn-primary" id="btn-confirm-ai-issue" onclick="handleConfirmAiIssue()" style="display: none; background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);">
+            ✨ Confirm & Issue Boxes
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL 1: Incoming Challan -->
@@ -2739,6 +3163,572 @@
           toast.style.transform = 'translateY(12px) scale(0.96)';
         }
       }, 2200);
+    }
+
+    // =========================================================================
+    // ✨ AI ISSUE SLIP & DELIVERY CHALLAN SCANNER & AUTO-MATCHER
+    // =========================================================================
+    let currentAiImageDataUrl = null;
+    let currentAiExtractedData = null;
+    let aiScanInterval = null;
+
+    function openAiScanModal() {
+      resetAiScanDropzone();
+      document.getElementById('modal-ai-scan').classList.add('active');
+    }
+
+    function closeAiScanModal() {
+      if (aiScanInterval) clearInterval(aiScanInterval);
+      document.getElementById('modal-ai-scan').classList.remove('active');
+    }
+
+    function resetAiScanDropzone() {
+      if (aiScanInterval) clearInterval(aiScanInterval);
+      currentAiImageDataUrl = null;
+      currentAiExtractedData = null;
+
+      const uploadStep = document.getElementById('ai-scan-step-upload');
+      const progressStep = document.getElementById('ai-scan-step-progress');
+      const reviewStep = document.getElementById('ai-scan-step-review');
+      const errorBanner = document.getElementById('ai-scan-error-banner');
+      const confirmBtn = document.getElementById('btn-confirm-ai-issue');
+      const fileInput = document.getElementById('ai-file-input');
+
+      if (uploadStep) uploadStep.style.display = 'block';
+      if (progressStep) progressStep.style.display = 'none';
+      if (reviewStep) reviewStep.style.display = 'none';
+      if (errorBanner) errorBanner.style.display = 'none';
+      if (confirmBtn) confirmBtn.style.display = 'none';
+      if (fileInput) fileInput.value = '';
+    }
+
+    function handleAiFileSelected(files) {
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file (JPG, PNG, WEBP).');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        currentAiImageDataUrl = e.target.result;
+        startAiImageScan(currentAiImageDataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Drag & Drop event bindings
+    document.addEventListener('DOMContentLoaded', () => {
+      const dropzone = document.getElementById('ai-dropzone');
+      if (dropzone) {
+        ['dragenter', 'dragover'].forEach(name => {
+          dropzone.addEventListener(name, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.add('dragover');
+          });
+        });
+        ['dragleave', 'drop'].forEach(name => {
+          dropzone.addEventListener(name, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+          });
+        });
+        dropzone.addEventListener('drop', (e) => {
+          const dt = e.dataTransfer;
+          const files = dt ? dt.files : null;
+          if (files && files.length > 0) {
+            handleAiFileSelected(files);
+          }
+        });
+      }
+    });
+
+    // Global Paste Listener (Ctrl+V anywhere on stock book)
+    window.addEventListener('paste', (e) => {
+      const clipboardData = e.clipboardData || window.clipboardData;
+      if (!clipboardData || !clipboardData.items) return;
+
+      // Ignore paste if user is typing in standard text input/textarea
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) {
+        if (!activeEl.closest('#modal-ai-scan')) return;
+      }
+
+      for (let i = 0; i < clipboardData.items.length; i++) {
+        const item = clipboardData.items[i];
+        if (item.type && item.type.indexOf('image') !== -1) {
+          const blob = item.getAsFile();
+          if (blob) {
+            e.preventDefault();
+            openAiScanModal();
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+              currentAiImageDataUrl = evt.target.result;
+              startAiImageScan(currentAiImageDataUrl);
+            };
+            reader.readAsDataURL(blob);
+            break;
+          }
+        }
+      }
+    });
+
+    async function startAiImageScan(dataUrl) {
+      const apiKey = (localStorage.getItem('gemini-api-key') || '').trim();
+      const selectedModel = (localStorage.getItem('selected-gemini-model') || 'gemini-2.0-flash').trim();
+
+      const uploadStep = document.getElementById('ai-scan-step-upload');
+      const progressStep = document.getElementById('ai-scan-step-progress');
+      const reviewStep = document.getElementById('ai-scan-step-review');
+      const errorBanner = document.getElementById('ai-scan-error-banner');
+      const errorMsg = document.getElementById('ai-scan-error-msg');
+      const stageLabel = document.getElementById('ai-stage-label');
+      const progressBar = document.getElementById('ai-progress-bar');
+      const progressPct = document.getElementById('ai-progress-pct');
+
+      if (!apiKey) {
+        if (progressStep) progressStep.style.display = 'none';
+        if (uploadStep) uploadStep.style.display = 'block';
+        if (errorBanner && errorMsg) {
+          errorBanner.style.display = 'block';
+          errorMsg.innerHTML = `
+            Gemini API Key is missing. Please configure your Google Gemini API key in 
+            <a href="../settings.html#gemini-settings" style="color: var(--accent); font-weight: 700; text-decoration: underline;" target="_blank">Settings &gt; Gemini AI</a>.
+          `;
+        }
+        return;
+      }
+
+      if (uploadStep) uploadStep.style.display = 'none';
+      if (reviewStep) reviewStep.style.display = 'none';
+      if (errorBanner) errorBanner.style.display = 'none';
+      if (progressStep) progressStep.style.display = 'block';
+
+      let progress = 10;
+      if (progressBar) progressBar.style.width = '10%';
+      if (progressPct) progressPct.textContent = '10%';
+      if (stageLabel) stageLabel.textContent = 'Uploading slip & initializing Gemini Vision AI...';
+
+      const startTime = Date.now();
+      if (aiScanInterval) clearInterval(aiScanInterval);
+      aiScanInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 1200) {
+          progress = Math.min(30, progress + 3);
+          if (stageLabel) stageLabel.textContent = 'Analyzing slip handwriting, lot & challan headers...';
+        } else if (elapsed < 3200) {
+          progress = Math.min(65, progress + 2.5);
+          if (stageLabel) stageLabel.textContent = 'Reading box numbers, gross weights & department issue marks...';
+        } else if (elapsed < 6000) {
+          progress = Math.min(88, progress + 1.2);
+          if (stageLabel) stageLabel.textContent = 'Cross-referencing box entries with active RM inventory...';
+        } else {
+          progress = Math.min(95, progress + 0.4);
+          if (stageLabel) stageLabel.textContent = 'Formatting structured box allocations...';
+        }
+        if (progressBar) progressBar.style.width = `${progress}%`;
+        if (progressPct) progressPct.textContent = `${Math.round(progress)}%`;
+      }, 150);
+
+      try {
+        let base64Data = '';
+        let mimeType = 'image/jpeg';
+        if (dataUrl.startsWith('data:')) {
+          const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+          if (match) {
+            mimeType = match[1];
+            base64Data = match[2];
+          } else {
+            base64Data = dataUrl.split(',')[1] || dataUrl;
+          }
+        } else {
+          base64Data = dataUrl;
+        }
+
+        const prompt = `Extract yarn raw material issuance or delivery challan information from this textile image. Return ONLY a valid JSON object matching this schema:
+        {
+          "lotNumber": "Lot number or code (e.g. LOT-4092, 4092, L-99)",
+          "challanNumber": "Challan number if visible",
+          "supplier": "Supplier or Mill name if visible",
+          "quality": "Yarn Quality/Specification if visible",
+          "issueDate": "Date of issue or delivery in YYYY-MM-DD format (convert DD/MM/YYYY or DD-MM-YYYY to YYYY-MM-DD)",
+          "issuedTo": "Recipient department, unit, plant, or machine (e.g. 'Covering', 'TFO', 'Doubler', 'Weaving', 'Knitting', 'Unit 1')",
+          "boxes": [
+            { "boxNumber": "1", "cones": 24, "weight": 50.0 }
+          ],
+          "boxNumbers": ["1", "2", "3", "4", "5", "6"],
+          "remarks": "Any notes or remarks found on the slip"
+        }`;
+
+        const modelConfigs = [
+          { id: selectedModel || 'gemini-2.0-flash', ver: 'v1beta' },
+          { id: 'gemini-2.0-flash', ver: 'v1beta' },
+          { id: 'gemini-2.5-flash', ver: 'v1beta' },
+          { id: 'gemini-flash-latest', ver: 'v1' }
+        ];
+
+        const uniqueConfigs = [];
+        const seenIds = new Set();
+        for (const config of modelConfigs) {
+          const key = `${config.id}-${config.ver}`;
+          if (!seenIds.has(key)) {
+            uniqueConfigs.push(config);
+            seenIds.add(key);
+          }
+        }
+
+        let success = false;
+        let lastError = '';
+        let parsedData = null;
+
+        for (const config of uniqueConfigs) {
+          try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/${config.ver}/models/${config.id}:generateContent?key=${apiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{
+                  parts: [
+                    { text: prompt },
+                    { inline_data: { mime_type: mimeType, data: base64Data } }
+                  ]
+                }]
+              })
+            });
+
+            const result = await res.json();
+            if (result.error) {
+              lastError = `${config.id}: ${result.error.message}`;
+              continue;
+            }
+
+            if (!result.candidates || !result.candidates[0]) {
+              lastError = `${config.id}: No candidates returned.`;
+              continue;
+            }
+
+            const text = result.candidates[0].content.parts[0].text;
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('Could not parse valid JSON from AI response.');
+
+            parsedData = JSON.parse(jsonMatch[0]);
+            success = true;
+            break;
+          } catch (err) {
+            lastError = err.message;
+          }
+        }
+
+        if (!success || !parsedData) {
+          throw new Error(lastError || 'Failed to extract data using Gemini AI models.');
+        }
+
+        if (aiScanInterval) clearInterval(aiScanInterval);
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressPct) progressPct.textContent = '100%';
+        if (stageLabel) stageLabel.textContent = '✨ Extraction complete! Populating details...';
+
+        await new Promise(r => setTimeout(r, 300));
+        currentAiExtractedData = parsedData;
+        populateAiScanReview(parsedData, dataUrl);
+
+      } catch (err) {
+        if (aiScanInterval) clearInterval(aiScanInterval);
+        if (progressStep) progressStep.style.display = 'none';
+        if (uploadStep) uploadStep.style.display = 'block';
+        if (errorBanner && errorMsg) {
+          errorBanner.style.display = 'block';
+          errorMsg.textContent = 'AI Scan notice: ' + err.message;
+        }
+      }
+    }
+
+    function populateAiScanReview(data, dataUrl) {
+      const uploadStep = document.getElementById('ai-scan-step-upload');
+      const progressStep = document.getElementById('ai-scan-step-progress');
+      const reviewStep = document.getElementById('ai-scan-step-review');
+      const confirmBtn = document.getElementById('btn-confirm-ai-issue');
+      const previewImg = document.getElementById('ai-preview-img');
+      const detectedLotText = document.getElementById('ai-detected-lot-text');
+      const lotSelect = document.getElementById('ai-match-lot-select');
+      const issueDateInput = document.getElementById('ai-issue-date');
+      const issueToInput = document.getElementById('ai-issue-to');
+      const remarksInput = document.getElementById('ai-issue-remarks');
+
+      if (uploadStep) uploadStep.style.display = 'none';
+      if (progressStep) progressStep.style.display = 'none';
+      if (reviewStep) reviewStep.style.display = 'block';
+      if (confirmBtn) confirmBtn.style.display = 'inline-flex';
+
+      if (previewImg) previewImg.src = dataUrl;
+
+      // Set detected lot label
+      const rawLot = (data.lotNumber || '').trim();
+      const rawChallan = (data.challanNumber || '').trim();
+      if (detectedLotText) {
+        detectedLotText.textContent = rawLot ? `${rawLot}${rawChallan ? ' (' + rawChallan + ')' : ''}` : (rawChallan ? `Challan: ${rawChallan}` : 'Not specified');
+      }
+
+      // Populate Matched Lot Dropdown
+      if (lotSelect) {
+        lotSelect.innerHTML = '';
+        if (!stockData || stockData.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = '-- No active stock lots in inventory --';
+          lotSelect.appendChild(opt);
+        } else {
+          // Normalize clean search tokens
+          const cleanLotToken = rawLot.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          const cleanChallanToken = rawChallan.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+          let bestMatchLot = null;
+          let highestScore = 0;
+
+          stockData.forEach(lot => {
+            const opt = document.createElement('option');
+            opt.value = lot.id;
+            const availCount = (lot.boxes || []).filter(b => b.status === 'available').length;
+            opt.textContent = `${lot.quality} — Lot: ${lot.lotNumber} | Ch: ${lot.challanNo} (${availCount} avail boxes)`;
+
+            const lotNumClean = String(lot.lotNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+            const challanClean = String(lot.challanNo || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+            let score = 0;
+            if (cleanLotToken && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 10;
+            if (cleanChallanToken && (challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 8;
+
+            if (score > highestScore) {
+              highestScore = score;
+              bestMatchLot = lot;
+            }
+
+            lotSelect.appendChild(opt);
+          });
+
+          if (bestMatchLot) {
+            lotSelect.value = bestMatchLot.id;
+          } else if (stockData.length > 0) {
+            lotSelect.value = stockData[0].id;
+          }
+        }
+      }
+
+      // Pre-fill Issue Date
+      if (issueDateInput) {
+        if (data.issueDate && /^\d{4}-\d{2}-\d{2}$/.test(data.issueDate)) {
+          issueDateInput.value = data.issueDate;
+        } else {
+          issueDateInput.value = new Date().toISOString().split('T')[0];
+        }
+      }
+
+      // Pre-fill Issued To
+      if (issueToInput) {
+        const detectedDept = (data.issuedTo || '').trim();
+        issueToInput.value = detectedDept || 'Covering';
+        setAiDepartmentChip(detectedDept || 'Covering');
+      }
+
+      // Pre-fill Remarks
+      if (remarksInput) {
+        remarksInput.value = (data.remarks || '').trim();
+      }
+
+      // Render Boxes for selected lot
+      renderAiMatchedBoxesTable(data);
+    }
+
+    function handleAiLotSelectionChanged(lotId) {
+      if (currentAiExtractedData) {
+        renderAiMatchedBoxesTable(currentAiExtractedData);
+      }
+    }
+
+    function setAiDepartmentChip(dept) {
+      const issueToInput = document.getElementById('ai-issue-to');
+      if (issueToInput) issueToInput.value = dept;
+      document.querySelectorAll('.ai-chip').forEach(c => {
+        if (c.textContent.trim().toLowerCase() === dept.toLowerCase()) c.classList.add('active');
+        else c.classList.remove('active');
+      });
+    }
+
+    function renderAiMatchedBoxesTable(parsedData) {
+      const lotSelect = document.getElementById('ai-match-lot-select');
+      const tableBody = document.getElementById('ai-boxes-table-body');
+      const selectedPill = document.getElementById('ai-boxes-selected-pill');
+      if (!tableBody || !lotSelect) return;
+
+      tableBody.innerHTML = '';
+      const lotId = lotSelect.value;
+      const lot = stockData.find(l => String(l.id) === String(lotId));
+
+      if (!lot || !lot.boxes || lot.boxes.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 1.5rem; color: var(--muted);">
+              No boxes registered under this lot.
+            </td>
+          </tr>
+        `;
+        if (selectedPill) selectedPill.textContent = '0 boxes (0.00 kg)';
+        return;
+      }
+
+      // Build lookup set of detected box numbers
+      const detectedBoxTokens = new Set();
+      if (parsedData) {
+        if (Array.isArray(parsedData.boxes)) {
+          parsedData.boxes.forEach(b => {
+            if (b && b.boxNumber) {
+              const clean = String(b.boxNumber).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+              if (clean) detectedBoxTokens.add(clean);
+            }
+          });
+        }
+        if (Array.isArray(parsedData.boxNumbers)) {
+          parsedData.boxNumbers.forEach(bNum => {
+            const clean = String(bNum).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+            if (clean) detectedBoxTokens.add(clean);
+          });
+        }
+      }
+
+      lot.boxes.forEach((box, idx) => {
+        const tr = document.createElement('tr');
+        const boxIdClean = String(box.boxNumber || box.id || (idx + 1)).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const numOnly = boxIdClean.replace(/[^0-9]/g, '');
+
+        // Check if box was detected in the AI parsed document
+        let isDetected = false;
+        if (detectedBoxTokens.size === 0) {
+          isDetected = (box.status === 'available');
+        } else {
+          isDetected = detectedBoxTokens.has(boxIdClean) || (numOnly && detectedBoxTokens.has(numOnly));
+        }
+
+        const isAvailable = (box.status === 'available');
+        const isChecked = isDetected && isAvailable;
+
+        const gross = Number(box.grossWeight || box.weight || 0).toFixed(2);
+        const remaining = Number(box.remainingWeight !== undefined ? box.remainingWeight : box.weight || 0).toFixed(2);
+        const statusClass = box.status === 'issued' ? 'issued' : (box.status === 'gr' ? 'gr' : 'available');
+        const statusLabel = box.status === 'issued' ? 'Issued' : (box.status === 'gr' ? 'GR (Returned)' : 'Available');
+
+        tr.innerHTML = `
+          <td style="text-align: center;">
+            <input type="checkbox" class="ai-box-checkbox" data-box-id="${box.id}" data-weight="${remaining}" ${isChecked ? 'checked' : ''} onchange="updateAiSelectedBoxesMetrics()">
+          </td>
+          <td style="font-weight: 700; font-family: var(--font-mono);">${box.boxNumber || box.id}</td>
+          <td>${gross} kg</td>
+          <td style="font-weight: 600;">${remaining} kg</td>
+          <td>
+            <span class="status-badge ${statusClass}">
+              ● ${statusLabel}
+            </span>
+          </td>
+        `;
+
+        tableBody.appendChild(tr);
+      });
+
+      updateAiSelectedBoxesMetrics();
+    }
+
+    function toggleAllAiBoxes(checked) {
+      document.querySelectorAll('.ai-box-checkbox').forEach(cb => {
+        cb.checked = checked;
+      });
+      updateAiSelectedBoxesMetrics();
+    }
+
+    function updateAiSelectedBoxesMetrics() {
+      const selectedPill = document.getElementById('ai-boxes-selected-pill');
+      const confirmBtn = document.getElementById('btn-confirm-ai-issue');
+      const checkboxes = document.querySelectorAll('.ai-box-checkbox:checked');
+      
+      let totalKg = 0;
+      checkboxes.forEach(cb => {
+        const wt = Number(cb.getAttribute('data-weight')) || 0;
+        totalKg += wt;
+      });
+
+      const count = checkboxes.length;
+      if (selectedPill) {
+        selectedPill.textContent = `${count} box${count === 1 ? '' : 'es'} (${totalKg.toFixed(2)} kg)`;
+      }
+      if (confirmBtn) {
+        confirmBtn.textContent = `✨ Confirm & Issue ${count} Box${count === 1 ? '' : 'es'}`;
+      }
+    }
+
+    function handleConfirmAiIssue() {
+      const lotSelect = document.getElementById('ai-match-lot-select');
+      const lotId = lotSelect ? lotSelect.value : null;
+      const issueDate = document.getElementById('ai-issue-date').value || new Date().toISOString().split('T')[0];
+      const issuedTo = (document.getElementById('ai-issue-to').value || '').trim() || 'Covering';
+      const remarks = (document.getElementById('ai-issue-remarks').value || '').trim();
+
+      if (!lotId) {
+        alert('Please select a valid Stock Lot.');
+        return;
+      }
+
+      const lot = stockData.find(l => String(l.id) === String(lotId));
+      if (!lot) {
+        alert('Selected Stock Lot not found.');
+        return;
+      }
+
+      // Collect all checked boxes
+      const checkedBoxIds = [];
+      document.querySelectorAll('.ai-box-checkbox:checked').forEach(cb => {
+        checkedBoxIds.push(cb.getAttribute('data-box-id'));
+      });
+
+      if (checkedBoxIds.length === 0) {
+        alert('Please select at least one box to issue.');
+        return;
+      }
+
+      const nowIso = new Date().toISOString();
+      const boxUids = [];
+      let issuedCount = 0;
+
+      checkedBoxIds.forEach(boxId => {
+        const box = lot.boxes.find(b => String(b.id) === String(boxId));
+        if (box) {
+          box.status = 'issued';
+          box.issueDate = issueDate;
+          box.issuedTo = issuedTo;
+          box.previousIssueDate = issueDate;
+          box.previousIssuedTo = issuedTo;
+          box.unissued_at = null;
+          box.updated_at = nowIso;
+          boxUids.push(`${lot.id}__${box.id}`);
+          syncBoxStatusToOrders(lot, box.id, 'issued', issueDate, issuedTo);
+          issuedCount++;
+        }
+      });
+
+      lot.updated_at = nowIso;
+
+      // Atomic Server RPC Dispatch if available
+      if (boxUids.length > 0 && window.VishwaSupabase && typeof window.VishwaSupabase.issueYarnBoxesAtomic === 'function') {
+        window.VishwaSupabase.issueYarnBoxesAtomic(boxUids, {
+          issuedTo: issuedTo,
+          issueDate: issueDate,
+          remarks: remarks || `Issued to ${issuedTo} via AI Slip Scan`
+        }).catch(err => console.warn('Atomic box issue notice:', err));
+      }
+
+      saveStockData();
+      closeAiScanModal();
+      renderStockBook();
+      showToastNotification(`✨ Successfully issued ${issuedCount} boxes to ${issuedTo}!`);
     }
 
     let pendingUnissueAction = null;
