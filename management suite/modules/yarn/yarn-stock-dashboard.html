@@ -4406,6 +4406,21 @@
       const companyEmail = company.sellerEmail || "sales@vishwafashions.com";
       const companyGst = company.sellerGstin || "24AAAFV1234A1Z5";
       const customerAddress = sale.customerAddress || "Industrial Area, Surat, Gujarat, India";
+      let customerGst = sale.buyerGstin || sale.buyerGst || sale.gstin || sale.gstNo || sale.customerGstin || sale.customerGst || '';
+      if (!customerGst && sale.customerName) {
+        const trimmedCust = sale.customerName.trim().toLowerCase();
+        if (typeof dataStore !== 'undefined') {
+          for (const div of Object.keys(dataStore)) {
+            if (dataStore[div] && Array.isArray(dataStore[div].sales)) {
+              const prev = dataStore[div].sales.find(s => s.customerName && s.customerName.trim().toLowerCase() === trimmedCust && (s.buyerGstin || s.buyerGst || s.gstin || s.gstNo || s.customerGstin || s.customerGst));
+              if (prev) {
+                customerGst = prev.buyerGstin || prev.buyerGst || prev.gstin || prev.gstNo || prev.customerGstin || prev.customerGst || '';
+                break;
+              }
+            }
+          }
+        }
+      }
 
       const itemsHtml = items.map((item, index) => {
         const grossStr = (parseFloat(item.grossWeight) || 0) > 0 ? (parseFloat(item.grossWeight) || 0).toFixed(2) : '-';
@@ -4658,7 +4673,7 @@
                   <div style="font-size: 12px; font-weight: 700; margin-bottom: 5px;">${sale.customerName}</div>
                   <div style="color: #444444; font-size: 11px; line-height: 1.5;">
                     Address: ${customerAddress}<br>
-                    State Code: 24 (Gujarat)
+                    State Code: 24 (Gujarat)${customerGst ? `<br>GSTIN: <strong>${customerGst}</strong>` : ''}
                   </div>
                 </td>
                 <td>
