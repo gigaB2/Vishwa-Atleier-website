@@ -6626,7 +6626,11 @@
                     </div>
 
                     <!-- Global Actions -->
-                    <div class="att-header-controls" style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="att-header-controls" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary" onclick="exportAttendanceCSV()"
+                            style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em; height: 44px; padding: 0 1.25rem; border-radius: 12px; border: 1.5px solid rgba(59, 130, 246, 0.4); color: #3b82f6; background: rgba(59, 130, 246, 0.08); cursor: pointer;" title="Export Attendance Matrix CSV for selected period">
+                            <i class="ri-file-excel-2-line" style="font-size: 1.1rem;"></i> Export CSV
+                        </button>
                         <button type="button" class="btn btn-secondary" onclick="openMasterAttendanceModal()"
                             style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 800; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em; height: 44px; padding: 0 1.35rem; border-radius: 12px; border: 1.5px solid rgba(16, 185, 129, 0.4); color: #10b981; background: rgba(16, 185, 129, 0.08); cursor: pointer;">
                             <i class="ri-calendar-check-line" style="font-size: 1.1rem;"></i> Master Attendance View
@@ -17322,6 +17326,9 @@
               <button type="button" class="btn btn-primary" onclick="openBulkAttendanceModal()" style="font-size: 0.95rem; font-weight: 900; text-transform: uppercase; padding: 0.55rem 1.3rem; border-radius: 9px; display: inline-flex; align-items: center; gap: 0.5rem;">
                 <i class="ri-user-follow-line" style="font-size: 1.1rem;"></i> Log Daily Attendance
               </button>
+              <button type="button" class="btn btn-secondary" onclick="exportAttendanceCSV()" style="font-size: 0.95rem; font-weight: 900; text-transform: uppercase; padding: 0.55rem 1.3rem; border-radius: 9px; display: inline-flex; align-items: center; gap: 0.5rem; border: 1.5px solid rgba(59, 130, 246, 0.4); color: #3b82f6; background: rgba(59, 130, 246, 0.08);">
+                <i class="ri-file-excel-2-line" style="font-size: 1.1rem;"></i> Export CSV
+              </button>
             </div>
             <div style="display: flex; align-items: center; gap: 0.75rem;">
               <button type="button" onclick="closeMasterAttendanceModal()" class="btn" style="background: var(--border); color: var(--fg); font-weight: 900; font-size: 0.95rem; padding: 0.55rem 1.3rem; border-radius: 9px; cursor: pointer; border: none;">Close</button>
@@ -18657,6 +18664,199 @@
                 }
 
                 alert(`Attendance records for ${dateStr} have been successfully deleted.`);
+            };
+
+            // --- EXPORT ATTENDANCE CSV (MASTER ATTENDANCE MATRIX VIEW) ---
+            window.exportAttendanceCSV = function () {
+                if (typeof loadState === 'function' && (!state || !state.employees || state.employees.length === 0)) {
+                    loadState();
+                }
+
+                // Determine date range from filter or Master Attendance modal or default to current month
+                const fromInput = document.getElementById('att-filter-date-from');
+                const toInput = document.getElementById('att-filter-date-to');
+                const masterMonthInput = document.getElementById('master-att-month-filter');
+
+                let fromDate = fromInput ? fromInput.value : '';
+                let toDate = toInput ? toInput.value : '';
+
+                // If dates are not set or if master attendance modal is active, determine month
+                const masterModal = document.getElementById('master-attendance-modal');
+                const isMasterModalOpen = masterModal && (masterModal.style.display === 'flex' || masterModal.style.display === 'block' || document.body.classList.contains('master-att-modal-open'));
+
+                let targetMonthStr = '';
+                if (isMasterModalOpen && masterMonthInput && masterMonthInput.value) {
+                    targetMonthStr = masterMonthInput.value;
+                } else if (fromDate && toDate && fromDate.substring(0, 7) === toDate.substring(0, 7)) {
+                    targetMonthStr = fromDate.substring(0, 7);
+                } else if (fromDate) {
+                    targetMonthStr = fromDate.substring(0, 7);
+                } else {
+                    const now = new Date();
+                    targetMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                }
+
+                const [year, monthNum] = targetMonthStr.split('-').map(Number);
+                const monthIndex = monthNum - 1;
+                const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+                // If fromDate/toDate were not explicitly customized, use whole month range
+                if (!fromDate || !toDate || (isMasterModalOpen && targetMonthStr)) {
+                    fromDate = `${year}-${String(monthNum).padStart(2, '0')}-01`;
+                    toDate = `${year}-${String(monthNum).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+                }
+
+                // Build date array for columns
+                const startDate = new Date(fromDate);
+                const endDate = new Date(toDate);
+                const daysList = [];
+
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                    const dYear = d.getFullYear();
+                    const dMonth = String(d.getMonth() + 1).padStart(2, '0');
+                    const dDay = String(d.getDate()).padStart(2, '0');
+                    const dDateStr = `${dYear}-${dMonth}-${dDay}`;
+                    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+                    const isSun = d.getDay() === 0;
+                    daysList.push({
+                        dateStr: dDateStr,
+                        dayNum: d.getDate(),
+                        dayName: dayName,
+                        isSunday: isSun
+                    });
+                }
+
+                if (daysList.length === 0) {
+                    alert('Please select a valid date range to export attendance.');
+                    return;
+                }
+
+                const staffList = (state && Array.isArray(state.employees)) ? state.employees.filter(e => e.status !== 'Terminated') : [];
+                if (staffList.length === 0) {
+                    alert('No active employees found to export.');
+                    return;
+                }
+
+                const attendanceData = (state && state.attendance && typeof state.attendance === 'object') ? state.attendance : {};
+
+                // CSV Escape Helper
+                const csvCell = (val) => {
+                    if (val === undefined || val === null) return '""';
+                    const str = String(val).replace(/"/g, '""');
+                    return `"${str}"`;
+                };
+
+                // Build CSV Headers
+                // Row 1: Employee, Role, Salary Style, Total Shifts, Present Days, Half Days, Leaves, Absents, [Date (DayName)]...
+                const headerRow1 = [
+                    'Employee',
+                    'Role',
+                    'Salary Style',
+                    'Total Shifts',
+                    'Present Days',
+                    'Half Days',
+                    'Leaves',
+                    'Absents',
+                    ...daysList.map(d => `${d.dayNum} (${d.dayName})`)
+                ];
+
+                const csvRows = [
+                    headerRow1.map(csvCell).join(',')
+                ];
+
+                // Data Rows
+                staffList.forEach(emp => {
+                    const cleanName = String(emp.name || '').trim();
+                    const empId = String(emp.id || '').trim();
+                    const lowerName = cleanName.toLowerCase();
+
+                    let totalShifts = 0;
+                    let presentDays = 0;
+                    let halfDays = 0;
+                    let leaves = 0;
+                    let absents = 0;
+
+                    const dayCells = daysList.map(day => {
+                        const dateStr = day.dateStr;
+                        const dayAttendance = attendanceData[dateStr] || {};
+                        const entry = dayAttendance[cleanName] || (empId ? dayAttendance[empId] : null) || (Object.keys(dayAttendance).find(k => k.toLowerCase() === lowerName) ? dayAttendance[Object.keys(dayAttendance).find(k => k.toLowerCase() === lowerName)] : null);
+
+                        const isJoined = !emp.joinDate || dateStr >= emp.joinDate;
+                        const isTerminated = emp.status === 'Terminated';
+                        const isTerminatedOnDate = isTerminated && emp.terminationDate && dateStr > emp.terminationDate;
+                        const isEmployable = isJoined && !isTerminatedOnDate;
+
+                        if (!isEmployable) {
+                            return '—';
+                        }
+
+                        if (entry) {
+                            const status = entry.status || 'present';
+                            if (status === 'present') {
+                                totalShifts += 1;
+                                presentDays += 1;
+                                return 'P';
+                            } else if (status === 'night_shift') {
+                                totalShifts += 1;
+                                presentDays += 1;
+                                return '1N';
+                            } else if (status === 'double_shift') {
+                                totalShifts += 2;
+                                presentDays += 1;
+                                return '2P';
+                            } else if (status === 'half_day') {
+                                totalShifts += 0.5;
+                                presentDays += 0.5;
+                                halfDays += 1;
+                                return '0.5P';
+                            } else if (status === 'leave') {
+                                leaves += 1;
+                                return 'L';
+                            } else if (status === 'absent') {
+                                absents += 1;
+                                return 'A';
+                            } else {
+                                totalShifts += 1;
+                                presentDays += 1;
+                                return 'P';
+                            }
+                        } else if (day.isSunday) {
+                            return 'OFF';
+                        } else {
+                            return '—';
+                        }
+                    });
+
+                    const empRow = [
+                        emp.name || 'Unknown',
+                        (typeof getEmpDisplayRole === 'function' ? getEmpDisplayRole(emp) : emp.role) || 'Staff',
+                        emp.salaryStyle || 'Per Month Fixed',
+                        totalShifts,
+                        presentDays,
+                        halfDays,
+                        leaves,
+                        absents,
+                        ...dayCells
+                    ];
+
+                    csvRows.push(empRow.map(csvCell).join(','));
+                });
+
+                // Convert to blob and download
+                const csvString = '\uFEFF' + csvRows.join('\r\n');
+                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const fileName = `Master_Attendance_${fromDate}_to_${toDate}.csv`;
+
+                if (navigator.msSaveBlob) {
+                    navigator.msSaveBlob(blob, fileName);
+                } else {
+                    link.href = URL.createObjectURL(blob);
+                    link.setAttribute('download', fileName);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
             };
 
             // --- EMPLOYEE CALENDAR MODAL CONTROLS & SWIPE GESTURES ---
