@@ -4020,8 +4020,8 @@ Extraction Rules:
       const cleanChallanToken = rawChallan.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
       const cleanQualToken = aiQuality.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
-      const detectedBoxSet = new Set(rawBoxes.map(b => String(b.boxNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()).filter(Boolean));
-      const detectedBoxNums = new Set(rawBoxes.map(b => String(b.boxNumber || '').replace(/[^0-9]/g, '')).filter(Boolean));
+      const detectedBoxSet = new Set((rawBoxes || []).map(b => String(b.boxNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()).filter(Boolean));
+      const detectedBoxNums = new Set((rawBoxes || []).map(b => String(b.boxNumber || '').replace(/[^0-9]/g, '')).filter(Boolean));
 
       let bestMatchLot = null;
       let highestScore = 0;
@@ -4048,26 +4048,24 @@ Extraction Rules:
             }
           });
 
-          if (cleanQualToken && qualClean && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 6;
-          if (cleanLotToken && lotNumClean && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 6;
-          if (cleanChallanToken && challanClean && (challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 6;
+          if (cleanLotToken && lotNumClean && (lotNumClean === cleanLotToken || lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 30;
+          if (cleanChallanToken && challanClean && (challanClean === cleanChallanToken || challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 25;
+          if (cleanQualToken && qualClean && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 15;
 
-          // An existing stock lot should ONLY be auto-selected if actual box overlap exists!
-          if (boxMatches >= 2 || (rawBoxes.length > 0 && boxMatches >= Math.ceil(rawBoxes.length * 0.4))) {
-            if (score > highestScore && score >= 12) {
-              highestScore = score;
-              bestMatchLot = lot;
-              matchedBoxCount = boxMatches;
-            }
+          // An existing stock lot is selected if box overlap exists or if lot/challan matches strongly
+          if (score > highestScore && (boxMatches > 0 || score >= 25)) {
+            highestScore = score;
+            bestMatchLot = lot;
+            matchedBoxCount = boxMatches;
           }
         });
       }
 
-      // Determine quality: matched inventory lot takes priority if boxes matched, else AI quality, else first registered stock quality or fallback
+      // Determine quality: matched inventory lot takes priority if matched, else AI quality, else first registered stock quality
       let finalQuality = '';
       if (bestMatchLot && bestMatchLot.quality) {
         finalQuality = bestMatchLot.quality;
-      } else if (aiQuality && aiQuality.toLowerCase() !== 'null' && aiQuality.toLowerCase() !== 'undefined' && aiQuality.toLowerCase() !== 'none') {
+      } else if (aiQuality && !['null', 'undefined', 'none', 'blank'].includes(aiQuality.toLowerCase())) {
         finalQuality = aiQuality;
       } else {
         const firstStockLot = stockData.find(l => l && l.quality);
@@ -4114,70 +4112,82 @@ Extraction Rules:
       const lotSelect = document.getElementById('ai-match-lot-select');
       if (!lotSelect) return;
 
-      const totalBoxesWeight = rawBoxes.reduce((acc, b) => acc + (b.weight || 0), 0) || Number(currentAiExtractedData?.totalWeight) || 0;
-      const totalBoxesCount = rawBoxes.length;
-
       lotSelect.innerHTML = '';
 
-      // Dynamic Option: Auto-register new lot
-      const newLotOpt = document.createElement('option');
-      newLotOpt.value = '__NEW_LOT__';
-      newLotOpt.textContent = `✨ Auto-Register / Issue New Lot: ${quality || 'New Quality'} (${totalBoxesWeight.toFixed(2)} kg - ${totalBoxesCount} boxes)`;
-      lotSelect.appendChild(newLotOpt);
+      if (!Array.isArray(stockData) || stockData.length === 0) {
+        const noOpt = document.createElement('option');
+        noOpt.value = '';
+        noOpt.disabled = true;
+        noOpt.selected = true;
+        noOpt.textContent = '⚠️ No stock lots found in Yarn RM Stock Book';
+        lotSelect.appendChild(noOpt);
+        return;
+      }
+
+      const cleanLotToken = (rawLot || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const cleanChallanToken = (rawChallan || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const cleanQualToken = (quality || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const detectedBoxSet = new Set((rawBoxes || []).map(b => (b.boxNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()).filter(Boolean));
+      const detectedBoxNums = new Set((rawBoxes || []).map(b => (b.boxNumber || '').replace(/[^0-9]/g, '')).filter(Boolean));
 
       let bestMatchLot = null;
       let highestScore = 0;
 
-      if (Array.isArray(stockData) && stockData.length > 0) {
-        const cleanLotToken = (rawLot || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-        const cleanChallanToken = (rawChallan || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-        const cleanQualToken = (quality || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-        const detectedBoxSet = new Set(rawBoxes.map(b => (b.boxNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()).filter(Boolean));
-        const detectedBoxNums = new Set(rawBoxes.map(b => (b.boxNumber || '').replace(/[^0-9]/g, '')).filter(Boolean));
+      const scoredLots = stockData.map(lot => {
+        let score = 0;
+        let boxMatches = 0;
+        const lotNumClean = String(lot.lotNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const challanClean = String(lot.challanNo || lot.challanNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const qualClean = String(lot.quality || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
-        stockData.forEach(lot => {
-          const opt = document.createElement('option');
-          opt.value = lot.id;
-          const availCount = (lot.boxes || []).filter(b => b.status === 'available').length;
-          opt.textContent = `${lot.quality} — Lot: ${lot.lotNumber} | Ch: ${lot.challanNo} (${availCount} avail boxes)`;
-
-          const lotNumClean = String(lot.lotNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-          const challanClean = String(lot.challanNo || lot.challanNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-          const qualClean = String(lot.quality || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-
-          let score = 0;
-          let boxMatches = 0;
-          (lot.boxes || []).forEach(b => {
-            const bClean = String(b.boxNumber || b.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-            const bNum = bClean.replace(/[^0-9]/g, '');
-            if (bClean && detectedBoxSet.has(bClean)) {
-              score += 20;
-              boxMatches++;
-            } else if (bNum && detectedBoxNums.has(bNum) && bNum.length >= 2) {
-              score += 10;
-              boxMatches++;
-            }
-          });
-
-          if (cleanQualToken && qualClean && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 6;
-          if (cleanLotToken && lotNumClean && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 6;
-          if (cleanChallanToken && challanClean && (challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 6;
-
-          if (boxMatches >= 2 || (rawBoxes.length > 0 && boxMatches >= Math.ceil(rawBoxes.length * 0.4))) {
-            if (score > highestScore && score >= 12) {
-              highestScore = score;
-              bestMatchLot = lot;
-            }
+        (lot.boxes || []).forEach(b => {
+          const bClean = String(b.boxNumber || b.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          const bNum = bClean.replace(/[^0-9]/g, '');
+          if (bClean && detectedBoxSet.has(bClean)) {
+            score += 20;
+            boxMatches++;
+          } else if (bNum && detectedBoxNums.has(bNum) && bNum.length >= 2) {
+            score += 10;
+            boxMatches++;
           }
-
-          lotSelect.appendChild(opt);
         });
+
+        if (cleanLotToken && lotNumClean && (lotNumClean === cleanLotToken || lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 30;
+        if (cleanChallanToken && challanClean && (challanClean === cleanChallanToken || challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 25;
+        if (cleanQualToken && qualClean && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 15;
+
+        return { lot, score, boxMatches };
+      });
+
+      scoredLots.sort((a, b) => b.score - a.score);
+
+      if (scoredLots.length > 0 && scoredLots[0].score >= 10) {
+        bestMatchLot = scoredLots[0].lot;
       }
+
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.textContent = `-- Select Existing Stock Lot (${stockData.length} in Stock Book) --`;
+      if (!bestMatchLot) defaultOpt.selected = true;
+      lotSelect.appendChild(defaultOpt);
+
+      scoredLots.forEach(({ lot, score }) => {
+        const opt = document.createElement('option');
+        opt.value = lot.id;
+        const availCount = (lot.boxes || []).filter(b => b.status === 'available').length;
+        const availWeight = (lot.boxes || []).filter(b => b.status === 'available').reduce((acc, b) => acc + (Number(b.remainingWeight !== undefined ? b.remainingWeight : b.weight) || 0), 0);
+        const matchTag = (bestMatchLot && String(lot.id) === String(bestMatchLot.id)) ? ' ⭐ (Matched in Stock)' : '';
+        opt.textContent = `${lot.quality || 'Yarn'} — Lot: ${lot.lotNumber || '-'} | Ch: ${lot.challanNo || lot.challanNumber || '-'} (${availCount} avail boxes, ${availWeight.toFixed(2)} kg)${matchTag}`;
+        if (bestMatchLot && String(lot.id) === String(bestMatchLot.id)) {
+          opt.selected = true;
+        }
+        lotSelect.appendChild(opt);
+      });
 
       if (bestMatchLot) {
         lotSelect.value = bestMatchLot.id;
       } else {
-        lotSelect.value = '__NEW_LOT__';
+        lotSelect.value = '';
       }
     }
 
@@ -4192,6 +4202,9 @@ Extraction Rules:
         issueDate: normalizeIsoDate(b.issueDate || b.issue_date || b.date || b.issuedDate || b.issue_dt || b.issueDt || b.deliveryDate || b.delivery_date) || ''
       }));
       populateAiMatchedLotDropdown(newQuality, currentAiExtractedData?.lotNumber || '', currentAiExtractedData?.challanNumber || '', rawBoxes);
+      if (currentAiExtractedData) {
+        renderAiMatchedBoxesTable(currentAiExtractedData);
+      }
     }
 
     function populateAiScanReview(data, dataUrl) {
@@ -4296,6 +4309,16 @@ Extraction Rules:
     }
 
     function handleAiLotSelectionChanged(lotId) {
+      if (lotId) {
+        const lot = (stockData || []).find(l => String(l.id) === String(lotId));
+        if (lot && lot.quality) {
+          const qualityInput = document.getElementById('ai-summary-quality-input');
+          if (qualityInput) qualityInput.value = lot.quality;
+          if (currentAiExtractedData) {
+            currentAiExtractedData.quality = lot.quality;
+          }
+        }
+      }
       if (currentAiExtractedData) {
         renderAiMatchedBoxesTable(currentAiExtractedData);
       }
@@ -4336,9 +4359,37 @@ Extraction Rules:
       if (!tableBody) return;
 
       tableBody.innerHTML = '';
-      const lotId = lotSelect ? lotSelect.value : '__NEW_LOT__';
-      const isNewLot = (!lotId || lotId === '__NEW_LOT__');
+      const lotId = lotSelect ? lotSelect.value : '';
       const todayIso = new Date().toISOString().split('T')[0];
+
+      if (!lotId) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 2rem; color: var(--muted);">
+              <span style="font-size: 1.25rem; display: block; margin-bottom: 0.5rem;">📦</span>
+              Please select an existing stock lot from the <strong>Destination Stock Lot</strong> dropdown below to view and issue its available boxes.
+            </td>
+          </tr>
+        `;
+        if (selectedPill) selectedPill.textContent = '0 boxes (0.00 kg)';
+        updateAiSelectedBoxesMetrics();
+        return;
+      }
+
+      // Matched Existing Stock Lot in Inventory
+      const lot = (stockData || []).find(l => String(l.id) === String(lotId));
+      if (!lot || !lot.boxes || lot.boxes.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 1.5rem; color: var(--muted);">
+              No boxes registered under this lot in Yarn RM Stock Book.
+            </td>
+          </tr>
+        `;
+        if (selectedPill) selectedPill.textContent = '0 boxes (0.00 kg)';
+        updateAiSelectedBoxesMetrics();
+        return;
+      }
 
       // Prepare parsed boxes from AI (preserve empty date when no date written)
       let slipBoxes = [];
@@ -4360,122 +4411,65 @@ Extraction Rules:
         }
       }
 
-      if (isNewLot) {
-        // Render directly from scanned slip boxes
-        if (slipBoxes.length === 0) {
-          tableBody.innerHTML = `
-            <tr>
-              <td colspan="6" style="text-align: center; padding: 1.5rem; color: var(--muted);">
-                No box rows detected in document.
-              </td>
-            </tr>
-          `;
-          if (selectedPill) selectedPill.textContent = '0 boxes (0.00 kg)';
-          return;
+      const slipBoxMap = new Map();
+      slipBoxes.forEach(sb => {
+        const clean = sb.boxNumber.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        slipBoxMap.set(clean, sb);
+        const numOnly = clean.replace(/[^0-9]/g, '');
+        if (numOnly) slipBoxMap.set(numOnly, sb);
+      });
+
+      lot.boxes.forEach((box, idx) => {
+        const tr = document.createElement('tr');
+        const boxIdClean = String(box.boxNumber || box.id || (idx + 1)).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const numOnly = boxIdClean.replace(/[^0-9]/g, '');
+
+        let matchedSlipBox = slipBoxMap.get(boxIdClean) || (numOnly ? slipBoxMap.get(numOnly) : null);
+        const isAvailable = (box.status === 'available');
+        const hasSlipDate = Boolean(matchedSlipBox && matchedSlipBox.issueDate && matchedSlipBox.issueDate.trim() !== '');
+        
+        // Boxes with no date in the slip should NOT be selected by default
+        const isChecked = isAvailable && (matchedSlipBox ? hasSlipDate : false);
+        const boxDate = matchedSlipBox?.issueDate || (isChecked ? todayIso : '');
+
+        const gross = Number(box.grossWeight || box.weight || 0).toFixed(2);
+        const remaining = Number(box.remainingWeight !== undefined ? box.remainingWeight : box.weight || 0).toFixed(2);
+        const cones = box.cones || (matchedSlipBox ? matchedSlipBox.cones : 12);
+
+        let statusClass = 'available';
+        let statusLabel = '● Ready to Issue';
+        let statusStyle = '';
+
+        if (box.status === 'issued') {
+          statusClass = 'issued';
+          statusLabel = 'Issued';
+        } else if (box.status === 'gr') {
+          statusClass = 'gr';
+          statusLabel = 'GR (Returned)';
+        } else if (!isChecked) {
+          statusClass = 'unselected';
+          statusLabel = '○ In Stock (Unselected)';
+          statusStyle = 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
         }
 
-        slipBoxes.forEach((b, idx) => {
-          const tr = document.createElement('tr');
-          const wt = Number(b.weight).toFixed(2);
-          const cones = Number(b.cones) || 12;
-          const hasDate = Boolean(b.issueDate && b.issueDate.trim() !== '');
-          const isChecked = hasDate;
-          const boxDate = b.issueDate || '';
-
-          tr.innerHTML = `
-            <td style="text-align: center;">
-              <input type="checkbox" class="ai-box-checkbox" data-box-num="${b.boxNumber}" data-cones="${cones}" data-weight="${wt}" data-is-new="true" ${isChecked ? 'checked' : ''} onchange="handleAiBoxRowCheckboxChanged(this)">
-            </td>
-            <td style="font-weight: 700; font-family: var(--font-mono);">${b.boxNumber}</td>
-            <td style="text-align: center; font-weight: 600;" class="ai-row-cones">${cones}</td>
-            <td style="text-align: right; font-weight: 700;">${wt} kg</td>
-            <td>
-              <input type="date" class="ai-row-date-input" value="${boxDate}" onchange="handleAiRowDateChanged(this)" title="Box Issue Date (${hasDate ? 'Auto-detected from slip' : 'Empty in slip - fill date to issue'})">
-            </td>
-            <td style="text-align: center;">
-              <span class="status-badge ${isChecked ? 'available' : 'unselected'}" style="${isChecked ? '' : 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);'}">
-                ${isChecked ? '● Ready to Issue' : '○ No Date (Unselected)'}
-              </span>
-            </td>
-          `;
-          tableBody.appendChild(tr);
-        });
-
-      } else {
-        // Matched Existing Stock Lot in Inventory
-        const lot = stockData.find(l => String(l.id) === String(lotId));
-        if (!lot || !lot.boxes || lot.boxes.length === 0) {
-          tableBody.innerHTML = `
-            <tr>
-              <td colspan="6" style="text-align: center; padding: 1.5rem; color: var(--muted);">
-                No boxes registered under this lot in inventory.
-              </td>
-            </tr>
-          `;
-          if (selectedPill) selectedPill.textContent = '0 boxes (0.00 kg)';
-          return;
-        }
-
-        const slipBoxMap = new Map();
-        slipBoxes.forEach(sb => {
-          const clean = sb.boxNumber.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-          slipBoxMap.set(clean, sb);
-          const numOnly = clean.replace(/[^0-9]/g, '');
-          if (numOnly) slipBoxMap.set(numOnly, sb);
-        });
-
-        lot.boxes.forEach((box, idx) => {
-          const tr = document.createElement('tr');
-          const boxIdClean = String(box.boxNumber || box.id || (idx + 1)).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-          const numOnly = boxIdClean.replace(/[^0-9]/g, '');
-
-          let matchedSlipBox = slipBoxMap.get(boxIdClean) || (numOnly ? slipBoxMap.get(numOnly) : null);
-          const isAvailable = (box.status === 'available');
-          const hasSlipDate = Boolean(matchedSlipBox && matchedSlipBox.issueDate && matchedSlipBox.issueDate.trim() !== '');
-          
-          // Boxes with no date in the slip should NOT be selected
-          const isChecked = isAvailable && (matchedSlipBox ? hasSlipDate : false);
-          const boxDate = matchedSlipBox?.issueDate || (isChecked ? todayIso : '');
-
-          const gross = Number(box.grossWeight || box.weight || 0).toFixed(2);
-          const remaining = Number(box.remainingWeight !== undefined ? box.remainingWeight : box.weight || 0).toFixed(2);
-          const cones = box.cones || (matchedSlipBox ? matchedSlipBox.cones : 12);
-
-          let statusClass = 'available';
-          let statusLabel = '● Ready to Issue';
-          let statusStyle = '';
-
-          if (box.status === 'issued') {
-            statusClass = 'issued';
-            statusLabel = 'Issued';
-          } else if (box.status === 'gr') {
-            statusClass = 'gr';
-            statusLabel = 'GR (Returned)';
-          } else if (!isChecked) {
-            statusClass = 'unselected';
-            statusLabel = '○ No Date (Unselected)';
-            statusStyle = 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
-          }
-
-          tr.innerHTML = `
-            <td style="text-align: center;">
-              <input type="checkbox" class="ai-box-checkbox" data-box-id="${box.id}" data-box-num="${box.boxNumber || box.id}" data-cones="${cones}" data-weight="${remaining}" ${isChecked ? 'checked' : ''} ${isAvailable ? '' : 'disabled'} onchange="handleAiBoxRowCheckboxChanged(this)">
-            </td>
-            <td style="font-weight: 700; font-family: var(--font-mono);">${box.boxNumber || box.id}</td>
-            <td style="text-align: center; font-weight: 600;" class="ai-row-cones">${cones}</td>
-            <td style="text-align: right; font-weight: 700;">${remaining} kg</td>
-            <td>
-              <input type="date" class="ai-row-date-input" value="${boxDate}" ${isAvailable ? '' : 'disabled'} onchange="handleAiRowDateChanged(this)" title="Box Issue Date">
-            </td>
-            <td style="text-align: center;">
-              <span class="status-badge ${statusClass}" style="${statusStyle}">
-                ${statusLabel}
-              </span>
-            </td>
-          `;
-          tableBody.appendChild(tr);
-        });
-      }
+        tr.innerHTML = `
+          <td style="text-align: center;">
+            <input type="checkbox" class="ai-box-checkbox" data-box-id="${box.id}" data-box-num="${box.boxNumber || box.id}" data-cones="${cones}" data-weight="${remaining}" ${isChecked ? 'checked' : ''} ${isAvailable ? '' : 'disabled'} onchange="handleAiBoxRowCheckboxChanged(this)">
+          </td>
+          <td style="font-weight: 700; font-family: var(--font-mono);">${box.boxNumber || box.id}</td>
+          <td style="text-align: center; font-weight: 600;" class="ai-row-cones">${cones}</td>
+          <td style="text-align: right; font-weight: 700;">${remaining} kg</td>
+          <td>
+            <input type="date" class="ai-row-date-input" value="${boxDate}" ${isAvailable ? '' : 'disabled'} onchange="handleAiRowDateChanged(this)" title="Box Issue Date">
+          </td>
+          <td style="text-align: center;">
+            <span class="status-badge ${statusClass}" style="${statusStyle}">
+              ${statusLabel}
+            </span>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      });
 
       updateAiSelectedBoxesMetrics();
     }
@@ -4500,7 +4494,7 @@ Extraction Rules:
           if (badge) {
             badge.className = 'status-badge unselected';
             badge.style = 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
-            badge.textContent = '○ No Date (Unselected)';
+            badge.textContent = '○ In Stock (Unselected)';
           }
         }
       }
@@ -4528,7 +4522,7 @@ Extraction Rules:
           if (badge) {
             badge.className = 'status-badge unselected';
             badge.style = 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
-            badge.textContent = '○ No Date (Unselected)';
+            badge.textContent = '○ In Stock (Unselected)';
           }
         }
       }
@@ -4557,7 +4551,7 @@ Extraction Rules:
             if (badge) {
               badge.className = 'status-badge unselected';
               badge.style = 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
-              badge.textContent = '○ No Date (Unselected)';
+              badge.textContent = '○ In Stock (Unselected)';
             }
           }
         }
@@ -4601,11 +4595,23 @@ Extraction Rules:
       const departmentName = issueToInput ? issueToInput.value.trim() : '';
       const remarks = (document.getElementById('ai-issue-remarks')?.value || '').trim();
       const lotSelect = document.getElementById('ai-match-lot-select');
-      const lotId = lotSelect ? lotSelect.value : '__NEW_LOT__';
+      const lotId = lotSelect ? lotSelect.value : '';
 
       if (!departmentName) {
         alert('Please select the Department it is issued to (TFO, Doubler, Covering, MX).');
         if (issueToInput) issueToInput.focus();
+        return;
+      }
+
+      if (!lotId) {
+        alert('Please select an existing stock lot from the Yarn RM Stock Book.');
+        if (lotSelect) lotSelect.focus();
+        return;
+      }
+
+      const targetLot = (stockData || []).find(l => String(l.id) === String(lotId));
+      if (!targetLot) {
+        alert('Selected Stock Lot not found in Yarn RM Stock Book.');
         return;
       }
 
@@ -4614,7 +4620,7 @@ Extraction Rules:
       const rows = document.querySelectorAll('#ai-boxes-table-body tr');
       rows.forEach(tr => {
         const cb = tr.querySelector('.ai-box-checkbox');
-        if (cb) {
+        if (cb && !cb.disabled) {
           const dateInput = tr.querySelector('.ai-row-date-input');
           const boxNum = cb.getAttribute('data-box-num') || '';
           const boxId = cb.getAttribute('data-box-id') || boxNum;
@@ -4633,188 +4639,28 @@ Extraction Rules:
       }
 
       const nowIso = new Date().toISOString();
-      const qualityInput = document.getElementById('ai-summary-quality-input');
-      const rawQuality = (qualityInput ? qualityInput.value.trim() : '') || currentAiExtractedData?.quality || 'Yarn Raw Material';
-      let targetLot = null;
       const boxUids = [];
       let issuedCount = 0;
 
-      if (!lotId || lotId === '__NEW_LOT__') {
-        // Create new registered lot containing ALL boxes from challan (checked ones as issued, unchecked as available)
-        const newLotId = `LOT-${rawQuality.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
-        const challanNo = currentAiExtractedData?.challanNumber || `CH-${Date.now().toString().slice(-4)}`;
-        const lotNumber = currentAiExtractedData?.lotNumber || `LOT-${Date.now().toString().slice(-4)}`;
-        const supplier = currentAiExtractedData?.supplier || 'Mill Supplier';
-        
-        let itemType = 'Polyester';
-        const qLower = rawQuality.toLowerCase();
-        if (qLower.includes('nylon')) itemType = 'Nylon';
-        else if (qLower.includes('viscose') || qLower.includes('cotton')) itemType = 'Viscose';
-        else if (qLower.includes('spandex') || qLower.includes('lycra')) itemType = 'Spandex';
-        else if (qLower.includes('poly')) itemType = 'Polyester';
-        
-        const newBoxes = allRows.map(r => {
-          if (r.isChecked) {
-            issuedCount++;
-            boxUids.push(`${newLotId}__${r.boxNum}`);
-            return {
-              id: r.boxNum,
-              boxNumber: r.boxNum,
-              cones: r.cones,
-              grossWeight: r.weight,
-              remainingWeight: r.weight,
-              weight: r.weight,
-              status: 'issued',
-              issueDate: r.issueDate,
-              issuedTo: departmentName,
-              previousIssueDate: r.issueDate,
-              previousIssuedTo: departmentName,
-              unissued_at: null,
-              updated_at: nowIso,
-              grWeight: 0,
-              grDate: null,
-              grRemarks: null
-            };
-          } else {
-            return {
-              id: r.boxNum,
-              boxNumber: r.boxNum,
-              cones: r.cones,
-              grossWeight: r.weight,
-              remainingWeight: r.weight,
-              weight: r.weight,
-              status: 'available',
-              issueDate: null,
-              issuedTo: null,
-              previousIssueDate: null,
-              previousIssuedTo: null,
-              unissued_at: null,
-              updated_at: nowIso,
-              grWeight: 0,
-              grDate: null,
-              grRemarks: null
-            };
-          }
-        });
+      if (!Array.isArray(targetLot.boxes)) targetLot.boxes = [];
 
-        targetLot = {
-          id: newLotId,
-          batchId: `BATCH-${Date.now()}`,
-          lotNumber: lotNumber,
-          challanNo: challanNo,
-          challanNumber: challanNo,
-          receiveDate: checkedRows[0]?.issueDate || nowIso.split('T')[0],
-          date: checkedRows[0]?.issueDate || nowIso.split('T')[0],
-          supplier: supplier,
-          quality: rawQuality,
-          itemType: itemType,
-          code: '',
-          color: '',
-          rate: '',
-          orderRef: '',
-          boxes: newBoxes,
-          updated_at: nowIso
-        };
-
-        stockData.unshift(targetLot);
-
-        // Also add batch into yarn-rm-orders for cross-module unity
-        try {
-          let orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
-          if (!Array.isArray(orders)) orders = [];
-          const newOrderId = `ORD-${Date.now().toString().slice(-4)}`;
-          const totalBatchWt = allRows.reduce((acc, b) => acc + b.weight, 0);
-
-          orders.unshift({
-            id: newOrderId,
-            orderNumber: newOrderId,
-            orderDate: targetLot.receiveDate,
-            supplier: supplier,
-            category: itemType,
-            quality: rawQuality,
-            code: '',
-            color: '',
-            orderedWeight: totalBatchWt,
-            price: '',
-            status: 'Completed',
-            batches: [{
-              id: targetLot.batchId,
-              receiveDate: targetLot.receiveDate,
-              challanNumber: challanNo,
-              lotNumber: lotNumber,
-              totalWeight: totalBatchWt,
-              boxes: newBoxes.map(b => ({
-                boxNumber: b.boxNumber,
-                cones: b.cones,
-                weight: b.weight,
-                returnedWeight: 0,
-                returnedDate: '',
-                status: b.status,
-                issueDate: b.issueDate,
-                issuedTo: b.issuedTo,
-                previousIssueDate: b.previousIssueDate,
-                previousIssuedTo: b.previousIssuedTo,
-                updated_at: nowIso
-              }))
-            }]
-          });
-
-          localStorage.setItem('yarn-rm-orders', JSON.stringify(orders));
-          if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
-            window.VishwaSupabase.set('yarn-rm-orders', orders, true);
-          }
-        } catch(e) {
-          console.warn('Auto-create yarn-rm-order notice:', e);
-        }
-
-      } else {
-        // Issue into existing lot
-        targetLot = stockData.find(l => String(l.id) === String(lotId));
-        if (!targetLot) {
-          alert('Selected Stock Lot not found.');
-          return;
-        }
-
-        if (!Array.isArray(targetLot.boxes)) targetLot.boxes = [];
-
-        checkedRows.forEach(r => {
-          let box = targetLot.boxes.find(b => String(b.id) === String(r.boxId) || String(b.boxNumber) === String(r.boxNum));
-          if (box) {
-            box.status = 'issued';
-            box.issueDate = r.issueDate;
-            box.issuedTo = departmentName;
-            box.previousIssueDate = r.issueDate;
-            box.previousIssuedTo = departmentName;
-            box.unissued_at = null;
-            box.updated_at = nowIso;
-          } else {
-            box = {
-              id: r.boxNum,
-              boxNumber: r.boxNum,
-              cones: r.cones,
-              grossWeight: r.weight,
-              remainingWeight: r.weight,
-              weight: r.weight,
-              status: 'issued',
-              issueDate: r.issueDate,
-              issuedTo: departmentName,
-              previousIssueDate: r.issueDate,
-              previousIssuedTo: departmentName,
-              unissued_at: null,
-              updated_at: nowIso,
-              grWeight: 0,
-              grDate: null,
-              grRemarks: null
-            };
-            targetLot.boxes.push(box);
-          }
+      checkedRows.forEach(r => {
+        let box = targetLot.boxes.find(b => String(b.id) === String(r.boxId) || String(b.boxNumber) === String(r.boxNum));
+        if (box) {
+          box.status = 'issued';
+          box.issueDate = r.issueDate || nowIso.split('T')[0];
+          box.issuedTo = departmentName;
+          box.previousIssueDate = box.issueDate;
+          box.previousIssuedTo = departmentName;
+          box.unissued_at = null;
+          box.updated_at = nowIso;
           boxUids.push(`${targetLot.id}__${box.id}`);
-          syncBoxStatusToOrders(targetLot, box.id, 'issued', r.issueDate, departmentName);
+          syncBoxStatusToOrders(targetLot, box.id, 'issued', box.issueDate, departmentName);
           issuedCount++;
-        });
+        }
+      });
 
-        targetLot.updated_at = nowIso;
-      }
+      targetLot.updated_at = nowIso;
 
       // Atomic Server RPC Dispatch if available
       if (boxUids.length > 0 && window.VishwaSupabase && typeof window.VishwaSupabase.issueYarnBoxesAtomic === 'function') {
@@ -4835,7 +4681,7 @@ Extraction Rules:
         window.postMessage({ type: 'YARN_STOCK_UPDATED' }, '*');
       } catch(e) {}
 
-      showToastNotification(`✨ Successfully issued ${issuedCount} boxes of ${rawQuality} to ${departmentName}!`);
+      showToastNotification(`✨ Successfully issued ${issuedCount} boxes of ${targetLot.quality || 'Yarn'} to ${departmentName}!`);
     }
 
     let pendingUnissueAction = null;

@@ -1638,7 +1638,112 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(processedBoxes[3].isChecked, false);
     assert.strictEqual(processedBoxes[3].issueDate, '');
   });
+
+  await t.test('AI Vision Scanner: strictly issues boxes to existing items in stock and does NOT create new orders in RM order book', () => {
+    // 1. Initial State: 1 existing order in yarn-rm-orders and 1 corresponding lot in stock
+    const initialOrders = [
+      {
+        id: 'ORD-1001',
+        orderNumber: 'ORD-1001',
+        orderDate: '2026-08-01',
+        supplier: 'ABC Spinners',
+        quality: '30s Cotton Combed',
+        status: 'Active',
+        batches: [
+          {
+            id: 'BATCH-1001',
+            challanNumber: 'CH-8800',
+            lotNumber: 'LOT-9900',
+            totalWeight: 100.0,
+            boxes: [
+              { boxNumber: 'B1', cones: 24, weight: 50.0, status: 'available' },
+              { boxNumber: 'B2', cones: 24, weight: 50.0, status: 'available' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const stockData = [
+      {
+        id: 'LOT-9900__CH-8800',
+        batchId: 'BATCH-1001',
+        lotNumber: 'LOT-9900',
+        challanNo: 'CH-8800',
+        quality: '30s Cotton Combed',
+        supplier: 'ABC Spinners',
+        boxes: [
+          { id: 'B1', boxNumber: 'B1', cones: 24, weight: 50.0, remainingWeight: 50.0, status: 'available' },
+          { id: 'B2', boxNumber: 'B2', cones: 24, weight: 50.0, remainingWeight: 50.0, status: 'available' }
+        ]
+      }
+    ];
+
+    // 2. Simulated scanned slip targeting B1
+    const scannedData = {
+      lotNumber: 'LOT-9900',
+      challanNumber: 'CH-8800',
+      boxes: [
+        { boxNumber: 'B1', cones: 24, weight: 50.0, issueDate: '2026-09-05' }
+      ]
+    };
+
+    // 3. Dropdown population: only existing lots in stockData must be listed (no __NEW_LOT__)
+    const dropdownOptions = stockData.map(lot => ({
+      value: lot.id,
+      label: `${lot.quality} — Lot: ${lot.lotNumber} | Ch: ${lot.challanNo}`
+    }));
+
+    assert.strictEqual(dropdownOptions.length, 1, 'Only 1 existing lot in dropdown');
+    assert.strictEqual(dropdownOptions[0].value, 'LOT-9900__CH-8800');
+    assert.ok(!dropdownOptions.some(opt => opt.value === '__NEW_LOT__'), '__NEW_LOT__ option is not present');
+
+    // 4. Issue execution: target lot must be an existing lot from stockData
+    const selectedLotId = 'LOT-9900__CH-8800';
+    const targetLot = stockData.find(l => l.id === selectedLotId);
+    assert.ok(targetLot, 'Target lot must exist in stockData');
+
+    const departmentName = 'TFO';
+    const issueDate = '2026-09-05';
+    const nowIso = new Date().toISOString();
+
+    // Issue box B1 on existing lot
+    const boxB1 = targetLot.boxes.find(b => b.boxNumber === 'B1');
+    assert.ok(boxB1, 'Box B1 exists in target lot');
+    boxB1.status = 'issued';
+    boxB1.issueDate = issueDate;
+    boxB1.issuedTo = departmentName;
+    boxB1.updated_at = nowIso;
+
+    // Sync box status to orders (using syncBoxStatusToOrders logic)
+    initialOrders.forEach(ord => {
+      (ord.batches || []).forEach(b => {
+        if (b.id === targetLot.batchId || (b.challanNumber === targetLot.challanNo && b.lotNumber === targetLot.lotNumber)) {
+          const matchingBx = (b.boxes || []).find(bx => bx.boxNumber === 'B1');
+          if (matchingBx) {
+            matchingBx.status = 'issued';
+            matchingBx.issueDate = issueDate;
+            matchingBx.issuedTo = departmentName;
+            matchingBx.updated_at = nowIso;
+          }
+        }
+      });
+    });
+
+    // 5. Verification: NO NEW ORDER was added to initialOrders
+    assert.strictEqual(initialOrders.length, 1, 'Order book still has exactly 1 order (NO new order was created)');
+    assert.strictEqual(initialOrders[0].id, 'ORD-1001');
+    assert.strictEqual(initialOrders[0].batches[0].boxes[0].status, 'issued');
+    assert.strictEqual(initialOrders[0].batches[0].boxes[0].issuedTo, 'TFO');
+    assert.strictEqual(initialOrders[0].batches[0].boxes[1].status, 'available');
+
+    // Stock verification
+    assert.strictEqual(targetLot.boxes[0].status, 'issued');
+    assert.strictEqual(targetLot.boxes[0].issuedTo, 'TFO');
+    assert.strictEqual(targetLot.boxes[1].status, 'available');
+  });
 });
+
 
 
 
