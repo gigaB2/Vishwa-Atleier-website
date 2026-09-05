@@ -4375,7 +4375,7 @@
         /* —— Master Attendance & Leaves Matrix Modal —— */
         #master-attendance-modal {
             box-sizing: border-box;
-            padding: 0 !important;
+            padding: 1.25rem !important;
             margin: 0 !important;
             left: 0 !important;
             right: 0 !important;
@@ -4385,55 +4385,62 @@
             height: 100vh !important;
             max-width: 100vw !important;
             max-height: 100vh !important;
-            justify-content: stretch !important;
-            align-items: stretch !important;
+            display: none;
+            align-items: center !important;
+            justify-content: center !important;
+            z-index: 100010;
         }
 
         #master-attendance-modal .tl-modal-panel {
-            width: 100vw !important;
-            max-width: 100vw !important;
-            max-height: 100vh !important;
-            min-height: 100vh !important;
-            height: 100vh !important;
-            margin: 0 !important;
-            border-radius: 0 !important;
+            width: 95vw !important;
+            max-width: 1720px !important;
+            max-height: 94vh !important;
+            min-height: 0 !important;
+            height: 94vh !important;
+            margin: auto !important;
+            border-radius: 16px !important;
             box-sizing: border-box !important;
             display: flex !important;
             flex-direction: column !important;
-            border: none !important;
+            overflow: hidden !important;
+            box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.45) !important;
         }
 
         #master-attendance-modal .tl-modal-inner,
         #master-attendance-modal .tl-modal-panel .double-bezel-inner {
-            max-height: 100vh !important;
-            min-height: 100vh !important;
-            height: 100vh !important;
+            max-height: 100% !important;
+            min-height: 0 !important;
+            height: 100% !important;
             width: 100% !important;
-            border-radius: 0 !important;
+            border-radius: 16px !important;
             box-sizing: border-box !important;
-            padding: 1.5rem 2rem !important;
+            padding: 1.1rem 1.4rem !important;
             display: flex !important;
             flex-direction: column !important;
+            overflow: hidden !important;
         }
 
         #master-attendance-modal #master-att-scroll-container {
-            flex: 1 1 auto !important;
+            flex: 1 1 0 !important;
             min-height: 0 !important;
+            max-height: 100% !important;
+            overflow: auto !important;
         }
 
         #master-attendance-modal .tl-sticky-label {
-            width: 480px;
+            width: 280px;
             flex-shrink: 0;
         }
 
         .master-att-cell {
-            width: 62px;
-            height: 62px;
-            border-radius: 14px;
+            width: 100%;
+            max-width: 38px;
+            height: 38px;
+            border-radius: 8px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 14px;
             font-weight: 900;
             cursor: pointer;
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
@@ -4441,53 +4448,53 @@
             margin: auto;
         }
         .master-att-cell:hover {
-            transform: scale(1.18);
-            box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+            transform: scale(1.15);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
             z-index: 10;
         }
         .master-att-cell.cell-present {
             background: rgba(16, 185, 129, 0.18);
             color: #10b981;
-            border: 2px solid rgba(16, 185, 129, 0.5);
+            border: 1.5px solid rgba(16, 185, 129, 0.45);
         }
         .master-att-cell.cell-night {
             background: rgba(99, 102, 241, 0.18);
             color: #6366f1;
-            border: 2px solid rgba(99, 102, 241, 0.5);
+            border: 1.5px solid rgba(99, 102, 241, 0.45);
         }
         .master-att-cell.cell-double {
             background: rgba(139, 92, 246, 0.2);
             color: #8b5cf6;
-            border: 2px solid rgba(139, 92, 246, 0.55);
+            border: 1.5px solid rgba(139, 92, 246, 0.5);
             font-weight: 900;
         }
         .master-att-cell.cell-half {
             background: rgba(245, 158, 11, 0.18);
             color: #f59e0b;
-            border: 2px solid rgba(245, 158, 11, 0.5);
+            border: 1.5px solid rgba(245, 158, 11, 0.45);
         }
         .master-att-cell.cell-leave {
             background: rgba(59, 130, 246, 0.18);
             color: #3b82f6;
-            border: 2px solid rgba(59, 130, 246, 0.5);
+            border: 1.5px solid rgba(59, 130, 246, 0.45);
         }
         .master-att-cell.cell-absent {
             background: rgba(239, 68, 68, 0.18);
             color: #ef4444;
-            border: 2px solid rgba(239, 68, 68, 0.5);
+            border: 1.5px solid rgba(239, 68, 68, 0.45);
         }
         .master-att-cell.cell-sunday {
-            background: rgba(0, 0, 0, 0.05);
+            background: rgba(0, 0, 0, 0.04);
             color: var(--muted);
-            font-size: 16px;
+            font-size: 11px;
             opacity: 0.8;
             font-weight: 900;
-            border: 2px dashed var(--border);
+            border: 1px dashed var(--border);
         }
         .master-att-cell.cell-empty {
             color: var(--muted);
             opacity: 0.35;
-            font-size: 26px;
+            font-size: 16px;
             font-weight: 900;
         }
         .master-att-cell.cell-inactive {
@@ -4503,8 +4510,8 @@
             }
 
             #master-attendance-modal .tl-modal-panel {
-                width: 100% !important;
-                max-width: 100% !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
                 max-height: 100vh !important;
                 min-height: 100vh !important;
                 height: 100vh !important;
@@ -4526,7 +4533,7 @@
                 display: flex !important;
                 flex-direction: column !important;
                 overflow: hidden !important;
-                padding: 0.85rem 0.85rem calc(0.85rem + env(safe-area-inset-bottom, 0px)) !important;
+                padding: 0.75rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
                 position: relative;
             }
 
@@ -14111,9 +14118,18 @@
                 return (a.name || '').localeCompare(b.name || '');
             });
 
-            const isNarrow = window.innerWidth <= 1024;
-            const LABEL_W = isNarrow ? 340 : 480;
-            const DAY_W = isNarrow ? 64 : 80;
+            const scrollContainer = document.getElementById('master-att-scroll-container');
+            const availableW = scrollContainer ? (scrollContainer.clientWidth || window.innerWidth * 0.92) : (window.innerWidth * 0.92);
+            
+            // Allocate sticky label width based on available viewport width
+            let LABEL_W = Math.min(300, Math.max(220, Math.floor(availableW * 0.22)));
+            if (availableW < 900) LABEL_W = 200;
+
+            // Calculate DAY_W to distribute remaining width across all month days (so no horizontal scroll needed)
+            const remainingW = availableW - LABEL_W - 4; // account for borders
+            let calcDayW = Math.floor(remainingW / daysInMonth);
+            // On very small screens (mobile portrait), enforce min width for touchability
+            const DAY_W = Math.max(34, calcDayW);
 
             const stickyLabels = document.querySelectorAll('#master-attendance-modal .tl-sticky-label');
             stickyLabels.forEach(el => el.style.width = LABEL_W + 'px');
@@ -14138,19 +14154,19 @@
             // 1. Render Date Headers
             const datesHeader = document.getElementById('master-att-dates-header-container');
             if (datesHeader) {
-                let topHeaderHtml = `<div style="display: flex; border-bottom: 2px solid var(--border); height: 46px; font-size: 18px; font-weight: 900; text-transform: uppercase; color: var(--muted); background: rgba(139, 92, 246, 0.07);">`;
-                topHeaderHtml += `<div style="width: ${daysInMonth * DAY_W}px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; height: 100%; border-right: 2px solid var(--border);">`;
+                let topHeaderHtml = `<div style="display: flex; border-bottom: 1.5px solid var(--border); height: 32px; font-size: 13px; font-weight: 900; text-transform: uppercase; color: var(--muted); background: rgba(139, 92, 246, 0.07);">`;
+                topHeaderHtml += `<div style="width: ${daysInMonth * DAY_W}px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; height: 100%; border-right: 1.5px solid var(--border);">`;
                 topHeaderHtml += `<span>${monthLongName} (${daysInMonth} Days)</span></div></div>`;
 
-                let daysHeaderHtml = `<div style="display: flex; height: 60px;">`;
+                let daysHeaderHtml = `<div style="display: flex; height: 44px;">`;
                 daysList.forEach(day => {
                     const bg = day.isToday ? 'rgba(139, 92, 246, 0.2)' : (day.isSunday ? 'rgba(245, 158, 11, 0.12)' : 'transparent');
                     const textCol = day.isToday ? 'var(--accent)' : (day.isSunday ? '#f59e0b' : 'var(--muted)');
                     const numCol = day.isToday ? 'var(--accent)' : (day.isSunday ? '#f59e0b' : 'var(--fg)');
                     daysHeaderHtml += `
-                        <div style="width: ${DAY_W}px; flex-shrink: 0; border-right: 2px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; background: ${bg}; height: 100%;" title="${day.dateStr} (${day.dayName})">
-                            <span style="color: ${textCol}; line-height: 1; font-size: 14px; font-weight: 900; text-transform: uppercase;">${day.dayName.substring(0, 2)}</span>
-                            <span style="font-size: 21px; color: ${numCol}; line-height: 1.2; font-weight: 900;">${day.dayNum}</span>
+                        <div style="width: ${DAY_W}px; flex-shrink: 0; border-right: 1.5px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; background: ${bg}; height: 100%;" title="${day.dateStr} (${day.dayName})">
+                            <span style="color: ${textCol}; line-height: 1; font-size: 10.5px; font-weight: 900; text-transform: uppercase;">${day.dayName[0]}</span>
+                            <span style="font-size: 14px; color: ${numCol}; line-height: 1.1; font-weight: 900;">${day.dayNum}</span>
                         </div>
                     `;
                 });
@@ -14178,8 +14194,8 @@
 
             if (filteredStaff.length === 0) {
                 rowsContainer.innerHTML = `
-                    <div style="padding: 5rem; text-align: center; color: var(--muted); font-weight: 800; font-size: 20px;">
-                        <i class="ri-user-search-line text-3xl mb-2 inline-block" style="font-size: 44px; margin-bottom: 14px;"></i>
+                    <div style="padding: 3rem; text-align: center; color: var(--muted); font-weight: 800; font-size: 16px;">
+                        <i class="ri-user-search-line text-2xl mb-2 inline-block" style="font-size: 32px; margin-bottom: 8px;"></i>
                         <p>No employees found matching the selected filters.</p>
                     </div>
                 `;
@@ -14304,7 +14320,7 @@
                         const safeJsName = String(emp.name).replace(/'/g, "\\'");
 
                         cellsHtml += `
-                            <div style="width: ${DAY_W}px; flex-shrink: 0; border-right: 2px solid var(--border); display: flex; align-items: center; justify-content: center; height: 100%; background: ${bgCol};" onclick="handleMasterCellClick('${safeJsName}', '${day.dateStr}')">
+                            <div style="width: ${DAY_W}px; flex-shrink: 0; border-right: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; height: 100%; background: ${bgCol}; padding: 2px;" onclick="handleMasterCellClick('${safeJsName}', '${day.dateStr}')">
                                 <span class="master-att-cell ${cellClass}" title="${cellTooltip}">
                                     ${cellContent}
                                 </span>
@@ -14314,21 +14330,21 @@
 
                     // Employee left label with totals pill
                     rowsHtml += `
-                        <div style="display: flex; border-bottom: 2px solid var(--border); min-height: 84px; position: relative;">
-                            <div class="tl-sticky-label" style="width: ${LABEL_W}px; flex-shrink: 0; position: sticky; left: 0; z-index: 25; background: var(--surface); border-right: 2px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 1.75rem; ${isTerminated ? 'opacity: 0.65;' : ''}">
-                                <div style="display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1;">
-                                    <div class="tl-avatar" style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; flex-shrink: 0; box-shadow: 0 2px 10px rgba(139,92,246,0.28);">
+                        <div style="display: flex; border-bottom: 1.5px solid var(--border); min-height: 52px; position: relative;">
+                            <div class="tl-sticky-label" style="width: ${LABEL_W}px; flex-shrink: 0; position: sticky; left: 0; z-index: 25; background: var(--surface); border-right: 1.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 0.85rem; ${isTerminated ? 'opacity: 0.65;' : ''}">
+                                <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+                                    <div class="tl-avatar" style="width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 900; flex-shrink: 0; box-shadow: 0 2px 6px rgba(139,92,246,0.2);">
                                         ${initials}
                                     </div>
                                     <div style="overflow: hidden; min-width: 0;">
-                                        <h4 style="font-size: 20px; font-weight: 900; margin: 0; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em;" title="${emp.name}">${emp.name}</h4>
-                                        <span style="font-size: 15px; font-weight: 800; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; margin-top: 4px;">${displayRole}</span>
+                                        <h4 style="font-size: 14.5px; font-weight: 900; margin: 0; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em;" title="${emp.name}">${emp.name}</h4>
+                                        <span style="font-size: 11.5px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; margin-top: 1px;">${displayRole}</span>
                                     </div>
                                 </div>
 
-                                <div style="flex-shrink: 0; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
-                                    <span style="font-size: 18px; font-weight: 900; color: #10b981; background: rgba(16, 185, 129, 0.16); border: 2px solid rgba(16, 185, 129, 0.4); padding: 5px 14px; border-radius: 10px; font-family: 'JetBrains Mono', monospace;" title="Total Shifts Worked">${empShifts} S</span>
-                                    <span style="font-size: 14.5px; font-weight: 800; color: var(--muted); white-space: nowrap;">${empPresents}P • ${empLeaves}L • ${empAbsents}A</span>
+                                <div style="flex-shrink: 0; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                                    <span style="font-size: 13.5px; font-weight: 900; color: #10b981; background: rgba(16, 185, 129, 0.16); border: 1.5px solid rgba(16, 185, 129, 0.35); padding: 2px 7px; border-radius: 6px; font-family: 'JetBrains Mono', monospace;" title="Total Shifts Worked">${empShifts}S</span>
+                                    <span style="font-size: 11px; font-weight: 800; color: var(--muted); white-space: nowrap;">${empPresents}P•${empLeaves}L•${empAbsents}A</span>
                                 </div>
                             </div>
 
@@ -14350,17 +14366,17 @@
                     const stats = dailyManpower[day.dayNum] || { presentCount: 0, shiftsCount: 0 };
                     const bg = day.isToday ? 'rgba(139, 92, 246, 0.16)' : (day.isSunday ? 'rgba(245, 158, 11, 0.08)' : 'rgba(0,0,0,0.03)');
                     dailyCellsHtml += `
-                        <div style="width: ${DAY_W}px; flex-shrink: 0; border-right: 2px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: ${bg}; font-size: 14px; font-weight: 900;" title="${day.dateStr}: ${stats.presentCount} staff (${stats.shiftsCount} shifts)">
-                            <span style="color: ${stats.shiftsCount > 0 ? '#10b981' : 'var(--muted)'}; line-height: 1; font-size: 18px; font-weight: 900;">${stats.shiftsCount}S</span>
-                            <span style="color: var(--muted); font-size: 14px; line-height: 1.2; font-weight: 800;">${stats.presentCount}P</span>
+                        <div style="width: ${DAY_W}px; flex-shrink: 0; border-right: 1.5px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: ${bg}; font-size: 10.5px; font-weight: 900;" title="${day.dateStr}: ${stats.presentCount} staff (${stats.shiftsCount} shifts)">
+                            <span style="color: ${stats.shiftsCount > 0 ? '#10b981' : 'var(--muted)'}; line-height: 1; font-size: 12.5px; font-weight: 900;">${stats.shiftsCount}S</span>
+                            <span style="color: var(--muted); font-size: 10.5px; line-height: 1.1; font-weight: 800;">${stats.presentCount}P</span>
                         </div>
                     `;
                 });
 
                 dailyTotalsContainer.innerHTML = `
-                    <div class="tl-sticky-label" style="width: ${LABEL_W}px; flex-shrink: 0; position: sticky; left: 0; z-index: 29; background: var(--surface); border-right: 2px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 1.75rem; font-size: 18px; font-weight: 900; text-transform: uppercase; color: var(--fg);">
+                    <div class="tl-sticky-label" style="width: ${LABEL_W}px; flex-shrink: 0; position: sticky; left: 0; z-index: 29; background: var(--surface); border-right: 1.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 0.85rem; font-size: 13.5px; font-weight: 900; text-transform: uppercase; color: var(--fg);">
                         <span>🏭 Factory Manpower</span>
-                        <span style="color: #10b981; font-size: 20px; font-weight: 900;">${grandTotalShifts} S</span>
+                        <span style="color: #10b981; font-size: 14.5px; font-weight: 900;">${grandTotalShifts} S</span>
                     </div>
                     <div style="display: flex; flex-grow: 1;">
                         ${dailyCellsHtml}
@@ -14372,14 +14388,14 @@
             const kpiContainer = document.getElementById('master-att-kpi-chips');
             if (kpiContainer) {
                 kpiContainer.innerHTML = `
-                    <span style="padding: 8px 16px; border-radius: 10px; background: rgba(0,0,0,0.04); border: 2px solid var(--border); color: var(--fg); font-size: 17px; font-weight: 800;">👥 Staff: <b>${filteredStaff.length}</b></span>
-                    <span style="padding: 8px 16px; border-radius: 10px; background: rgba(16, 185, 129, 0.14); border: 2px solid rgba(16, 185, 129, 0.4); color: #10b981; font-size: 17px; font-weight: 900;">⚡ Shifts: <b>${grandTotalShifts}</b></span>
-                    <span style="padding: 8px 16px; border-radius: 10px; background: rgba(16, 185, 129, 0.1); border: 2px solid rgba(16, 185, 129, 0.35); color: #10b981; font-size: 17px; font-weight: 800;">🟢 Pres: <b>${grandPresentDays}</b></span>
-                    ${grandNightShifts > 0 ? `<span style="padding: 8px 16px; border-radius: 10px; background: rgba(99, 102, 241, 0.14); border: 2px solid rgba(99, 102, 241, 0.4); color: #6366f1; font-size: 17px; font-weight: 800;">🌙 Night: <b>${grandNightShifts}</b></span>` : ''}
-                    ${grandDoubleShifts > 0 ? `<span style="padding: 8px 16px; border-radius: 10px; background: rgba(139, 92, 246, 0.14); border: 2px solid rgba(139, 92, 246, 0.4); color: #8b5cf6; font-size: 17px; font-weight: 800;">⚡ Double: <b>${grandDoubleShifts}</b></span>` : ''}
-                    ${grandHalfDays > 0 ? `<span style="padding: 8px 16px; border-radius: 10px; background: rgba(245, 158, 11, 0.14); border: 2px solid rgba(245, 158, 11, 0.4); color: #f59e0b; font-size: 17px; font-weight: 800;">🌓 Half: <b>${grandHalfDays}</b></span>` : ''}
-                    <span style="padding: 8px 16px; border-radius: 10px; background: rgba(59, 130, 246, 0.14); border: 2px solid rgba(59, 130, 246, 0.4); color: #3b82f6; font-size: 17px; font-weight: 800;">🏖️ Leaves: <b>${grandLeaves}</b></span>
-                    <span style="padding: 8px 16px; border-radius: 10px; background: rgba(239, 68, 68, 0.14); border: 2px solid rgba(239, 68, 68, 0.4); color: #ef4444; font-size: 17px; font-weight: 800;">🔴 Absent: <b>${grandAbsences}</b></span>
+                    <span style="padding: 4px 10px; border-radius: 7px; background: rgba(0,0,0,0.04); border: 1.5px solid var(--border); color: var(--fg); font-size: 13px; font-weight: 800;">👥 Staff: <b>${filteredStaff.length}</b></span>
+                    <span style="padding: 4px 10px; border-radius: 7px; background: rgba(16, 185, 129, 0.14); border: 1.5px solid rgba(16, 185, 129, 0.35); color: #10b981; font-size: 13px; font-weight: 900;">⚡ Shifts: <b>${grandTotalShifts}</b></span>
+                    <span style="padding: 4px 10px; border-radius: 7px; background: rgba(16, 185, 129, 0.1); border: 1.5px solid rgba(16, 185, 129, 0.3); color: #10b981; font-size: 13px; font-weight: 800;">🟢 Pres: <b>${grandPresentDays}</b></span>
+                    ${grandNightShifts > 0 ? `<span style="padding: 4px 10px; border-radius: 7px; background: rgba(99, 102, 241, 0.14); border: 1.5px solid rgba(99, 102, 241, 0.35); color: #6366f1; font-size: 13px; font-weight: 800;">🌙 Night: <b>${grandNightShifts}</b></span>` : ''}
+                    ${grandDoubleShifts > 0 ? `<span style="padding: 4px 10px; border-radius: 7px; background: rgba(139, 92, 246, 0.14); border: 1.5px solid rgba(139, 92, 246, 0.35); color: #8b5cf6; font-size: 13px; font-weight: 800;">⚡ Double: <b>${grandDoubleShifts}</b></span>` : ''}
+                    ${grandHalfDays > 0 ? `<span style="padding: 4px 10px; border-radius: 7px; background: rgba(245, 158, 11, 0.14); border: 1.5px solid rgba(245, 158, 11, 0.35); color: #f59e0b; font-size: 13px; font-weight: 800;">🌓 Half: <b>${grandHalfDays}</b></span>` : ''}
+                    <span style="padding: 4px 10px; border-radius: 7px; background: rgba(59, 130, 246, 0.14); border: 1.5px solid rgba(59, 130, 246, 0.35); color: #3b82f6; font-size: 13px; font-weight: 800;">🏖️ Leaves: <b>${grandLeaves}</b></span>
+                    <span style="padding: 4px 10px; border-radius: 7px; background: rgba(239, 68, 68, 0.14); border: 1.5px solid rgba(239, 68, 68, 0.35); color: #ef4444; font-size: 13px; font-weight: 800;">🔴 Absent: <b>${grandAbsences}</b></span>
                 `;
             }
 
@@ -14387,7 +14403,7 @@
             setTimeout(() => {
                 const scrollContainer = document.getElementById('master-att-scroll-container');
                 if (!scrollContainer) return;
-                if (isNarrow && daysList.length) {
+                if (window.innerWidth <= 1024 && daysList.length) {
                     let todayIdx = daysList.findIndex(d => d.isToday);
                     if (todayIdx < 0) todayIdx = 0;
                     scrollContainer.scrollLeft = Math.max(0, (todayIdx * DAY_W) - (scrollContainer.clientWidth / 2) + (DAY_W / 2));
@@ -17214,76 +17230,74 @@
     </div>
 
     <!-- MASTER ATTENDANCE & LEAVES MATRIX MODAL -->
-    <div id="master-attendance-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 100010; padding: 0;">
-      <div class="double-bezel tl-modal-panel master-att-panel" style="width: 100vw; max-width: 100vw; height: 100vh; max-height: 100vh; background: var(--surface); border-radius: 0; border: none;">
-        <div class="double-bezel-inner p-6 tl-modal-inner master-att-inner" style="padding: 1.5rem 2rem; display: flex; flex-direction: column; width: 100%; height: 100vh; max-height: 100vh; border-radius: 0;">
+    <div id="master-attendance-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 100010; padding: 1.25rem;">
+      <div class="double-bezel tl-modal-panel master-att-panel" style="width: 95vw; max-width: 1720px; height: 94vh; max-height: 94vh; background: var(--surface); border-radius: 16px; border: 1.5px solid var(--border);">
+        <div class="double-bezel-inner tl-modal-inner master-att-inner" style="padding: 1.1rem 1.4rem; display: flex; flex-direction: column; width: 100%; height: 100%; border-radius: 16px;">
 
           <!-- Header -->
-          <div class="tl-modal-header flex items-center justify-between border-b border-border pb-4" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 1.25rem;">
-            <div class="tl-modal-header-top flex items-center gap-3" style="display: flex; align-items: center; gap: 1.25rem; min-width: 0; flex: 1;">
-              <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(16, 185, 129, 0.16); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 2.1rem; flex-shrink: 0; border: 2px solid rgba(16, 185, 129, 0.4);">
+          <div class="tl-modal-header flex items-center justify-between border-b border-border pb-2.5" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
+            <div class="tl-modal-header-top flex items-center gap-3" style="display: flex; align-items: center; gap: 0.85rem; min-width: 0; flex: 1;">
+              <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(16, 185, 129, 0.16); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.45rem; flex-shrink: 0; border: 1.5px solid rgba(16, 185, 129, 0.4);">
                 <i class="ri-calendar-check-fill"></i>
               </div>
               <div>
-                <h3 class="text-3xl font-bold text-fg uppercase tracking-wider font-display" style="margin: 0; font-size: 1.95rem; line-height: 1.2; font-weight: 900; letter-spacing: -0.01em;">Master Attendance &amp; Leaves View</h3>
-                <span id="master-att-range-label" class="text-base font-bold text-accent uppercase tracking-wider" style="font-size: 18px; font-weight: 800; color: var(--accent); margin-top: 5px; display: block;"></span>
+                <h3 class="text-xl font-bold text-fg uppercase tracking-wider font-display" style="margin: 0; font-size: 1.25rem; line-height: 1.2; font-weight: 900; letter-spacing: -0.01em;">Master Attendance &amp; Leaves View</h3>
+                <span id="master-att-range-label" class="text-sm font-bold text-accent uppercase tracking-wider" style="font-size: 13px; font-weight: 800; color: var(--accent); margin-top: 2px; display: block;"></span>
               </div>
             </div>
 
-            <div class="tl-modal-header-meta flex items-center gap-3 flex-wrap" style="display: flex; align-items: center; gap: 1.25rem; flex-shrink: 0;">
+            <div class="tl-modal-header-meta flex items-center gap-2.5 flex-wrap" style="display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;">
               <!-- Month Navigator -->
-              <div class="tl-month-filter-wrap flex items-center gap-1.5" style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.035); padding: 8px 14px; border-radius: 14px; border: 2px solid var(--border);">
-                <button type="button" onclick="changeMasterAttMonth(-1)" style="background: transparent; border: none; font-size: 22px; cursor: pointer; color: var(--fg); padding: 4px 14px; border-radius: 8px; font-weight: 900;" title="Previous Month">◀</button>
-                <input type="month" id="master-att-month-filter" onchange="renderMasterAttendanceGrid()" class="bg-transparent border-none text-fg focus:outline-none font-bold cursor-pointer" style="border: none; background: transparent; font-size: 18px; color: var(--fg); font-weight: 900; outline: none; padding: 4px 10px; min-height: 44px;">
-                <button type="button" onclick="changeMasterAttMonth(1)" style="background: transparent; border: none; font-size: 22px; cursor: pointer; color: var(--fg); padding: 4px 14px; border-radius: 8px; font-weight: 900;" title="Next Month">▶</button>
-                <button type="button" onclick="setMasterAttCurrentMonth()" style="background: rgba(139, 92, 246, 0.16); border: 2px solid rgba(139, 92, 246, 0.4); font-size: 15px; color: var(--accent); cursor: pointer; padding: 8px 16px; border-radius: 10px; font-weight: 900; text-transform: uppercase;">This Month</button>
+              <div class="tl-month-filter-wrap flex items-center gap-1" style="display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.035); padding: 4px 8px; border-radius: 10px; border: 1.5px solid var(--border);">
+                <button type="button" onclick="changeMasterAttMonth(-1)" style="background: transparent; border: none; font-size: 14px; cursor: pointer; color: var(--fg); padding: 3px 8px; border-radius: 6px; font-weight: 900;" title="Previous Month">◀</button>
+                <input type="month" id="master-att-month-filter" onchange="renderMasterAttendanceGrid()" class="bg-transparent border-none text-fg focus:outline-none font-bold cursor-pointer" style="border: none; background: transparent; font-size: 13.5px; color: var(--fg); font-weight: 900; outline: none; padding: 2px 6px; min-height: 32px;">
+                <button type="button" onclick="changeMasterAttMonth(1)" style="background: transparent; border: none; font-size: 14px; cursor: pointer; color: var(--fg); padding: 3px 8px; border-radius: 6px; font-weight: 900;" title="Next Month">▶</button>
+                <button type="button" onclick="setMasterAttCurrentMonth()" style="background: rgba(139, 92, 246, 0.16); border: 1.5px solid rgba(139, 92, 246, 0.35); font-size: 12px; color: var(--accent); cursor: pointer; padding: 4px 10px; border-radius: 8px; font-weight: 900; text-transform: uppercase;">This Month</button>
               </div>
 
               <!-- Role Filter -->
-              <select id="master-att-role-filter" onchange="renderMasterAttendanceGrid()" class="bg-black/5 dark-mode:bg-black/40 border border-border rounded-lg text-fg focus:outline-none" style="border: 2px solid var(--border); border-radius: 14px; padding: 10px 18px; font-size: 17px; font-weight: 800; color: var(--fg); background: rgba(0,0,0,0.035); min-height: 52px;">
+              <select id="master-att-role-filter" onchange="renderMasterAttendanceGrid()" class="bg-black/5 dark-mode:bg-black/40 border border-border rounded-lg text-fg focus:outline-none" style="border: 1.5px solid var(--border); border-radius: 10px; padding: 6px 12px; font-size: 13px; font-weight: 800; color: var(--fg); background: rgba(0,0,0,0.035); min-height: 38px;">
                 <option value="All">All Roles / Depts</option>
               </select>
 
               <!-- Search Input -->
-              <div style="position: relative; min-width: 220px; max-width: 320px;">
-                <input type="text" id="master-att-search" placeholder="Search staff..." oninput="renderMasterAttendanceGrid()" class="bg-black/5 dark-mode:bg-black/40 border border-border rounded-lg text-fg focus:outline-none" style="width: 100%; border: 2px solid var(--border); border-radius: 14px; padding: 10px 18px 10px 46px; font-size: 17px; font-weight: 700; color: var(--fg); background: rgba(0,0,0,0.035); min-height: 52px;">
-                <i class="ri-search-line" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 20px; color: var(--muted); pointer-events: none;"></i>
+              <div style="position: relative; min-width: 160px; max-width: 220px;">
+                <input type="text" id="master-att-search" placeholder="Search staff..." oninput="renderMasterAttendanceGrid()" class="bg-black/5 dark-mode:bg-black/40 border border-border rounded-lg text-fg focus:outline-none" style="width: 100%; border: 1.5px solid var(--border); border-radius: 10px; padding: 6px 12px 6px 34px; font-size: 13px; font-weight: 700; color: var(--fg); background: rgba(0,0,0,0.035); min-height: 38px;">
+                <i class="ri-search-line" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--muted); pointer-events: none;"></i>
               </div>
 
               <!-- Close -->
-              <button type="button" onclick="closeMasterAttendanceModal()" class="tl-modal-close text-muted hover:text-fg font-bold cursor-pointer" style="background: transparent; border: none; font-size: 34px; cursor: pointer; color: var(--muted); line-height: 1; padding: 4px;" aria-label="Close master attendance">✕</button>
+              <button type="button" onclick="closeMasterAttendanceModal()" class="tl-modal-close text-muted hover:text-fg font-bold cursor-pointer" style="background: transparent; border: none; font-size: 24px; cursor: pointer; color: var(--muted); line-height: 1; padding: 4px;" aria-label="Close master attendance">✕</button>
             </div>
           </div>
 
           <!-- KPI Summary Bar & Legend -->
-          <div class="flex items-center justify-between flex-wrap gap-3 mb-3 pb-2 border-b border-border/50" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.35rem; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border);">
+          <div class="flex items-center justify-between flex-wrap gap-2.5 mb-2 pb-1.5 border-b border-border/50" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.85rem; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1.5px solid var(--border);">
             <!-- Summary metrics chips -->
-            <div id="master-att-kpi-chips" class="flex items-center gap-2 flex-wrap font-bold font-body" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 17px;">
+            <div id="master-att-kpi-chips" class="flex items-center gap-1.5 flex-wrap font-bold font-body" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px;">
               <!-- Dynamically populated KPI chips -->
             </div>
 
             <!-- Legend Chips -->
-            <div class="tl-legend flex gap-4 font-bold text-muted uppercase tracking-wider flex-wrap" style="display: flex; gap: 18px; font-size: 15.5px; color: var(--muted); align-items: center;">
-              <div class="flex items-center gap-2"><span class="master-att-cell cell-present" style="width: 32px; height: 32px; font-size: 16px; cursor: default; transform: none;">1</span> Day (1S)</div>
-              <div class="flex items-center gap-2"><span class="master-att-cell cell-night" style="width: 32px; height: 32px; font-size: 16px; cursor: default; transform: none;">🌙</span> Night (1S)</div>
-              <div class="flex items-center gap-2"><span class="master-att-cell cell-double" style="width: 32px; height: 32px; font-size: 16px; cursor: default; transform: none;">⚡</span> 2 Shifts</div>
-              <div class="flex items-center gap-2"><span class="master-att-cell cell-half" style="width: 32px; height: 32px; font-size: 16px; cursor: default; transform: none;">½</span> Half Day</div>
-              <div class="flex items-center gap-2"><span class="master-att-cell cell-leave" style="width: 32px; height: 32px; font-size: 16px; cursor: default; transform: none;">🏖️</span> Leave</div>
-              <div class="flex items-center gap-2"><span class="master-att-cell cell-absent" style="width: 32px; height: 32px; font-size: 16px; cursor: default; transform: none;">✕</span> Absent</div>
-              <div class="flex items-center gap-2"><span class="master-att-cell cell-sunday" style="width: 32px; height: 32px; font-size: 12px; cursor: default; transform: none;">OFF</span> Sun</div>
+            <div class="tl-legend flex gap-3 font-bold text-muted uppercase tracking-wider flex-wrap" style="display: flex; gap: 12px; font-size: 12px; color: var(--muted); align-items: center;">
+              <div class="flex items-center gap-1.5"><span class="master-att-cell cell-present" style="width: 22px; height: 22px; font-size: 11px; cursor: default; transform: none; border-radius: 5px;">1</span> Day (1S)</div>
+              <div class="flex items-center gap-1.5"><span class="master-att-cell cell-night" style="width: 22px; height: 22px; font-size: 11px; cursor: default; transform: none; border-radius: 5px;">🌙</span> Night (1S)</div>
+              <div class="flex items-center gap-1.5"><span class="master-att-cell cell-double" style="width: 22px; height: 22px; font-size: 11px; cursor: default; transform: none; border-radius: 5px;">⚡</span> 2 Shifts</div>
+              <div class="flex items-center gap-1.5"><span class="master-att-cell cell-half" style="width: 22px; height: 22px; font-size: 11px; cursor: default; transform: none; border-radius: 5px;">½</span> Half Day</div>
+              <div class="flex items-center gap-1.5"><span class="master-att-cell cell-leave" style="width: 22px; height: 22px; font-size: 11px; cursor: default; transform: none; border-radius: 5px;">🏖️</span> Leave</div>
+              <div class="flex items-center gap-1.5"><span class="master-att-cell cell-absent" style="width: 22px; height: 22px; font-size: 11px; cursor: default; transform: none; border-radius: 5px;">✕</span> Absent</div>
+              <div class="flex items-center gap-1.5"><span class="master-att-cell cell-sunday" style="width: 22px; height: 22px; font-size: 9px; cursor: default; transform: none; border-radius: 5px;">OFF</span> Sun</div>
             </div>
           </div>
 
-          <p class="tl-scroll-hint" style="margin: 0 0 0.75rem; font-size: 15px; font-weight: 800; color: var(--muted); text-transform: uppercase;">Swipe horizontally to browse days</p>
-
           <!-- Scrollable Table Container -->
-          <div id="master-att-scroll-container" style="flex-grow: 1; overflow: auto; border: 2px solid var(--border); border-radius: 16px; background: rgba(0,0,0,0.02); min-height: 0;">
+          <div id="master-att-scroll-container" style="flex: 1 1 0; overflow: auto; border: 1.5px solid var(--border); border-radius: 12px; background: rgba(0,0,0,0.02); min-height: 0;">
             <div style="display: inline-block; min-width: 100%; position: relative;">
               <!-- Header Row -->
-              <div style="display: flex; position: sticky; top: 0; z-index: 30; background: var(--surface); border-bottom: 2px solid var(--border); min-height: 72px;">
-                <div class="tl-sticky-label" style="width: 480px; flex-shrink: 0; position: sticky; left: 0; z-index: 31; background: var(--surface); border-right: 2px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 1.75rem; font-size: 17px; font-weight: 900; color: var(--muted); text-transform: uppercase;">
+              <div style="display: flex; position: sticky; top: 0; z-index: 30; background: var(--surface); border-bottom: 1.5px solid var(--border); min-height: 52px;">
+                <div class="tl-sticky-label" style="width: 280px; flex-shrink: 0; position: sticky; left: 0; z-index: 31; background: var(--surface); border-right: 1.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 1rem; font-size: 13px; font-weight: 900; color: var(--muted); text-transform: uppercase;">
                   <span>Staff / Role</span>
-                  <span style="font-size: 16px; color: var(--accent); font-weight: 900;">Month Total</span>
+                  <span style="font-size: 12px; color: var(--accent); font-weight: 900;">Total</span>
                 </div>
                 <div id="master-att-dates-header-container" style="display: flex; flex-grow: 1; flex-direction: column;">
                   <!-- Day headers will go here -->
@@ -17296,21 +17310,21 @@
               </div>
 
               <!-- Bottom Summary Row (Sticky Bottom) -->
-              <div id="master-att-daily-totals-container" style="display: flex; position: sticky; bottom: 0; z-index: 28; background: var(--surface); border-top: 2px solid var(--border); min-height: 70px;">
+              <div id="master-att-daily-totals-container" style="display: flex; position: sticky; bottom: 0; z-index: 28; background: var(--surface); border-top: 1.5px solid var(--border); min-height: 48px;">
                 <!-- Daily factory totals will go here -->
               </div>
             </div>
           </div>
 
           <!-- Footer Actions -->
-          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px solid var(--border); padding-top: 1.25rem; margin-top: 1.25rem; flex-wrap: wrap; gap: 1rem;">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-              <button type="button" class="btn btn-primary" onclick="openBulkAttendanceModal()" style="font-size: 1.15rem; font-weight: 900; text-transform: uppercase; padding: 0.9rem 2rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.75rem;">
-                <i class="ri-user-follow-line" style="font-size: 1.4rem;"></i> Log Daily Attendance
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1.5px solid var(--border); padding-top: 0.75rem; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <button type="button" class="btn btn-primary" onclick="openBulkAttendanceModal()" style="font-size: 0.95rem; font-weight: 900; text-transform: uppercase; padding: 0.55rem 1.3rem; border-radius: 9px; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i class="ri-user-follow-line" style="font-size: 1.1rem;"></i> Log Daily Attendance
               </button>
             </div>
-            <div style="display: flex; align-items: center; gap: 1rem;">
-              <button type="button" onclick="closeMasterAttendanceModal()" class="btn" style="background: var(--border); color: var(--fg); font-weight: 900; font-size: 1.15rem; padding: 0.9rem 2rem; border-radius: 12px; cursor: pointer; border: none;">Close</button>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <button type="button" onclick="closeMasterAttendanceModal()" class="btn" style="background: var(--border); color: var(--fg); font-weight: 900; font-size: 0.95rem; padding: 0.55rem 1.3rem; border-radius: 9px; cursor: pointer; border: none;">Close</button>
             </div>
           </div>
 
