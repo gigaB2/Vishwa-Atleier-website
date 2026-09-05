@@ -1468,11 +1468,64 @@
       overflow-y: auto;
       padding-right: 0.35rem;
     }
+    .ai-challan-summary-card {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(236, 72, 153, 0.06) 100%);
+      border: 1.5px solid rgba(139, 92, 246, 0.25);
+      border-radius: 12px;
+      padding: 0.9rem 1.15rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .dark-mode .ai-challan-summary-card {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(236, 72, 153, 0.1) 100%);
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+    .ai-summary-quality-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.2px;
+      margin-bottom: 0.2rem;
+    }
+    .ai-summary-badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+    .ai-summary-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-weight: 600;
+      color: var(--fg);
+    }
+    .ai-machine-prompt-box {
+      background: var(--surface);
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      padding: 1rem 1.15rem;
+      box-shadow: 0 4px 20px rgba(124, 58, 237, 0.12);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .ai-machine-prompt-box.highlight {
+      animation: pulse-accent 1.5s infinite;
+    }
     .ai-lot-match-banner {
-      background: rgba(139, 92, 246, 0.08);
-      border: 1px solid rgba(139, 92, 246, 0.25);
-      border-radius: 10px;
-      padding: 0.85rem 1rem;
+      background: rgba(0,0,0,0.02);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1485,20 +1538,27 @@
       margin-top: 0.35rem;
     }
     .ai-chip {
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       font-weight: 600;
-      padding: 0.3rem 0.65rem;
-      border-radius: 6px;
+      padding: 0.35rem 0.75rem;
+      border-radius: 8px;
       background: var(--bg);
       border: 1px solid var(--border);
       color: var(--fg);
       cursor: pointer;
       transition: all 0.15s ease;
+      user-select: none;
     }
-    .ai-chip:hover, .ai-chip.active {
-      background: var(--accent);
-      color: #fff;
+    .ai-chip:hover {
       border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .ai-chip.active {
+      background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
     }
     .ai-box-table-wrap {
       border: 1px solid var(--border);
@@ -1523,7 +1583,7 @@
       border-bottom: 1px solid var(--border);
     }
     .ai-box-table td {
-      padding: 0.55rem 0.75rem;
+      padding: 0.5rem 0.75rem;
       border-bottom: 1px solid var(--border);
       vertical-align: middle;
     }
@@ -1532,6 +1592,17 @@
     }
     .ai-box-table tr:hover {
       background: rgba(139, 92, 246, 0.04);
+    }
+    .ai-row-date-input {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      padding: 0.2rem 0.4rem;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--fg);
+      font-weight: 600;
     }
     .status-badge {
       display: inline-flex;
@@ -1823,69 +1894,86 @@
               </div>
             </div>
 
-            <!-- Right: Extracted Fields & Box Selection -->
+            <!-- Right: Extracted Fields & Machine Issuance -->
             <div class="ai-review-form-card">
-              <!-- Matched Lot Banner -->
-              <div class="ai-lot-match-banner">
-                <div style="flex: 1;">
-                  <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px;">Matched Stock Lot</div>
-                  <select class="form-control" id="ai-match-lot-select" onchange="handleAiLotSelectionChanged(this.value)" style="font-weight: 700; margin-top: 0.25rem;">
-                    <!-- Auto-populated with matched and available stock lots -->
-                  </select>
-                </div>
-                <div style="text-align: right; min-width: 110px;">
-                  <div style="font-size: 0.75rem; color: var(--muted);">Detected in Slip</div>
-                  <div style="font-family: var(--font-mono); font-weight: 700; font-size: 0.9rem;" id="ai-detected-lot-text">-</div>
-                </div>
-              </div>
-
-              <!-- Issue Parameters Grid -->
-              <div class="form-grid" style="grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
-                <div class="form-group">
-                  <label>Issue Date *</label>
-                  <input type="date" class="form-control" id="ai-issue-date" required>
-                </div>
-                <div class="form-group">
-                  <label>Issued To (Department / Party) *</label>
-                  <input type="text" class="form-control" id="ai-issue-to" placeholder="e.g. Covering Unit 1" required>
-                  <div class="ai-chips-group">
-                    <span class="ai-chip" onclick="setAiDepartmentChip('TFO')">TFO</span>
-                    <span class="ai-chip" onclick="setAiDepartmentChip('Doubler')">Doubler</span>
-                    <span class="ai-chip" onclick="setAiDepartmentChip('Covering')">Covering</span>
-                    <span class="ai-chip" onclick="setAiDepartmentChip('Weaving')">Weaving</span>
-                    <span class="ai-chip" onclick="setAiDepartmentChip('MX')">MX</span>
+              <!-- Summary Card: Quality, Net Weight, Box & Cone Metrics -->
+              <div class="ai-challan-summary-card">
+                <div>
+                  <div class="ai-summary-quality-title" id="ai-summary-quality-text">20/1 BRT POLY</div>
+                  <div class="ai-summary-badges-row">
+                    <span class="ai-summary-pill" id="ai-summary-boxes-pill">📦 10 Boxes</span>
+                    <span class="ai-summary-pill" id="ai-summary-weight-pill">⚖️ 240.00 kg</span>
+                    <span class="ai-summary-pill" id="ai-summary-cones-pill">🧵 12 Cones/bx</span>
+                    <span class="ai-summary-pill" id="ai-summary-dates-pill" style="color: var(--accent); border-color: rgba(139, 92, 246, 0.3);">📅 Auto Dates</span>
                   </div>
                 </div>
-                <div class="form-group full">
-                  <label>Remarks / Issue Slip No.</label>
-                  <input type="text" class="form-control" id="ai-issue-remarks" placeholder="Optional notes extracted from slip...">
+                <div style="text-align: right; min-width: 90px;">
+                  <span class="status-badge available" style="font-size: 0.8rem; padding: 0.3rem 0.65rem;">
+                    ✨ AI Verified
+                  </span>
                 </div>
               </div>
 
-              <!-- Boxes Selection Table -->
+              <!-- Primary Focus: Machine Issued To (The ONLY required operator input) -->
+              <div class="ai-machine-prompt-box">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <label for="ai-issue-to" style="font-weight: 800; font-size: 0.95rem; color: var(--accent); margin: 0; display: flex; align-items: center; gap: 0.35rem;">
+                    <span>🎯</span> Issued To Machine / Section *
+                  </label>
+                  <span style="font-size: 0.72rem; font-weight: 700; background: rgba(124, 58, 237, 0.12); color: var(--accent); padding: 0.15rem 0.5rem; border-radius: 999px;">
+                    Required
+                  </span>
+                </div>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  id="ai-issue-to" 
+                  placeholder="Enter Machine # or select chip below (e.g. Machine 1, Covering 1, TFO 2)..." 
+                  style="font-size: 0.95rem; font-weight: 700; padding: 0.55rem 0.85rem;" 
+                  required
+                  onkeydown="if(event.key === 'Enter'){ event.preventDefault(); handleConfirmAiIssue(); }"
+                >
+                <div class="ai-chips-group">
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 1')">Machine 1</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 2')">Machine 2</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 3')">Machine 3</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 4')">Machine 4</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 5')">Machine 5</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 6')">Machine 6</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Covering 1')">Covering 1</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Covering 2')">Covering 2</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('TFO 1')">TFO 1</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('TFO 2')">TFO 2</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Doubler 1')">Doubler 1</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Weaving 1')">Weaving 1</span>
+                </div>
+              </div>
+
+              <!-- Boxes Selection Table with Individual Box Issue Dates -->
               <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <label style="font-weight: 700; font-size: 0.9rem;">Select Boxes to Issue</label>
+                    <label style="font-weight: 700; font-size: 0.88rem; margin: 0;">Extracted Box Register</label>
                     <span class="cones-pill" id="ai-boxes-selected-pill">0 boxes (0.00 kg)</span>
                   </div>
                   <div style="display: flex; gap: 0.4rem;">
-                    <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(true)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; min-height: 26px;">Select All</button>
-                    <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(false)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; min-height: 26px;">Deselect All</button>
+                    <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(true)" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; min-height: 24px;">Select All</button>
+                    <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(false)" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; min-height: 24px;">Deselect All</button>
                   </div>
                 </div>
 
-                <div class="ai-box-table-wrap" style="max-height: 240px; overflow-y: auto;">
+                <div class="ai-box-table-wrap" style="max-height: 220px; overflow-y: auto;">
                   <table class="ai-box-table">
                     <thead>
                       <tr>
-                        <th style="width: 40px; text-align: center;">
+                        <th style="width: 36px; text-align: center;">
                           <input type="checkbox" id="ai-master-box-cb" onchange="toggleAllAiBoxes(this.checked)" checked>
                         </th>
                         <th>Box #</th>
-                        <th>Gross Wt</th>
-                        <th>Remaining</th>
-                        <th>Current Status</th>
+                        <th style="text-align: center; width: 65px;">Cones</th>
+                        <th style="text-align: right; width: 85px;">Net Wt</th>
+                        <th style="width: 130px;">Issue Date</th>
+                        <th style="text-align: center; width: 90px;">Status</th>
                       </tr>
                     </thead>
                     <tbody id="ai-boxes-table-body">
@@ -1894,6 +1982,21 @@
                   </table>
                 </div>
               </div>
+
+              <!-- Target Lot Association & Remarks (Auto-resolved) -->
+              <div class="ai-lot-match-banner">
+                <div style="flex: 1;">
+                  <div style="font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Destination Stock Lot</div>
+                  <select class="form-control" id="ai-match-lot-select" onchange="handleAiLotSelectionChanged(this.value)" style="font-size: 0.82rem; font-weight: 600; padding: 0.3rem 0.5rem; margin-top: 0.2rem; height: 32px;">
+                    <!-- Auto-populated with matched or auto-created lots -->
+                  </select>
+                </div>
+                <div style="flex: 1; margin-left: 0.5rem;">
+                  <div style="font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Remarks / Note</div>
+                  <input type="text" class="form-control" id="ai-issue-remarks" placeholder="Optional remark..." style="font-size: 0.82rem; padding: 0.3rem 0.5rem; margin-top: 0.2rem; height: 32px;">
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -3317,6 +3420,21 @@
       return { apiKey, selectedModel };
     }
 
+    function normalizeIsoDate(dateStr) {
+      if (!dateStr) return '';
+      const trimmed = String(dateStr).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+      // DD-MM-YYYY or DD/MM/YYYY
+      const m = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+      if (m) {
+        const day = m[1].padStart(2, '0');
+        const month = m[2].padStart(2, '0');
+        const year = m[3];
+        return `${year}-${month}-${day}`;
+      }
+      return '';
+    }
+
     async function startAiImageScan(dataUrl) {
       const { apiKey, selectedModel } = getStoredGeminiConfig();
 
@@ -3361,7 +3479,7 @@
           if (stageLabel) stageLabel.textContent = 'Analyzing slip handwriting, lot & challan headers...';
         } else if (elapsed < 3200) {
           progress = Math.min(65, progress + 2.5);
-          if (stageLabel) stageLabel.textContent = 'Reading box numbers, gross weights & department issue marks...';
+          if (stageLabel) stageLabel.textContent = 'Reading box numbers, cones, net weights & issue dates...';
         } else if (elapsed < 6000) {
           progress = Math.min(88, progress + 1.2);
           if (stageLabel) stageLabel.textContent = 'Cross-referencing box entries with active RM inventory...';
@@ -3388,20 +3506,33 @@
           base64Data = dataUrl;
         }
 
-        const prompt = `Extract yarn raw material issuance or delivery challan information from this textile image. Return ONLY a valid JSON object matching this schema:
-        {
-          "lotNumber": "Lot number or code (e.g. LOT-4092, 4092, L-99)",
-          "challanNumber": "Challan number if visible",
-          "supplier": "Supplier or Mill name if visible",
-          "quality": "Yarn Quality/Specification if visible",
-          "issueDate": "Date of issue or delivery in YYYY-MM-DD format (convert DD/MM/YYYY or DD-MM-YYYY to YYYY-MM-DD)",
-          "issuedTo": "Recipient department, unit, plant, or machine (e.g. 'Covering', 'TFO', 'Doubler', 'Weaving', 'Knitting', 'Unit 1')",
-          "boxes": [
-            { "boxNumber": "1", "cones": 24, "weight": 50.0 }
-          ],
-          "boxNumbers": ["1", "2", "3", "4", "5", "6"],
-          "remarks": "Any notes or remarks found on the slip"
-        }`;
+        const prompt = `You are a high-precision OCR and data extraction system for yarn manufacturing and textile mills.
+Analyze this raw material delivery challan / yarn issuance register image carefully.
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "quality": "Yarn Quality/Specification/Count (e.g. '20/1 BRT POLY', '80/72 Polyester DTY', '30s Combed Cotton')",
+  "totalWeight": 240.0,
+  "lotNumber": "Lot number or box batch prefix if visible (e.g. 'LOT-26', '26', 'M005336')",
+  "challanNumber": "Challan number if visible",
+  "supplier": "Supplier / Mill name if visible",
+  "defaultIssueDate": "YYYY-MM-DD",
+  "boxes": [
+    {
+      "boxNumber": "M005336/26",
+      "cones": 12,
+      "weight": 24.0,
+      "issueDate": "2026-08-16"
+    }
+  ],
+  "remarks": "Any additional notes or header labels"
+}
+
+Extraction Rules:
+1. Extract EVERY single box row in the table with its exact box no (e.g. 'M005336/26', 'M005540/26', 'M006325/26'), number of cones (e.g. 12), net weight (e.g. 24.000), and individual issue date.
+2. Note that different boxes in the same challan/register can have different issue dates (e.g. some boxes are issued on 08-08-2026 and others on 16-08-2026). Convert each date to ISO 'YYYY-MM-DD' format (e.g. '2026-08-08' and '2026-08-16').
+3. Extract the yarn quality name from the top header (e.g. '20/1 BRT POLY').
+4. Extract the total weight from the header if present (e.g. 240.000).`;
 
         const modelConfigs = [
           { id: selectedModel || 'gemini-2.0-flash', ver: 'v1beta' },
@@ -3471,7 +3602,7 @@
         if (progressPct) progressPct.textContent = '100%';
         if (stageLabel) stageLabel.textContent = '✨ Extraction complete! Populating details...';
 
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 250));
         currentAiExtractedData = parsedData;
         populateAiScanReview(parsedData, dataUrl);
 
@@ -3492,9 +3623,12 @@
       const reviewStep = document.getElementById('ai-scan-step-review');
       const confirmBtn = document.getElementById('btn-confirm-ai-issue');
       const previewImg = document.getElementById('ai-preview-img');
-      const detectedLotText = document.getElementById('ai-detected-lot-text');
+      const qualityTextEl = document.getElementById('ai-summary-quality-text');
+      const boxesPillEl = document.getElementById('ai-summary-boxes-pill');
+      const weightPillEl = document.getElementById('ai-summary-weight-pill');
+      const conesPillEl = document.getElementById('ai-summary-cones-pill');
+      const datesPillEl = document.getElementById('ai-summary-dates-pill');
       const lotSelect = document.getElementById('ai-match-lot-select');
-      const issueDateInput = document.getElementById('ai-issue-date');
       const issueToInput = document.getElementById('ai-issue-to');
       const remarksInput = document.getElementById('ai-issue-remarks');
 
@@ -3505,28 +3639,67 @@
 
       if (previewImg) previewImg.src = dataUrl;
 
-      // Set detected lot label
+      // Extract & Normalize Fields
+      const rawQuality = (data.quality || '20/1 BRT POLY').trim();
       const rawLot = (data.lotNumber || '').trim();
       const rawChallan = (data.challanNumber || '').trim();
-      if (detectedLotText) {
-        detectedLotText.textContent = rawLot ? `${rawLot}${rawChallan ? ' (' + rawChallan + ')' : ''}` : (rawChallan ? `Challan: ${rawChallan}` : 'Not specified');
+      
+      // Normalize boxes array
+      let rawBoxes = [];
+      if (Array.isArray(data.boxes) && data.boxes.length > 0) {
+        rawBoxes = data.boxes.map((b, idx) => ({
+          boxNumber: String(b.boxNumber || b.boxNo || `Box-${idx + 1}`).trim(),
+          cones: Number(b.cones) || 12,
+          weight: Number(b.weight || b.netWeight) || 24.0,
+          issueDate: normalizeIsoDate(b.issueDate) || normalizeIsoDate(data.defaultIssueDate) || new Date().toISOString().split('T')[0]
+        }));
+      } else if (Array.isArray(data.boxNumbers) && data.boxNumbers.length > 0) {
+        rawBoxes = data.boxNumbers.map((bNum, idx) => ({
+          boxNumber: String(bNum).trim(),
+          cones: 12,
+          weight: 24.0,
+          issueDate: normalizeIsoDate(data.defaultIssueDate) || new Date().toISOString().split('T')[0]
+        }));
+      }
+
+      const totalBoxesCount = rawBoxes.length;
+      const totalBoxesWeight = rawBoxes.reduce((acc, b) => acc + (b.weight || 0), 0) || Number(data.totalWeight) || 0;
+      const avgCones = rawBoxes.length > 0 ? (rawBoxes[0].cones || 12) : 12;
+      const distinctDates = [...new Set(rawBoxes.map(b => b.issueDate).filter(Boolean))];
+
+      // Update Summary Banner
+      if (qualityTextEl) qualityTextEl.textContent = rawQuality;
+      if (boxesPillEl) boxesPillEl.textContent = `📦 ${totalBoxesCount} Boxes`;
+      if (weightPillEl) weightPillEl.textContent = `⚖️ ${totalBoxesWeight.toFixed(2)} kg`;
+      if (conesPillEl) conesPillEl.textContent = `🧵 ${avgCones} Cones/bx`;
+      if (datesPillEl) {
+        if (distinctDates.length > 1) {
+          datesPillEl.textContent = `📅 ${distinctDates.length} Dates Auto-detected`;
+        } else if (distinctDates.length === 1) {
+          datesPillEl.textContent = `📅 ${distinctDates[0]}`;
+        } else {
+          datesPillEl.textContent = `📅 Auto Dates`;
+        }
       }
 
       // Populate Matched Lot Dropdown
       if (lotSelect) {
         lotSelect.innerHTML = '';
-        if (!stockData || stockData.length === 0) {
-          const opt = document.createElement('option');
-          opt.value = '';
-          opt.textContent = '-- No active stock lots in inventory --';
-          lotSelect.appendChild(opt);
-        } else {
-          // Normalize clean search tokens
+        
+        // Dynamic Option: Auto-register new lot
+        const newLotOpt = document.createElement('option');
+        newLotOpt.value = '__NEW_LOT__';
+        newLotOpt.textContent = `✨ Auto-Register / Issue New Lot: ${rawQuality} (${totalBoxesWeight.toFixed(2)} kg - ${totalBoxesCount} boxes)`;
+        lotSelect.appendChild(newLotOpt);
+
+        let bestMatchLot = null;
+        let highestScore = 0;
+
+        if (Array.isArray(stockData) && stockData.length > 0) {
           const cleanLotToken = rawLot.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
           const cleanChallanToken = rawChallan.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-
-          let bestMatchLot = null;
-          let highestScore = 0;
+          const cleanQualToken = rawQuality.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          const detectedBoxSet = new Set(rawBoxes.map(b => b.boxNumber.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()));
 
           stockData.forEach(lot => {
             const opt = document.createElement('option');
@@ -3536,41 +3709,41 @@
 
             const lotNumClean = String(lot.lotNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
             const challanClean = String(lot.challanNo || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+            const qualClean = String(lot.quality || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
             let score = 0;
-            if (cleanLotToken && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 10;
+            if (cleanQualToken && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 15;
+            if (cleanLotToken && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 12;
             if (cleanChallanToken && (challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 8;
 
-            if (score > highestScore) {
+            // Box number overlap bonus
+            (lot.boxes || []).forEach(b => {
+              const bClean = String(b.boxNumber || b.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+              if (detectedBoxSet.has(bClean)) score += 5;
+            });
+
+            if (score > highestScore && score >= 15) {
               highestScore = score;
               bestMatchLot = lot;
             }
 
             lotSelect.appendChild(opt);
           });
-
-          if (bestMatchLot) {
-            lotSelect.value = bestMatchLot.id;
-          } else if (stockData.length > 0) {
-            lotSelect.value = stockData[0].id;
-          }
         }
-      }
 
-      // Pre-fill Issue Date
-      if (issueDateInput) {
-        if (data.issueDate && /^\d{4}-\d{2}-\d{2}$/.test(data.issueDate)) {
-          issueDateInput.value = data.issueDate;
+        if (bestMatchLot) {
+          lotSelect.value = bestMatchLot.id;
         } else {
-          issueDateInput.value = new Date().toISOString().split('T')[0];
+          lotSelect.value = '__NEW_LOT__';
         }
       }
 
-      // Pre-fill Issued To
+      // Pre-fill Issued To (Auto-focus on this primary input)
       if (issueToInput) {
-        const detectedDept = (data.issuedTo || '').trim();
-        issueToInput.value = detectedDept || 'Covering';
-        setAiDepartmentChip(detectedDept || 'Covering');
+        issueToInput.value = (data.issuedTo || '').trim();
+        setTimeout(() => {
+          issueToInput.focus();
+        }, 100);
       }
 
       // Pre-fill Remarks
@@ -3578,7 +3751,7 @@
         remarksInput.value = (data.remarks || '').trim();
       }
 
-      // Render Boxes for selected lot
+      // Render Boxes
       renderAiMatchedBoxesTable(data);
     }
 
@@ -3590,91 +3763,158 @@
 
     function setAiDepartmentChip(dept) {
       const issueToInput = document.getElementById('ai-issue-to');
-      if (issueToInput) issueToInput.value = dept;
+      if (issueToInput) {
+        issueToInput.value = dept;
+        issueToInput.focus();
+      }
       document.querySelectorAll('.ai-chip').forEach(c => {
         if (c.textContent.trim().toLowerCase() === dept.toLowerCase()) c.classList.add('active');
         else c.classList.remove('active');
       });
+      updateAiSelectedBoxesMetrics();
     }
+
+    // Live update confirm button text when typing in machine input
+    document.addEventListener('DOMContentLoaded', () => {
+      const issueToInput = document.getElementById('ai-issue-to');
+      if (issueToInput) {
+        issueToInput.addEventListener('input', () => {
+          const val = issueToInput.value.trim().toLowerCase();
+          document.querySelectorAll('.ai-chip').forEach(c => {
+            if (c.textContent.trim().toLowerCase() === val) c.classList.add('active');
+            else c.classList.remove('active');
+          });
+          updateAiSelectedBoxesMetrics();
+        });
+      }
+    });
 
     function renderAiMatchedBoxesTable(parsedData) {
       const lotSelect = document.getElementById('ai-match-lot-select');
       const tableBody = document.getElementById('ai-boxes-table-body');
       const selectedPill = document.getElementById('ai-boxes-selected-pill');
-      if (!tableBody || !lotSelect) return;
+      if (!tableBody) return;
 
       tableBody.innerHTML = '';
-      const lotId = lotSelect.value;
-      const lot = stockData.find(l => String(l.id) === String(lotId));
+      const lotId = lotSelect ? lotSelect.value : '__NEW_LOT__';
+      const isNewLot = (!lotId || lotId === '__NEW_LOT__');
+      const todayIso = new Date().toISOString().split('T')[0];
 
-      if (!lot || !lot.boxes || lot.boxes.length === 0) {
-        tableBody.innerHTML = `
-          <tr>
-            <td colspan="5" style="text-align: center; padding: 1.5rem; color: var(--muted);">
-              No boxes registered under this lot.
-            </td>
-          </tr>
-        `;
-        if (selectedPill) selectedPill.textContent = '0 boxes (0.00 kg)';
-        return;
-      }
-
-      // Build lookup set of detected box numbers
-      const detectedBoxTokens = new Set();
+      // Prepare parsed boxes from AI
+      let slipBoxes = [];
       if (parsedData) {
-        if (Array.isArray(parsedData.boxes)) {
-          parsedData.boxes.forEach(b => {
-            if (b && b.boxNumber) {
-              const clean = String(b.boxNumber).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-              if (clean) detectedBoxTokens.add(clean);
-            }
-          });
-        }
-        if (Array.isArray(parsedData.boxNumbers)) {
-          parsedData.boxNumbers.forEach(bNum => {
-            const clean = String(bNum).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-            if (clean) detectedBoxTokens.add(clean);
-          });
+        if (Array.isArray(parsedData.boxes) && parsedData.boxes.length > 0) {
+          slipBoxes = parsedData.boxes.map((b, idx) => ({
+            boxNumber: String(b.boxNumber || b.boxNo || `Box-${idx + 1}`).trim(),
+            cones: Number(b.cones) || 12,
+            weight: Number(b.weight || b.netWeight) || 24.0,
+            issueDate: normalizeIsoDate(b.issueDate) || normalizeIsoDate(parsedData.defaultIssueDate) || todayIso
+          }));
+        } else if (Array.isArray(parsedData.boxNumbers) && parsedData.boxNumbers.length > 0) {
+          slipBoxes = parsedData.boxNumbers.map((bNum, idx) => ({
+            boxNumber: String(bNum).trim(),
+            cones: 12,
+            weight: 24.0,
+            issueDate: normalizeIsoDate(parsedData.defaultIssueDate) || todayIso
+          }));
         }
       }
 
-      lot.boxes.forEach((box, idx) => {
-        const tr = document.createElement('tr');
-        const boxIdClean = String(box.boxNumber || box.id || (idx + 1)).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-        const numOnly = boxIdClean.replace(/[^0-9]/g, '');
-
-        // Check if box was detected in the AI parsed document
-        let isDetected = false;
-        if (detectedBoxTokens.size === 0) {
-          isDetected = (box.status === 'available');
-        } else {
-          isDetected = detectedBoxTokens.has(boxIdClean) || (numOnly && detectedBoxTokens.has(numOnly));
+      if (isNewLot) {
+        // Render directly from scanned slip boxes
+        if (slipBoxes.length === 0) {
+          tableBody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 1.5rem; color: var(--muted);">
+                No box rows detected in document.
+              </td>
+            </tr>
+          `;
+          if (selectedPill) selectedPill.textContent = '0 boxes (0.00 kg)';
+          return;
         }
 
-        const isAvailable = (box.status === 'available');
-        const isChecked = isDetected && isAvailable;
+        slipBoxes.forEach((b, idx) => {
+          const tr = document.createElement('tr');
+          const wt = Number(b.weight).toFixed(2);
+          const cones = Number(b.cones) || 12;
+          const boxDate = b.issueDate || todayIso;
 
-        const gross = Number(box.grossWeight || box.weight || 0).toFixed(2);
-        const remaining = Number(box.remainingWeight !== undefined ? box.remainingWeight : box.weight || 0).toFixed(2);
-        const statusClass = box.status === 'issued' ? 'issued' : (box.status === 'gr' ? 'gr' : 'available');
-        const statusLabel = box.status === 'issued' ? 'Issued' : (box.status === 'gr' ? 'GR (Returned)' : 'Available');
+          tr.innerHTML = `
+            <td style="text-align: center;">
+              <input type="checkbox" class="ai-box-checkbox" data-box-num="${b.boxNumber}" data-cones="${cones}" data-weight="${wt}" data-is-new="true" checked onchange="updateAiSelectedBoxesMetrics()">
+            </td>
+            <td style="font-weight: 700; font-family: var(--font-mono);">${b.boxNumber}</td>
+            <td style="text-align: center; font-weight: 600;" class="ai-row-cones">${cones}</td>
+            <td style="text-align: right; font-weight: 700;">${wt} kg</td>
+            <td>
+              <input type="date" class="ai-row-date-input" value="${boxDate}" title="Box Issue Date (Auto-detected)">
+            </td>
+            <td style="text-align: center;">
+              <span class="status-badge available">● Ready to Issue</span>
+            </td>
+          `;
+          tableBody.appendChild(tr);
+        });
 
-        tr.innerHTML = `
-          <td style="text-align: center;">
-            <input type="checkbox" class="ai-box-checkbox" data-box-id="${box.id}" data-weight="${remaining}" ${isChecked ? 'checked' : ''} onchange="updateAiSelectedBoxesMetrics()">
-          </td>
-          <td style="font-weight: 700; font-family: var(--font-mono);">${box.boxNumber || box.id}</td>
-          <td>${gross} kg</td>
-          <td style="font-weight: 600;">${remaining} kg</td>
-          <td>
-            <span class="status-badge ${statusClass}">
-              ● ${statusLabel}
-            </span>
-          </td>
-        `;
+      } else {
+        // Matched Existing Stock Lot in Inventory
+        const lot = stockData.find(l => String(l.id) === String(lotId));
+        if (!lot || !lot.boxes || lot.boxes.length === 0) {
+          tableBody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 1.5rem; color: var(--muted);">
+                No boxes registered under this lot in inventory.
+              </td>
+            </tr>
+          `;
+          if (selectedPill) selectedPill.textContent = '0 boxes (0.00 kg)';
+          return;
+        }
 
-        tableBody.appendChild(tr);
-      });
+        const slipBoxMap = new Map();
+        slipBoxes.forEach(sb => {
+          const clean = sb.boxNumber.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          slipBoxMap.set(clean, sb);
+          const numOnly = clean.replace(/[^0-9]/g, '');
+          if (numOnly) slipBoxMap.set(numOnly, sb);
+        });
+
+        lot.boxes.forEach((box, idx) => {
+          const tr = document.createElement('tr');
+          const boxIdClean = String(box.boxNumber || box.id || (idx + 1)).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          const numOnly = boxIdClean.replace(/[^0-9]/g, '');
+
+          let matchedSlipBox = slipBoxMap.get(boxIdClean) || (numOnly ? slipBoxMap.get(numOnly) : null);
+          const isDetected = slipBoxes.length === 0 ? (box.status === 'available') : Boolean(matchedSlipBox);
+          const isAvailable = (box.status === 'available');
+          const isChecked = isDetected && isAvailable;
+
+          const gross = Number(box.grossWeight || box.weight || 0).toFixed(2);
+          const remaining = Number(box.remainingWeight !== undefined ? box.remainingWeight : box.weight || 0).toFixed(2);
+          const cones = box.cones || (matchedSlipBox ? matchedSlipBox.cones : 12);
+          const boxDate = matchedSlipBox?.issueDate || box.issueDate || todayIso;
+
+          const statusClass = box.status === 'issued' ? 'issued' : (box.status === 'gr' ? 'gr' : 'available');
+          const statusLabel = box.status === 'issued' ? 'Issued' : (box.status === 'gr' ? 'GR (Returned)' : 'Available');
+
+          tr.innerHTML = `
+            <td style="text-align: center;">
+              <input type="checkbox" class="ai-box-checkbox" data-box-id="${box.id}" data-box-num="${box.boxNumber || box.id}" data-cones="${cones}" data-weight="${remaining}" ${isChecked ? 'checked' : ''} onchange="updateAiSelectedBoxesMetrics()">
+            </td>
+            <td style="font-weight: 700; font-family: var(--font-mono);">${box.boxNumber || box.id}</td>
+            <td style="text-align: center; font-weight: 600;" class="ai-row-cones">${cones}</td>
+            <td style="text-align: right; font-weight: 700;">${remaining} kg</td>
+            <td>
+              <input type="date" class="ai-row-date-input" value="${boxDate}" title="Box Issue Date (Auto-detected)">
+            </td>
+            <td style="text-align: center;">
+              <span class="status-badge ${statusClass}">● ${statusLabel}</span>
+            </td>
+          `;
+          tableBody.appendChild(tr);
+        });
+      }
 
       updateAiSelectedBoxesMetrics();
     }
@@ -3689,6 +3929,7 @@
     function updateAiSelectedBoxesMetrics() {
       const selectedPill = document.getElementById('ai-boxes-selected-pill');
       const confirmBtn = document.getElementById('btn-confirm-ai-issue');
+      const machineInput = document.getElementById('ai-issue-to');
       const checkboxes = document.querySelectorAll('.ai-box-checkbox:checked');
       
       let totalKg = 0;
@@ -3702,74 +3943,223 @@
         selectedPill.textContent = `${count} box${count === 1 ? '' : 'es'} (${totalKg.toFixed(2)} kg)`;
       }
       if (confirmBtn) {
-        confirmBtn.textContent = `✨ Confirm & Issue ${count} Box${count === 1 ? '' : 'es'}`;
+        const targetMachine = machineInput ? machineInput.value.trim() : '';
+        confirmBtn.textContent = targetMachine 
+          ? `✨ Issue ${count} Box${count === 1 ? '' : 'es'} to ${targetMachine}`
+          : `✨ Confirm & Issue ${count} Box${count === 1 ? '' : 'es'}`;
       }
     }
 
     function handleConfirmAiIssue() {
+      const machineInput = document.getElementById('ai-issue-to');
+      const machineName = machineInput ? machineInput.value.trim() : '';
+      const remarks = (document.getElementById('ai-issue-remarks')?.value || '').trim();
       const lotSelect = document.getElementById('ai-match-lot-select');
-      const lotId = lotSelect ? lotSelect.value : null;
-      const issueDate = document.getElementById('ai-issue-date').value || new Date().toISOString().split('T')[0];
-      const issuedTo = (document.getElementById('ai-issue-to').value || '').trim() || 'Covering';
-      const remarks = (document.getElementById('ai-issue-remarks').value || '').trim();
+      const lotId = lotSelect ? lotSelect.value : '__NEW_LOT__';
 
-      if (!lotId) {
-        alert('Please select a valid Stock Lot.');
+      if (!machineName) {
+        alert('Please enter or select the Machine its issued to (e.g. Machine 1, Covering 1, TFO 2).');
+        if (machineInput) machineInput.focus();
         return;
       }
 
-      const lot = stockData.find(l => String(l.id) === String(lotId));
-      if (!lot) {
-        alert('Selected Stock Lot not found.');
-        return;
-      }
-
-      // Collect all checked boxes
-      const checkedBoxIds = [];
-      document.querySelectorAll('.ai-box-checkbox:checked').forEach(cb => {
-        checkedBoxIds.push(cb.getAttribute('data-box-id'));
+      // Collect all checked table rows
+      const checkedRows = [];
+      const rows = document.querySelectorAll('#ai-boxes-table-body tr');
+      rows.forEach(tr => {
+        const cb = tr.querySelector('.ai-box-checkbox');
+        if (cb && cb.checked) {
+          const dateInput = tr.querySelector('.ai-row-date-input');
+          const boxNum = cb.getAttribute('data-box-num') || '';
+          const boxId = cb.getAttribute('data-box-id') || boxNum;
+          const weight = Number(cb.getAttribute('data-weight')) || 24.0;
+          const cones = Number(cb.getAttribute('data-cones')) || 12;
+          const issueDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+          checkedRows.push({ boxId, boxNum, weight, cones, issueDate });
+        }
       });
 
-      if (checkedBoxIds.length === 0) {
+      if (checkedRows.length === 0) {
         alert('Please select at least one box to issue.');
         return;
       }
 
       const nowIso = new Date().toISOString();
+      const rawQuality = currentAiExtractedData?.quality || '20/1 BRT POLY';
+      let targetLot = null;
       const boxUids = [];
       let issuedCount = 0;
 
-      checkedBoxIds.forEach(boxId => {
-        const box = lot.boxes.find(b => String(b.id) === String(boxId));
-        if (box) {
-          box.status = 'issued';
-          box.issueDate = issueDate;
-          box.issuedTo = issuedTo;
-          box.previousIssueDate = issueDate;
-          box.previousIssuedTo = issuedTo;
-          box.unissued_at = null;
-          box.updated_at = nowIso;
-          boxUids.push(`${lot.id}__${box.id}`);
-          syncBoxStatusToOrders(lot, box.id, 'issued', issueDate, issuedTo);
+      if (!lotId || lotId === '__NEW_LOT__') {
+        // Create new registered lot
+        const newLotId = `LOT-${rawQuality.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
+        const challanNo = currentAiExtractedData?.challanNumber || `CH-${Date.now().toString().slice(-4)}`;
+        const lotNumber = currentAiExtractedData?.lotNumber || `LOT-${Date.now().toString().slice(-4)}`;
+        const supplier = currentAiExtractedData?.supplier || 'Mill Supplier';
+        const itemType = rawQuality.toLowerCase().includes('poly') ? 'Polyester' : (rawQuality.toLowerCase().includes('nylon') ? 'Nylon' : 'Viscose');
+        
+        const newBoxes = checkedRows.map(r => {
           issuedCount++;
-        }
-      });
+          boxUids.push(`${newLotId}__${r.boxNum}`);
+          return {
+            id: r.boxNum,
+            boxNumber: r.boxNum,
+            cones: r.cones,
+            grossWeight: r.weight,
+            remainingWeight: r.weight,
+            weight: r.weight,
+            status: 'issued',
+            issueDate: r.issueDate,
+            issuedTo: machineName,
+            previousIssueDate: r.issueDate,
+            previousIssuedTo: machineName,
+            unissued_at: null,
+            updated_at: nowIso,
+            grWeight: 0,
+            grDate: null,
+            grRemarks: null
+          };
+        });
 
-      lot.updated_at = nowIso;
+        targetLot = {
+          id: newLotId,
+          batchId: `BATCH-${Date.now()}`,
+          lotNumber: lotNumber,
+          challanNo: challanNo,
+          challanNumber: challanNo,
+          receiveDate: checkedRows[0]?.issueDate || nowIso.split('T')[0],
+          date: checkedRows[0]?.issueDate || nowIso.split('T')[0],
+          supplier: supplier,
+          quality: rawQuality,
+          itemType: itemType,
+          code: '',
+          color: '',
+          rate: '',
+          orderRef: '',
+          boxes: newBoxes,
+          updated_at: nowIso
+        };
+
+        stockData.unshift(targetLot);
+
+        // Also add batch into yarn-rm-orders for cross-module unity
+        try {
+          let orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
+          if (!Array.isArray(orders)) orders = [];
+          const newOrderId = `ORD-${Date.now().toString().slice(-4)}`;
+          const totalBatchWt = checkedRows.reduce((acc, b) => acc + b.weight, 0);
+
+          orders.unshift({
+            id: newOrderId,
+            orderNumber: newOrderId,
+            orderDate: targetLot.receiveDate,
+            supplier: supplier,
+            category: itemType,
+            quality: rawQuality,
+            code: '',
+            color: '',
+            orderedWeight: totalBatchWt,
+            price: '',
+            status: 'Completed',
+            batches: [{
+              id: targetLot.batchId,
+              receiveDate: targetLot.receiveDate,
+              challanNumber: challanNo,
+              lotNumber: lotNumber,
+              totalWeight: totalBatchWt,
+              boxes: newBoxes.map(b => ({
+                boxNumber: b.boxNumber,
+                cones: b.cones,
+                weight: b.weight,
+                returnedWeight: 0,
+                returnedDate: '',
+                status: 'issued',
+                issueDate: b.issueDate,
+                issuedTo: machineName,
+                previousIssueDate: b.issueDate,
+                previousIssuedTo: machineName,
+                updated_at: nowIso
+              }))
+            }]
+          });
+
+          localStorage.setItem('yarn-rm-orders', JSON.stringify(orders));
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+            window.VishwaSupabase.set('yarn-rm-orders', orders, true);
+          }
+        } catch(e) {
+          console.warn('Auto-create yarn-rm-order notice:', e);
+        }
+
+      } else {
+        // Issue into existing lot
+        targetLot = stockData.find(l => String(l.id) === String(lotId));
+        if (!targetLot) {
+          alert('Selected Stock Lot not found.');
+          return;
+        }
+
+        if (!Array.isArray(targetLot.boxes)) targetLot.boxes = [];
+
+        checkedRows.forEach(r => {
+          let box = targetLot.boxes.find(b => String(b.id) === String(r.boxId) || String(b.boxNumber) === String(r.boxNum));
+          if (box) {
+            box.status = 'issued';
+            box.issueDate = r.issueDate;
+            box.issuedTo = machineName;
+            box.previousIssueDate = r.issueDate;
+            box.previousIssuedTo = machineName;
+            box.unissued_at = null;
+            box.updated_at = nowIso;
+          } else {
+            box = {
+              id: r.boxNum,
+              boxNumber: r.boxNum,
+              cones: r.cones,
+              grossWeight: r.weight,
+              remainingWeight: r.weight,
+              weight: r.weight,
+              status: 'issued',
+              issueDate: r.issueDate,
+              issuedTo: machineName,
+              previousIssueDate: r.issueDate,
+              previousIssuedTo: machineName,
+              unissued_at: null,
+              updated_at: nowIso,
+              grWeight: 0,
+              grDate: null,
+              grRemarks: null
+            };
+            targetLot.boxes.push(box);
+          }
+          boxUids.push(`${targetLot.id}__${box.id}`);
+          syncBoxStatusToOrders(targetLot, box.id, 'issued', r.issueDate, machineName);
+          issuedCount++;
+        });
+
+        targetLot.updated_at = nowIso;
+      }
 
       // Atomic Server RPC Dispatch if available
       if (boxUids.length > 0 && window.VishwaSupabase && typeof window.VishwaSupabase.issueYarnBoxesAtomic === 'function') {
         window.VishwaSupabase.issueYarnBoxesAtomic(boxUids, {
-          issuedTo: issuedTo,
-          issueDate: issueDate,
-          remarks: remarks || `Issued to ${issuedTo} via AI Slip Scan`
+          issuedTo: machineName,
+          remarks: remarks || `Issued to ${machineName} via AI Slip Scan`
         }).catch(err => console.warn('Atomic box issue notice:', err));
       }
 
       saveStockData();
       closeAiScanModal();
       renderStockBook();
-      showToastNotification(`✨ Successfully issued ${issuedCount} boxes to ${issuedTo}!`);
+      renderStockDashboard();
+
+      try {
+        window.dispatchEvent(new CustomEvent('yarn-stock-updated'));
+        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: STORAGE_KEY } }));
+        window.postMessage({ type: 'YARN_STOCK_UPDATED' }, '*');
+      } catch(e) {}
+
+      showToastNotification(`✨ Successfully issued ${issuedCount} boxes of ${rawQuality} to ${machineName}!`);
     }
 
     let pendingUnissueAction = null;

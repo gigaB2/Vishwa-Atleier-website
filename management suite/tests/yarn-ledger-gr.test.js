@@ -1322,6 +1322,79 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     const totalIssuedKg = stockLot.boxes.filter(b => b.status === 'issued').reduce((acc, b) => acc + b.weight, 0);
     assert.strictEqual(Number(totalIssuedKg.toFixed(2)), 151.7, 'Total issued weight = 50.0 + 51.2 + 50.5 = 151.7 kg');
   });
+
+  await t.test('AI Vision Scanner: parses 20/1 BRT POLY challan with per-box issue dates and issues to specified machine', () => {
+    // Exact structure of the user's uploaded challan
+    const aiExtractedChallan = {
+      quality: '20/1 BRT POLY',
+      totalWeight: 240.0,
+      lotNumber: 'M005336/26',
+      challanNumber: 'CH-240',
+      supplier: 'Supreme Poly Mills',
+      boxes: [
+        { boxNumber: 'M005336/26', cones: 12, weight: 24.0, issueDate: '2026-08-16' },
+        { boxNumber: 'M005540/26', cones: 12, weight: 24.0, issueDate: '2026-08-16' },
+        { boxNumber: 'M006325/26', cones: 12, weight: 24.0, issueDate: '2026-08-08' },
+        { boxNumber: 'M016607/26', cones: 12, weight: 24.0, issueDate: '2026-08-16' },
+        { boxNumber: 'M005331/26', cones: 12, weight: 24.0, issueDate: '2026-08-08' },
+        { boxNumber: 'M005607/26', cones: 12, weight: 24.0, issueDate: '2026-08-16' },
+        { boxNumber: 'M006317/26', cones: 12, weight: 24.0, issueDate: '2026-08-16' },
+        { boxNumber: 'M006318/26', cones: 12, weight: 24.0, issueDate: '2026-08-16' },
+        { boxNumber: 'M014080/26', cones: 12, weight: 24.0, issueDate: '2026-08-08' },
+        { boxNumber: 'M014662/26', cones: 12, weight: 24.0, issueDate: '2026-08-16' }
+      ]
+    };
+
+    const targetMachine = 'Machine 1';
+    const nowIso = new Date().toISOString();
+
+    // Auto-Register & Issue Lot
+    const createdLot = {
+      id: 'LOT-201BRTPOLY-AUTO',
+      lotNumber: aiExtractedChallan.lotNumber,
+      challanNo: aiExtractedChallan.challanNumber,
+      quality: aiExtractedChallan.quality,
+      supplier: aiExtractedChallan.supplier,
+      itemType: 'Polyester',
+      boxes: aiExtractedChallan.boxes.map(b => ({
+        id: b.boxNumber,
+        boxNumber: b.boxNumber,
+        cones: b.cones,
+        grossWeight: b.weight,
+        remainingWeight: b.weight,
+        weight: b.weight,
+        status: 'issued',
+        issueDate: b.issueDate,
+        issuedTo: targetMachine,
+        previousIssueDate: b.issueDate,
+        previousIssuedTo: targetMachine,
+        unissued_at: null,
+        updated_at: nowIso,
+        grWeight: 0
+      }))
+    };
+
+    // Assertions
+    assert.strictEqual(createdLot.quality, '20/1 BRT POLY');
+    assert.strictEqual(createdLot.boxes.length, 10, 'All 10 boxes registered');
+    
+    // Check total weight
+    const totalWt = createdLot.boxes.reduce((acc, b) => acc + b.weight, 0);
+    assert.strictEqual(totalWt, 240.0, 'Total weight must be 240.0 kg');
+
+    // Check individual box issue dates & machine
+    const boxAug8 = createdLot.boxes.filter(b => b.issueDate === '2026-08-08');
+    const boxAug16 = createdLot.boxes.filter(b => b.issueDate === '2026-08-16');
+    assert.strictEqual(boxAug8.length, 3, '3 boxes issued on 2026-08-08 (M006325/26, M005331/26, M014080/26)');
+    assert.strictEqual(boxAug16.length, 7, '7 boxes issued on 2026-08-16');
+
+    createdLot.boxes.forEach(box => {
+      assert.strictEqual(box.status, 'issued');
+      assert.strictEqual(box.issuedTo, 'Machine 1');
+      assert.strictEqual(box.cones, 12);
+      assert.strictEqual(box.weight, 24.0);
+    });
+  });
 });
 
 
