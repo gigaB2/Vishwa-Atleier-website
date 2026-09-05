@@ -1715,9 +1715,28 @@
           ? parseFloat(b.remainingWeight) 
           : Math.max(0, actualGross - grWeight);
 
-        const isFullyGr = grWeight > 0 && (grWeight >= actualGross || remainingWeight <= 0);
-        const isPartialGr = grWeight > 0 && !isFullyGr;
-        const status = isFullyGr ? 'gr' : (b.status === 'issued' ? 'issued' : 'available');
+        const prevIssueDate = b.previousIssueDate || (b.status === 'issued' ? b.issueDate : null);
+        const prevIssuedTo = b.previousIssuedTo || (b.status === 'issued' ? b.issuedTo : null);
+        const wasIssued = Boolean((b.status === 'issued' || b.issueDate || b.issuedTo || prevIssueDate || prevIssuedTo) && !b.unissued_at);
+
+        let status = 'available';
+        let issueDate = null;
+        let issuedTo = null;
+
+        if (isFullyGr) {
+          status = 'gr';
+          issueDate = null;
+          issuedTo = null;
+        } else if (wasIssued) {
+          status = 'issued';
+          issueDate = b.issueDate || prevIssueDate;
+          issuedTo = b.issuedTo || prevIssuedTo || 'Department';
+        } else {
+          status = 'available';
+          issueDate = null;
+          issuedTo = null;
+        }
+
         const activeWeight = isFullyGr ? actualGross : remainingWeight;
 
         return {
@@ -1729,8 +1748,10 @@
           remainingWeight: remainingWeight,
           weight: activeWeight,
           status: status,
-          issueDate: isFullyGr ? null : (b.issueDate || null),
-          issuedTo: isFullyGr ? null : (b.issuedTo || null),
+          issueDate: issueDate,
+          issuedTo: issuedTo,
+          previousIssueDate: prevIssueDate,
+          previousIssuedTo: prevIssuedTo,
           grDate: grWeight > 0 ? (b.grDate || b.returnedDate || null) : null,
           grRemarks: isFullyGr ? (b.grRemarks || 'Fully Returned in Challan GR') : (isPartialGr ? `Partial GR (-${grWeight.toFixed(2)} kg)` : null),
           grWeight: grWeight
@@ -1788,10 +1809,20 @@
               batch.boxes.forEach(bx => {
                 if (String(bx.boxNumber || bx.id).trim() === String(boxId).trim()) {
                   bx.status = status;
-                  bx.issueDate = (status === 'issued') ? (issueDate || nowIso.split('T')[0]) : null;
-                  bx.issuedTo = (status === 'issued') ? (issuedTo || 'Department') : null;
+                  if (status === 'issued') {
+                    bx.issueDate = issueDate || nowIso.split('T')[0];
+                    bx.issuedTo = issuedTo || 'Department';
+                    bx.previousIssueDate = bx.issueDate;
+                    bx.previousIssuedTo = bx.issuedTo;
+                    bx.unissued_at = null;
+                  } else if (status === 'available') {
+                    bx.issueDate = null;
+                    bx.issuedTo = null;
+                    bx.previousIssueDate = null;
+                    bx.previousIssuedTo = null;
+                    bx.unissued_at = nowIso;
+                  }
                   bx.updated_at = nowIso;
-                  if (status === 'available') bx.unissued_at = nowIso;
                   modified = true;
                 }
               });
@@ -1899,6 +1930,9 @@
                                (batchLot ? existingBoxMap.get(`${batchLot}__${bId}`) : null) ||
                                (existingLot && Array.isArray(existingLot.boxes) ? existingLot.boxes.find(x => String(x.id || x.boxNumber).trim() === bId) : null);
 
+                  const prevIssueDate = bx.previousIssueDate || oldB?.previousIssueDate || (oldB?.status === 'issued' ? oldB.issueDate : (bx.status === 'issued' ? bx.issueDate : null));
+                  const prevIssuedTo = bx.previousIssuedTo || oldB?.previousIssuedTo || (oldB?.status === 'issued' ? oldB.issuedTo : (bx.status === 'issued' ? bx.issuedTo : null));
+
                   let isIssued = false;
                   let issueDate = null;
                   let issuedTo = null;
@@ -1931,6 +1965,16 @@
                     } else {
                       isIssued = false;
                     }
+                  } else if (!isFullyGr && (prevIssueDate || prevIssuedTo)) {
+                    const issueTime = prevIssueDate ? new Date(prevIssueDate).getTime() : 0;
+                    const unissueTime = unissuedAt ? new Date(unissuedAt).getTime() : 0;
+                    if (unissueTime <= issueTime || !unissuedAt) {
+                      isIssued = true;
+                      issueDate = prevIssueDate;
+                      issuedTo = prevIssuedTo || 'Department';
+                    } else {
+                      isIssued = false;
+                    }
                   } else {
                     isIssued = false;
                   }
@@ -1945,6 +1989,8 @@
                     status: isFullyGr ? 'gr' : (isIssued ? 'issued' : 'available'),
                     issueDate: isFullyGr ? null : (isIssued ? issueDate : null),
                     issuedTo: isFullyGr ? null : (isIssued ? issuedTo : null),
+                    previousIssueDate: prevIssueDate,
+                    previousIssuedTo: prevIssuedTo,
                     updated_at: updatedAt,
                     unissued_at: isIssued ? null : unissuedAt,
                     grWeight: retWt,
@@ -2718,6 +2764,8 @@
         box.status = 'available';
         box.issueDate = null;
         box.issuedTo = null;
+        box.previousIssueDate = null;
+        box.previousIssuedTo = null;
         box.updated_at = nowIso;
         box.unissued_at = nowIso;
         if (lot) {
@@ -2767,6 +2815,8 @@
           b.status = 'available';
           b.issueDate = null;
           b.issuedTo = null;
+          b.previousIssueDate = null;
+          b.previousIssuedTo = null;
           b.updated_at = nowIso;
           b.unissued_at = nowIso;
           boxUids.push(`${lot.id}__${b.id}`);
@@ -2868,6 +2918,8 @@
             status: oldBox.status || 'available',
             issueDate: oldBox.issueDate || null,
             issuedTo: oldBox.issuedTo || null,
+            previousIssueDate: oldBox.previousIssueDate || (oldBox.status === 'issued' ? oldBox.issueDate : null),
+            previousIssuedTo: oldBox.previousIssuedTo || (oldBox.status === 'issued' ? oldBox.issuedTo : null),
             grDate: oldBox.grDate || null,
             grRemarks: oldBox.grRemarks || null
           });
@@ -2896,7 +2948,9 @@
         returnedDate: b.grDate || null,
         status: b.status || 'available',
         issueDate: b.issueDate || null,
-        issuedTo: b.issuedTo || null
+        issuedTo: b.issuedTo || null,
+        previousIssueDate: b.previousIssueDate || null,
+        previousIssuedTo: b.previousIssuedTo || null
       }));
 
       const newBatch = {
@@ -3070,6 +3124,9 @@
             box.status = 'issued';
             box.issueDate = issueDate;
             box.issuedTo = issuedTo;
+            box.previousIssueDate = issueDate;
+            box.previousIssuedTo = issuedTo;
+            box.unissued_at = null;
             box.updated_at = nowIso;
             lot.updated_at = nowIso;
             boxUids.push(`${lot.id}__${box.id}`);

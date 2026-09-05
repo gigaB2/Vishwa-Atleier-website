@@ -351,11 +351,17 @@
         const locTime = locRow.updated_at ? new Date(locRow.updated_at).getTime() : 0;
         const remTime = remRow.updated_at ? new Date(remRow.updated_at).getTime() : 0;
 
-        if (locTime >= remTime) {
+        if (locTime > remTime) {
           rowMap.set(matchedPKey, {
             ...remRow,
             ...locRow,
             id: locRow.syncKey ? (String(locRow.id).startsWith('PUR-') ? `PUR-${locRow.syncKey}` : `SAL-${locRow.syncKey}`) : locRow.id
+          });
+        } else {
+          rowMap.set(matchedPKey, {
+            ...locRow,
+            ...remRow,
+            id: remRow.syncKey ? (String(remRow.id).startsWith('PUR-') ? `PUR-${remRow.syncKey}` : `SAL-${remRow.syncKey}`) : (remRow.id || locRow.id)
           });
         }
       } else {
@@ -574,40 +580,66 @@
         } else {
           const curBox = boxMap.get(bId);
 
-          // 1. Goods Return (GR) takes precedence
-          if (incBox.status === 'gr' || (incBox.grWeight > 0 && incBox.grWeight >= (incBox.grossWeight || incBox.weight || 1))) {
-            boxMap.set(bId, { ...curBox, ...incBox, status: 'gr' });
-            return;
-          }
-          if (curBox.status === 'gr' || (curBox.grWeight > 0 && curBox.grWeight >= (curBox.grossWeight || curBox.weight || 1))) {
-            boxMap.set(bId, { ...incBox, ...curBox, status: 'gr' });
-            return;
-          }
-
           const curUpdated = curBox.updated_at ? new Date(curBox.updated_at).getTime() : 0;
           const incUpdated = incBox.updated_at ? new Date(incBox.updated_at).getTime() : 0;
+          const winner = (incUpdated >= curUpdated) ? incBox : curBox;
+          const loser = (incUpdated >= curUpdated) ? curBox : incBox;
+
+          const prevIssueDate = incBox.previousIssueDate || curBox.previousIssueDate || (incBox.status === 'issued' ? incBox.issueDate : (curBox.status === 'issued' ? curBox.issueDate : null));
+          const prevIssuedTo = incBox.previousIssuedTo || curBox.previousIssuedTo || (incBox.status === 'issued' ? incBox.issuedTo : (curBox.status === 'issued' ? curBox.issuedTo : null));
+
+          const isWinnerGr = (winner.status === 'gr') || (winner.grWeight > 0 && winner.grWeight >= (winner.grossWeight || winner.weight || 1));
+
+          if (isWinnerGr) {
+            boxMap.set(bId, {
+              ...loser,
+              ...winner,
+              status: 'gr',
+              issueDate: null,
+              issuedTo: null,
+              previousIssueDate: prevIssueDate,
+              previousIssuedTo: prevIssuedTo
+            });
+            return;
+          }
 
           if (curBox.status === 'issued' && incBox.status === 'issued') {
-            const winner = (incUpdated >= curUpdated) ? incBox : curBox;
             boxMap.set(bId, {
               ...curBox,
               ...incBox,
               status: 'issued',
-              issueDate: winner.issueDate || curBox.issueDate || incBox.issueDate,
-              issuedTo: winner.issuedTo || curBox.issuedTo || incBox.issuedTo,
+              issueDate: winner.issueDate || curBox.issueDate || incBox.issueDate || prevIssueDate,
+              issuedTo: winner.issuedTo || curBox.issuedTo || incBox.issuedTo || prevIssuedTo,
+              previousIssueDate: prevIssueDate,
+              previousIssuedTo: prevIssuedTo,
               updated_at: winner.updated_at || incBox.updated_at || curBox.updated_at
             });
           } else if (curBox.status !== 'issued' && incBox.status !== 'issued') {
-            const winner = (incUpdated >= curUpdated) ? incBox : curBox;
-            boxMap.set(bId, {
-              ...curBox,
-              ...incBox,
-              status: 'available',
-              issueDate: null,
-              issuedTo: null,
-              unissued_at: winner.unissued_at || incBox.unissued_at || curBox.unissued_at || winner.updated_at,
-              updated_at: winner.updated_at || incBox.updated_at || curBox.updated_at
-            });
+            const wasIssued = Boolean(prevIssueDate && (!winner.unissued_at || new Date(winner.unissued_at).getTime() < new Date(prevIssueDate).getTime()));
+            if (wasIssued) {
+              boxMap.set(bId, {
+                ...loser,
+                ...winner,
+                status: 'issued',
+                issueDate: prevIssueDate,
+                issuedTo: prevIssuedTo || 'Department',
+                previousIssueDate: prevIssueDate,
+                previousIssuedTo: prevIssuedTo,
+                updated_at: winner.updated_at || new Date().toISOString()
+              });
+            } else {
+              boxMap.set(bId, {
+                ...curBox,
+                ...incBox,
+                status: 'available',
+                issueDate: null,
+                issuedTo: null,
+                previousIssueDate: null,
+                previousIssuedTo: null,
+                unissued_at: winner.unissued_at || incBox.unissued_at || curBox.unissued_at || winner.updated_at,
+                updated_at: winner.updated_at || incBox.updated_at || curBox.updated_at
+              });
+            }
           } else {
             // One is issued, the other is available (unissued)
             const issuedBox = (curBox.status === 'issued') ? curBox : incBox;
@@ -629,6 +661,8 @@
                 status: 'available',
                 issueDate: null,
                 issuedTo: null,
+                previousIssueDate: null,
+                previousIssuedTo: null,
                 unissued_at: availBox.unissued_at || availBox.updated_at,
                 updated_at: availBox.updated_at || new Date().toISOString()
               });
@@ -637,8 +671,10 @@
                 ...availBox,
                 ...issuedBox,
                 status: 'issued',
-                issueDate: issuedBox.issueDate,
-                issuedTo: issuedBox.issuedTo,
+                issueDate: issuedBox.issueDate || prevIssueDate,
+                issuedTo: issuedBox.issuedTo || prevIssuedTo,
+                previousIssueDate: prevIssueDate,
+                previousIssuedTo: prevIssuedTo,
                 updated_at: issuedBox.updated_at || new Date().toISOString()
               });
             }
@@ -813,43 +849,66 @@
               if (!bBoxMap.has(bxId)) {
                 if (isLocallyActive) bBoxMap.set(bxId, { ...locBx });
               } else {
-                const remBx = bBoxMap.get(bxId);
-                const isLocGr = (Number(locBx.returnedWeight) > 0) && (Number(locBx.returnedWeight) >= (Number(locBx.weight) || 1)) || locBx.status === 'gr';
-                const isRemGr = (Number(remBx.returnedWeight) > 0) && (Number(remBx.returnedWeight) >= (Number(remBx.weight) || 1)) || remBx.status === 'gr';
+                const locUpdated = locBx.updated_at ? new Date(locBx.updated_at).getTime() : 0;
+                const remUpdated = remBx.updated_at ? new Date(remBx.updated_at).getTime() : 0;
+                const winner = (locUpdated >= remUpdated) ? locBx : remBx;
+                const loser = (locUpdated >= remUpdated) ? remBx : locBx;
 
-                if (isLocGr || isRemGr) {
+                const prevIssueDate = locBx.previousIssueDate || remBx.previousIssueDate || (locBx.status === 'issued' ? locBx.issueDate : (remBx.status === 'issued' ? remBx.issueDate : null));
+                const prevIssuedTo = locBx.previousIssuedTo || remBx.previousIssuedTo || (locBx.status === 'issued' ? locBx.issuedTo : (remBx.status === 'issued' ? remBx.issuedTo : null));
+
+                const isWinnerGr = (winner.status === 'gr') || (Number(winner.returnedWeight) > 0 && Number(winner.returnedWeight) >= (Number(winner.weight) || 1));
+
+                if (isWinnerGr) {
                   bBoxMap.set(bxId, {
-                    ...remBx,
-                    ...locBx,
-                    status: 'gr'
+                    ...loser,
+                    ...winner,
+                    status: 'gr',
+                    issueDate: null,
+                    issuedTo: null,
+                    previousIssueDate: prevIssueDate,
+                    previousIssuedTo: prevIssuedTo
                   });
                   return;
                 }
 
-                const locUpdated = locBx.updated_at ? new Date(locBx.updated_at).getTime() : 0;
-                const remUpdated = remBx.updated_at ? new Date(remBx.updated_at).getTime() : 0;
-
                 if (locBx.status === 'issued' && remBx.status === 'issued') {
-                  const winner = (locUpdated > remUpdated) ? locBx : remBx;
                   bBoxMap.set(bxId, {
                     ...remBx,
                     ...locBx,
                     status: 'issued',
-                    issueDate: winner.issueDate || locBx.issueDate || remBx.issueDate,
-                    issuedTo: winner.issuedTo || locBx.issuedTo || remBx.issuedTo,
+                    issueDate: winner.issueDate || locBx.issueDate || remBx.issueDate || prevIssueDate,
+                    issuedTo: winner.issuedTo || locBx.issuedTo || remBx.issuedTo || prevIssuedTo,
+                    previousIssueDate: prevIssueDate,
+                    previousIssuedTo: prevIssuedTo,
                     updated_at: winner.updated_at || locBx.updated_at || remBx.updated_at
                   });
                 } else if (locBx.status !== 'issued' && remBx.status !== 'issued') {
-                  const winner = (locUpdated > remUpdated) ? locBx : remBx;
-                  bBoxMap.set(bxId, {
-                    ...remBx,
-                    ...locBx,
-                    status: 'available',
-                    issueDate: null,
-                    issuedTo: null,
-                    unissued_at: winner.unissued_at || locBx.unissued_at || remBx.unissued_at || winner.updated_at,
-                    updated_at: winner.updated_at || locBx.updated_at || remBx.updated_at
-                  });
+                  const wasIssued = Boolean(prevIssueDate && (!winner.unissued_at || new Date(winner.unissued_at).getTime() < new Date(prevIssueDate).getTime()));
+                  if (wasIssued) {
+                    bBoxMap.set(bxId, {
+                      ...loser,
+                      ...winner,
+                      status: 'issued',
+                      issueDate: prevIssueDate,
+                      issuedTo: prevIssuedTo || 'Department',
+                      previousIssueDate: prevIssueDate,
+                      previousIssuedTo: prevIssuedTo,
+                      updated_at: winner.updated_at || new Date().toISOString()
+                    });
+                  } else {
+                    bBoxMap.set(bxId, {
+                      ...remBx,
+                      ...locBx,
+                      status: 'available',
+                      issueDate: null,
+                      issuedTo: null,
+                      previousIssueDate: null,
+                      previousIssuedTo: null,
+                      unissued_at: winner.unissued_at || locBx.unissued_at || remBx.unissued_at || winner.updated_at,
+                      updated_at: winner.updated_at || locBx.updated_at || remBx.updated_at
+                    });
+                  }
                 } else {
                   const issuedBx = (locBx.status === 'issued') ? locBx : remBx;
                   const availBx = (locBx.status === 'issued') ? remBx : locBx;
@@ -870,6 +929,8 @@
                       status: 'available',
                       issueDate: null,
                       issuedTo: null,
+                      previousIssueDate: null,
+                      previousIssuedTo: null,
                       unissued_at: availBx.unissued_at || availBx.updated_at,
                       updated_at: availBx.updated_at || new Date().toISOString()
                     });
@@ -878,8 +939,10 @@
                       ...availBx,
                       ...issuedBx,
                       status: 'issued',
-                      issueDate: issuedBx.issueDate,
-                      issuedTo: issuedBx.issuedTo,
+                      issueDate: issuedBx.issueDate || prevIssueDate,
+                      issuedTo: issuedBx.issuedTo || prevIssuedTo,
+                      previousIssueDate: prevIssueDate,
+                      previousIssuedTo: prevIssuedTo,
                       updated_at: issuedBx.updated_at || new Date().toISOString()
                     });
                   }
@@ -6613,6 +6676,11 @@
       }
     },
     mergeDatasets: (key, localVal, remoteVal) => mergeDatasets(key, localVal, remoteVal),
+    mergeYarnSalesDatasets: mergeYarnSalesDatasets,
+    mergeYarnProductionDatasets: mergeYarnProductionDatasets,
+    mergeYarnLedgerDatasets: mergeYarnLedgerDatasets,
+    mergeYarnStockDatasets: mergeYarnStockDatasets,
+    mergeYarnOrdersDatasets: mergeYarnOrdersDatasets,
     getAvatarColors: () => AVATAR_COLORS
   };
 

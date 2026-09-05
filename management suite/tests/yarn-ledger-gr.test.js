@@ -914,6 +914,200 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
       '80/72 TFO 350 TPM'
     ]);
   });
+
+  await t.test('when GR is added to an issued box and then deleted/removed, it reverts to issued on previous date (not available)', () => {
+    // 1. Initial State: Box B1 is available, Box B2 was issued to 'Knitter Unit 2' on 2026-08-15
+    const stockLot = {
+      id: 'LOT-500__CH-1234',
+      lotNumber: 'LOT-500',
+      challanNo: 'CH-1234',
+      supplier: 'Reliance Industries',
+      quality: '80/72 Polyester',
+      boxes: [
+        { id: 'B1', boxNumber: 'B1', weight: 40.0, grossWeight: 40.0, remainingWeight: 40.0, grWeight: 0, status: 'available' },
+        { id: 'B2', boxNumber: 'B2', weight: 40.0, grossWeight: 40.0, remainingWeight: 40.0, grWeight: 0, status: 'issued', issueDate: '2026-08-15', issuedTo: 'Knitter Unit 2', previousIssueDate: '2026-08-15', previousIssuedTo: 'Knitter Unit 2' }
+      ]
+    };
+
+    // 2. User issues 100% Full GR on both B1 (available) and B2 (issued)
+    const grAllocations = [
+      { boxNumber: 'B1', returnedWeight: 40.0, remarks: 'Defective' },
+      { boxNumber: 'B2', returnedWeight: 40.0, remarks: 'Defective issued cones' }
+    ];
+
+    grAllocations.forEach(alloc => {
+      const bx = stockLot.boxes.find(b => b.boxNumber === alloc.boxNumber);
+      const prevIssueDate = bx.previousIssueDate || (bx.status === 'issued' ? bx.issueDate : null);
+      const prevIssuedTo = bx.previousIssuedTo || (bx.status === 'issued' ? bx.issuedTo : null);
+      if (prevIssueDate) bx.previousIssueDate = prevIssueDate;
+      if (prevIssuedTo) bx.previousIssuedTo = prevIssuedTo;
+
+      const ret = alloc.returnedWeight;
+      const gross = bx.grossWeight || bx.weight;
+      bx.grWeight = ret;
+      bx.remainingWeight = Math.max(0, gross - ret);
+      if (ret >= gross && gross > 0) {
+        bx.status = 'gr';
+        bx.issueDate = null;
+        bx.issuedTo = null;
+      }
+    });
+
+    assert.strictEqual(stockLot.boxes[0].status, 'gr');
+    assert.strictEqual(stockLot.boxes[1].status, 'gr');
+    assert.strictEqual(stockLot.boxes[1].previousIssueDate, '2026-08-15', 'Preserves previous issue date');
+    assert.strictEqual(stockLot.boxes[1].previousIssuedTo, 'Knitter Unit 2', 'Preserves previous recipient');
+
+    // 3. User now REMOVES / DELETES the GR on both boxes (sets returnedWeight = 0)
+    const clearAllocations = [
+      { boxNumber: 'B1', returnedWeight: 0 },
+      { boxNumber: 'B2', returnedWeight: 0 }
+    ];
+
+    clearAllocations.forEach(alloc => {
+      const bx = stockLot.boxes.find(b => b.boxNumber === alloc.boxNumber);
+      const prevIssueDate = bx.previousIssueDate || (bx.status === 'issued' ? bx.issueDate : null);
+      const prevIssuedTo = bx.previousIssuedTo || (bx.status === 'issued' ? bx.issuedTo : null);
+      if (prevIssueDate) bx.previousIssueDate = prevIssueDate;
+      if (prevIssuedTo) bx.previousIssuedTo = prevIssuedTo;
+
+      const ret = alloc.returnedWeight;
+      const gross = bx.grossWeight || bx.weight;
+      bx.grWeight = ret;
+      bx.remainingWeight = Math.max(0, gross - ret);
+      bx.weight = bx.remainingWeight;
+
+      if (ret >= gross && gross > 0) {
+        bx.status = 'gr';
+        bx.issueDate = null;
+        bx.issuedTo = null;
+      } else {
+        if (bx.previousIssueDate || bx.previousIssuedTo || bx.issueDate || bx.issuedTo || bx.status === 'issued') {
+          bx.status = 'issued';
+          bx.issueDate = bx.issueDate || bx.previousIssueDate;
+          bx.issuedTo = bx.issuedTo || bx.previousIssuedTo || 'Department';
+        } else {
+          bx.status = 'available';
+          bx.issueDate = null;
+          bx.issuedTo = null;
+        }
+      }
+    });
+
+    // Box B1 (which was never issued before GR) should go back to AVAILABLE
+    assert.strictEqual(stockLot.boxes[0].status, 'available');
+    assert.strictEqual(stockLot.boxes[0].issueDate, null);
+    assert.strictEqual(stockLot.boxes[0].issuedTo, null);
+
+    // Box B2 (which WAS issued before GR) must go back to ISSUED on its previous date and recipient!
+    assert.strictEqual(stockLot.boxes[1].status, 'issued', 'B2 must revert to issued, NOT available');
+    assert.strictEqual(stockLot.boxes[1].issueDate, '2026-08-15', 'B2 issue date must be restored to previous date');
+    assert.strictEqual(stockLot.boxes[1].issuedTo, 'Knitter Unit 2', 'B2 issuedTo recipient must be restored');
+  });
+
+  await t.test('multi-device merge restores issued status on previous date when remote deletes GR', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.join(__dirname, '../assets/supabase-client.js');
+    const clientCode = fs.readFileSync(filePath, 'utf8');
+
+    const sandbox = {
+      window: {
+        location: { pathname: '/management%20suite/modules/yarn/yarn-production.html', href: 'http://localhost/yarn-production.html' },
+        addEventListener: () => {},
+        dispatchEvent: () => {},
+        CustomEvent: function(name, opts) { this.name = name; this.detail = opts?.detail; },
+        StorageEvent: function(name, opts) { this.name = name; this.key = opts?.key; this.newValue = opts?.newValue; },
+        HTMLInputElement: function() {},
+        HTMLTextAreaElement: function() {},
+        HTMLSelectElement: function() {}
+      },
+      document: {
+        location: { pathname: '/management%20suite/modules/yarn/yarn-production.html', href: 'http://localhost/yarn-production.html' },
+        addEventListener: () => {},
+        getElementById: () => null,
+        querySelector: () => null,
+        querySelectorAll: () => []
+      },
+      localStorage: {
+        _data: {},
+        getItem(k) { return this._data[k] || null; },
+        setItem(k, v) { this._data[k] = String(v); },
+        removeItem(k) { delete this._data[k]; }
+      },
+      navigator: { onLine: true },
+      console: console,
+      setTimeout: setTimeout,
+      clearTimeout: clearTimeout,
+      setInterval: setInterval,
+      clearInterval: clearInterval,
+      Date: Date
+    };
+
+    const fn = new Function('window', 'document', 'localStorage', 'navigator', 'console', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date', clientCode);
+    fn(sandbox.window, sandbox.document, sandbox.localStorage, sandbox.navigator, sandbox.console, sandbox.setTimeout, sandbox.clearTimeout, sandbox.setInterval, sandbox.clearInterval, sandbox.Date);
+    const vSupabase = sandbox.window.VishwaSupabase;
+
+    // Local device has B2 in GR state (was issued before)
+    const localStock = [
+      {
+        id: 'LOT-777__CH-99',
+        lotNumber: 'LOT-777',
+        challanNo: 'CH-99',
+        updated_at: '2026-09-01T10:00:00.000Z',
+        boxes: [
+          {
+            id: 'B2',
+            boxNumber: 'B2',
+            grossWeight: 50.0,
+            weight: 50.0,
+            remainingWeight: 0,
+            grWeight: 50.0,
+            status: 'gr',
+            issueDate: null,
+            issuedTo: null,
+            previousIssueDate: '2026-08-10',
+            previousIssuedTo: 'TFO Plant 1',
+            updated_at: '2026-09-01T10:00:00.000Z'
+          }
+        ]
+      }
+    ];
+
+    // Remote peer just deleted the GR on B2 (grWeight = 0, status changed with newer timestamp)
+    const remoteStock = [
+      {
+        id: 'LOT-777__CH-99',
+        lotNumber: 'LOT-777',
+        challanNo: 'CH-99',
+        updated_at: '2026-09-05T05:00:00.000Z',
+        boxes: [
+          {
+            id: 'B2',
+            boxNumber: 'B2',
+            grossWeight: 50.0,
+            weight: 50.0,
+            remainingWeight: 50.0,
+            grWeight: 0,
+            status: 'issued',
+            issueDate: '2026-08-10',
+            issuedTo: 'TFO Plant 1',
+            previousIssueDate: '2026-08-10',
+            previousIssuedTo: 'TFO Plant 1',
+            updated_at: '2026-09-05T05:00:00.000Z'
+          }
+        ]
+      }
+    ];
+
+    const merged = vSupabase.mergeYarnStockDatasets(localStock, remoteStock);
+    assert.strictEqual(merged.length, 1);
+    const box = merged[0].boxes[0];
+    assert.strictEqual(box.status, 'issued', 'Merged box must be issued');
+    assert.strictEqual(box.issueDate, '2026-08-10', 'Issue date preserved');
+    assert.strictEqual(box.issuedTo, 'TFO Plant 1', 'Issued to preserved');
+    assert.strictEqual(box.grWeight, 0, 'GR is 0');
+  });
 });
 
 

@@ -1,3 +1,268 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2687,48 +2952,124 @@
       populateQualityDatalist();
       renderTable();
 
-      // Cloud & Real-time Event Listeners
+      // Cloud & Real-time Event Listeners (Instant Sub-50ms Multi-PC Realtime Reflection)
       const handleRemoteSync = async (e) => {
-        if (isUserActivelyEditing()) return; // Never disrupt active user editing
+        if (isLocalSaving) return; // Skip echo of our own active in-flight save
+
+        let targetKey = null;
+        let incomingVal = null;
         if (e && e.detail) {
-          if (e.detail.isRemote === false) return; // Skip non-remote events
-          if (e.detail.key) {
-            const k = e.detail.key;
-            if (!k.startsWith('yarn') && !k.startsWith('costing-') && k !== 'yarn-rm-orders' && k !== 'yarn_ledger_deleted_keys' && k !== 'vf_deleted_entity_ids') {
-              return;
+          if (e.detail.isRemote === false) return; // Skip explicit local non-remote echoes
+          targetKey = e.detail.key;
+          incomingVal = e.detail.value;
+        } else if (e && e.key) {
+          targetKey = e.key;
+          incomingVal = e.newValue;
+        } else if (e && e.data && e.data.type === 'STORAGE_SYNC') {
+          targetKey = e.data.key;
+          incomingVal = e.data.value;
+        }
+
+        // Filter irrelevant non-yarn keys
+        if (targetKey && !targetKey.startsWith('yarn') && !targetKey.startsWith('costing-') && targetKey !== 'yarn-rm-orders' && targetKey !== 'vishwa_yarn_rm_stock_data' && targetKey !== 'yarn_ledger_deleted_keys' && targetKey !== 'vf_deleted_entity_ids') {
+          return;
+        }
+
+        // 1. Instant In-Memory Direct Ledger Array Merge (Sales & Purchase Ledgers)
+        if (targetKey === 'yarn_sales_ledger_data' || targetKey === 'yarn_purchase_ledger_data') {
+          let remoteArr = incomingVal;
+          if (typeof remoteArr === 'string') {
+            try { remoteArr = JSON.parse(remoteArr); } catch(err) { remoteArr = null; }
+          }
+          if (!remoteArr) {
+            const cached = (typeof cache !== 'undefined' && cache && cache[targetKey]) || (window.VishwaSupabase && window.VishwaSupabase.cache && window.VishwaSupabase.cache[targetKey]) || localStorage.getItem(targetKey);
+            if (cached) {
+              try { remoteArr = JSON.parse(cached); } catch(err) { remoteArr = null; }
             }
+          }
+
+          if (Array.isArray(remoteArr)) {
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+              remoteArr = window.VishwaSupabase.filterDeletedEntities(remoteArr, 'yarn_ledger_deleted_keys');
+            }
+
+            const tab = targetKey === 'yarn_sales_ledger_data' ? 'sales' : 'purchase';
+            ledgerData[tab] = mergeLedgerDatasets(ledgerData[tab], remoteArr);
+
+            populatePartyFilter();
+            populateQualityFilter();
+            populateQualityDatalist(cachedCloudDataMap);
+
+            // In-place live table update: check if user is actively focused on a cell input
+            const activeEl = document.activeElement;
+            const tbody = document.getElementById('excel-table-body');
+            const isInputFocused = activeEl && tbody && tbody.contains(activeEl);
+
+            if (isInputFocused) {
+              const focusedRow = activeEl.closest('tr');
+              const focusedRowId = focusedRow && focusedRow.id ? focusedRow.id.replace('ledger-row-', '') : null;
+              const focusedField = activeEl.dataset.field;
+
+              (ledgerData[activeTab] || []).forEach(r => {
+                if (r.id !== focusedRowId) {
+                  updateRowDOM(r.id);
+                } else {
+                  updateRowDOM(r.id, focusedField);
+                }
+              });
+              updateFooterAndKPISummaries();
+            } else {
+              renderTable(false);
+            }
+            return;
           }
         }
 
-        if (isUserActivelyEditing()) return;
+        // 2. Orders, Stock, Sales logs, Settings, or Deletions
+        if (targetKey && (targetKey === 'yarn-rm-orders' || targetKey === 'vishwa_yarn_rm_stock_data' || targetKey.endsWith('_sales_logs') || targetKey.endsWith('_production_logs') || targetKey === 'yarn_ledger_settings' || targetKey === 'yarn_ledger_deleted_keys' || targetKey === 'vf_deleted_entity_ids')) {
+          if (incomingVal) {
+            try {
+              cachedCloudDataMap[targetKey] = typeof incomingVal === 'string' ? JSON.parse(incomingVal) : incomingVal;
+            } catch(e) {}
+          }
+        }
 
+        // Fast in-memory sync from cachedCloudDataMap without slow HTTP blocking
         await loadAndSyncFromCloud(false);
-
-        // Guard again after async await completes
-        if (isUserActivelyEditing()) return;
-
         populatePartyFilter();
         populateQualityFilter();
-        populateQualityDatalist();
-        renderTable(false);
+        populateQualityDatalist(cachedCloudDataMap);
+
+        const activeEl = document.activeElement;
+        const tbody = document.getElementById('excel-table-body');
+        const isInputFocused = activeEl && tbody && tbody.contains(activeEl);
+        if (isInputFocused) {
+          const focusedRow = activeEl.closest('tr');
+          const focusedRowId = focusedRow && focusedRow.id ? focusedRow.id.replace('ledger-row-', '') : null;
+          const focusedField = activeEl.dataset.field;
+          (ledgerData[activeTab] || []).forEach(r => {
+            if (r.id !== focusedRowId) {
+              updateRowDOM(r.id);
+            } else {
+              updateRowDOM(r.id, focusedField);
+            }
+          });
+          updateFooterAndKPISummaries();
+        } else {
+          renderTable(false);
+        }
       };
 
-      window.addEventListener('storage', async (e) => {
-        if (isUserActivelyEditing()) return;
-        if (!e.key || e.key.startsWith('yarn') || e.key.startsWith('costing-') || e.key === 'yarn-rm-orders' || e.key === 'yarn_ledger_deleted_keys' || e.key === 'vf_deleted_entity_ids') {
-          handleRemoteSync(e);
-        }
-      });
-
+      window.addEventListener('storage', handleRemoteSync);
       window.addEventListener('supabase-sync', handleRemoteSync);
       window.addEventListener('supabase-item-deleted', handleRemoteSync);
+      window.addEventListener('yarn-order-updated', handleRemoteSync);
+      window.addEventListener('yarn-stock-updated', handleRemoteSync);
 
       window.addEventListener('focus', async () => {
-        if (isUserActivelyEditing()) return;
         const activeEl = document.activeElement;
         if (!activeEl || !document.getElementById('excel-table-body')?.contains(activeEl)) {
           await loadAndSyncFromCloud(false);
-          if (isUserActivelyEditing()) return;
           populatePartyFilter();
           populateQualityFilter();
           populateQualityDatalist();
@@ -2832,10 +3173,21 @@
             const remRow = rowMap.get(matchedId);
             const locTime = locRow.updated_at ? new Date(locRow.updated_at).getTime() : 0;
             const remTime = remRow.updated_at ? new Date(remRow.updated_at).getTime() : 0;
-            if (locTime >= remTime) {
-              rowMap.set(matchedId, { ...remRow, ...locRow });
+            if (locTime > remTime) {
+              rowMap.set(matchedId, { ...remRow, ...locRow, id: locRow.id || matchedId });
             } else {
-              rowMap.set(matchedId, { ...locRow, ...remRow });
+              rowMap.set(matchedId, {
+                ...locRow,
+                ...remRow,
+                id: remRow.id || matchedId,
+                paidAmount: remRow.paidAmount !== undefined ? remRow.paidAmount : locRow.paidAmount,
+                paymentDate: remRow.paymentDate !== undefined ? remRow.paymentDate : locRow.paymentDate,
+                interestPaid: remRow.interestPaid !== undefined ? remRow.interestPaid : locRow.interestPaid,
+                grQty: remRow.grQty !== undefined ? remRow.grQty : locRow.grQty,
+                grBoxes: remRow.grBoxes || locRow.grBoxes,
+                grDate: remRow.grDate || locRow.grDate,
+                grRemarks: remRow.grRemarks || locRow.grRemarks
+              });
             }
           }
         });
@@ -3769,7 +4121,7 @@
     }
 
     // In-place DOM updater for single row edits (Preserves active element focus & dropdowns)
-    function updateRowDOM(rowId) {
+    function updateRowDOM(rowId, skipField = null) {
       const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
       if (!row) return;
 
@@ -3781,8 +4133,63 @@
 
       tr.className = `${comp.status === 'overdue' ? 'is-overdue' : (comp.status === 'paid' ? 'is-paid' : '')} ${isLocked ? 'is-locked' : ''}`;
 
+      // Update editable input values if not currently focused by local user
+      const updateFieldInput = (fieldName, newVal) => {
+        if (skipField === fieldName) return;
+        const inp = tr.querySelector(`input[data-field="${fieldName}"]`);
+        if (inp && document.activeElement !== inp) {
+          const valStr = newVal !== undefined && newVal !== null ? String(newVal) : '';
+          if (String(inp.value) !== valStr) {
+            inp.value = valStr;
+          }
+        }
+      };
+
+      updateFieldInput('grossQty', row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0)));
+      updateFieldInput('grQty', row.grQty || 0);
+      updateFieldInput('qty', row.qty || 0);
+      updateFieldInput('rate', row.rate || 0);
+      updateFieldInput('gstPercent', row.gstPercent !== undefined ? row.gstPercent : 5.0);
+      updateFieldInput('paidAmount', row.paidAmount || 0);
+      updateFieldInput('paymentDate', row.paymentDate || '');
+      updateFieldInput('creditDays', row.creditDays || defaultCreditDays);
+      updateFieldInput('interestRate', row.interestRate !== undefined ? row.interestRate : defaultInterestRate);
+      updateFieldInput('interestPaid', row.interestPaid || 0);
+      updateFieldInput('remarks', row.remarks || '');
+      updateFieldInput('quality', row.quality || '');
+
+      // Dynamic GR cell styling
+      const grInp = tr.querySelector('input[data-field="grQty"]');
+      if (grInp) {
+        if (Number(row.grQty) > 0) {
+          grInp.style.color = 'var(--accent3)';
+          grInp.style.fontWeight = '700';
+          if (grInp.parentElement && grInp.parentElement.parentElement) {
+            grInp.parentElement.parentElement.style.background = 'rgba(249, 115, 22, 0.08)';
+          }
+        } else {
+          grInp.style.color = '';
+          grInp.style.fontWeight = '';
+          if (grInp.parentElement && grInp.parentElement.parentElement) {
+            grInp.parentElement.parentElement.style.background = '';
+          }
+        }
+      }
+
+      // Readonly / computed column spans
+      const elQty = tr.querySelector('.col-val-qty');
+      if (elQty) elQty.textContent = Number(row.qty || 0).toFixed(2);
+
       const elSubtotal = tr.querySelector('.col-val-subtotal');
-      if (elSubtotal) elSubtotal.textContent = formatCurrency(row.subtotal);
+      if (elSubtotal) {
+        elSubtotal.innerHTML = `
+          <div>${formatCurrency(row.subtotal)}</div>
+          ${Number(row.grQty) > 0 
+            ? `<div style="font-size: 0.7rem; color: var(--accent3); font-weight: 700; letter-spacing: -0.01em;" title="Goods Return Deducted Amount">(-${formatCurrency(row.grAmount || (row.grQty * row.rate))} GR)</div>` 
+            : ''
+          }
+        `;
+      }
 
       const elGrandTotal = tr.querySelector('.col-val-grandtotal');
       if (elGrandTotal) elGrandTotal.textContent = formatCurrency(row.grandTotal);
@@ -4964,7 +5371,11 @@
                   returnedWeight: Number(bx.returnedWeight) || Number(bx.grWeight) || 0,
                   date: (bx.returnedDate || bx.grDate || '').split('T')[0],
                   remarks: bx.returnedRemarks || bx.grRemarks || '',
-                  status: bx.status || 'available'
+                  status: bx.status || 'available',
+                  issueDate: bx.issueDate || null,
+                  issuedTo: bx.issuedTo || null,
+                  previousIssueDate: bx.previousIssueDate || (bx.status === 'issued' ? bx.issueDate : null),
+                  previousIssuedTo: bx.previousIssuedTo || (bx.status === 'issued' ? bx.issuedTo : null)
                 }));
                 break;
               }
@@ -5005,7 +5416,11 @@
                 returnedWeight: Number(bx.grWeight) || Number(bx.returnedWeight) || 0,
                 date: (bx.grDate || bx.returnedDate || '').split('T')[0],
                 remarks: bx.grRemarks || bx.returnedRemarks || '',
-                status: bx.status || 'available'
+                status: bx.status || 'available',
+                issueDate: bx.issueDate || null,
+                issuedTo: bx.issuedTo || null,
+                previousIssueDate: bx.previousIssueDate || (bx.status === 'issued' ? bx.issueDate : null),
+                previousIssuedTo: bx.previousIssuedTo || (bx.status === 'issued' ? bx.issuedTo : null)
               }));
             }
           }
@@ -5449,12 +5864,25 @@
                 targetBox.returnedRemarks = ret > 0 ? (alloc.remarks || effectiveGrRemarks) : null;
                 targetBox.updated_at = new Date().toISOString();
 
+                const prevIssueDate = targetBox.previousIssueDate || (targetBox.status === 'issued' ? targetBox.issueDate : null);
+                const prevIssuedTo = targetBox.previousIssuedTo || (targetBox.status === 'issued' ? targetBox.issuedTo : null);
+                if (prevIssueDate) targetBox.previousIssueDate = prevIssueDate;
+                if (prevIssuedTo) targetBox.previousIssuedTo = prevIssuedTo;
+
                 if (ret >= gross && gross > 0) {
                   targetBox.status = 'gr';
                   targetBox.issueDate = null;
                   targetBox.issuedTo = null;
-                } else if (targetBox.status === 'gr' && ret < gross) {
-                  targetBox.status = (targetBox.issuedTo || targetBox.issueDate) ? 'issued' : 'available';
+                } else if (ret < gross) {
+                  if (targetBox.previousIssueDate || targetBox.previousIssuedTo || targetBox.issueDate || targetBox.issuedTo || targetBox.status === 'issued') {
+                    targetBox.status = 'issued';
+                    targetBox.issueDate = targetBox.issueDate || targetBox.previousIssueDate;
+                    targetBox.issuedTo = targetBox.issuedTo || targetBox.previousIssuedTo || 'Department';
+                  } else {
+                    targetBox.status = 'available';
+                    targetBox.issueDate = null;
+                    targetBox.issuedTo = null;
+                  }
                 }
 
                 if (ret > 0) {
@@ -5484,12 +5912,25 @@
               bx.returnedRemarks = retForThisBox > 0 ? effectiveGrRemarks : null;
               bx.updated_at = new Date().toISOString();
 
+              const prevIssueDate = bx.previousIssueDate || (bx.status === 'issued' ? bx.issueDate : null);
+              const prevIssuedTo = bx.previousIssuedTo || (bx.status === 'issued' ? bx.issuedTo : null);
+              if (prevIssueDate) bx.previousIssueDate = prevIssueDate;
+              if (prevIssuedTo) bx.previousIssuedTo = prevIssuedTo;
+
               if (retForThisBox >= gross && gross > 0) {
                 bx.status = 'gr';
                 bx.issueDate = null;
                 bx.issuedTo = null;
-              } else if (bx.status === 'gr' && retForThisBox < gross) {
-                bx.status = (bx.issuedTo || bx.issueDate) ? 'issued' : 'available';
+              } else if (retForThisBox < gross) {
+                if (bx.previousIssueDate || bx.previousIssuedTo || bx.issueDate || bx.issuedTo || bx.status === 'issued') {
+                  bx.status = 'issued';
+                  bx.issueDate = bx.issueDate || bx.previousIssueDate;
+                  bx.issuedTo = bx.issuedTo || bx.previousIssuedTo || 'Department';
+                } else {
+                  bx.status = 'available';
+                  bx.issueDate = null;
+                  bx.issuedTo = null;
+                }
               }
 
               if (retForThisBox > 0) {
@@ -5591,6 +6032,11 @@
           bx.grRemarks = ret > 0 ? rRemarks : null;
           bx.updated_at = new Date().toISOString();
 
+          const prevIssueDate = bx.previousIssueDate || (bx.status === 'issued' ? bx.issueDate : null);
+          const prevIssuedTo = bx.previousIssuedTo || (bx.status === 'issued' ? bx.issuedTo : null);
+          if (prevIssueDate) bx.previousIssueDate = prevIssueDate;
+          if (prevIssuedTo) bx.previousIssuedTo = prevIssuedTo;
+
           if (ret >= gross && gross > 0) {
             bx.status = 'gr';
             bx.weight = gross;
@@ -5598,11 +6044,14 @@
             bx.issuedTo = null;
           } else {
             bx.weight = bx.remainingWeight;
-            // For partial returns: if the box was already issued, remaining weight remains issued and is not brought to available
-            if (bx.status === 'issued' || bx.issuedTo || bx.issueDate) {
+            if (bx.previousIssueDate || bx.previousIssuedTo || bx.issueDate || bx.issuedTo || bx.status === 'issued') {
               bx.status = 'issued';
-            } else if (bx.status === 'gr' && ret < gross) {
+              bx.issueDate = bx.issueDate || bx.previousIssueDate;
+              bx.issuedTo = bx.issuedTo || bx.previousIssuedTo || 'Department';
+            } else {
               bx.status = 'available';
+              bx.issueDate = null;
+              bx.issuedTo = null;
             }
           }
         });
