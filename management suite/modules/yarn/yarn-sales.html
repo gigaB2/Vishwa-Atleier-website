@@ -1846,52 +1846,52 @@
           <table>
             <thead>
               <tr>
-                <th onclick="toggleSalesSort('challanNo')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('challanNo')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Challan No <span id="sales-sort-icon-challanNo">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('date')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('date')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Sale Date <span id="sales-sort-icon-date">▼</span>
                 </th>
-                <th onclick="toggleSalesSort('customerName')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('customerName')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Customer Name <span id="sales-sort-icon-customerName">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('boriNo')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('boriNo')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Bori/Box No <span id="sales-sort-icon-boriNo">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('composition')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('composition')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Composition <span id="sales-sort-icon-composition">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('lotNo')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('lotNo')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Lot No <span id="sales-sort-icon-lotNo">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('color')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('color')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Color <span id="sales-sort-icon-color">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('specs')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('specs')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Specs <span id="sales-sort-icon-specs">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('totalRolls')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('totalRolls')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Rolls <span id="sales-sort-icon-totalRolls">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('totalQty')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('totalQty')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Qty (Kg) <span id="sales-sort-icon-totalQty">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('rate')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('rate')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Rate/Kg <span id="sales-sort-icon-rate">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('subtotal')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('subtotal')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Amount <span id="sales-sort-icon-subtotal">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('discountAmount')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('discountAmount')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Discount <span id="sales-sort-icon-discountAmount">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('gstAmount')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('gstAmount')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   GST <span id="sales-sort-icon-gstAmount">↕</span>
                 </th>
-                <th onclick="toggleSalesSort('grandTotal')" style="cursor: pointer; user-select: none;">
+                <th onclick="toggleSalesSort('grandTotal')" style="cursor: pointer; user-select: none; white-space: nowrap;">
                   Total Amount <span id="sales-sort-icon-grandTotal">↕</span>
                 </th>
-                <th class="actions-col">Actions</th>
+                <th class="actions-col" style="white-space: nowrap;">Actions</th>
               </tr>
             </thead>
             <tbody id="sales-table-body">
@@ -6969,6 +6969,9 @@
         return;
       }
 
+      // Assign stable high-contrast palette colors to all unique lots across sales logs
+      const allSalesLots = Array.from(new Set((dataStore[activeDivision]?.sales || []).map(s => resolveSaleLotNo(s)).filter(l => l && l !== '-')));
+
       filtered.forEach(s => {
         const tr = document.createElement('tr');
         tr.style.cursor = 'pointer';
@@ -6980,7 +6983,7 @@
           openSaleDetailsModal(s.id);
         };
         const boriDisplay = s.items && s.items.length > 0 ? 
-          `${s.items.map(i => i.boriNo).join(', ')} <span class="badge" style="font-size:0.7rem;">(${s.items.length} Boris/Boxes)</span>` : 
+          `${s.items.map(i => i.boriNo).join(', ')} <span class="badge" style="font-size:0.7rem; white-space: nowrap;">(${s.items.length} Boris/Boxes)</span>` : 
           (s.boriNo || '-');
 
         const compositionDisplay = (s.items && s.items.length > 0)
@@ -6988,6 +6991,35 @@
           : (s.composition || '-');
 
         const lotNoDisplay = resolveSaleLotNo(s);
+        let lotCapsulesHtml = '-';
+        if (s.items && s.items.length > 0) {
+          const uniqueLots = Array.from(new Set(s.items.map(i => (i.lotNo && String(i.lotNo).trim() && String(i.lotNo).trim() !== '-') ? String(i.lotNo).trim() : '').filter(Boolean)));
+          if (uniqueLots.length > 0) {
+            lotCapsulesHtml = `<div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">` +
+              uniqueLots.map(lKey => {
+                const lStyle = getLotColorStyle(lKey, allSalesLots);
+                if (lStyle) {
+                  return `<span style="background: ${lStyle.bg}; color: ${lStyle.text}; padding: 3px 8px; border-radius: 6px; font-weight: 600; border: 1px solid ${lStyle.border}; font-size: 0.8rem; white-space: nowrap; display: inline-block;">${lKey}</span>`;
+                }
+                return `<span class="badge" style="font-size: 0.8rem; white-space: nowrap;">${lKey}</span>`;
+              }).join('') +
+            `</div>`;
+          } else if (lotNoDisplay && lotNoDisplay !== '-') {
+            const lStyle = getLotColorStyle(lotNoDisplay, allSalesLots);
+            if (lStyle) {
+              lotCapsulesHtml = `<span style="background: ${lStyle.bg}; color: ${lStyle.text}; padding: 3px 8px; border-radius: 6px; font-weight: 600; border: 1px solid ${lStyle.border}; font-size: 0.8rem; white-space: nowrap; display: inline-block;">${lotNoDisplay}</span>`;
+            } else {
+              lotCapsulesHtml = `<span class="badge" style="font-size: 0.8rem; white-space: nowrap;">${lotNoDisplay}</span>`;
+            }
+          }
+        } else if (lotNoDisplay && lotNoDisplay !== '-') {
+          const lStyle = getLotColorStyle(lotNoDisplay, allSalesLots);
+          if (lStyle) {
+            lotCapsulesHtml = `<span style="background: ${lStyle.bg}; color: ${lStyle.text}; padding: 3px 8px; border-radius: 6px; font-weight: 600; border: 1px solid ${lStyle.border}; font-size: 0.8rem; white-space: nowrap; display: inline-block;">${lotNoDisplay}</span>`;
+          } else {
+            lotCapsulesHtml = `<span class="badge" style="font-size: 0.8rem; white-space: nowrap;">${lotNoDisplay}</span>`;
+          }
+        }
 
         const colorDisplay = (s.items && s.items.length > 0)
           ? Array.from(new Set(s.items.map(i => i.color).filter(Boolean))).join(' / ') || (s.color || '-')
@@ -7007,41 +7039,41 @@
         const rateDisplay = rateVal > 0 ? `₹${rateVal.toFixed(2)}` : '-';
 
         const discInfo = getSaleDiscountInfo(s);
-        let discountDisplay = '<span class="muted">0% (₹0.00)</span>';
+        let discountDisplay = '<span class="muted" style="white-space: nowrap;">0% (₹0.00)</span>';
         if (discInfo.amount > 0) {
           const discLabel = discInfo.type === 'percent'
             ? `${discInfo.percent}%`
             : (discInfo.value > 0 ? `Flat ₹${discInfo.value.toFixed(2)}` : 'Flat');
-          discountDisplay = `<span style="color: #ef4444; font-weight: 600;">${discLabel}</span> <span class="muted" style="font-size:0.75rem;">(-₹${discInfo.amount.toFixed(2)})</span>`;
+          discountDisplay = `<span style="color: #ef4444; font-weight: 600; white-space: nowrap;">${discLabel}</span> <span class="muted" style="font-size:0.75rem; white-space: nowrap;">(-₹${discInfo.amount.toFixed(2)})</span>`;
         }
 
         const gstRateVal = getSaleGstRate(s);
         const taxableVal = Math.max(0, subtotalVal - discInfo.amount);
         const gstVal = s.gstAmount !== undefined && s.discountAmount === discInfo.amount && s.subtotalAmount === subtotalVal ? parseFloat(s.gstAmount) : (taxableVal * (gstRateVal / 100));
         const grandTotalVal = (s.totalAmount && s.discountAmount === discInfo.amount && s.subtotalAmount === subtotalVal) ? parseFloat(s.totalAmount) : (taxableVal + gstVal);
-        const gstDisplay = `<span>${gstRateVal}%</span> <span class="muted" style="font-size:0.75rem;">(₹${gstVal.toFixed(2)})</span>`;
+        const gstDisplay = `<span style="white-space: nowrap;">${gstRateVal}%</span> <span class="muted" style="font-size:0.75rem; white-space: nowrap;">(₹${gstVal.toFixed(2)})</span>`;
 
         const customerDisplay = s.customerName 
-          ? `<strong>${s.customerName}</strong>${s.agentName ? `<div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;"><i class="fas fa-user-tie" style="margin-right: 3px; font-size: 0.7rem;"></i>${s.agentName}</div>` : ''}`
+          ? `<span style="font-weight: 600; white-space: nowrap;">${s.customerName}</span>${s.agentName ? `<span style="font-size: 0.75rem; color: var(--muted); margin-left: 6px; white-space: nowrap;" title="Agent: ${s.agentName}"><i class="fas fa-user-tie" style="margin-right: 3px; font-size: 0.7rem;"></i>${s.agentName}</span>` : ''}`
           : '-';
 
         tr.innerHTML = `
-          <td><strong>${s.challanNo}</strong></td>
-          <td>${formatDate(s.date)}</td>
-          <td>${customerDisplay}</td>
-          <td>${boriDisplay}</td>
-          <td><span style="font-size:0.85rem; font-weight: 500;">${compositionDisplay}</span></td>
-          <td><span style="font-weight: 600; color: var(--accent); font-size: 0.85rem;">${lotNoDisplay}</span></td>
-          <td>${colorDisplay}</td>
-          <td>${specsDisplay}</td>
-          <td>${rollsTotal}</td>
-          <td>${qtyTotal.toFixed(2)} Kg</td>
-          <td>${rateDisplay}</td>
-          <td>₹${subtotalVal.toFixed(2)}</td>
-          <td>${discountDisplay}</td>
-          <td>${gstDisplay}</td>
-          <td><strong>₹${grandTotalVal.toFixed(2)}</strong></td>
-          <td class="actions-cell">
+          <td style="white-space: nowrap;"><strong>${s.challanNo}</strong></td>
+          <td style="white-space: nowrap;">${formatDate(s.date)}</td>
+          <td style="white-space: nowrap;">${customerDisplay}</td>
+          <td style="min-width: 140px;">${boriDisplay}</td>
+          <td style="min-width: 130px;"><span style="font-size:0.85rem; font-weight: 500;">${compositionDisplay}</span></td>
+          <td style="vertical-align: middle; white-space: nowrap;">${lotCapsulesHtml}</td>
+          <td style="white-space: nowrap;">${colorDisplay}</td>
+          <td style="white-space: nowrap;">${specsDisplay}</td>
+          <td style="white-space: nowrap; text-align: center;">${rollsTotal}</td>
+          <td style="white-space: nowrap; font-weight: 600;">${qtyTotal.toFixed(2)} Kg</td>
+          <td style="white-space: nowrap;">${rateDisplay}</td>
+          <td style="white-space: nowrap;">₹${subtotalVal.toFixed(2)}</td>
+          <td style="white-space: nowrap;">${discountDisplay}</td>
+          <td style="white-space: nowrap;">${gstDisplay}</td>
+          <td style="white-space: nowrap;"><strong style="color: var(--fg);">₹${grandTotalVal.toFixed(2)}</strong></td>
+          <td class="actions-cell" style="white-space: nowrap;">
             <div class="action-menu-container">
               <button type="button" class="action-menu-btn" onclick="event.stopPropagation(); toggleActionMenu(this, 'sale-${s.id}')" title="Actions" aria-label="Actions" aria-expanded="false">
                 <span></span>
