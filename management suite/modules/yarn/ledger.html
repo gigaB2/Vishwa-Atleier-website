@@ -2589,7 +2589,7 @@
     let isHistoryAction = false;
 
     // Allowed editable fields for auto-synced rows
-    const SYNCED_EDITABLE_FIELDS = ['grQty', 'grossQty', 'paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
+    const SYNCED_EDITABLE_FIELDS = ['grQty', 'grossQty', 'gstPercent', 'paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
 
     // Semantic Status Badge Renderer with SVG Icons
     function renderStatusBadge(status) {
@@ -4751,11 +4751,8 @@
               </div>
             </td>
 
-            <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
-              ${isLocked
-                ? `<div class="cell-readonly num font-mono" title="GST %">${Number(row.gstPercent !== undefined ? row.gstPercent : 5.0).toFixed(1)}%</div>`
-                : `<input type="number" step="0.1" data-field="gstPercent" class="cell-input num-font" style="width: 75px;" value="${row.gstPercent !== undefined ? row.gstPercent : 5.0}" oninput="handleCellChange('${row.id}', 'gstPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'gstPercent', this.value, true)">`
-              }
+            <td class="num-col">
+              <input type="number" step="0.1" data-field="gstPercent" class="cell-input num-font" style="width: 75px;" value="${row.gstPercent !== undefined ? row.gstPercent : 5.0}" oninput="handleCellChange('${row.id}', 'gstPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'gstPercent', this.value, true)" title="GST %">
             </td>
 
             <td class="num-col cell-locked-bg">

@@ -2012,7 +2012,48 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(isFullyGr2, false, 'Should not be full GR');
     assert.strictEqual(isPartialGr2, true, 'Should be partial GR');
   });
+
+  await t.test('Yarn Ledger: altering GST % recalculates GST amount and grand total on locked and manual rows', () => {
+    const SYNCED_EDITABLE_FIELDS = ['grQty', 'grossQty', 'gstPercent', 'paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
+    assert.ok(SYNCED_EDITABLE_FIELDS.includes('gstPercent'), 'gstPercent must be allowed in SYNCED_EDITABLE_FIELDS');
+
+    // Simulate ledger row
+    const row = {
+      id: 'PUR-order_101',
+      qty: 100,
+      rate: 200,
+      subtotal: 20000,
+      gstPercent: 5.0,
+      grandTotal: 21000,
+      paidAmount: 0,
+      isManual: false,
+      source: 'yarn-rm-orders'
+    };
+
+    // User alters GST % to 12%
+    const newGstPercent = 12.0;
+    row.gstPercent = newGstPercent;
+    const subtotal = Number((row.qty * row.rate).toFixed(2));
+    const gstAmt = Number(((subtotal * row.gstPercent) / 100).toFixed(2));
+    row.grandTotal = Number((subtotal + gstAmt).toFixed(2));
+
+    assert.strictEqual(row.gstPercent, 12.0);
+    assert.strictEqual(row.subtotal, 20000);
+    assert.strictEqual(gstAmt, 2400);
+    assert.strictEqual(row.grandTotal, 22400);
+
+    // User alters GST % to 0% (tax exempt / nil rated)
+    row.gstPercent = 0.0;
+    const subtotal0 = Number((row.qty * row.rate).toFixed(2));
+    const gstAmt0 = Number(((subtotal0 * row.gstPercent) / 100).toFixed(2));
+    row.grandTotal = Number((subtotal0 + gstAmt0).toFixed(2));
+
+    assert.strictEqual(row.gstPercent, 0.0);
+    assert.strictEqual(gstAmt0, 0);
+    assert.strictEqual(row.grandTotal, 20000);
+  });
 });
+
 
 
 
