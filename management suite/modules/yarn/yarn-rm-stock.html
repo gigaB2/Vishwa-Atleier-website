@@ -1349,32 +1349,37 @@
       margin-left: 0.35rem;
     }
 
-    /* Modal Layout & Dropzone */
+    /* Modal Layout & Dropzone - Generous, Spacious & Crystal Clear */
     .ai-modal-card {
-      max-width: 1040px !important;
-      width: 95vw !important;
-      max-height: 92vh;
+      max-width: 1440px !important;
+      width: 96vw !important;
+      max-height: 94vh;
       display: flex;
       flex-direction: column;
     }
+    .ai-modal-card .modal-body {
+      padding: 1.5rem 1.75rem !important;
+      max-height: calc(94vh - 140px) !important;
+    }
     .ai-dropzone-wrap {
-      border: 2px dashed rgba(168, 85, 247, 0.4);
+      border: 2.5px dashed rgba(168, 85, 247, 0.45);
       background: rgba(168, 85, 247, 0.03);
-      border-radius: 14px;
-      padding: 2.5rem 1.5rem;
+      border-radius: 16px;
+      padding: 3.5rem 2rem;
       text-align: center;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       position: relative;
     }
     .ai-dropzone-wrap:hover, .ai-dropzone-wrap.dragover {
       border-color: #a855f7;
       background: rgba(168, 85, 247, 0.08);
-      transform: scale(1.005);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 36px rgba(124, 58, 237, 0.15);
     }
     .ai-dropzone-icon {
-      font-size: 2.75rem;
-      margin-bottom: 0.75rem;
+      font-size: 3.25rem;
+      margin-bottom: 0.85rem;
       display: inline-block;
       animation: floatIcon 3s ease-in-out infinite;
     }
@@ -1387,17 +1392,17 @@
     .ai-scan-progress-wrap {
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
+      border-radius: 14px;
+      padding: 2rem;
       margin: 1.5rem 0;
       text-align: center;
     }
     .ai-progress-track {
-      height: 8px;
+      height: 10px;
       background: rgba(0,0,0,0.06);
       border-radius: 999px;
       overflow: hidden;
-      margin: 1rem 0 0.5rem 0;
+      margin: 1.25rem 0 0.65rem 0;
       position: relative;
     }
     .dark-mode .ai-progress-track {
@@ -1409,11 +1414,11 @@
       background: linear-gradient(90deg, #7c3aed, #ec4899, #f97316);
       border-radius: 999px;
       transition: width 0.25s ease;
-      box-shadow: 0 0 12px rgba(236, 72, 153, 0.6);
+      box-shadow: 0 0 16px rgba(236, 72, 153, 0.7);
     }
     .ai-stage-text {
-      font-size: 0.9rem;
-      font-weight: 600;
+      font-size: 1rem;
+      font-weight: 700;
       color: var(--fg);
       display: flex;
       align-items: center;
@@ -1421,14 +1426,14 @@
       gap: 0.5rem;
     }
 
-    /* Split Review Screen */
+    /* Split Review Screen - Expanded & Balanced */
     .ai-review-grid {
       display: grid;
-      grid-template-columns: 1fr 1.2fr;
-      gap: 1.25rem;
-      min-height: 440px;
+      grid-template-columns: 1.05fr 1.35fr;
+      gap: 1.5rem;
+      min-height: 560px;
     }
-    @media (max-width: 860px) {
+    @media (max-width: 1024px) {
       .ai-review-grid {
         grid-template-columns: 1fr;
       }
@@ -1436,154 +1441,178 @@
     .ai-img-preview-card {
       border: 1px solid var(--border);
       background: var(--bg);
-      border-radius: 12px;
-      padding: 0.75rem;
+      border-radius: 14px;
+      padding: 1rem 1.15rem;
       display: flex;
       flex-direction: column;
       height: 100%;
-      max-height: 520px;
+      max-height: calc(94vh - 200px);
+      box-shadow: var(--shadow-sm);
     }
     .ai-img-container {
       flex: 1;
       overflow: auto;
-      border-radius: 8px;
+      border-radius: 10px;
       background: rgba(0,0,0,0.03);
+      border: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 280px;
+      min-height: 400px;
+      max-height: calc(94vh - 270px);
+      position: relative;
+      cursor: zoom-in;
+      transition: all 0.2s ease;
+    }
+    .ai-img-container.is-zoomed {
+      cursor: zoom-out;
+      align-items: flex-start;
     }
     .ai-img-container img {
       max-width: 100%;
-      max-height: 450px;
+      max-height: calc(94vh - 290px);
       object-fit: contain;
-      border-radius: 6px;
-      box-shadow: var(--shadow-sm);
+      border-radius: 8px;
+      box-shadow: var(--shadow-md);
+      transition: transform 0.2s ease;
+    }
+    .ai-img-container.is-zoomed img {
+      max-width: 180%;
+      max-height: none;
     }
     .ai-review-form-card {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
-      max-height: 520px;
+      gap: 1.15rem;
+      max-height: calc(94vh - 200px);
       overflow-y: auto;
-      padding-right: 0.35rem;
+      padding-right: 0.5rem;
     }
     .ai-challan-summary-card {
       background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(236, 72, 153, 0.06) 100%);
-      border: 1.5px solid rgba(139, 92, 246, 0.25);
-      border-radius: 12px;
-      padding: 0.9rem 1.15rem;
+      border: 1.5px solid rgba(139, 92, 246, 0.3);
+      border-radius: 14px;
+      padding: 1.1rem 1.35rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 1rem;
+      gap: 1.25rem;
+      box-shadow: var(--shadow-sm);
     }
     .dark-mode .ai-challan-summary-card {
-      background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(236, 72, 153, 0.1) 100%);
-      border-color: rgba(139, 92, 246, 0.4);
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.16) 0%, rgba(236, 72, 153, 0.12) 100%);
+      border-color: rgba(139, 92, 246, 0.45);
     }
     .ai-summary-quality-title {
       font-family: var(--font-display);
-      font-size: 1.15rem;
+      font-size: 1.35rem;
       font-weight: 800;
       color: var(--accent);
-      letter-spacing: -0.2px;
-      margin-bottom: 0.2rem;
+      letter-spacing: -0.3px;
+      margin-bottom: 0.35rem;
     }
     .ai-summary-badges-row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.5rem;
-      font-size: 0.8rem;
+      gap: 0.6rem;
+      font-size: 0.88rem;
     }
     .ai-summary-pill {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-      padding: 0.2rem 0.6rem;
+      gap: 0.4rem;
+      padding: 0.3rem 0.75rem;
       border-radius: 999px;
       background: var(--surface);
       border: 1px solid var(--border);
-      font-weight: 600;
+      font-weight: 700;
       color: var(--fg);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .ai-machine-prompt-box {
       background: var(--surface);
       border: 2px solid var(--accent);
-      border-radius: 12px;
-      padding: 1rem 1.15rem;
-      box-shadow: 0 4px 20px rgba(124, 58, 237, 0.12);
+      border-radius: 14px;
+      padding: 1.15rem 1.35rem;
+      box-shadow: 0 6px 24px rgba(124, 58, 237, 0.14);
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
+      gap: 0.75rem;
     }
     .ai-machine-prompt-box.highlight {
       animation: pulse-accent 1.5s infinite;
     }
     .ai-lot-match-banner {
       background: rgba(0,0,0,0.02);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.65rem 0.85rem;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 0.85rem 1.15rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem;
+      gap: 1rem;
     }
     .ai-chips-group {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-top: 0.35rem;
+      gap: 0.55rem;
+      margin-top: 0.4rem;
     }
     .ai-chip {
-      font-size: 0.8rem;
-      font-weight: 600;
-      padding: 0.35rem 0.75rem;
-      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 0.45rem 1.15rem;
+      border-radius: 10px;
       background: var(--bg);
-      border: 1px solid var(--border);
+      border: 1.5px solid var(--border);
       color: var(--fg);
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
       user-select: none;
     }
     .ai-chip:hover {
       border-color: var(--accent);
       color: var(--accent);
-      transform: translateY(-1px);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
     }
     .ai-chip.active {
       background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
       color: #fff;
       border-color: transparent;
-      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+      transform: translateY(-1px);
     }
     .ai-box-table-wrap {
-      border: 1px solid var(--border);
-      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
       overflow: hidden;
       background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      max-height: 340px !important;
     }
     .ai-box-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.86rem;
+      font-size: 0.92rem;
     }
     .ai-box-table th {
       background: var(--bg);
-      padding: 0.55rem 0.75rem;
+      padding: 0.7rem 0.85rem;
       text-align: left;
-      font-weight: 600;
-      font-size: 0.78rem;
+      font-weight: 700;
+      font-size: 0.82rem;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.6px;
       color: var(--muted);
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1.5px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 2;
     }
     .ai-box-table td {
-      padding: 0.5rem 0.75rem;
+      padding: 0.65rem 0.85rem;
       border-bottom: 1px solid var(--border);
       vertical-align: middle;
     }
@@ -1591,15 +1620,15 @@
       border-bottom: none;
     }
     .ai-box-table tr:hover {
-      background: rgba(139, 92, 246, 0.04);
+      background: rgba(139, 92, 246, 0.05);
     }
     .ai-row-date-input {
       font-family: var(--font-mono);
-      font-size: 0.78rem;
-      padding: 0.2rem 0.4rem;
-      height: 28px;
+      font-size: 0.84rem;
+      padding: 0.25rem 0.5rem;
+      height: 32px;
       border-radius: 6px;
-      border: 1px solid var(--border);
+      border: 1.5px solid var(--border);
       background: var(--bg);
       color: var(--fg);
       font-weight: 600;
@@ -1845,17 +1874,20 @@
         <button class="modal-close" onclick="closeAiScanModal()">&times;</button>
       </div>
 
-      <div class="modal-body" style="padding: 1.25rem 1.5rem; overflow-y: auto; max-height: calc(92vh - 140px);">
+      <div class="modal-body" style="padding: 1.5rem 1.75rem; overflow-y: auto; max-height: calc(94vh - 140px);">
         
         <!-- STEP 1: Upload / Dropzone Screen -->
         <div id="ai-scan-step-upload">
           <div class="ai-dropzone-wrap" id="ai-dropzone" onclick="document.getElementById('ai-file-input').click()">
             <input type="file" id="ai-file-input" accept="image/*" style="display: none;" onchange="handleAiFileSelected(this.files)">
-            <div class="ai-dropzone-icon">📄</div>
-            <h3 style="font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; margin-bottom: 0.35rem;">Click to Upload or Drag & Drop Issue Slip</h3>
-            <p style="color: var(--muted); font-size: 0.88rem; margin-bottom: 1.25rem;">Supports JPG, PNG, WEBP — Delivery Challans, Gate Passes, Handwritten Issue Slips, or Box Stickers</p>
-            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface); padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid var(--border); font-size: 0.8rem; font-weight: 600; color: var(--fg); box-shadow: var(--shadow-sm);">
-              <span>💡 Tip: You can also press <kbd style="background: var(--bg); padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid var(--border); font-family: var(--font-mono);">Ctrl + V</kbd> to paste an image directly from clipboard</span>
+            <div class="ai-dropzone-icon">📑</div>
+            <h3 style="font-family: var(--font-display); font-size: 1.35rem; font-weight: 800; margin-bottom: 0.45rem; color: var(--fg);">Click to Upload or Drag & Drop Issue Slip / Challan</h3>
+            <p style="color: var(--muted); font-size: 0.95rem; margin-bottom: 1.5rem; max-width: 600px; margin-left: auto; margin-right: auto;">Supports JPG, PNG, WEBP — Delivery Challans, Gate Passes, Handwritten Issue Slips, or Box Stickers</p>
+            <div style="display: inline-flex; align-items: center; gap: 0.6rem; background: var(--surface); padding: 0.6rem 1.25rem; border-radius: 999px; border: 1.5px solid var(--border); font-size: 0.88rem; font-weight: 700; color: var(--fg); box-shadow: var(--shadow-sm);">
+              <span>💡 Instant Paste:</span>
+              <span style="color: var(--muted); font-weight: 500;">Press</span>
+              <kbd style="background: var(--bg); padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid var(--border); font-family: var(--font-mono); font-weight: 700; color: var(--accent);">Ctrl + V</kbd>
+              <span style="color: var(--muted); font-weight: 500;">anywhere to paste image from clipboard</span>
             </div>
           </div>
         </div>
@@ -1863,14 +1895,14 @@
         <!-- STEP 2: Scanning / Progress Animation -->
         <div id="ai-scan-step-progress" style="display: none;">
           <div class="ai-scan-progress-wrap">
-            <div style="font-size: 2.2rem; margin-bottom: 0.5rem;" class="ai-sparkle-icon">✨</div>
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;" class="ai-sparkle-icon">✨</div>
             <div class="ai-stage-text" id="ai-stage-label">Initializing Gemini AI Vision Engine...</div>
             <div class="ai-progress-track">
               <div class="ai-progress-fill" id="ai-progress-bar"></div>
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); font-family: var(--font-mono); margin-top: 0.35rem;">
-              <span>AI Multimodal Vision</span>
-              <span id="ai-progress-pct">0%</span>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); font-family: var(--font-mono); margin-top: 0.5rem; font-weight: 600;">
+              <span>Gemini AI Multimodal Vision</span>
+              <span id="ai-progress-pct" style="color: var(--accent); font-weight: 700;">0%</span>
             </div>
           </div>
         </div>
@@ -1878,20 +1910,27 @@
         <!-- STEP 3: Review & Verification Screen -->
         <div id="ai-scan-step-review" style="display: none;">
           <div class="ai-review-grid">
-            <!-- Left: Document Image Preview -->
+            <!-- Left: Document Image Preview with Zoom Control -->
             <div class="ai-img-preview-card">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <span style="font-size: 0.82rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Scanned Document</span>
-                <button type="button" class="btn btn-secondary" onclick="resetAiScanDropzone()" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; min-height: 28px;">
-                  ↺ Re-upload
-                </button>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+                <span style="font-size: 0.85rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; display: flex; align-items: center; gap: 0.35rem;">
+                  <span>📑</span> Scanned Document
+                </span>
+                <div style="display: flex; gap: 0.45rem; align-items: center;">
+                  <button type="button" class="btn btn-secondary" id="ai-zoom-toggle-btn" onclick="toggleAiImgZoom()" style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 700; min-height: 30px; border-radius: 8px;" title="Toggle Zoom In / Fit">
+                    🔍 Zoom 180%
+                  </button>
+                  <button type="button" class="btn btn-secondary" onclick="resetAiScanDropzone()" style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 700; min-height: 30px; border-radius: 8px;">
+                    ↺ Re-upload
+                  </button>
+                </div>
               </div>
-              <div class="ai-img-container">
+              <div class="ai-img-container" onclick="toggleAiImgZoom()" title="Click to zoom in/out on scanned document">
                 <img id="ai-preview-img" src="" alt="Scanned Document">
               </div>
             </div>
 
-            <!-- Right: Extracted Fields & Machine Issuance -->
+            <!-- Right: Extracted Fields & Department Issuance -->
             <div class="ai-review-form-card">
               <!-- Summary Card: Quality, Net Weight, Box & Cone Metrics -->
               <div class="ai-challan-summary-card">
@@ -1904,8 +1943,8 @@
                     <span class="ai-summary-pill" id="ai-summary-dates-pill" style="color: var(--accent); border-color: rgba(139, 92, 246, 0.3);">📅 Auto Dates</span>
                   </div>
                 </div>
-                <div style="text-align: right; min-width: 90px;">
-                  <span class="status-badge available" style="font-size: 0.8rem; padding: 0.3rem 0.65rem;">
+                <div style="text-align: right; min-width: 100px;">
+                  <span class="status-badge available" style="font-size: 0.82rem; padding: 0.35rem 0.75rem;">
                     ✨ AI Verified
                   </span>
                 </div>
@@ -1914,10 +1953,10 @@
               <!-- Primary Focus: Issued To Department (Exact same departments as +issue box) -->
               <div class="ai-machine-prompt-box">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <label for="ai-issue-to" style="font-weight: 800; font-size: 0.95rem; color: var(--accent); margin: 0; display: flex; align-items: center; gap: 0.35rem;">
-                    <span>🎯</span> Issued To *
+                  <label for="ai-issue-to" style="font-weight: 800; font-size: 1.05rem; color: var(--accent); margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                    <span>🎯</span> Issued To Department *
                   </label>
-                  <span style="font-size: 0.72rem; font-weight: 700; background: rgba(124, 58, 237, 0.12); color: var(--accent); padding: 0.15rem 0.5rem; border-radius: 999px;">
+                  <span style="font-size: 0.75rem; font-weight: 800; background: rgba(124, 58, 237, 0.14); color: var(--accent); padding: 0.2rem 0.6rem; border-radius: 999px;">
                     Required
                   </span>
                 </div>
@@ -1925,7 +1964,7 @@
                   class="form-control" 
                   id="ai-issue-to" 
                   required
-                  style="font-size: 0.95rem; font-weight: 700; padding: 0.55rem 0.85rem;"
+                  style="font-size: 1.05rem; font-weight: 700; padding: 0.65rem 1rem; height: 46px; border-radius: 10px;"
                   onchange="setAiDepartmentChip(this.value)"
                   onkeydown="if(event.key === 'Enter'){ event.preventDefault(); handleConfirmAiIssue(); }"
                 >
@@ -1945,29 +1984,29 @@
 
               <!-- Boxes Selection Table with Individual Box Issue Dates -->
               <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <label style="font-weight: 700; font-size: 0.88rem; margin: 0;">Extracted Box Register</label>
-                    <span class="cones-pill" id="ai-boxes-selected-pill">0 boxes (0.00 kg)</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.55rem;">
+                  <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <label style="font-weight: 800; font-size: 0.95rem; margin: 0; color: var(--fg);">Extracted Box Register</label>
+                    <span class="cones-pill" id="ai-boxes-selected-pill" style="font-weight: 700;">0 boxes (0.00 kg)</span>
                   </div>
-                  <div style="display: flex; gap: 0.4rem;">
-                    <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(true)" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; min-height: 24px;">Select All</button>
-                    <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(false)" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; min-height: 24px;">Deselect All</button>
+                  <div style="display: flex; gap: 0.45rem;">
+                    <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(true)" style="padding: 0.25rem 0.65rem; font-size: 0.78rem; font-weight: 600; min-height: 28px; border-radius: 6px;">Select All</button>
+                    <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(false)" style="padding: 0.25rem 0.65rem; font-size: 0.78rem; font-weight: 600; min-height: 28px; border-radius: 6px;">Deselect All</button>
                   </div>
                 </div>
 
-                <div class="ai-box-table-wrap" style="max-height: 220px; overflow-y: auto;">
+                <div class="ai-box-table-wrap">
                   <table class="ai-box-table">
                     <thead>
                       <tr>
-                        <th style="width: 36px; text-align: center;">
-                          <input type="checkbox" id="ai-master-box-cb" onchange="toggleAllAiBoxes(this.checked)" checked>
+                        <th style="width: 40px; text-align: center;">
+                          <input type="checkbox" id="ai-master-box-cb" onchange="toggleAllAiBoxes(this.checked)" checked style="transform: scale(1.15);">
                         </th>
                         <th>Box #</th>
-                        <th style="text-align: center; width: 65px;">Cones</th>
-                        <th style="text-align: right; width: 85px;">Net Wt</th>
-                        <th style="width: 130px;">Issue Date</th>
-                        <th style="text-align: center; width: 90px;">Status</th>
+                        <th style="text-align: center; width: 75px;">Cones</th>
+                        <th style="text-align: right; width: 100px;">Net Wt</th>
+                        <th style="width: 145px;">Issue Date</th>
+                        <th style="text-align: center; width: 100px;">Status</th>
                       </tr>
                     </thead>
                     <tbody id="ai-boxes-table-body">
@@ -1979,15 +2018,15 @@
 
               <!-- Target Lot Association & Remarks (Auto-resolved) -->
               <div class="ai-lot-match-banner">
-                <div style="flex: 1;">
-                  <div style="font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Destination Stock Lot</div>
-                  <select class="form-control" id="ai-match-lot-select" onchange="handleAiLotSelectionChanged(this.value)" style="font-size: 0.82rem; font-weight: 600; padding: 0.3rem 0.5rem; margin-top: 0.2rem; height: 32px;">
+                <div style="flex: 1.2;">
+                  <div style="font-size: 0.75rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Destination Stock Lot</div>
+                  <select class="form-control" id="ai-match-lot-select" onchange="handleAiLotSelectionChanged(this.value)" style="font-size: 0.88rem; font-weight: 600; padding: 0.4rem 0.65rem; margin-top: 0.25rem; height: 36px; border-radius: 8px;">
                     <!-- Auto-populated with matched or auto-created lots -->
                   </select>
                 </div>
                 <div style="flex: 1; margin-left: 0.5rem;">
-                  <div style="font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Remarks / Note</div>
-                  <input type="text" class="form-control" id="ai-issue-remarks" placeholder="Optional remark..." style="font-size: 0.82rem; padding: 0.3rem 0.5rem; margin-top: 0.2rem; height: 32px;">
+                  <div style="font-size: 0.75rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Remarks / Note</div>
+                  <input type="text" class="form-control" id="ai-issue-remarks" placeholder="Optional remark..." style="font-size: 0.88rem; padding: 0.4rem 0.65rem; margin-top: 0.25rem; height: 36px; border-radius: 8px;">
                 </div>
               </div>
 
@@ -1996,12 +2035,12 @@
         </div>
 
         <!-- Error Banner -->
-        <div id="ai-scan-error-banner" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1.5px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 1rem; color: var(--error); margin-top: 1rem; font-size: 0.88rem;">
-          <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
-            <span style="font-size: 1.2rem;">⚠️</span>
+        <div id="ai-scan-error-banner" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1.5px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 1.15rem; color: var(--error); margin-top: 1.25rem; font-size: 0.92rem;">
+          <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+            <span style="font-size: 1.35rem;">⚠️</span>
             <div style="flex: 1;">
-              <strong id="ai-scan-error-title">Extraction Notice</strong>
-              <div id="ai-scan-error-msg" style="margin-top: 0.25rem;"></div>
+              <strong id="ai-scan-error-title" style="font-size: 1rem;">Extraction Notice</strong>
+              <div id="ai-scan-error-msg" style="margin-top: 0.35rem; line-height: 1.5;"></div>
             </div>
           </div>
         </div>
@@ -3279,6 +3318,18 @@
       document.getElementById('modal-ai-scan').classList.remove('active');
     }
 
+    function toggleAiImgZoom() {
+      const container = document.querySelector('.ai-img-container');
+      const btn = document.getElementById('ai-zoom-toggle-btn');
+      if (container) {
+        container.classList.toggle('is-zoomed');
+        const isZoomed = container.classList.contains('is-zoomed');
+        if (btn) {
+          btn.innerHTML = isZoomed ? '🔍 Fit Normal' : '🔍 Zoom 180%';
+        }
+      }
+    }
+
     function resetAiScanDropzone() {
       if (aiScanInterval) clearInterval(aiScanInterval);
       currentAiImageDataUrl = null;
@@ -3290,6 +3341,11 @@
       const errorBanner = document.getElementById('ai-scan-error-banner');
       const confirmBtn = document.getElementById('btn-confirm-ai-issue');
       const fileInput = document.getElementById('ai-file-input');
+      const imgContainer = document.querySelector('.ai-img-container');
+      const zoomBtn = document.getElementById('ai-zoom-toggle-btn');
+
+      if (imgContainer) imgContainer.classList.remove('is-zoomed');
+      if (zoomBtn) zoomBtn.innerHTML = '🔍 Zoom 180%';
 
       if (uploadStep) uploadStep.style.display = 'block';
       if (progressStep) progressStep.style.display = 'none';
