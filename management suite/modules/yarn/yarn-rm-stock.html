@@ -2309,6 +2309,7 @@
                     <span class="cones-pill" id="ai-boxes-selected-pill">0 boxes (0.00 kg)</span>
                   </div>
                   <div style="display: flex; gap: 0.4rem; flex-shrink: 0;">
+                    <button type="button" class="btn btn-secondary" onclick="selectOnlyDatedAiBoxes()" style="padding: 0.25rem 0.6rem; font-size: 0.78rem; font-weight: 700; min-height: 28px; border-radius: 6px; white-space: nowrap; background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">📅 Select Only Dated</button>
                     <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(true)" style="padding: 0.25rem 0.6rem; font-size: 0.78rem; font-weight: 600; min-height: 28px; border-radius: 6px; white-space: nowrap;">Select All</button>
                     <button type="button" class="btn btn-secondary" onclick="toggleAllAiBoxes(false)" style="padding: 0.25rem 0.6rem; font-size: 0.78rem; font-weight: 600; min-height: 28px; border-radius: 6px; white-space: nowrap;">Deselect All</button>
                   </div>
@@ -3795,27 +3796,35 @@
     }
 
     function normalizeIsoDate(dateStr) {
-      if (!dateStr) return '';
-      const trimmed = String(dateStr).trim();
-      if (!trimmed || ['null', 'undefined', 'none', 'nil', '-', 'n/a', 'blank'].includes(trimmed.toLowerCase())) return '';
+      if (dateStr === null || dateStr === undefined) return '';
+      let trimmed = String(dateStr).trim();
+      if (!trimmed || ['null', 'undefined', 'none', 'nil', '-', 'n/a', 'blank', 'false', '0', 'unissued', 'white', 'empty'].includes(trimmed.toLowerCase())) return '';
+
+      // Fix common typos in years like 0206 or 206 -> 2026
+      trimmed = trimmed.replace(/[-/.](?:0206|206)$/, '-2026').replace(/\/(?:0206|206)$/, '/2026');
 
       // 1. Check YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
       const isoMatch = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
       if (isoMatch) {
-        const year = isoMatch[1];
+        let year = isoMatch[1];
+        if (year === '0206' || year === '0205' || year === '0204') year = '20' + year.slice(2);
         const month = isoMatch[2].padStart(2, '0');
         const day = isoMatch[3].padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
 
-      // 2. Check DD-MM-YYYY or DD-MM-YY (or with / or .)
+      // 2. Check DD-MM-YYYY or DD-MM-YY (or D-M-YYYY, D/M/YYYY etc.)
       const dmyMatch = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
       if (dmyMatch) {
         const day = dmyMatch[1].padStart(2, '0');
         const month = dmyMatch[2].padStart(2, '0');
         let year = dmyMatch[3];
-        if (year.length === 2) {
+        if (year === '0206' || year === '206') {
+          year = '2026';
+        } else if (year.length === 2) {
           year = (parseInt(year, 10) > 50 ? '19' : '20') + year;
+        } else if (year.length === 4 && year.startsWith('02')) {
+          year = '20' + year.slice(2);
         }
         return `${year}-${month}-${day}`;
       }
@@ -3823,7 +3832,8 @@
       // 3. Fallback to JS Date parsing if valid and not NaN
       const parsed = new Date(trimmed);
       if (!isNaN(parsed.getTime())) {
-        const y = parsed.getFullYear();
+        let y = parsed.getFullYear();
+        if (y < 1900 && y > 100) y += 2000;
         const m = String(parsed.getMonth() + 1).padStart(2, '0');
         const d = String(parsed.getDate()).padStart(2, '0');
         if (y >= 1970 && y <= 2100) {
@@ -3878,7 +3888,7 @@
           if (stageLabel) stageLabel.textContent = 'Analyzing slip handwriting, lot & challan headers...';
         } else if (elapsed < 3200) {
           progress = Math.min(65, progress + 2.5);
-          if (stageLabel) stageLabel.textContent = 'Reading box numbers, cones, net weights & issue dates...';
+          if (stageLabel) stageLabel.textContent = 'Reading box numbers, cones, net weights & checking per-row issue dates...';
         } else if (elapsed < 6000) {
           progress = Math.min(88, progress + 1.2);
           if (stageLabel) stageLabel.textContent = 'Cross-referencing box entries with active RM inventory...';
@@ -3905,33 +3915,56 @@
           base64Data = dataUrl;
         }
 
-        const prompt = `You are an expert OCR and data extraction system for yarn manufacturing and textile mills.
-Analyze this raw material delivery challan / yarn issuance register image carefully.
+        const prompt = `You are an expert, high-precision OCR and document analysis AI for textile mills, yarn stock registers, and raw material challans.
+Carefully examine every single row of this box register / issue slip image with 99%+ accuracy.
 
-Return ONLY a valid JSON object matching this schema:
+DOCUMENT / TABLE COLUMN STRUCTURE:
+This document is a tabular spreadsheet/register where each row represents an individual box:
+- Column 1: Box Number (e.g. 22951, 23004, 23008, 23174, 23220, etc.)
+- Column 2: Number of Cones (e.g. 6, 12, etc.)
+- Column 3: Net Weight in kg (e.g. 27.83, 28.08, 27.86, etc.)
+- Column 4: Issue Date (e.g. "23-08-2026", "29-08-2026", "1-9-2026", "3/9/0206", etc.) OR COMPLETELY EMPTY / BLANK / WHITE.
+
+CRITICAL ROW-BY-ROW VERIFICATION RULES:
+1. INSPECT EVERY ROW INDEPENDENTLY:
+   - Carefully check the 4th column (Date column) for EVERY box row from top to bottom.
+   - If the date cell contains a written or printed date (often highlighted in green, with blue box number):
+     * Set "isIssued": true
+     * Set "issueDate": exact date string written in that row (e.g. "2026-08-23", "2026-08-29", "2026-09-01", "2026-09-03")
+   - If the date cell is EMPTY, BLANK, WHITE, or has NO text/date written in it (e.g. rows like 23008, 23174, 23220, 23226, 23227, 23240, 23258, 23262, 23266, 23273, 23275, 23362, 23402 in the sample image):
+     * Set "isIssued": false
+     * Set "issueDate": null
+2. STRICT PROHIBITION ON HALLUCINATION / DATE PROPAGATION:
+   - NEVER copy or borrow a date from the row above or below.
+   - NEVER assume that un-dated boxes share the same date.
+   - If a cell is blank or white, it MUST have "isIssued": false and "issueDate": null.
+3. YARN QUALITY:
+   - Look for yarn quality/count (e.g. "80/72 Polyester DTY", "30s Cotton", etc.) anywhere in headers, titles, or notes. If not written, return null.
+
+Return ONLY a JSON object matching this schema:
 {
-  "quality": "The exact yarn count/quality/item name written on this challan or box register (e.g. '80/72 Polyester DTY', '30s Combed Cotton', '40/1 Viscose', '150/48 FDY', '70D Spandex'). Look across all headers, column titles, item description rows, or next to box numbers. If not explicitly found, return null (do NOT assume or default to any quality name).",
-  "totalWeight": 240.0,
-  "lotNumber": "Lot number or box batch prefix if visible (e.g. 'LOT-26', '26', 'M005336')",
-  "challanNumber": "Challan number if visible",
-  "supplier": "Supplier / Mill name if visible",
-  "defaultIssueDate": "YYYY-MM-DD or null if no overall date",
+  "quality": "Yarn quality if written, otherwise null",
+  "lotNumber": "Lot number or batch prefix if visible, otherwise null",
+  "challanNumber": "Challan number if visible, otherwise null",
+  "supplier": "Supplier / Mill name if visible, otherwise null",
   "boxes": [
     {
-      "boxNumber": "M005336/26",
-      "cones": 12,
-      "weight": 24.0,
-      "issueDate": "2026-08-16 or null if empty/blank in this box row"
+      "boxNumber": "22951",
+      "cones": 6,
+      "weight": 27.83,
+      "isIssued": true,
+      "issueDate": "2026-08-23"
+    },
+    {
+      "boxNumber": "23008",
+      "cones": 6,
+      "weight": 27.86,
+      "isIssued": false,
+      "issueDate": null
     }
   ],
-  "remarks": "Any additional notes or header labels"
-}
-
-Extraction Rules:
-1. Extract EVERY single box row in the table with its exact box no (e.g. 'M005336/26', 'M005540/26', 'M006325/26'), number of cones (e.g. 12), net weight (e.g. 24.000), and individual issue date.
-2. IMPORTANT FOR ISSUE DATES: In delivery challans or registers, only SOME boxes have an issue date written (e.g. '16-08-26', '08/08/26', '16-08-2026', '08/08/2026'). If a box row has a date written, extract that date into "issueDate" (as 'YYYY-MM-DD'). If a box row has NO date written (the date column or cell is empty / blank / un-dated), you MUST return "issueDate": null (or ""). DO NOT invent, assume, or copy dates to blank box rows!
-3. IMPORTANT FOR YARN QUALITY: Extract the yarn quality / count / specification from anywhere on the challan (header, item description column, table text, or watermarks). Look for standard yarn counts like 30s, 40s, 20/1, 80/72, 150/48, 70D, 40D, Cotton, Polyester, Nylon, Viscose, Spandex, DTY, FDY, Bright, BRT, etc. DO NOT invent or default to '20/1 BRT POLY' unless it is actually written in the image! If no quality name is mentioned on the image, set "quality": null.
-4. Extract the total weight, lot number, challan number, and supplier name if visible.`;
+  "remarks": "Any additional notes"
+}`;
 
         const modelConfigs = [
           { id: selectedModel || 'gemini-2.0-flash', ver: 'v1beta' },
@@ -3965,7 +3998,10 @@ Extraction Rules:
                     { text: prompt },
                     { inline_data: { mime_type: mimeType, data: base64Data } }
                   ]
-                }]
+                }],
+                generationConfig: {
+                  temperature: 0.1
+                }
               })
             });
 
@@ -4200,12 +4236,18 @@ Extraction Rules:
       if (currentAiExtractedData) {
         currentAiExtractedData.quality = newQuality;
       }
-      const rawBoxes = (currentAiExtractedData?.boxes || []).map((b, idx) => ({
-        boxNumber: String(b.boxNumber || b.boxNo || b.box_no || b.box_number || b.id || b.box || b.cartonNo || b.carton_no || `Box-${idx + 1}`).trim(),
-        cones: Number(b.cones || b.no_of_cones || b.conesCount || b.cone_count || b.cones_per_box) || 12,
-        weight: Number(b.weight || b.netWeight || b.net_weight || b.wt || b.box_weight || b.grossWeight || b.gross_weight) || 24.0,
-        issueDate: normalizeIsoDate(b.issueDate || b.issue_date || b.date || b.issuedDate || b.issue_dt || b.issueDt || b.deliveryDate || b.delivery_date) || ''
-      }));
+      const rawBoxes = (currentAiExtractedData?.boxes || []).map((b, idx) => {
+        const isExplicitlyUnissued = (b.isIssued === false) || (b.hasDate === false);
+        const rawDate = isExplicitlyUnissued ? '' : (b.issueDate || b.issue_date || b.date || b.issuedDate || b.issue_dt || b.issueDt || b.deliveryDate || b.delivery_date);
+        const parsedDate = isExplicitlyUnissued ? '' : normalizeIsoDate(rawDate);
+        return {
+          boxNumber: String(b.boxNumber || b.boxNo || b.box_no || b.box_number || b.id || b.box || b.cartonNo || b.carton_no || `Box-${idx + 1}`).trim(),
+          cones: Number(b.cones || b.no_of_cones || b.conesCount || b.cone_count || b.cones_per_box) || 12,
+          weight: Number(b.weight || b.netWeight || b.net_weight || b.wt || b.box_weight || b.grossWeight || b.gross_weight) || 24.0,
+          isIssued: !isExplicitlyUnissued && Boolean(parsedDate),
+          issueDate: parsedDate
+        };
+      });
       populateAiMatchedLotDropdown(newQuality, currentAiExtractedData?.lotNumber || '', currentAiExtractedData?.challanNumber || '', rawBoxes);
       if (currentAiExtractedData) {
         renderAiMatchedBoxesTable(currentAiExtractedData);
@@ -4239,18 +4281,25 @@ Extraction Rules:
       // Normalize boxes array (preserve blank dates when image has no date)
       let rawBoxes = [];
       if (Array.isArray(data.boxes) && data.boxes.length > 0) {
-        rawBoxes = data.boxes.map((b, idx) => ({
-          boxNumber: String(b.boxNumber || b.boxNo || b.box_no || b.box_number || b.id || b.box || b.cartonNo || b.carton_no || `Box-${idx + 1}`).trim(),
-          cones: Number(b.cones || b.no_of_cones || b.conesCount || b.cone_count || b.cones_per_box) || 12,
-          weight: Number(b.weight || b.netWeight || b.net_weight || b.wt || b.box_weight || b.grossWeight || b.gross_weight) || 24.0,
-          issueDate: normalizeIsoDate(b.issueDate || b.issue_date || b.date || b.issuedDate || b.issue_dt || b.issueDt || b.deliveryDate || b.delivery_date) || ''
-        }));
+        rawBoxes = data.boxes.map((b, idx) => {
+          const isExplicitlyUnissued = (b.isIssued === false) || (b.hasDate === false);
+          const rawDate = isExplicitlyUnissued ? '' : (b.issueDate || b.issue_date || b.date || b.issuedDate || b.issue_dt || b.issueDt || b.deliveryDate || b.delivery_date);
+          const parsedDate = isExplicitlyUnissued ? '' : normalizeIsoDate(rawDate);
+          return {
+            boxNumber: String(b.boxNumber || b.boxNo || b.box_no || b.box_number || b.id || b.box || b.cartonNo || b.carton_no || `Box-${idx + 1}`).trim(),
+            cones: Number(b.cones || b.no_of_cones || b.conesCount || b.cone_count || b.cones_per_box) || 12,
+            weight: Number(b.weight || b.netWeight || b.net_weight || b.wt || b.box_weight || b.grossWeight || b.gross_weight) || 24.0,
+            isIssued: !isExplicitlyUnissued && Boolean(parsedDate),
+            issueDate: parsedDate
+          };
+        });
       } else if (Array.isArray(data.boxNumbers) && data.boxNumbers.length > 0) {
         rawBoxes = data.boxNumbers.map((bNum, idx) => ({
           boxNumber: String(bNum).trim(),
           cones: 12,
           weight: 24.0,
-          issueDate: normalizeIsoDate(data.defaultIssueDate || data.issueDate || data.date) || ''
+          isIssued: false,
+          issueDate: ''
         }));
       }
 
@@ -4268,7 +4317,7 @@ Extraction Rules:
       const totalBoxesWeight = rawBoxes.reduce((acc, b) => acc + (b.weight || 0), 0) || Number(data.totalWeight) || 0;
       const avgCones = rawBoxes.length > 0 ? (rawBoxes[0].cones || 12) : 12;
       const distinctDates = [...new Set(rawBoxes.map(b => b.issueDate).filter(Boolean))];
-      const datedBoxesCount = rawBoxes.filter(b => b.issueDate).length;
+      const datedBoxesCount = rawBoxes.filter(b => b.isIssued && b.issueDate).length;
 
       // Update Summary Banner
       if (qualityInput) qualityInput.value = resolvedQuality;
@@ -4276,12 +4325,10 @@ Extraction Rules:
       if (weightPillEl) weightPillEl.textContent = `⚖️ ${totalBoxesWeight.toFixed(2)} kg`;
       if (conesPillEl) conesPillEl.textContent = `🧵 ${avgCones} Cones/bx`;
       if (datesPillEl) {
-        if (distinctDates.length > 1) {
-          datesPillEl.textContent = `📅 ${distinctDates.length} Dates (${datedBoxesCount}/${totalBoxesCount} dated)`;
-        } else if (distinctDates.length === 1) {
-          datesPillEl.textContent = `📅 ${distinctDates[0]} (${datedBoxesCount}/${totalBoxesCount} dated)`;
+        if (datedBoxesCount > 0) {
+          datesPillEl.textContent = `📅 ${datedBoxesCount} Dated for Issue (${totalBoxesCount - datedBoxesCount} Blank/Unissued)`;
         } else {
-          datesPillEl.textContent = `📅 0 Dates (${datedBoxesCount}/${totalBoxesCount} dated)`;
+          datesPillEl.textContent = `📅 0 Dated (${totalBoxesCount} Unissued)`;
         }
       }
 
@@ -4400,18 +4447,25 @@ Extraction Rules:
       let slipBoxes = [];
       if (parsedData) {
         if (Array.isArray(parsedData.boxes) && parsedData.boxes.length > 0) {
-          slipBoxes = parsedData.boxes.map((b, idx) => ({
-            boxNumber: String(b.boxNumber || b.boxNo || b.box_no || b.box_number || b.id || b.box || b.cartonNo || b.carton_no || `Box-${idx + 1}`).trim(),
-            cones: Number(b.cones || b.no_of_cones || b.conesCount || b.cone_count || b.cones_per_box) || 12,
-            weight: Number(b.weight || b.netWeight || b.net_weight || b.wt || b.box_weight || b.grossWeight || b.gross_weight) || 24.0,
-            issueDate: normalizeIsoDate(b.issueDate || b.issue_date || b.date || b.issuedDate || b.issue_dt || b.issueDt || b.deliveryDate || b.delivery_date) || ''
-          }));
+          slipBoxes = parsedData.boxes.map((b, idx) => {
+            const isExplicitlyUnissued = (b.isIssued === false) || (b.hasDate === false);
+            const rawDate = isExplicitlyUnissued ? '' : (b.issueDate || b.issue_date || b.date || b.issuedDate || b.issue_dt || b.issueDt || b.deliveryDate || b.delivery_date);
+            const parsedDate = isExplicitlyUnissued ? '' : normalizeIsoDate(rawDate);
+            return {
+              boxNumber: String(b.boxNumber || b.boxNo || b.box_no || b.box_number || b.id || b.box || b.cartonNo || b.carton_no || `Box-${idx + 1}`).trim(),
+              cones: Number(b.cones || b.no_of_cones || b.conesCount || b.cone_count || b.cones_per_box) || 12,
+              weight: Number(b.weight || b.netWeight || b.net_weight || b.wt || b.box_weight || b.grossWeight || b.gross_weight) || 24.0,
+              isIssued: !isExplicitlyUnissued && Boolean(parsedDate),
+              issueDate: parsedDate
+            };
+          });
         } else if (Array.isArray(parsedData.boxNumbers) && parsedData.boxNumbers.length > 0) {
           slipBoxes = parsedData.boxNumbers.map((bNum, idx) => ({
             boxNumber: String(bNum).trim(),
             cones: 12,
             weight: 24.0,
-            issueDate: normalizeIsoDate(parsedData.defaultIssueDate || parsedData.issueDate || parsedData.date) || ''
+            isIssued: false,
+            issueDate: ''
           }));
         }
       }
@@ -4431,11 +4485,11 @@ Extraction Rules:
 
         let matchedSlipBox = slipBoxMap.get(boxIdClean) || (numOnly ? slipBoxMap.get(numOnly) : null);
         const isAvailable = (box.status === 'available');
-        const hasSlipDate = Boolean(matchedSlipBox && matchedSlipBox.issueDate && matchedSlipBox.issueDate.trim() !== '');
+        const hasSlipDate = Boolean(matchedSlipBox && matchedSlipBox.isIssued && matchedSlipBox.issueDate && matchedSlipBox.issueDate.trim() !== '');
         
-        // Boxes with no date in the slip should NOT be selected by default
-        const isChecked = isAvailable && (matchedSlipBox ? hasSlipDate : false);
-        const boxDate = matchedSlipBox?.issueDate || (isChecked ? todayIso : '');
+        // ONLY boxes with an actual date in the slip are selected for issue
+        const isChecked = isAvailable && hasSlipDate;
+        const boxDate = hasSlipDate ? matchedSlipBox.issueDate : '';
 
         const gross = Number(box.grossWeight || box.weight || 0).toFixed(2);
         const remaining = Number(box.remainingWeight !== undefined ? box.remainingWeight : box.weight || 0).toFixed(2);
@@ -4531,6 +4585,31 @@ Extraction Rules:
           }
         }
       }
+      updateAiSelectedBoxesMetrics();
+    }
+
+    function selectOnlyDatedAiBoxes() {
+      document.querySelectorAll('#ai-boxes-table-body tr').forEach(tr => {
+        const cb = tr.querySelector('.ai-box-checkbox');
+        const dateInput = tr.querySelector('.ai-row-date-input');
+        const badge = tr.querySelector('.status-badge');
+
+        if (cb && !cb.disabled) {
+          const hasDate = Boolean(dateInput && dateInput.value && dateInput.value.trim() !== '');
+          cb.checked = hasDate;
+          if (badge) {
+            if (hasDate) {
+              badge.className = 'status-badge available';
+              badge.style = '';
+              badge.textContent = '● Ready to Issue';
+            } else {
+              badge.className = 'status-badge unselected';
+              badge.style = 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
+              badge.textContent = '○ In Stock (Unselected)';
+            }
+          }
+        }
+      });
       updateAiSelectedBoxesMetrics();
     }
 
