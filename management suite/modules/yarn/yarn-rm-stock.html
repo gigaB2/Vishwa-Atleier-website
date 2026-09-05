@@ -3792,15 +3792,40 @@
     function normalizeIsoDate(dateStr) {
       if (!dateStr) return '';
       const trimmed = String(dateStr).trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-      // DD-MM-YYYY or DD/MM/YYYY
-      const m = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
-      if (m) {
-        const day = m[1].padStart(2, '0');
-        const month = m[2].padStart(2, '0');
-        const year = m[3];
+      if (!trimmed || ['null', 'undefined', 'none', 'nil', '-', 'n/a', 'blank'].includes(trimmed.toLowerCase())) return '';
+
+      // 1. Check YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
+      const isoMatch = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+      if (isoMatch) {
+        const year = isoMatch[1];
+        const month = isoMatch[2].padStart(2, '0');
+        const day = isoMatch[3].padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
+
+      // 2. Check DD-MM-YYYY or DD-MM-YY (or with / or .)
+      const dmyMatch = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+      if (dmyMatch) {
+        const day = dmyMatch[1].padStart(2, '0');
+        const month = dmyMatch[2].padStart(2, '0');
+        let year = dmyMatch[3];
+        if (year.length === 2) {
+          year = (parseInt(year, 10) > 50 ? '19' : '20') + year;
+        }
+        return `${year}-${month}-${day}`;
+      }
+
+      // 3. Fallback to JS Date parsing if valid and not NaN
+      const parsed = new Date(trimmed);
+      if (!isNaN(parsed.getTime())) {
+        const y = parsed.getFullYear();
+        const m = String(parsed.getMonth() + 1).padStart(2, '0');
+        const d = String(parsed.getDate()).padStart(2, '0');
+        if (y >= 1970 && y <= 2100) {
+          return `${y}-${m}-${d}`;
+        }
+      }
+
       return '';
     }
 
@@ -3899,7 +3924,7 @@ Return ONLY a valid JSON object matching this schema:
 
 Extraction Rules:
 1. Extract EVERY single box row in the table with its exact box no (e.g. 'M005336/26', 'M005540/26', 'M006325/26'), number of cones (e.g. 12), net weight (e.g. 24.000), and individual issue date.
-2. IMPORTANT FOR ISSUE DATES: Note that in delivery challans or registers, only SOME boxes have an issue date written (e.g. 08-08-2026 or 16-08-2026). If a box row has NO date written (the date column or cell is empty / blank / un-dated), you MUST return "issueDate": null (or ""). DO NOT invent, assume, or copy dates to blank box rows! Convert written dates to ISO 'YYYY-MM-DD' format.
+2. IMPORTANT FOR ISSUE DATES: In delivery challans or registers, only SOME boxes have an issue date written (e.g. '16-08-26', '08/08/26', '16-08-2026', '08/08/2026'). If a box row has a date written, extract that date into "issueDate" (as 'YYYY-MM-DD'). If a box row has NO date written (the date column or cell is empty / blank / un-dated), you MUST return "issueDate": null (or ""). DO NOT invent, assume, or copy dates to blank box rows!
 3. IMPORTANT FOR YARN QUALITY: Extract the yarn quality / count / specification from anywhere on the challan (header, item description column, table text, or watermarks). Look for standard yarn counts like 30s, 40s, 20/1, 80/72, 150/48, 70D, 40D, Cotton, Polyester, Nylon, Viscose, Spandex, DTY, FDY, Bright, BRT, etc. DO NOT invent or default to '20/1 BRT POLY' unless it is actually written in the image! If no quality name is mentioned on the image, set "quality": null.
 4. Extract the total weight, lot number, challan number, and supplier name if visible.`;
 
@@ -4000,10 +4025,12 @@ Extraction Rules:
 
       let bestMatchLot = null;
       let highestScore = 0;
+      let matchedBoxCount = 0;
 
       if (Array.isArray(stockData) && stockData.length > 0) {
         stockData.forEach(lot => {
           let score = 0;
+          let boxMatches = 0;
           const lotNumClean = String(lot.lotNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
           const challanClean = String(lot.challanNo || lot.challanNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
           const qualClean = String(lot.quality || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
@@ -4013,19 +4040,25 @@ Extraction Rules:
             const bClean = String(b.boxNumber || b.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
             const bNum = bClean.replace(/[^0-9]/g, '');
             if (bClean && detectedBoxSet.has(bClean)) {
-              score += 15;
+              score += 20;
+              boxMatches++;
             } else if (bNum && detectedBoxNums.has(bNum) && bNum.length >= 2) {
-              score += 8;
+              score += 10;
+              boxMatches++;
             }
           });
 
-          if (cleanQualToken && qualClean && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 12;
-          if (cleanLotToken && lotNumClean && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 10;
-          if (cleanChallanToken && challanClean && (challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 8;
+          if (cleanQualToken && qualClean && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 6;
+          if (cleanLotToken && lotNumClean && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 6;
+          if (cleanChallanToken && challanClean && (challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 6;
 
-          if (score > highestScore && score >= 8) {
-            highestScore = score;
-            bestMatchLot = lot;
+          // An existing stock lot should ONLY be auto-selected if actual box overlap exists!
+          if (boxMatches >= 2 || (rawBoxes.length > 0 && boxMatches >= Math.ceil(rawBoxes.length * 0.4))) {
+            if (score > highestScore && score >= 12) {
+              highestScore = score;
+              bestMatchLot = lot;
+              matchedBoxCount = boxMatches;
+            }
           }
         });
       }
@@ -4045,7 +4078,8 @@ Extraction Rules:
       return {
         quality: finalQuality,
         bestMatchLot: bestMatchLot,
-        score: highestScore
+        score: highestScore,
+        matchedBoxCount: matchedBoxCount
       };
     }
 
@@ -4112,23 +4146,28 @@ Extraction Rules:
           const qualClean = String(lot.quality || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
           let score = 0;
+          let boxMatches = 0;
           (lot.boxes || []).forEach(b => {
             const bClean = String(b.boxNumber || b.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
             const bNum = bClean.replace(/[^0-9]/g, '');
             if (bClean && detectedBoxSet.has(bClean)) {
-              score += 15;
+              score += 20;
+              boxMatches++;
             } else if (bNum && detectedBoxNums.has(bNum) && bNum.length >= 2) {
-              score += 8;
+              score += 10;
+              boxMatches++;
             }
           });
 
-          if (cleanQualToken && qualClean && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 12;
-          if (cleanLotToken && lotNumClean && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 10;
-          if (cleanChallanToken && challanClean && (challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 8;
+          if (cleanQualToken && qualClean && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 6;
+          if (cleanLotToken && lotNumClean && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 6;
+          if (cleanChallanToken && challanClean && (challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 6;
 
-          if (score > highestScore && score >= 8) {
-            highestScore = score;
-            bestMatchLot = lot;
+          if (boxMatches >= 2 || (rawBoxes.length > 0 && boxMatches >= Math.ceil(rawBoxes.length * 0.4))) {
+            if (score > highestScore && score >= 12) {
+              highestScore = score;
+              bestMatchLot = lot;
+            }
           }
 
           lotSelect.appendChild(opt);
@@ -4147,10 +4186,10 @@ Extraction Rules:
         currentAiExtractedData.quality = newQuality;
       }
       const rawBoxes = (currentAiExtractedData?.boxes || []).map((b, idx) => ({
-        boxNumber: String(b.boxNumber || b.boxNo || `Box-${idx + 1}`).trim(),
-        cones: Number(b.cones) || 12,
-        weight: Number(b.weight || b.netWeight) || 24.0,
-        issueDate: normalizeIsoDate(b.issueDate) || ''
+        boxNumber: String(b.boxNumber || b.boxNo || b.box_no || b.box_number || b.id || b.box || b.cartonNo || b.carton_no || `Box-${idx + 1}`).trim(),
+        cones: Number(b.cones || b.no_of_cones || b.conesCount || b.cone_count || b.cones_per_box) || 12,
+        weight: Number(b.weight || b.netWeight || b.net_weight || b.wt || b.box_weight || b.grossWeight || b.gross_weight) || 24.0,
+        issueDate: normalizeIsoDate(b.issueDate || b.issue_date || b.date || b.issuedDate || b.issue_dt || b.issueDt || b.deliveryDate || b.delivery_date) || ''
       }));
       populateAiMatchedLotDropdown(newQuality, currentAiExtractedData?.lotNumber || '', currentAiExtractedData?.challanNumber || '', rawBoxes);
     }
@@ -4183,17 +4222,17 @@ Extraction Rules:
       let rawBoxes = [];
       if (Array.isArray(data.boxes) && data.boxes.length > 0) {
         rawBoxes = data.boxes.map((b, idx) => ({
-          boxNumber: String(b.boxNumber || b.boxNo || `Box-${idx + 1}`).trim(),
-          cones: Number(b.cones) || 12,
-          weight: Number(b.weight || b.netWeight) || 24.0,
-          issueDate: normalizeIsoDate(b.issueDate) || ''
+          boxNumber: String(b.boxNumber || b.boxNo || b.box_no || b.box_number || b.id || b.box || b.cartonNo || b.carton_no || `Box-${idx + 1}`).trim(),
+          cones: Number(b.cones || b.no_of_cones || b.conesCount || b.cone_count || b.cones_per_box) || 12,
+          weight: Number(b.weight || b.netWeight || b.net_weight || b.wt || b.box_weight || b.grossWeight || b.gross_weight) || 24.0,
+          issueDate: normalizeIsoDate(b.issueDate || b.issue_date || b.date || b.issuedDate || b.issue_dt || b.issueDt || b.deliveryDate || b.delivery_date) || ''
         }));
       } else if (Array.isArray(data.boxNumbers) && data.boxNumbers.length > 0) {
         rawBoxes = data.boxNumbers.map((bNum, idx) => ({
           boxNumber: String(bNum).trim(),
           cones: 12,
           weight: 24.0,
-          issueDate: normalizeIsoDate(data.defaultIssueDate) || ''
+          issueDate: normalizeIsoDate(data.defaultIssueDate || data.issueDate || data.date) || ''
         }));
       }
 
@@ -4306,17 +4345,17 @@ Extraction Rules:
       if (parsedData) {
         if (Array.isArray(parsedData.boxes) && parsedData.boxes.length > 0) {
           slipBoxes = parsedData.boxes.map((b, idx) => ({
-            boxNumber: String(b.boxNumber || b.boxNo || `Box-${idx + 1}`).trim(),
-            cones: Number(b.cones) || 12,
-            weight: Number(b.weight || b.netWeight) || 24.0,
-            issueDate: normalizeIsoDate(b.issueDate) || ''
+            boxNumber: String(b.boxNumber || b.boxNo || b.box_no || b.box_number || b.id || b.box || b.cartonNo || b.carton_no || `Box-${idx + 1}`).trim(),
+            cones: Number(b.cones || b.no_of_cones || b.conesCount || b.cone_count || b.cones_per_box) || 12,
+            weight: Number(b.weight || b.netWeight || b.net_weight || b.wt || b.box_weight || b.grossWeight || b.gross_weight) || 24.0,
+            issueDate: normalizeIsoDate(b.issueDate || b.issue_date || b.date || b.issuedDate || b.issue_dt || b.issueDt || b.deliveryDate || b.delivery_date) || ''
           }));
         } else if (Array.isArray(parsedData.boxNumbers) && parsedData.boxNumbers.length > 0) {
           slipBoxes = parsedData.boxNumbers.map((bNum, idx) => ({
             boxNumber: String(bNum).trim(),
             cones: 12,
             weight: 24.0,
-            issueDate: normalizeIsoDate(parsedData.defaultIssueDate) || ''
+            issueDate: normalizeIsoDate(parsedData.defaultIssueDate || parsedData.issueDate || parsedData.date) || ''
           }));
         }
       }
@@ -4339,7 +4378,7 @@ Extraction Rules:
           const tr = document.createElement('tr');
           const wt = Number(b.weight).toFixed(2);
           const cones = Number(b.cones) || 12;
-          const hasDate = Boolean(b.issueDate);
+          const hasDate = Boolean(b.issueDate && b.issueDate.trim() !== '');
           const isChecked = hasDate;
           const boxDate = b.issueDate || '';
 
@@ -4392,7 +4431,7 @@ Extraction Rules:
 
           let matchedSlipBox = slipBoxMap.get(boxIdClean) || (numOnly ? slipBoxMap.get(numOnly) : null);
           const isAvailable = (box.status === 'available');
-          const hasSlipDate = Boolean(matchedSlipBox && matchedSlipBox.issueDate);
+          const hasSlipDate = Boolean(matchedSlipBox && matchedSlipBox.issueDate && matchedSlipBox.issueDate.trim() !== '');
           
           // Boxes with no date in the slip should NOT be selected
           const isChecked = isAvailable && (matchedSlipBox ? hasSlipDate : false);

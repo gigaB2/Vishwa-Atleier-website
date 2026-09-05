@@ -1557,6 +1557,87 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     const resolved = resolveTestQuality(aiExtractedData, aiExtractedData.boxes, mockStockData);
     assert.strictEqual(resolved, '80/72 Polyester DTY Semi Dull', 'Extracted quality is resolved from matched box inventory rather than defaulting to 20/1 BRT POLY');
   });
+
+  await t.test('AI Vision Scanner: normalizeIsoDate parses 2-digit years and formats accurately for box selection', () => {
+    function normalizeIsoDate(dateStr) {
+      if (!dateStr) return '';
+      const trimmed = String(dateStr).trim();
+      if (!trimmed || ['null', 'undefined', 'none', 'nil', '-', 'n/a', 'blank'].includes(trimmed.toLowerCase())) return '';
+
+      // 1. Check YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
+      const isoMatch = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+      if (isoMatch) {
+        const year = isoMatch[1];
+        const month = isoMatch[2].padStart(2, '0');
+        const day = isoMatch[3].padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      // 2. Check DD-MM-YYYY or DD-MM-YY (or with / or .)
+      const dmyMatch = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+      if (dmyMatch) {
+        const day = dmyMatch[1].padStart(2, '0');
+        const month = dmyMatch[2].padStart(2, '0');
+        let year = dmyMatch[3];
+        if (year.length === 2) {
+          year = (parseInt(year, 10) > 50 ? '19' : '20') + year;
+        }
+        return `${year}-${month}-${day}`;
+      }
+
+      // 3. Fallback to JS Date parsing if valid and not NaN
+      const parsed = new Date(trimmed);
+      if (!isNaN(parsed.getTime())) {
+        const y = parsed.getFullYear();
+        const m = String(parsed.getMonth() + 1).padStart(2, '0');
+        const d = String(parsed.getDate()).padStart(2, '0');
+        if (y >= 1970 && y <= 2100) {
+          return `${y}-${m}-${d}`;
+        }
+      }
+
+      return '';
+    }
+
+    assert.strictEqual(normalizeIsoDate('16-08-26'), '2026-08-16');
+    assert.strictEqual(normalizeIsoDate('08/08/26'), '2026-08-08');
+    assert.strictEqual(normalizeIsoDate('8-8-26'), '2026-08-08');
+    assert.strictEqual(normalizeIsoDate('16.08.26'), '2026-08-16');
+    assert.strictEqual(normalizeIsoDate('16-08-2026'), '2026-08-16');
+    assert.strictEqual(normalizeIsoDate('2026-08-16'), '2026-08-16');
+    assert.strictEqual(normalizeIsoDate(''), '');
+    assert.strictEqual(normalizeIsoDate(null), '');
+    assert.strictEqual(normalizeIsoDate('null'), '');
+    assert.strictEqual(normalizeIsoDate('-'), '');
+    assert.strictEqual(normalizeIsoDate('N/A'), '');
+
+    // Test box selection logic based on dates
+    const scannedBoxes = [
+      { boxNumber: 'M005336/26', cones: 12, weight: 24.0, issueDate: '16-08-26' },
+      { boxNumber: 'M005337/26', cones: 12, weight: 24.0, issueDate: '08/08/26' },
+      { boxNumber: 'M005338/26', cones: 12, weight: 24.0, issueDate: null },
+      { boxNumber: 'M005339/26', cones: 12, weight: 24.0, issueDate: '' }
+    ];
+
+    const processedBoxes = scannedBoxes.map(b => {
+      const normalizedDate = normalizeIsoDate(b.issueDate);
+      const isChecked = Boolean(normalizedDate);
+      return {
+        boxNumber: b.boxNumber,
+        issueDate: normalizedDate,
+        isChecked
+      };
+    });
+
+    assert.strictEqual(processedBoxes[0].isChecked, true);
+    assert.strictEqual(processedBoxes[0].issueDate, '2026-08-16');
+    assert.strictEqual(processedBoxes[1].isChecked, true);
+    assert.strictEqual(processedBoxes[1].issueDate, '2026-08-08');
+    assert.strictEqual(processedBoxes[2].isChecked, false);
+    assert.strictEqual(processedBoxes[2].issueDate, '');
+    assert.strictEqual(processedBoxes[3].isChecked, false);
+    assert.strictEqual(processedBoxes[3].issueDate, '');
+  });
 });
 
 
