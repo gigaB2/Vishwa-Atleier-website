@@ -5333,103 +5333,131 @@
       const targetLot = String(row.lotNumber || '').trim();
       const targetSupplier = String(row.partyName || '').trim().toLowerCase();
 
-      // 1. Try fetching from yarn-rm-orders
+      // Fetch BOTH orders and stock data to ensure full status and issue metadata preservation
+      let orders = [];
+      let stock = [];
       try {
-        let orders = [];
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.getMultiple === 'function') {
+          const multi = await window.VishwaSupabase.getMultiple(['yarn-rm-orders', 'vishwa_yarn_rm_stock_data']);
+          orders = multi['yarn-rm-orders'] || [];
+          stock = multi['vishwa_yarn_rm_stock_data'] || [];
+        } else if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
           orders = (await window.VishwaSupabase.get('yarn-rm-orders')) || [];
+          stock = (await window.VishwaSupabase.get('vishwa_yarn_rm_stock_data')) || [];
         }
-        if (!Array.isArray(orders) || orders.length === 0) {
-          try {
-            const raw = localStorage.getItem('yarn-rm-orders');
-            if (raw) orders = JSON.parse(raw);
-          } catch(e) {}
-        }
+      } catch(e) {}
 
-        if (Array.isArray(orders)) {
-          for (const ord of orders) {
-            if (!ord || !Array.isArray(ord.batches)) continue;
-            const ordId = String(ord.id || ord.orderNumber || '').trim();
-            const ordSupplier = String(ord.supplier || '').trim().toLowerCase();
-
-            for (const b of ord.batches) {
-              if (!b) continue;
-              const bId = String(b.id || '').trim();
-              const bChallan = String(b.challanNumber || '').trim();
-              const bLot = String(b.lotNumber || '').trim();
-
-              const isMatch = (targetBatchId && bId === targetBatchId) ||
-                              (targetChallan && bChallan === targetChallan && (targetSupplier === '' || ordSupplier === targetSupplier)) ||
-                              (targetLot && bLot === targetLot && (targetChallan === '' || bChallan === targetChallan)) ||
-                              (targetOrderId && (ordId === targetOrderId || ord.id === targetOrderId) && (targetChallan === '' || bChallan === targetChallan));
-
-              if (isMatch && Array.isArray(b.boxes) && b.boxes.length > 0) {
-                batchBoxes = b.boxes.map((bx, idx) => ({
-                  boxNumber: bx.boxNumber || bx.id || `B${idx + 1}`,
-                  cones: Number(bx.cones) || 0,
-                  weight: Number(bx.grossWeight) || Number(bx.weight) || 0,
-                  returnedWeight: Number(bx.returnedWeight) || Number(bx.grWeight) || 0,
-                  date: (bx.returnedDate || bx.grDate || '').split('T')[0],
-                  remarks: bx.returnedRemarks || bx.grRemarks || '',
-                  status: bx.status || 'available',
-                  issueDate: bx.issueDate || null,
-                  issuedTo: bx.issuedTo || null,
-                  previousIssueDate: bx.previousIssueDate || (bx.status === 'issued' ? bx.issueDate : null),
-                  previousIssuedTo: bx.previousIssuedTo || (bx.status === 'issued' ? bx.issuedTo : null)
-                }));
-                break;
-              }
-            }
-            if (batchBoxes.length > 0) break;
-          }
-        }
-      } catch (e) {
-        console.warn('Could not fetch batch boxes from orders:', e);
-      }
-
-      // 2. Fallback to vishwa_yarn_rm_stock_data if not found in orders
-      if (batchBoxes.length === 0) {
+      if (!Array.isArray(orders) || orders.length === 0) {
         try {
-          let stock = [];
-          if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
-            stock = (await window.VishwaSupabase.get('vishwa_yarn_rm_stock_data')) || [];
-          }
-          if (!Array.isArray(stock) || stock.length === 0) {
-            try {
-              const rawStock = localStorage.getItem('vishwa_yarn_rm_stock_data');
-              if (rawStock) stock = JSON.parse(rawStock);
-            } catch(e) {}
-          }
+          const raw = localStorage.getItem('yarn-rm-orders');
+          if (raw) orders = JSON.parse(raw);
+        } catch(e) {}
+      }
+      if (!Array.isArray(stock) || stock.length === 0) {
+        try {
+          const rawStock = localStorage.getItem('vishwa_yarn_rm_stock_data');
+          if (rawStock) stock = JSON.parse(rawStock);
+        } catch(e) {}
+      }
+      if (!Array.isArray(orders)) orders = [];
+      if (!Array.isArray(stock)) stock = [];
 
-          if (Array.isArray(stock)) {
-            const matchedLot = stock.find(lot => 
-              (targetBatchId && String(lot.batchId) === targetBatchId) ||
-              (targetChallan && String(lot.challanNo || lot.challanNumber).trim() === targetChallan) ||
-              (targetLot && String(lot.lotNumber).trim() === targetLot) ||
-              (targetOrderId && (String(lot.orderRef) === targetOrderId))
-            );
-            if (matchedLot && Array.isArray(matchedLot.boxes) && matchedLot.boxes.length > 0) {
-              batchBoxes = matchedLot.boxes.map((bx, idx) => ({
-                boxNumber: bx.boxNumber || bx.id || `B${idx + 1}`,
-                cones: Number(bx.cones) || 0,
-                weight: Number(bx.grossWeight) || (Number(bx.weight || 0) + Number(bx.grWeight || 0)),
-                returnedWeight: Number(bx.grWeight) || Number(bx.returnedWeight) || 0,
-                date: (bx.grDate || bx.returnedDate || '').split('T')[0],
-                remarks: bx.grRemarks || bx.returnedRemarks || '',
-                status: bx.status || 'available',
-                issueDate: bx.issueDate || null,
-                issuedTo: bx.issuedTo || null,
-                previousIssueDate: bx.previousIssueDate || (bx.status === 'issued' ? bx.issueDate : null),
-                previousIssuedTo: bx.previousIssuedTo || (bx.status === 'issued' ? bx.issuedTo : null)
-              }));
-            }
+      // Find matching batch in orders
+      let matchedOrderBatch = null;
+      for (const ord of orders) {
+        if (!ord || !Array.isArray(ord.batches)) continue;
+        const ordId = String(ord.id || ord.orderNumber || '').trim();
+        const ordSupplier = String(ord.supplier || '').trim().toLowerCase();
+        for (const b of ord.batches) {
+          if (!b) continue;
+          const bId = String(b.id || '').trim();
+          const bChallan = String(b.challanNumber || '').trim();
+          const bLot = String(b.lotNumber || '').trim();
+          const isMatch = (targetBatchId && bId === targetBatchId) ||
+                          (targetChallan && bChallan === targetChallan && (targetSupplier === '' || ordSupplier === targetSupplier)) ||
+                          (targetLot && bLot === targetLot && (targetChallan === '' || bChallan === targetChallan)) ||
+                          (targetOrderId && (ordId === targetOrderId || ord.id === targetOrderId) && (targetChallan === '' || bChallan === targetChallan));
+          if (isMatch && Array.isArray(b.boxes) && b.boxes.length > 0) {
+            matchedOrderBatch = b;
+            break;
           }
-        } catch(e) {
-          console.warn('Could not fetch batch boxes from stock:', e);
         }
+        if (matchedOrderBatch) break;
       }
 
-      // 3. Overlay any saved row.grBoxes so return details saved in ledger row take precedence
+      // Find matching lot in stock
+      let matchedStockLot = stock.find(lot => 
+        (targetBatchId && String(lot.batchId).trim() === targetBatchId) ||
+        (targetChallan && targetLot && String(lot.challanNo || lot.challanNumber).trim() === targetChallan && String(lot.lotNumber).trim() === targetLot) ||
+        (targetChallan && String(lot.challanNo || lot.challanNumber).trim() === targetChallan) ||
+        (targetLot && String(lot.lotNumber).trim() === targetLot) ||
+        (targetOrderId && (String(lot.orderRef).trim() === targetOrderId))
+      );
+
+      const stockBoxesMap = new Map();
+      if (matchedStockLot && Array.isArray(matchedStockLot.boxes)) {
+        matchedStockLot.boxes.forEach(sb => {
+          if (!sb) return;
+          const num = String(sb.id || sb.boxNumber || '').trim();
+          if (num) stockBoxesMap.set(num, sb);
+        });
+      }
+
+      const orderBoxesMap = new Map();
+      if (matchedOrderBatch && Array.isArray(matchedOrderBatch.boxes)) {
+        matchedOrderBatch.boxes.forEach(ob => {
+          if (!ob) return;
+          const num = String(ob.boxNumber || ob.id || '').trim();
+          if (num) orderBoxesMap.set(num, ob);
+        });
+      }
+
+      const allBoxNums = new Set([...orderBoxesMap.keys(), ...stockBoxesMap.keys()]);
+
+      if (allBoxNums.size > 0) {
+        batchBoxes = Array.from(allBoxNums).map((bNum, idx) => {
+          const ob = orderBoxesMap.get(bNum);
+          const sb = stockBoxesMap.get(bNum);
+
+          const bw = Number(ob?.grossWeight) || Number(ob?.weight) || Number(sb?.grossWeight) || (Number(sb?.weight || 0) + Number(sb?.grWeight || 0)) || 0;
+          const gw = Number(ob?.returnedWeight) || Number(ob?.grWeight) || Number(sb?.grWeight) || Number(sb?.returnedWeight) || 0;
+          const retDate = (ob?.returnedDate || ob?.grDate || sb?.grDate || sb?.returnedDate || '').split('T')[0];
+          const retRemarks = ob?.returnedRemarks || ob?.grRemarks || sb?.grRemarks || sb?.returnedRemarks || '';
+
+          const wasIssued = Boolean((sb?.status === 'issued' || ob?.status === 'issued' || sb?.issueDate || ob?.issueDate || sb?.previousIssueDate || ob?.previousIssueDate) && !sb?.unissued_at && !ob?.unissued_at);
+          const isFullyGr = (ob?.status === 'gr' || sb?.status === 'gr') || (gw >= bw && bw > 0);
+
+          let st = 'available';
+          let issDate = null;
+          let issTo = null;
+          const prevIssDate = sb?.previousIssueDate || ob?.previousIssueDate || (wasIssued ? (sb?.issueDate || ob?.issueDate) : null);
+          const prevIssTo = sb?.previousIssuedTo || ob?.previousIssuedTo || (wasIssued ? (sb?.issuedTo || ob?.issuedTo) : null);
+
+          if (isFullyGr) {
+            st = 'gr';
+          } else if (wasIssued) {
+            st = 'issued';
+            issDate = sb?.issueDate || ob?.issueDate || prevIssDate;
+            issTo = sb?.issuedTo || ob?.issuedTo || prevIssTo || 'Department';
+          }
+
+          return {
+            boxNumber: bNum || `B${idx + 1}`,
+            cones: Number(ob?.cones) || Number(sb?.cones) || 0,
+            weight: bw,
+            returnedWeight: gw,
+            date: retDate,
+            remarks: retRemarks,
+            status: st,
+            issueDate: issDate,
+            issuedTo: issTo,
+            previousIssueDate: prevIssDate,
+            previousIssuedTo: prevIssTo
+          };
+        });
+      }
+
+      // Overlay any saved row.grBoxes so return details saved in ledger row take precedence
       if (batchBoxes.length > 0 && Array.isArray(row.grBoxes) && row.grBoxes.length > 0) {
         const grMap = new Map();
         row.grBoxes.forEach(b => {
@@ -5769,7 +5797,164 @@
         if (matchedBatch) break;
       }
 
+      let matchedStockLot = stock.find(lot => 
+        (targetBatchId && String(lot.batchId).trim() === targetBatchId) ||
+        (targetChallan && targetLot && String(lot.challanNo || lot.challanNumber).trim() === targetChallan && String(lot.lotNumber).trim() === targetLot) ||
+        (targetChallan && String(lot.challanNo || lot.challanNumber).trim() === targetChallan) ||
+        (targetLot && String(lot.lotNumber).trim() === targetLot) ||
+        (targetOrderId && (String(lot.orderRef).trim() === targetOrderId))
+      );
+
+      // Build unified box state map across stock and orders
+      const stockBoxMap = new Map();
+      if (matchedStockLot && Array.isArray(matchedStockLot.boxes)) {
+        matchedStockLot.boxes.forEach(sb => {
+          if (!sb) return;
+          const num = String(sb.id || sb.boxNumber || '').trim();
+          if (num) stockBoxMap.set(num, sb);
+        });
+      }
+
+      const orderBoxMap = new Map();
+      if (matchedBatch && Array.isArray(matchedBatch.boxes)) {
+        matchedBatch.boxes.forEach(ob => {
+          if (!ob) return;
+          const num = String(ob.boxNumber || ob.id || '').trim();
+          if (num) orderBoxMap.set(num, ob);
+        });
+      }
+
+      const allBoxNumbers = Array.from(new Set([
+        ...Array.from(orderBoxMap.keys()),
+        ...Array.from(stockBoxMap.keys()),
+        ...(Array.isArray(boxAllocations) ? boxAllocations.map(a => String(a.boxNumber || a.id || '').trim()).filter(Boolean) : [])
+      ]));
+
+      const boxAllocMap = new Map();
+      if (Array.isArray(boxAllocations) && boxAllocations.length > 0) {
+        boxAllocations.forEach(alloc => {
+          boxAllocMap.set(String(alloc.boxNumber || alloc.id || '').trim(), alloc);
+        });
+      }
+
+      let remGrToDist = Number(newGrQty);
       let grBoxesResult = [];
+
+      const grossFromRow = Number(row.grossQty) || (Number(row.qty || 0) + Number(newGrQty || 0));
+
+      const unifiedBoxes = allBoxNumbers.length > 0 ? allBoxNumbers.map((bNum, idx) => {
+        const ob = orderBoxMap.get(bNum);
+        const sb = stockBoxMap.get(bNum);
+
+        const gross = Number(ob?.grossWeight) || Number(ob?.weight) || Number(sb?.grossWeight) || (Number(sb?.weight || 0) + Number(sb?.grWeight || 0)) || (grossFromRow / (allBoxNumbers.length || 1));
+        const cones = Number(ob?.cones) || Number(sb?.cones) || 0;
+
+        let ret = 0;
+        let rDate = effectiveGrDate;
+        let rRemarks = effectiveGrRemarks;
+
+        if (boxAllocMap.has(bNum)) {
+          const alloc = boxAllocMap.get(bNum);
+          ret = Number(alloc.returnedWeight) || 0;
+          rDate = alloc.date || effectiveGrDate;
+          rRemarks = alloc.remarks || effectiveGrRemarks;
+        } else if (boxAllocMap.size === 0 && remGrToDist > 0) {
+          ret = Math.min(gross, remGrToDist);
+          remGrToDist = Math.max(0, Number((remGrToDist - ret).toFixed(2)));
+        }
+
+        ret = Number(ret.toFixed(2));
+        const rem = Math.max(0, Number((gross - ret).toFixed(2)));
+        const isFullyGr = ret >= gross && gross > 0;
+        const isPartialGr = ret > 0 && !isFullyGr;
+
+        const wasIssued = Boolean((sb?.status === 'issued' || ob?.status === 'issued' || sb?.issueDate || ob?.issueDate || sb?.previousIssueDate || ob?.previousIssueDate) && !sb?.unissued_at && !ob?.unissued_at);
+        const prevIssueDate = sb?.previousIssueDate || ob?.previousIssueDate || (wasIssued ? (sb?.issueDate || ob?.issueDate) : null);
+        const prevIssuedTo = sb?.previousIssuedTo || ob?.previousIssuedTo || (wasIssued ? (sb?.issuedTo || ob?.issuedTo) : null);
+
+        let status = 'available';
+        let issueDate = null;
+        let issuedTo = null;
+
+        if (isFullyGr) {
+          status = 'gr';
+          issueDate = null;
+          issuedTo = null;
+        } else if (wasIssued) {
+          status = 'issued';
+          issueDate = sb?.issueDate || ob?.issueDate || prevIssueDate;
+          issuedTo = sb?.issuedTo || ob?.issuedTo || prevIssuedTo || 'Department';
+        } else {
+          status = 'available';
+          issueDate = null;
+          issuedTo = null;
+        }
+
+        if (ret > 0) {
+          grBoxesResult.push({
+            boxNumber: bNum,
+            cones: cones,
+            weight: gross,
+            returnedWeight: ret,
+            date: rDate,
+            remarks: rRemarks
+          });
+        }
+
+        return {
+          id: bNum,
+          boxNumber: bNum,
+          cones: cones,
+          grossWeight: gross,
+          weight: isFullyGr ? gross : rem,
+          remainingWeight: rem,
+          returnedWeight: ret,
+          grWeight: ret,
+          returnedDate: ret > 0 ? rDate : null,
+          grDate: ret > 0 ? rDate : null,
+          returnedRemarks: ret > 0 ? rRemarks : null,
+          grRemarks: isFullyGr ? (rRemarks || 'Fully Returned in Challan GR') : (isPartialGr ? (rRemarks || `Partial GR (-${ret.toFixed(2)} kg)`) : null),
+          status: status,
+          issueDate: issueDate,
+          issuedTo: issuedTo,
+          previousIssueDate: prevIssueDate,
+          previousIssuedTo: prevIssuedTo,
+          unissued_at: status === 'issued' ? null : (sb?.unissued_at || ob?.unissued_at || null),
+          updated_at: new Date().toISOString()
+        };
+      }) : [{
+        id: 'B1',
+        boxNumber: 'B1',
+        cones: 1,
+        grossWeight: grossFromRow,
+        weight: newGrQty >= grossFromRow ? grossFromRow : Math.max(0, grossFromRow - newGrQty),
+        remainingWeight: Math.max(0, grossFromRow - newGrQty),
+        returnedWeight: newGrQty,
+        grWeight: newGrQty,
+        returnedDate: newGrQty > 0 ? effectiveGrDate : null,
+        grDate: newGrQty > 0 ? effectiveGrDate : null,
+        returnedRemarks: newGrQty > 0 ? effectiveGrRemarks : null,
+        grRemarks: newGrQty >= grossFromRow ? (effectiveGrRemarks || 'Fully Returned in Challan GR') : (newGrQty > 0 ? `Partial GR (-${newGrQty.toFixed(2)} kg)` : null),
+        status: newGrQty >= grossFromRow ? 'gr' : 'available',
+        issueDate: null,
+        issuedTo: null,
+        previousIssueDate: null,
+        previousIssuedTo: null,
+        updated_at: new Date().toISOString()
+      }];
+
+      if (allBoxNumbers.length === 0 && newGrQty > 0) {
+        grBoxesResult = [{
+          boxNumber: 'B1',
+          cones: 1,
+          weight: grossFromRow,
+          returnedWeight: newGrQty,
+          date: effectiveGrDate,
+          remarks: effectiveGrRemarks
+        }];
+      }
+
+      // If batch not found in orders, create it
       if (!matchedBatch && (targetChallan || targetLot || row.partyName)) {
         const supplierName = row.partyName || 'Unknown Supplier';
         const qualityName = row.quality || 'Yarn';
@@ -5780,23 +5965,6 @@
         const grossTotal = Number(row.grossQty) || (Number(row.qty || 0) + Number(newGrQty || 0));
         const netTotal = Math.max(0, Number((grossTotal - newGrQty).toFixed(2)));
         const batchIdVal = targetBatchId || `BATCH-${Date.now()}`;
-        const newBatchBoxes = Array.isArray(boxAllocations) && boxAllocations.length > 0 ? boxAllocations.map((alloc, idx) => ({
-          boxNumber: alloc.boxNumber || `B${idx + 1}`,
-          cones: Number(alloc.cones) || 0,
-          weight: Number(alloc.grossWeight || alloc.weight) || (grossTotal / boxAllocations.length),
-          returnedWeight: Number(alloc.returnedWeight) || 0,
-          returnedDate: Number(alloc.returnedWeight) > 0 ? (alloc.date || effectiveGrDate) : null,
-          returnedRemarks: Number(alloc.returnedWeight) > 0 ? (alloc.remarks || effectiveGrRemarks) : null,
-          status: (Number(alloc.returnedWeight) >= (Number(alloc.grossWeight || alloc.weight) || (grossTotal / boxAllocations.length))) ? 'gr' : 'available'
-        })) : [{
-          boxNumber: 'B1',
-          cones: 1,
-          weight: grossTotal,
-          returnedWeight: newGrQty,
-          returnedDate: newGrQty > 0 ? effectiveGrDate : null,
-          returnedRemarks: newGrQty > 0 ? effectiveGrRemarks : null,
-          status: newGrQty >= grossTotal ? 'gr' : 'available'
-        }];
 
         matchedBatch = {
           id: batchIdVal,
@@ -5807,7 +5975,7 @@
           returnedWeight: Number(newGrQty.toFixed(2)),
           totalWeight: netTotal,
           receivedQty: netTotal,
-          boxes: newBatchBoxes,
+          boxes: unifiedBoxes,
           updated_at: new Date().toISOString()
         };
 
@@ -5840,7 +6008,7 @@
       }
 
       if (matchedBatch) {
-        let grossTotal = (matchedBatch.boxes || []).reduce((acc, bx) => acc + (Number(bx.grossWeight) || Number(bx.weight) || 0), 0);
+        let grossTotal = unifiedBoxes.reduce((acc, bx) => acc + (Number(bx.grossWeight) || Number(bx.weight) || 0), 0);
         if (grossTotal === 0) {
           grossTotal = Number(row.grossQty) || (Number(row.qty || 0) + Number(newGrQty || 0));
         }
@@ -5848,137 +6016,14 @@
         matchedBatch.returnedWeight = Number(newGrQty.toFixed(2));
         matchedBatch.totalWeight = Math.max(0, Number((grossTotal - newGrQty).toFixed(2)));
         matchedBatch.receivedQty = matchedBatch.totalWeight;
+        matchedBatch.boxes = unifiedBoxes;
         matchedBatch.updated_at = new Date().toISOString();
-
-        if (Array.isArray(matchedBatch.boxes) && matchedBatch.boxes.length > 0) {
-          if (Array.isArray(boxAllocations) && boxAllocations.length > 0) {
-            boxAllocations.forEach(alloc => {
-              const bNum = String(alloc.boxNumber || alloc.id || '').trim();
-              const targetBox = matchedBatch.boxes.find(bx => String(bx.boxNumber || bx.id || '').trim() === bNum);
-              if (targetBox) {
-                const ret = Number(alloc.returnedWeight) || 0;
-                const gross = Number(targetBox.grossWeight) || Number(targetBox.weight) || 0;
-                targetBox.grossWeight = gross;
-                targetBox.returnedWeight = ret;
-                targetBox.returnedDate = ret > 0 ? (alloc.date || effectiveGrDate) : null;
-                targetBox.returnedRemarks = ret > 0 ? (alloc.remarks || effectiveGrRemarks) : null;
-                targetBox.updated_at = new Date().toISOString();
-
-                const prevIssueDate = targetBox.previousIssueDate || (targetBox.status === 'issued' ? targetBox.issueDate : null);
-                const prevIssuedTo = targetBox.previousIssuedTo || (targetBox.status === 'issued' ? targetBox.issuedTo : null);
-                if (prevIssueDate) targetBox.previousIssueDate = prevIssueDate;
-                if (prevIssuedTo) targetBox.previousIssuedTo = prevIssuedTo;
-
-                if (ret >= gross && gross > 0) {
-                  targetBox.status = 'gr';
-                  targetBox.issueDate = null;
-                  targetBox.issuedTo = null;
-                } else if (ret < gross) {
-                  if (targetBox.previousIssueDate || targetBox.previousIssuedTo || targetBox.issueDate || targetBox.issuedTo || targetBox.status === 'issued') {
-                    targetBox.status = 'issued';
-                    targetBox.issueDate = targetBox.issueDate || targetBox.previousIssueDate;
-                    targetBox.issuedTo = targetBox.issuedTo || targetBox.previousIssuedTo || 'Department';
-                  } else {
-                    targetBox.status = 'available';
-                    targetBox.issueDate = null;
-                    targetBox.issuedTo = null;
-                  }
-                }
-
-                if (ret > 0) {
-                  grBoxesResult.push({
-                    boxNumber: bNum,
-                    cones: Number(targetBox.cones) || 0,
-                    weight: gross,
-                    returnedWeight: ret,
-                    date: targetBox.returnedDate,
-                    remarks: targetBox.returnedRemarks
-                  });
-                }
-              }
-            });
-          } else {
-            let remainingGrToDistribute = Number(newGrQty);
-            matchedBatch.boxes.forEach((bx, idx) => {
-              const gross = Number(bx.grossWeight) || Number(bx.weight) || 0;
-              let retForThisBox = 0;
-              if (remainingGrToDistribute > 0) {
-                retForThisBox = Math.min(gross, remainingGrToDistribute);
-                remainingGrToDistribute = Math.max(0, Number((remainingGrToDistribute - retForThisBox).toFixed(2)));
-              }
-              bx.grossWeight = gross;
-              bx.returnedWeight = Number(retForThisBox.toFixed(2));
-              bx.returnedDate = retForThisBox > 0 ? effectiveGrDate : null;
-              bx.returnedRemarks = retForThisBox > 0 ? effectiveGrRemarks : null;
-              bx.updated_at = new Date().toISOString();
-
-              const prevIssueDate = bx.previousIssueDate || (bx.status === 'issued' ? bx.issueDate : null);
-              const prevIssuedTo = bx.previousIssuedTo || (bx.status === 'issued' ? bx.issuedTo : null);
-              if (prevIssueDate) bx.previousIssueDate = prevIssueDate;
-              if (prevIssuedTo) bx.previousIssuedTo = prevIssuedTo;
-
-              if (retForThisBox >= gross && gross > 0) {
-                bx.status = 'gr';
-                bx.issueDate = null;
-                bx.issuedTo = null;
-              } else if (retForThisBox < gross) {
-                if (bx.previousIssueDate || bx.previousIssuedTo || bx.issueDate || bx.issuedTo || bx.status === 'issued') {
-                  bx.status = 'issued';
-                  bx.issueDate = bx.issueDate || bx.previousIssueDate;
-                  bx.issuedTo = bx.issuedTo || bx.previousIssuedTo || 'Department';
-                } else {
-                  bx.status = 'available';
-                  bx.issueDate = null;
-                  bx.issuedTo = null;
-                }
-              }
-
-              if (retForThisBox > 0) {
-                grBoxesResult.push({
-                  boxNumber: bx.boxNumber || bx.id || `B${idx + 1}`,
-                  cones: Number(bx.cones) || 0,
-                  weight: gross,
-                  returnedWeight: retForThisBox,
-                  date: effectiveGrDate,
-                  remarks: effectiveGrRemarks
-                });
-              }
-            });
-          }
-        }
         ordersChanged = true;
       }
 
-      let matchedStockLot = stock.find(lot => 
-        (targetBatchId && String(lot.batchId) === targetBatchId) ||
-        (targetChallan && String(lot.challanNo || lot.challanNumber).trim() === targetChallan) ||
-        (targetLot && String(lot.lotNumber).trim() === targetLot) ||
-        (targetOrderId && (String(lot.orderRef) === targetOrderId))
-      );
-
+      // Update or create matched stock lot
       if (!matchedStockLot && matchedBatch) {
         const lotIdVal = matchedBatch.lotNumber ? `${matchedBatch.lotNumber}__${matchedBatch.challanNumber || matchedBatch.id}` : `LOT-${Date.now().toString().slice(-4)}`;
-        const grossTotal = Number(row.grossQty) || (Number(row.qty || 0) + Number(newGrQty || 0));
-        const newStockBoxes = (matchedBatch.boxes || []).map((bx, idx) => {
-          const bNum = String(bx.boxNumber || bx.id || `B${idx + 1}`).trim();
-          const gross = Number(bx.grossWeight) || Number(bx.weight) || 0;
-          const ret = Number(bx.returnedWeight) || 0;
-          const rem = Math.max(0, Number((gross - ret).toFixed(2)));
-          const isFullyGr = ret >= gross && gross > 0;
-          return {
-            id: bNum,
-            boxNumber: bNum,
-            cones: Number(bx.cones) || 0,
-            grossWeight: gross,
-            remainingWeight: rem,
-            weight: isFullyGr ? gross : rem,
-            status: isFullyGr ? 'gr' : 'available',
-            grWeight: ret,
-            grDate: ret > 0 ? (bx.returnedDate || effectiveGrDate) : null,
-            grRemarks: ret > 0 ? (bx.returnedRemarks || effectiveGrRemarks) : null
-          };
-        });
-
         matchedStockLot = {
           id: lotIdVal,
           batchId: matchedBatch.id,
@@ -5994,68 +6039,13 @@
           color: '',
           rate: row.rate || '',
           orderRef: row.orderId || row.orderNumber || '',
-          boxes: newStockBoxes,
+          boxes: unifiedBoxes,
           updated_at: new Date().toISOString()
         };
         stock.unshift(matchedStockLot);
         stockChanged = true;
-      }
-
-      if (matchedStockLot && Array.isArray(matchedStockLot.boxes)) {
-        const boxAllocMap = new Map();
-        grBoxesResult.forEach(b => {
-          boxAllocMap.set(String(b.boxNumber).trim(), b);
-        });
-
-        let remGrToDist = Number(newGrQty);
-        matchedStockLot.boxes.forEach((bx, idx) => {
-          const bNum = String(bx.boxNumber || bx.id || '').trim();
-          const gross = Number(bx.grossWeight) || (Number(bx.weight || 0) + Number(bx.grWeight || 0));
-          let ret = 0;
-          let rDate = effectiveGrDate;
-          let rRemarks = effectiveGrRemarks;
-
-          if (boxAllocMap.has(bNum)) {
-            const alloc = boxAllocMap.get(bNum);
-            ret = Number(alloc.returnedWeight) || 0;
-            rDate = alloc.date || effectiveGrDate;
-            rRemarks = alloc.remarks || effectiveGrRemarks;
-          } else if (grBoxesResult.length === 0 && remGrToDist > 0) {
-            ret = Math.min(gross, remGrToDist);
-            remGrToDist = Math.max(0, Number((remGrToDist - ret).toFixed(2)));
-          }
-
-          bx.grossWeight = gross;
-          bx.grWeight = Number(ret.toFixed(2));
-          bx.remainingWeight = Math.max(0, Number((gross - ret).toFixed(2)));
-          bx.grDate = ret > 0 ? rDate : null;
-          bx.grRemarks = ret > 0 ? rRemarks : null;
-          bx.updated_at = new Date().toISOString();
-
-          const prevIssueDate = bx.previousIssueDate || (bx.status === 'issued' ? bx.issueDate : null);
-          const prevIssuedTo = bx.previousIssuedTo || (bx.status === 'issued' ? bx.issuedTo : null);
-          if (prevIssueDate) bx.previousIssueDate = prevIssueDate;
-          if (prevIssuedTo) bx.previousIssuedTo = prevIssuedTo;
-
-          if (ret >= gross && gross > 0) {
-            bx.status = 'gr';
-            bx.weight = gross;
-            bx.issueDate = null;
-            bx.issuedTo = null;
-          } else {
-            bx.weight = bx.remainingWeight;
-            if (bx.previousIssueDate || bx.previousIssuedTo || bx.issueDate || bx.issuedTo || bx.status === 'issued') {
-              bx.status = 'issued';
-              bx.issueDate = bx.issueDate || bx.previousIssueDate;
-              bx.issuedTo = bx.issuedTo || bx.previousIssuedTo || 'Department';
-            } else {
-              bx.status = 'available';
-              bx.issueDate = null;
-              bx.issuedTo = null;
-            }
-          }
-        });
-
+      } else if (matchedStockLot) {
+        matchedStockLot.boxes = unifiedBoxes;
         matchedStockLot.updated_at = new Date().toISOString();
         stockChanged = true;
       }

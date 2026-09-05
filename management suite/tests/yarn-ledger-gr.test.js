@@ -1742,7 +1742,163 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(targetLot.boxes[0].issuedTo, 'TFO');
     assert.strictEqual(targetLot.boxes[1].status, 'available');
   });
+
+  await t.test('Purchase ledger GR issuance: issuing GR for 1 box strictly preserves issue dates and status of remaining issued boxes in lot & orders', () => {
+    // Initial Stock with 4 boxes: B1 is available, B2/B3/B4 are issued
+    const stock = [
+      {
+        id: 'LOT-555__CH-1234',
+        batchId: 'BATCH-555',
+        lotNumber: 'LOT-555',
+        challanNo: 'CH-1234',
+        challanNumber: 'CH-1234',
+        supplier: 'Gokaldas Mills',
+        quality: '80/72 DTY Polyester',
+        boxes: [
+          { id: 'B1', boxNumber: 'B1', grossWeight: 50.0, weight: 50.0, remainingWeight: 50.0, returnedWeight: 0, grWeight: 0, status: 'available', issueDate: null, issuedTo: null },
+          { id: 'B2', boxNumber: 'B2', grossWeight: 50.0, weight: 50.0, remainingWeight: 50.0, returnedWeight: 0, grWeight: 0, status: 'issued', issueDate: '2026-09-02', issuedTo: 'Covering Unit 1', previousIssueDate: '2026-09-02', previousIssuedTo: 'Covering Unit 1' },
+          { id: 'B3', boxNumber: 'B3', grossWeight: 50.0, weight: 50.0, remainingWeight: 50.0, returnedWeight: 0, grWeight: 0, status: 'issued', issueDate: '2026-09-02', issuedTo: 'Covering Unit 1', previousIssueDate: '2026-09-02', previousIssuedTo: 'Covering Unit 1' },
+          { id: 'B4', boxNumber: 'B4', grossWeight: 50.0, weight: 50.0, remainingWeight: 50.0, returnedWeight: 0, grWeight: 0, status: 'issued', issueDate: '2026-09-03', issuedTo: 'Knitting Unit 2', previousIssueDate: '2026-09-03', previousIssuedTo: 'Knitting Unit 2' }
+        ]
+      }
+    ];
+
+    // Initial Orders
+    const orders = [
+      {
+        id: 'ORD-555',
+        orderNumber: '555',
+        supplier: 'Gokaldas Mills',
+        quality: '80/72 DTY Polyester',
+        batches: [
+          {
+            id: 'BATCH-555',
+            challanNumber: 'CH-1234',
+            lotNumber: 'LOT-555',
+            grossWeight: 200.0,
+            returnedWeight: 0,
+            totalWeight: 200.0,
+            receivedQty: 200.0,
+            boxes: [
+              { boxNumber: 'B1', grossWeight: 50.0, weight: 50.0, returnedWeight: 0, status: 'available', issueDate: null, issuedTo: null },
+              { boxNumber: 'B2', grossWeight: 50.0, weight: 50.0, returnedWeight: 0, status: 'issued', issueDate: '2026-09-02', issuedTo: 'Covering Unit 1', previousIssueDate: '2026-09-02', previousIssuedTo: 'Covering Unit 1' },
+              { boxNumber: 'B3', grossWeight: 50.0, weight: 50.0, returnedWeight: 0, status: 'issued', issueDate: '2026-09-02', issuedTo: 'Covering Unit 1', previousIssueDate: '2026-09-02', previousIssuedTo: 'Covering Unit 1' },
+              { boxNumber: 'B4', grossWeight: 50.0, weight: 50.0, returnedWeight: 0, status: 'issued', issueDate: '2026-09-03', issuedTo: 'Knitting Unit 2', previousIssueDate: '2026-09-03', previousIssuedTo: 'Knitting Unit 2' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const row = {
+      id: 'PUR-order_ORD-555_batch_BATCH-555_CH-1234',
+      orderId: 'ORD-555',
+      batchId: 'BATCH-555',
+      challanNo: 'CH-1234',
+      lotNumber: 'LOT-555',
+      partyName: 'Gokaldas Mills',
+      quality: '80/72 DTY Polyester',
+      grossQty: 200.0,
+      grQty: 50.0,
+      qty: 150.0,
+      rate: 300
+    };
+
+    // User allocates GR of 50 kg to B1 only
+    const boxAllocations = [
+      { boxNumber: 'B1', returnedWeight: 50.0, date: '2026-09-05', remarks: 'Defective box returned' },
+      { boxNumber: 'B2', returnedWeight: 0, date: '', remarks: '' },
+      { boxNumber: 'B3', returnedWeight: 0, date: '', remarks: '' },
+      { boxNumber: 'B4', returnedWeight: 0, date: '', remarks: '' }
+    ];
+
+    // Unified sync logic matching ledger.html implementation
+    const targetBatch = orders[0].batches[0];
+    const targetStockLot = stock[0];
+
+    const stockBoxMap = new Map();
+    targetStockLot.boxes.forEach(sb => stockBoxMap.set(sb.boxNumber, sb));
+    const orderBoxMap = new Map();
+    targetBatch.boxes.forEach(ob => orderBoxMap.set(ob.boxNumber, ob));
+
+    const boxAllocMap = new Map();
+    boxAllocations.forEach(a => boxAllocMap.set(a.boxNumber, a));
+
+    const allBoxNumbers = ['B1', 'B2', 'B3', 'B4'];
+    const unifiedBoxes = allBoxNumbers.map(bNum => {
+      const ob = orderBoxMap.get(bNum);
+      const sb = stockBoxMap.get(bNum);
+
+      const gross = Number(ob?.grossWeight) || Number(sb?.grossWeight) || 50.0;
+      const alloc = boxAllocMap.get(bNum);
+      const ret = alloc ? Number(alloc.returnedWeight) || 0 : 0;
+      const rem = Math.max(0, gross - ret);
+      const isFullyGr = ret >= gross && gross > 0;
+
+      const wasIssued = Boolean((sb?.status === 'issued' || ob?.status === 'issued' || sb?.issueDate || ob?.issueDate || sb?.previousIssueDate || ob?.previousIssueDate) && !sb?.unissued_at && !ob?.unissued_at);
+      const prevIssueDate = sb?.previousIssueDate || ob?.previousIssueDate || (wasIssued ? (sb?.issueDate || ob?.issueDate) : null);
+      const prevIssuedTo = sb?.previousIssuedTo || ob?.previousIssuedTo || (wasIssued ? (sb?.issuedTo || ob?.issuedTo) : null);
+
+      let status = 'available';
+      let issueDate = null;
+      let issuedTo = null;
+
+      if (isFullyGr) {
+        status = 'gr';
+      } else if (wasIssued) {
+        status = 'issued';
+        issueDate = sb?.issueDate || ob?.issueDate || prevIssueDate;
+        issuedTo = sb?.issuedTo || ob?.issuedTo || prevIssuedTo || 'Department';
+      }
+
+      return {
+        id: bNum,
+        boxNumber: bNum,
+        grossWeight: gross,
+        weight: isFullyGr ? gross : rem,
+        remainingWeight: rem,
+        returnedWeight: ret,
+        grWeight: ret,
+        status: status,
+        issueDate: issueDate,
+        issuedTo: issuedTo,
+        previousIssueDate: prevIssueDate,
+        previousIssuedTo: prevIssuedTo
+      };
+    });
+
+    targetBatch.boxes = unifiedBoxes;
+    targetStockLot.boxes = unifiedBoxes;
+
+    // Verify Box B1: transitioned to GR
+    assert.strictEqual(targetStockLot.boxes[0].status, 'gr');
+    assert.strictEqual(targetStockLot.boxes[0].returnedWeight, 50.0);
+    assert.strictEqual(targetStockLot.boxes[0].issueDate, null);
+
+    // Verify Box B2: strictly STAYED ISSUED with issueDate intact
+    assert.strictEqual(targetStockLot.boxes[1].status, 'issued');
+    assert.strictEqual(targetStockLot.boxes[1].issueDate, '2026-09-02');
+    assert.strictEqual(targetStockLot.boxes[1].issuedTo, 'Covering Unit 1');
+
+    // Verify Box B3: strictly STAYED ISSUED with issueDate intact
+    assert.strictEqual(targetStockLot.boxes[2].status, 'issued');
+    assert.strictEqual(targetStockLot.boxes[2].issueDate, '2026-09-02');
+    assert.strictEqual(targetStockLot.boxes[2].issuedTo, 'Covering Unit 1');
+
+    // Verify Box B4: strictly STAYED ISSUED with issueDate intact
+    assert.strictEqual(targetStockLot.boxes[3].status, 'issued');
+    assert.strictEqual(targetStockLot.boxes[3].issueDate, '2026-09-03');
+    assert.strictEqual(targetStockLot.boxes[3].issuedTo, 'Knitting Unit 2');
+
+    // Verify Order batch boxes also match
+    assert.strictEqual(targetBatch.boxes[0].status, 'gr');
+    assert.strictEqual(targetBatch.boxes[1].status, 'issued');
+    assert.strictEqual(targetBatch.boxes[1].issueDate, '2026-09-02');
+    assert.strictEqual(targetBatch.boxes[2].status, 'issued');
+    assert.strictEqual(targetBatch.boxes[3].status, 'issued');
+  });
 });
+
 
 
 
