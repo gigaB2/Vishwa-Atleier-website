@@ -1645,9 +1645,6 @@
           <span>Scan Issue Slip (AI)</span>
           <span class="ai-kbd-badge">Ctrl+V</span>
         </button>
-        <button type="button" class="btn btn-primary" onclick="openModal('modal-challan')">
-          <span style="font-size: 1.1rem; font-weight: bold;">+</span> Add Incoming Challan
-        </button>
       </div>
     </div>
 
@@ -1914,38 +1911,35 @@
                 </div>
               </div>
 
-              <!-- Primary Focus: Machine Issued To (The ONLY required operator input) -->
+              <!-- Primary Focus: Issued To Department (Exact same departments as +issue box) -->
               <div class="ai-machine-prompt-box">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <label for="ai-issue-to" style="font-weight: 800; font-size: 0.95rem; color: var(--accent); margin: 0; display: flex; align-items: center; gap: 0.35rem;">
-                    <span>🎯</span> Issued To Machine / Section *
+                    <span>🎯</span> Issued To *
                   </label>
                   <span style="font-size: 0.72rem; font-weight: 700; background: rgba(124, 58, 237, 0.12); color: var(--accent); padding: 0.15rem 0.5rem; border-radius: 999px;">
                     Required
                   </span>
                 </div>
-                <input 
-                  type="text" 
+                <select 
                   class="form-control" 
                   id="ai-issue-to" 
-                  placeholder="Enter Machine # or select chip below (e.g. Machine 1, Covering 1, TFO 2)..." 
-                  style="font-size: 0.95rem; font-weight: 700; padding: 0.55rem 0.85rem;" 
                   required
+                  style="font-size: 0.95rem; font-weight: 700; padding: 0.55rem 0.85rem;"
+                  onchange="setAiDepartmentChip(this.value)"
                   onkeydown="if(event.key === 'Enter'){ event.preventDefault(); handleConfirmAiIssue(); }"
                 >
+                  <option value="">-- Select Department --</option>
+                  <option value="TFO">TFO</option>
+                  <option value="Doubler">Doubler</option>
+                  <option value="Covering">Covering</option>
+                  <option value="MX">MX</option>
+                </select>
                 <div class="ai-chips-group">
-                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 1')">Machine 1</span>
-                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 2')">Machine 2</span>
-                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 3')">Machine 3</span>
-                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 4')">Machine 4</span>
-                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 5')">Machine 5</span>
-                  <span class="ai-chip" onclick="setAiDepartmentChip('Machine 6')">Machine 6</span>
-                  <span class="ai-chip" onclick="setAiDepartmentChip('Covering 1')">Covering 1</span>
-                  <span class="ai-chip" onclick="setAiDepartmentChip('Covering 2')">Covering 2</span>
-                  <span class="ai-chip" onclick="setAiDepartmentChip('TFO 1')">TFO 1</span>
-                  <span class="ai-chip" onclick="setAiDepartmentChip('TFO 2')">TFO 2</span>
-                  <span class="ai-chip" onclick="setAiDepartmentChip('Doubler 1')">Doubler 1</span>
-                  <span class="ai-chip" onclick="setAiDepartmentChip('Weaving 1')">Weaving 1</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('TFO')">TFO</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Doubler')">Doubler</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('Covering')">Covering</span>
+                  <span class="ai-chip" onclick="setAiDepartmentChip('MX')">MX</span>
                 </div>
               </div>
 
@@ -3738,9 +3732,17 @@ Extraction Rules:
         }
       }
 
-      // Pre-fill Issued To (Auto-focus on this primary input)
+      // Pre-fill Issued To (Map to exact departments in +issue box: TFO, Doubler, Covering, MX)
       if (issueToInput) {
-        issueToInput.value = (data.issuedTo || '').trim();
+        let detected = (data.issuedTo || '').trim().toLowerCase();
+        let matchedDept = 'Covering';
+        if (detected.includes('tfo')) matchedDept = 'TFO';
+        else if (detected.includes('doubler') || detected.includes('double')) matchedDept = 'Doubler';
+        else if (detected.includes('covering') || detected.includes('cover')) matchedDept = 'Covering';
+        else if (detected.includes('mx')) matchedDept = 'MX';
+
+        issueToInput.value = matchedDept;
+        setAiDepartmentChip(matchedDept);
         setTimeout(() => {
           issueToInput.focus();
         }, 100);
@@ -3774,11 +3776,11 @@ Extraction Rules:
       updateAiSelectedBoxesMetrics();
     }
 
-    // Live update confirm button text when typing in machine input
+    // Live update confirm button text when selecting department
     document.addEventListener('DOMContentLoaded', () => {
       const issueToInput = document.getElementById('ai-issue-to');
       if (issueToInput) {
-        issueToInput.addEventListener('input', () => {
+        issueToInput.addEventListener('change', () => {
           const val = issueToInput.value.trim().toLowerCase();
           document.querySelectorAll('.ai-chip').forEach(c => {
             if (c.textContent.trim().toLowerCase() === val) c.classList.add('active');
@@ -3951,15 +3953,15 @@ Extraction Rules:
     }
 
     function handleConfirmAiIssue() {
-      const machineInput = document.getElementById('ai-issue-to');
-      const machineName = machineInput ? machineInput.value.trim() : '';
+      const issueToInput = document.getElementById('ai-issue-to');
+      const departmentName = issueToInput ? issueToInput.value.trim() : '';
       const remarks = (document.getElementById('ai-issue-remarks')?.value || '').trim();
       const lotSelect = document.getElementById('ai-match-lot-select');
       const lotId = lotSelect ? lotSelect.value : '__NEW_LOT__';
 
-      if (!machineName) {
-        alert('Please enter or select the Machine its issued to (e.g. Machine 1, Covering 1, TFO 2).');
-        if (machineInput) machineInput.focus();
+      if (!departmentName) {
+        alert('Please select the Department it is issued to (TFO, Doubler, Covering, MX).');
+        if (issueToInput) issueToInput.focus();
         return;
       }
 
@@ -4010,9 +4012,9 @@ Extraction Rules:
             weight: r.weight,
             status: 'issued',
             issueDate: r.issueDate,
-            issuedTo: machineName,
+            issuedTo: departmentName,
             previousIssueDate: r.issueDate,
-            previousIssuedTo: machineName,
+            previousIssuedTo: departmentName,
             unissued_at: null,
             updated_at: nowIso,
             grWeight: 0,
@@ -4075,9 +4077,9 @@ Extraction Rules:
                 returnedDate: '',
                 status: 'issued',
                 issueDate: b.issueDate,
-                issuedTo: machineName,
+                issuedTo: departmentName,
                 previousIssueDate: b.issueDate,
-                previousIssuedTo: machineName,
+                previousIssuedTo: departmentName,
                 updated_at: nowIso
               }))
             }]
@@ -4106,9 +4108,9 @@ Extraction Rules:
           if (box) {
             box.status = 'issued';
             box.issueDate = r.issueDate;
-            box.issuedTo = machineName;
+            box.issuedTo = departmentName;
             box.previousIssueDate = r.issueDate;
-            box.previousIssuedTo = machineName;
+            box.previousIssuedTo = departmentName;
             box.unissued_at = null;
             box.updated_at = nowIso;
           } else {
@@ -4121,9 +4123,9 @@ Extraction Rules:
               weight: r.weight,
               status: 'issued',
               issueDate: r.issueDate,
-              issuedTo: machineName,
+              issuedTo: departmentName,
               previousIssueDate: r.issueDate,
-              previousIssuedTo: machineName,
+              previousIssuedTo: departmentName,
               unissued_at: null,
               updated_at: nowIso,
               grWeight: 0,
@@ -4133,7 +4135,7 @@ Extraction Rules:
             targetLot.boxes.push(box);
           }
           boxUids.push(`${targetLot.id}__${box.id}`);
-          syncBoxStatusToOrders(targetLot, box.id, 'issued', r.issueDate, machineName);
+          syncBoxStatusToOrders(targetLot, box.id, 'issued', r.issueDate, departmentName);
           issuedCount++;
         });
 
@@ -4143,8 +4145,8 @@ Extraction Rules:
       // Atomic Server RPC Dispatch if available
       if (boxUids.length > 0 && window.VishwaSupabase && typeof window.VishwaSupabase.issueYarnBoxesAtomic === 'function') {
         window.VishwaSupabase.issueYarnBoxesAtomic(boxUids, {
-          issuedTo: machineName,
-          remarks: remarks || `Issued to ${machineName} via AI Slip Scan`
+          issuedTo: departmentName,
+          remarks: remarks || `Issued to ${departmentName} via AI Slip Scan`
         }).catch(err => console.warn('Atomic box issue notice:', err));
       }
 
@@ -4159,7 +4161,7 @@ Extraction Rules:
         window.postMessage({ type: 'YARN_STOCK_UPDATED' }, '*');
       } catch(e) {}
 
-      showToastNotification(`✨ Successfully issued ${issuedCount} boxes of ${rawQuality} to ${machineName}!`);
+      showToastNotification(`✨ Successfully issued ${issuedCount} boxes of ${rawQuality} to ${departmentName}!`);
     }
 
     let pendingUnissueAction = null;

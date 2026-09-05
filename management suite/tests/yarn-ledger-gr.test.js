@@ -1323,7 +1323,7 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(Number(totalIssuedKg.toFixed(2)), 151.7, 'Total issued weight = 50.0 + 51.2 + 50.5 = 151.7 kg');
   });
 
-  await t.test('AI Vision Scanner: parses 20/1 BRT POLY challan with per-box issue dates and issues to specified machine', () => {
+  await t.test('AI Vision Scanner: parses 20/1 BRT POLY challan with per-box issue dates and issues to specified department (TFO, Doubler, Covering, MX)', () => {
     // Exact structure of the user's uploaded challan
     const aiExtractedChallan = {
       quality: '20/1 BRT POLY',
@@ -1345,7 +1345,7 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
       ]
     };
 
-    const targetMachine = 'Machine 1';
+    const targetDepartment = 'Covering';
     const nowIso = new Date().toISOString();
 
     // Auto-Register & Issue Lot
@@ -1365,9 +1365,9 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
         weight: b.weight,
         status: 'issued',
         issueDate: b.issueDate,
-        issuedTo: targetMachine,
+        issuedTo: targetDepartment,
         previousIssueDate: b.issueDate,
-        previousIssuedTo: targetMachine,
+        previousIssuedTo: targetDepartment,
         unissued_at: null,
         updated_at: nowIso,
         grWeight: 0
@@ -1382,7 +1382,7 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     const totalWt = createdLot.boxes.reduce((acc, b) => acc + b.weight, 0);
     assert.strictEqual(totalWt, 240.0, 'Total weight must be 240.0 kg');
 
-    // Check individual box issue dates & machine
+    // Check individual box issue dates & department
     const boxAug8 = createdLot.boxes.filter(b => b.issueDate === '2026-08-08');
     const boxAug16 = createdLot.boxes.filter(b => b.issueDate === '2026-08-16');
     assert.strictEqual(boxAug8.length, 3, '3 boxes issued on 2026-08-08 (M006325/26, M005331/26, M014080/26)');
@@ -1390,7 +1390,7 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
 
     createdLot.boxes.forEach(box => {
       assert.strictEqual(box.status, 'issued');
-      assert.strictEqual(box.issuedTo, 'Machine 1');
+      assert.strictEqual(box.issuedTo, 'Covering');
       assert.strictEqual(box.cones, 12);
       assert.strictEqual(box.weight, 24.0);
     });
