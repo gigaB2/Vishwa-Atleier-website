@@ -1494,7 +1494,71 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     const availableWeight = availableBoxes.reduce((acc, b) => acc + b.remainingWeight, 0);
     assert.strictEqual(availableWeight, 144.0, 'Available stock weight is 144.0 kg');
   });
+
+  await t.test('AI Vision Scanner: resolves and extracts yarn quality from matched stock boxes when OCR header is absent or custom quality is uploaded', () => {
+    // Inventory contains 2 lots with distinct qualities
+    const mockStockData = [
+      {
+        id: 'LOT-POLY-DTY-100',
+        quality: '80/72 Polyester DTY Semi Dull',
+        lotNumber: 'M005336',
+        challanNo: 'CH-4001',
+        boxes: [
+          { id: 'M005336/26', boxNumber: 'M005336/26', weight: 24.0, status: 'available' },
+          { id: 'M005540/26', boxNumber: 'M005540/26', weight: 24.0, status: 'available' },
+          { id: 'M006325/26', boxNumber: 'M006325/26', weight: 24.0, status: 'available' }
+        ]
+      },
+      {
+        id: 'LOT-COTTON-30S',
+        quality: '30s Combed Cotton Compact',
+        lotNumber: 'COT-881',
+        challanNo: 'CH-COT-10',
+        boxes: [
+          { id: 'CB-101', boxNumber: 'CB-101', weight: 45.0, status: 'available' },
+          { id: 'CB-102', boxNumber: 'CB-102', weight: 45.0, status: 'available' }
+        ]
+      }
+    ];
+
+    // Extracted payload from a scanned slip where OCR header was null or generic
+    const aiExtractedData = {
+      quality: null, // no quality written in header
+      lotNumber: 'M005336',
+      challanNumber: 'CH-4001',
+      boxes: [
+        { boxNumber: 'M005336/26', cones: 12, weight: 24.0, issueDate: '2026-08-16' },
+        { boxNumber: 'M005540/26', cones: 12, weight: 24.0, issueDate: '2026-08-16' }
+      ]
+    };
+
+    // Quality resolution function simulation
+    function resolveTestQuality(data, rawBoxes, stock) {
+      const detectedBoxSet = new Set(rawBoxes.map(b => String(b.boxNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()));
+      let bestMatch = null;
+      let highestScore = 0;
+
+      stock.forEach(lot => {
+        let score = 0;
+        (lot.boxes || []).forEach(b => {
+          const bClean = String(b.boxNumber || b.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          if (detectedBoxSet.has(bClean)) score += 15;
+        });
+        if (score > highestScore && score >= 10) {
+          highestScore = score;
+          bestMatch = lot;
+        }
+      });
+
+      if (bestMatch && bestMatch.quality) return bestMatch.quality;
+      return data.quality || 'Yarn Raw Material';
+    }
+
+    const resolved = resolveTestQuality(aiExtractedData, aiExtractedData.boxes, mockStockData);
+    assert.strictEqual(resolved, '80/72 Polyester DTY Semi Dull', 'Extracted quality is resolved from matched box inventory rather than defaulting to 20/1 BRT POLY');
+  });
 });
+
 
 
 

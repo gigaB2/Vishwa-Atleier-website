@@ -1917,34 +1917,284 @@
       </div>
     </div>
 
-  <!-- MODAL: AI Issue Slip / Delivery Challan Scanner & Matcher -->
-  <div class="modal-overlay" id="modal-ai-scan" style="z-index: 100015;">
+  <style>
+    .dark-mode .ai-challan-summary-card {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.16) 0%, rgba(236, 72, 153, 0.12) 100%);
+      border-color: rgba(139, 92, 246, 0.45);
+    }
+    .ai-summary-quality-title {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.3px;
+      margin-bottom: 0.35rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ai-summary-quality-input {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.2px;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1.5px solid rgba(139, 92, 246, 0.35);
+      border-radius: 8px;
+      padding: 0.25rem 0.65rem;
+      width: 100%;
+      max-width: 420px;
+      transition: all 0.2s ease;
+    }
+    .dark-mode .ai-summary-quality-input {
+      background: rgba(30, 27, 75, 0.7);
+      border-color: rgba(139, 92, 246, 0.5);
+      color: #c4b5fd;
+    }
+    .ai-summary-quality-input:focus {
+      outline: none;
+      border-color: #a855f7;
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+      background: var(--surface);
+    }
+    .ai-summary-badges-row {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding-bottom: 2px;
+    }
+    .ai-summary-badges-row::-webkit-scrollbar {
+      display: none;
+    }
+    .ai-summary-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-weight: 700;
+      color: var(--fg);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .dark-mode .ai-summary-pill {
+      background: rgba(255,255,255,0.06);
+    }
+    .ai-summary-pill.accent {
+      background: rgba(124, 58, 237, 0.12);
+      border-color: rgba(124, 58, 237, 0.28);
+      color: var(--accent);
+    }
+
+    /* Modal Table Wrap - Horizontal Scroll Fixed & Capsules Single Line */
+    .ai-box-table-wrap {
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      overflow-x: auto !important;
+      overflow-y: auto !important;
+      max-height: 250px;
+      background: var(--bg);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 0.5rem;
+    }
+    .ai-box-table {
+      width: 100%;
+      min-width: 600px;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .ai-box-table th {
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      border-bottom: 1.5px solid var(--border);
+      padding: 0.6rem 0.85rem;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      z-index: 10;
+      white-space: nowrap;
+    }
+    .ai-box-table td {
+      padding: 0.55rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .ai-box-table tr:hover {
+      background: rgba(124, 58, 237, 0.04);
+    }
+    .ai-row-date-input {
+      font-size: 0.85rem;
+      padding: 0.3rem 0.55rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--fg);
+      font-weight: 600;
+      font-family: var(--font-body);
+      width: 135px;
+    }
+    .ai-row-date-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+    }
+    .ai-row-cones {
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    /* Department Chips Live Glow */
+    .ai-chips-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .ai-chip {
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+    }
+    .ai-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .ai-chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+    }
+    .ai-machine-prompt-box {
+      background: rgba(124, 58, 237, 0.05);
+      border: 1.5px solid rgba(124, 58, 237, 0.25);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .ai-lot-match-banner {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    /* Status Badges */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.28rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .status-badge.available {
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--success);
+      border: 1px solid rgba(34, 197, 94, 0.28);
+    }
+    .status-badge.issued {
+      background: rgba(59, 130, 246, 0.12);
+      color: #3b82f6;
+      border: 1px solid rgba(59, 130, 246, 0.28);
+    }
+    .status-badge.gr {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--error);
+      border: 1px solid rgba(239, 68, 68, 0.28);
+    }
+    .status-badge.unselected {
+      background: rgba(148, 163, 184, 0.15);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+    .cones-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      background: rgba(124, 58, 237, 0.09);
+      color: var(--accent);
+      border: 1px solid rgba(124, 58, 237, 0.22);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- MODAL: AI Issue Slip & Delivery Challan Scanner -->
+  <div class="modal-overlay" id="modal-ai-scan" style="z-index: 100050;">
     <div class="modal-card ai-modal-card">
-      <div class="modal-header">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border); padding: 1rem 1.75rem;">
         <div style="display: flex; align-items: center; gap: 0.65rem;">
-          <span style="font-size: 1.35rem; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(236, 72, 153, 0.2));">✨</span>
+          <span style="font-size: 1.4rem;">✨</span>
           <div>
-            <h3 style="margin: 0; font-size: 1.15rem;">AI Issue Slip & Challan Scanner</h3>
-            <p style="margin: 0; font-size: 0.8rem; color: var(--muted);">Upload or paste a photo/scan of an issue slip or delivery challan to auto-issue yarn boxes</p>
+            <h3 style="margin: 0; font-family: var(--font-display); font-size: 1.25rem; font-weight: 800;">
+              AI Issue Slip & Delivery Challan Scanner
+            </h3>
+            <div style="font-size: 0.82rem; color: var(--muted); margin-top: 2px;">
+              Auto-extracts lot details, box register, cones, weights & issue dates via Gemini Vision
+            </div>
           </div>
         </div>
         <button class="modal-close" onclick="closeAiScanModal()">&times;</button>
       </div>
 
-      <div class="modal-body" style="padding: 1.5rem 1.75rem; overflow-y: auto; max-height: calc(94vh - 140px);">
+      <div class="modal-body">
         
         <!-- STEP 1: Upload / Dropzone Screen -->
         <div id="ai-scan-step-upload">
           <div class="ai-dropzone-wrap" id="ai-dropzone" onclick="document.getElementById('ai-file-input').click()">
             <input type="file" id="ai-file-input" accept="image/*" style="display: none;" onchange="handleAiFileSelected(this.files)">
-            <div class="ai-dropzone-icon">📑</div>
-            <h3 style="font-family: var(--font-display); font-size: 1.35rem; font-weight: 800; margin-bottom: 0.45rem; color: var(--fg);">Click to Upload or Drag & Drop Issue Slip / Challan</h3>
-            <p style="color: var(--muted); font-size: 0.95rem; margin-bottom: 1.5rem; max-width: 600px; margin-left: auto; margin-right: auto;">Supports JPG, PNG, WEBP — Delivery Challans, Gate Passes, Handwritten Issue Slips, or Box Stickers</p>
-            <div style="display: inline-flex; align-items: center; gap: 0.6rem; background: var(--surface); padding: 0.6rem 1.25rem; border-radius: 999px; border: 1.5px solid var(--border); font-size: 0.88rem; font-weight: 700; color: var(--fg); box-shadow: var(--shadow-sm);">
-              <span>💡 Instant Paste:</span>
-              <span style="color: var(--muted); font-weight: 500;">Press</span>
-              <kbd style="background: var(--bg); padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid var(--border); font-family: var(--font-mono); font-weight: 700; color: var(--accent);">Ctrl + V</kbd>
-              <span style="color: var(--muted); font-weight: 500;">anywhere to paste image from clipboard</span>
+            <div class="ai-dropzone-icon">📷</div>
+            <h3 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 0.4rem; color: var(--fg);">
+              Upload or Drag & Drop Issue Slip / Challan Photo
+            </h3>
+            <p style="color: var(--muted); font-size: 0.92rem; max-width: 520px; margin: 0 auto 1.25rem auto; line-height: 1.5;">
+              Supports mobile camera photos, paper slips, handwritten registers, and PDF exports (JPG, PNG, WEBP).
+            </p>
+            <div style="display: inline-flex; gap: 0.75rem; align-items: center;">
+              <button type="button" class="btn btn-primary" style="background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); pointer-events: none;">
+                Browse Image File
+              </button>
+              <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">or press <strong>Ctrl + V</strong> to paste</span>
             </div>
           </div>
         </div>
@@ -1991,16 +2241,28 @@
             <div class="ai-review-form-card">
               <!-- Summary Card: Quality, Net Weight, Box & Cone Metrics -->
               <div class="ai-challan-summary-card">
-                <div>
-                  <div class="ai-summary-quality-title" id="ai-summary-quality-text">20/1 BRT POLY</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                    <span style="font-size: 0.78rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">Quality:</span>
+                    <input 
+                      type="text" 
+                      id="ai-summary-quality-input" 
+                      list="ai-quality-datalist" 
+                      class="ai-summary-quality-input" 
+                      placeholder="Yarn Quality Name (e.g. 80/72 Polyester DTY)"
+                      oninput="handleAiQualityChanged(this.value)"
+                      title="Extracted Yarn Quality (Click or type to edit)"
+                    >
+                    <datalist id="ai-quality-datalist"></datalist>
+                  </div>
                   <div class="ai-summary-badges-row">
-                    <span class="ai-summary-pill" id="ai-summary-boxes-pill">📦 10 Boxes</span>
-                    <span class="ai-summary-pill" id="ai-summary-weight-pill">⚖️ 240.00 kg</span>
+                    <span class="ai-summary-pill" id="ai-summary-boxes-pill">📦 0 Boxes</span>
+                    <span class="ai-summary-pill" id="ai-summary-weight-pill">⚖️ 0.00 kg</span>
                     <span class="ai-summary-pill" id="ai-summary-cones-pill">🧵 12 Cones/bx</span>
-                    <span class="ai-summary-pill" id="ai-summary-dates-pill" style="color: var(--accent); border-color: rgba(139, 92, 246, 0.3);">📅 Auto Dates</span>
+                    <span class="ai-summary-pill" id="ai-summary-dates-pill" style="color: var(--accent); border-color: rgba(139, 92, 246, 0.3);">📅 0 Dates</span>
                   </div>
                 </div>
-                <div style="text-align: right; min-width: 100px;">
+                <div style="text-align: right; min-width: 100px; flex-shrink: 0;">
                   <span class="status-badge available" style="font-size: 0.82rem; padding: 0.35rem 0.75rem;">
                     ✨ AI Verified
                   </span>
@@ -3613,12 +3875,12 @@
           base64Data = dataUrl;
         }
 
-        const prompt = `You are a high-precision OCR and data extraction system for yarn manufacturing and textile mills.
+        const prompt = `You are an expert OCR and data extraction system for yarn manufacturing and textile mills.
 Analyze this raw material delivery challan / yarn issuance register image carefully.
 
 Return ONLY a valid JSON object matching this schema:
 {
-  "quality": "Yarn Quality/Specification/Count (e.g. '20/1 BRT POLY', '80/72 Polyester DTY', '30s Combed Cotton')",
+  "quality": "The exact yarn count/quality/item name written on this challan or box register (e.g. '80/72 Polyester DTY', '30s Combed Cotton', '40/1 Viscose', '150/48 FDY', '70D Spandex'). Look across all headers, column titles, item description rows, or next to box numbers. If not explicitly found, return null (do NOT assume or default to any quality name).",
   "totalWeight": 240.0,
   "lotNumber": "Lot number or box batch prefix if visible (e.g. 'LOT-26', '26', 'M005336')",
   "challanNumber": "Challan number if visible",
@@ -3629,7 +3891,7 @@ Return ONLY a valid JSON object matching this schema:
       "boxNumber": "M005336/26",
       "cones": 12,
       "weight": 24.0,
-      "issueDate": "2026-08-16 or null if empty/blank"
+      "issueDate": "2026-08-16 or null if empty/blank in this box row"
     }
   ],
   "remarks": "Any additional notes or header labels"
@@ -3638,8 +3900,8 @@ Return ONLY a valid JSON object matching this schema:
 Extraction Rules:
 1. Extract EVERY single box row in the table with its exact box no (e.g. 'M005336/26', 'M005540/26', 'M006325/26'), number of cones (e.g. 12), net weight (e.g. 24.000), and individual issue date.
 2. IMPORTANT FOR ISSUE DATES: Note that in delivery challans or registers, only SOME boxes have an issue date written (e.g. 08-08-2026 or 16-08-2026). If a box row has NO date written (the date column or cell is empty / blank / un-dated), you MUST return "issueDate": null (or ""). DO NOT invent, assume, or copy dates to blank box rows! Convert written dates to ISO 'YYYY-MM-DD' format.
-3. Extract the yarn quality name from the top header (e.g. '20/1 BRT POLY').
-4. Extract the total weight from the header if present (e.g. 240.000).`;
+3. IMPORTANT FOR YARN QUALITY: Extract the yarn quality / count / specification from anywhere on the challan (header, item description column, table text, or watermarks). Look for standard yarn counts like 30s, 40s, 20/1, 80/72, 150/48, 70D, 40D, Cotton, Polyester, Nylon, Viscose, Spandex, DTY, FDY, Bright, BRT, etc. DO NOT invent or default to '20/1 BRT POLY' unless it is actually written in the image! If no quality name is mentioned on the image, set "quality": null.
+4. Extract the total weight, lot number, challan number, and supplier name if visible.`;
 
         const modelConfigs = [
           { id: selectedModel || 'gemini-2.0-flash', ver: 'v1beta' },
@@ -3724,18 +3986,186 @@ Extraction Rules:
       }
     }
 
+    function resolveQualityAndMatchedLot(data, rawBoxes) {
+      const aiQuality = (data && data.quality ? String(data.quality).trim() : '');
+      const rawLot = (data && data.lotNumber ? String(data.lotNumber).trim() : '');
+      const rawChallan = (data && data.challanNumber ? String(data.challanNumber).trim() : '');
+
+      const cleanLotToken = rawLot.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const cleanChallanToken = rawChallan.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const cleanQualToken = aiQuality.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+      const detectedBoxSet = new Set(rawBoxes.map(b => String(b.boxNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()).filter(Boolean));
+      const detectedBoxNums = new Set(rawBoxes.map(b => String(b.boxNumber || '').replace(/[^0-9]/g, '')).filter(Boolean));
+
+      let bestMatchLot = null;
+      let highestScore = 0;
+
+      if (Array.isArray(stockData) && stockData.length > 0) {
+        stockData.forEach(lot => {
+          let score = 0;
+          const lotNumClean = String(lot.lotNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          const challanClean = String(lot.challanNo || lot.challanNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          const qualClean = String(lot.quality || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+          // Box number overlap bonus (strongest indicator)
+          (lot.boxes || []).forEach(b => {
+            const bClean = String(b.boxNumber || b.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+            const bNum = bClean.replace(/[^0-9]/g, '');
+            if (bClean && detectedBoxSet.has(bClean)) {
+              score += 15;
+            } else if (bNum && detectedBoxNums.has(bNum) && bNum.length >= 2) {
+              score += 8;
+            }
+          });
+
+          if (cleanQualToken && qualClean && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 12;
+          if (cleanLotToken && lotNumClean && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 10;
+          if (cleanChallanToken && challanClean && (challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 8;
+
+          if (score > highestScore && score >= 8) {
+            highestScore = score;
+            bestMatchLot = lot;
+          }
+        });
+      }
+
+      // Determine quality: matched inventory lot takes priority if boxes matched, else AI quality, else first registered stock quality or fallback
+      let finalQuality = '';
+      if (bestMatchLot && bestMatchLot.quality) {
+        finalQuality = bestMatchLot.quality;
+      } else if (aiQuality && aiQuality.toLowerCase() !== 'null' && aiQuality.toLowerCase() !== 'undefined' && aiQuality.toLowerCase() !== 'none') {
+        finalQuality = aiQuality;
+      } else {
+        const firstStockLot = stockData.find(l => l && l.quality);
+        const storedQualities = getStoredYarnQualities();
+        finalQuality = firstStockLot?.quality || storedQualities[0]?.quality || storedQualities[0]?.name || 'Yarn Raw Material';
+      }
+
+      return {
+        quality: finalQuality,
+        bestMatchLot: bestMatchLot,
+        score: highestScore
+      };
+    }
+
+    function populateAiQualityDatalist() {
+      const datalist = document.getElementById('ai-quality-datalist');
+      if (!datalist) return;
+      datalist.innerHTML = '';
+
+      const uniqueQuals = new Set();
+      (stockData || []).forEach(l => {
+        if (l && l.quality) uniqueQuals.add(l.quality.trim());
+      });
+      getStoredYarnQualities().forEach(q => {
+        const name = (q.quality || q.name || '').trim();
+        if (name) uniqueQuals.add(name);
+      });
+      try {
+        const orders = JSON.parse(localStorage.getItem('yarn-rm-orders') || '[]');
+        (orders || []).forEach(o => {
+          if (o && o.quality) uniqueQuals.add(o.quality.trim());
+        });
+      } catch(e) {}
+
+      uniqueQuals.forEach(qual => {
+        const opt = document.createElement('option');
+        opt.value = qual;
+        datalist.appendChild(opt);
+      });
+    }
+
+    function populateAiMatchedLotDropdown(quality, rawLot, rawChallan, rawBoxes) {
+      const lotSelect = document.getElementById('ai-match-lot-select');
+      if (!lotSelect) return;
+
+      const totalBoxesWeight = rawBoxes.reduce((acc, b) => acc + (b.weight || 0), 0) || Number(currentAiExtractedData?.totalWeight) || 0;
+      const totalBoxesCount = rawBoxes.length;
+
+      lotSelect.innerHTML = '';
+
+      // Dynamic Option: Auto-register new lot
+      const newLotOpt = document.createElement('option');
+      newLotOpt.value = '__NEW_LOT__';
+      newLotOpt.textContent = `✨ Auto-Register / Issue New Lot: ${quality || 'New Quality'} (${totalBoxesWeight.toFixed(2)} kg - ${totalBoxesCount} boxes)`;
+      lotSelect.appendChild(newLotOpt);
+
+      let bestMatchLot = null;
+      let highestScore = 0;
+
+      if (Array.isArray(stockData) && stockData.length > 0) {
+        const cleanLotToken = (rawLot || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const cleanChallanToken = (rawChallan || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const cleanQualToken = (quality || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const detectedBoxSet = new Set(rawBoxes.map(b => (b.boxNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()).filter(Boolean));
+        const detectedBoxNums = new Set(rawBoxes.map(b => (b.boxNumber || '').replace(/[^0-9]/g, '')).filter(Boolean));
+
+        stockData.forEach(lot => {
+          const opt = document.createElement('option');
+          opt.value = lot.id;
+          const availCount = (lot.boxes || []).filter(b => b.status === 'available').length;
+          opt.textContent = `${lot.quality} — Lot: ${lot.lotNumber} | Ch: ${lot.challanNo} (${availCount} avail boxes)`;
+
+          const lotNumClean = String(lot.lotNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          const challanClean = String(lot.challanNo || lot.challanNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          const qualClean = String(lot.quality || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+          let score = 0;
+          (lot.boxes || []).forEach(b => {
+            const bClean = String(b.boxNumber || b.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+            const bNum = bClean.replace(/[^0-9]/g, '');
+            if (bClean && detectedBoxSet.has(bClean)) {
+              score += 15;
+            } else if (bNum && detectedBoxNums.has(bNum) && bNum.length >= 2) {
+              score += 8;
+            }
+          });
+
+          if (cleanQualToken && qualClean && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 12;
+          if (cleanLotToken && lotNumClean && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 10;
+          if (cleanChallanToken && challanClean && (challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 8;
+
+          if (score > highestScore && score >= 8) {
+            highestScore = score;
+            bestMatchLot = lot;
+          }
+
+          lotSelect.appendChild(opt);
+        });
+      }
+
+      if (bestMatchLot) {
+        lotSelect.value = bestMatchLot.id;
+      } else {
+        lotSelect.value = '__NEW_LOT__';
+      }
+    }
+
+    function handleAiQualityChanged(newQuality) {
+      if (currentAiExtractedData) {
+        currentAiExtractedData.quality = newQuality;
+      }
+      const rawBoxes = (currentAiExtractedData?.boxes || []).map((b, idx) => ({
+        boxNumber: String(b.boxNumber || b.boxNo || `Box-${idx + 1}`).trim(),
+        cones: Number(b.cones) || 12,
+        weight: Number(b.weight || b.netWeight) || 24.0,
+        issueDate: normalizeIsoDate(b.issueDate) || ''
+      }));
+      populateAiMatchedLotDropdown(newQuality, currentAiExtractedData?.lotNumber || '', currentAiExtractedData?.challanNumber || '', rawBoxes);
+    }
+
     function populateAiScanReview(data, dataUrl) {
       const uploadStep = document.getElementById('ai-scan-step-upload');
       const progressStep = document.getElementById('ai-scan-step-progress');
       const reviewStep = document.getElementById('ai-scan-step-review');
       const confirmBtn = document.getElementById('btn-confirm-ai-issue');
       const previewImg = document.getElementById('ai-preview-img');
-      const qualityTextEl = document.getElementById('ai-summary-quality-text');
+      const qualityInput = document.getElementById('ai-summary-quality-input');
       const boxesPillEl = document.getElementById('ai-summary-boxes-pill');
       const weightPillEl = document.getElementById('ai-summary-weight-pill');
       const conesPillEl = document.getElementById('ai-summary-cones-pill');
       const datesPillEl = document.getElementById('ai-summary-dates-pill');
-      const lotSelect = document.getElementById('ai-match-lot-select');
       const issueToInput = document.getElementById('ai-issue-to');
       const remarksInput = document.getElementById('ai-issue-remarks');
 
@@ -3746,11 +4176,9 @@ Extraction Rules:
 
       if (previewImg) previewImg.src = dataUrl;
 
-      // Extract & Normalize Fields
-      const rawQuality = (data.quality || '20/1 BRT POLY').trim();
-      const rawLot = (data.lotNumber || '').trim();
-      const rawChallan = (data.challanNumber || '').trim();
-      
+      // Populate Datalist for quality autocomplete suggestions
+      populateAiQualityDatalist();
+
       // Normalize boxes array (preserve blank dates when image has no date)
       let rawBoxes = [];
       if (Array.isArray(data.boxes) && data.boxes.length > 0) {
@@ -3769,6 +4197,16 @@ Extraction Rules:
         }));
       }
 
+      // Resolve Quality from: 1) Matched Boxes in Stock, 2) AI OCR, 3) Settings
+      const qualityResolution = resolveQualityAndMatchedLot(data, rawBoxes);
+      const resolvedQuality = qualityResolution.quality;
+      const rawLot = (data.lotNumber || (qualityResolution.bestMatchLot ? qualityResolution.bestMatchLot.lotNumber : '')).trim();
+      const rawChallan = (data.challanNumber || (qualityResolution.bestMatchLot ? qualityResolution.bestMatchLot.challanNo : '')).trim();
+
+      if (currentAiExtractedData) {
+        currentAiExtractedData.quality = resolvedQuality;
+      }
+
       const totalBoxesCount = rawBoxes.length;
       const totalBoxesWeight = rawBoxes.reduce((acc, b) => acc + (b.weight || 0), 0) || Number(data.totalWeight) || 0;
       const avgCones = rawBoxes.length > 0 ? (rawBoxes[0].cones || 12) : 12;
@@ -3776,7 +4214,7 @@ Extraction Rules:
       const datedBoxesCount = rawBoxes.filter(b => b.issueDate).length;
 
       // Update Summary Banner
-      if (qualityTextEl) qualityTextEl.textContent = rawQuality;
+      if (qualityInput) qualityInput.value = resolvedQuality;
       if (boxesPillEl) boxesPillEl.textContent = `📦 ${totalBoxesCount} Boxes`;
       if (weightPillEl) weightPillEl.textContent = `⚖️ ${totalBoxesWeight.toFixed(2)} kg`;
       if (conesPillEl) conesPillEl.textContent = `🧵 ${avgCones} Cones/bx`;
@@ -3791,60 +4229,7 @@ Extraction Rules:
       }
 
       // Populate Matched Lot Dropdown
-      if (lotSelect) {
-        lotSelect.innerHTML = '';
-        
-        // Dynamic Option: Auto-register new lot
-        const newLotOpt = document.createElement('option');
-        newLotOpt.value = '__NEW_LOT__';
-        newLotOpt.textContent = `✨ Auto-Register / Issue New Lot: ${rawQuality} (${totalBoxesWeight.toFixed(2)} kg - ${totalBoxesCount} boxes)`;
-        lotSelect.appendChild(newLotOpt);
-
-        let bestMatchLot = null;
-        let highestScore = 0;
-
-        if (Array.isArray(stockData) && stockData.length > 0) {
-          const cleanLotToken = rawLot.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-          const cleanChallanToken = rawChallan.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-          const cleanQualToken = rawQuality.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-          const detectedBoxSet = new Set(rawBoxes.map(b => b.boxNumber.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()));
-
-          stockData.forEach(lot => {
-            const opt = document.createElement('option');
-            opt.value = lot.id;
-            const availCount = (lot.boxes || []).filter(b => b.status === 'available').length;
-            opt.textContent = `${lot.quality} — Lot: ${lot.lotNumber} | Ch: ${lot.challanNo} (${availCount} avail boxes)`;
-
-            const lotNumClean = String(lot.lotNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-            const challanClean = String(lot.challanNo || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-            const qualClean = String(lot.quality || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-
-            let score = 0;
-            if (cleanQualToken && (qualClean.includes(cleanQualToken) || cleanQualToken.includes(qualClean))) score += 15;
-            if (cleanLotToken && (lotNumClean.includes(cleanLotToken) || cleanLotToken.includes(lotNumClean))) score += 12;
-            if (cleanChallanToken && (challanClean.includes(cleanChallanToken) || cleanChallanToken.includes(challanClean))) score += 8;
-
-            // Box number overlap bonus
-            (lot.boxes || []).forEach(b => {
-              const bClean = String(b.boxNumber || b.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-              if (detectedBoxSet.has(bClean)) score += 5;
-            });
-
-            if (score > highestScore && score >= 15) {
-              highestScore = score;
-              bestMatchLot = lot;
-            }
-
-            lotSelect.appendChild(opt);
-          });
-        }
-
-        if (bestMatchLot) {
-          lotSelect.value = bestMatchLot.id;
-        } else {
-          lotSelect.value = '__NEW_LOT__';
-        }
-      }
+      populateAiMatchedLotDropdown(resolvedQuality, rawLot, rawChallan, rawBoxes);
 
       // Pre-fill Issued To (Map to exact departments in +issue box: TFO, Doubler, Covering, MX)
       if (issueToInput) {
@@ -4209,7 +4594,8 @@ Extraction Rules:
       }
 
       const nowIso = new Date().toISOString();
-      const rawQuality = currentAiExtractedData?.quality || '20/1 BRT POLY';
+      const qualityInput = document.getElementById('ai-summary-quality-input');
+      const rawQuality = (qualityInput ? qualityInput.value.trim() : '') || currentAiExtractedData?.quality || 'Yarn Raw Material';
       let targetLot = null;
       const boxUids = [];
       let issuedCount = 0;
@@ -4220,7 +4606,13 @@ Extraction Rules:
         const challanNo = currentAiExtractedData?.challanNumber || `CH-${Date.now().toString().slice(-4)}`;
         const lotNumber = currentAiExtractedData?.lotNumber || `LOT-${Date.now().toString().slice(-4)}`;
         const supplier = currentAiExtractedData?.supplier || 'Mill Supplier';
-        const itemType = rawQuality.toLowerCase().includes('poly') ? 'Polyester' : (rawQuality.toLowerCase().includes('nylon') ? 'Nylon' : 'Viscose');
+        
+        let itemType = 'Polyester';
+        const qLower = rawQuality.toLowerCase();
+        if (qLower.includes('nylon')) itemType = 'Nylon';
+        else if (qLower.includes('viscose') || qLower.includes('cotton')) itemType = 'Viscose';
+        else if (qLower.includes('spandex') || qLower.includes('lycra')) itemType = 'Spandex';
+        else if (qLower.includes('poly')) itemType = 'Polyester';
         
         const newBoxes = allRows.map(r => {
           if (r.isChecked) {
