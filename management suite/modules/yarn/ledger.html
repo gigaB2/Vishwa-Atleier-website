@@ -5425,7 +5425,7 @@
           const retRemarks = ob?.returnedRemarks || ob?.grRemarks || sb?.grRemarks || sb?.returnedRemarks || '';
 
           const wasIssued = Boolean((sb?.status === 'issued' || ob?.status === 'issued' || sb?.issueDate || ob?.issueDate || sb?.previousIssueDate || ob?.previousIssueDate) && !sb?.unissued_at && !ob?.unissued_at);
-          const isFullyGr = (ob?.status === 'gr' || sb?.status === 'gr') || (gw >= bw && bw > 0);
+          const isFullyGr = (gw >= bw && bw > 0) || ((ob?.status === 'gr' || sb?.status === 'gr') && (gw === 0 || gw >= bw));
 
           let st = 'available';
           let issDate = null;

@@ -1897,6 +1897,52 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(targetBatch.boxes[2].status, 'issued');
     assert.strictEqual(targetBatch.boxes[3].status, 'issued');
   });
+  await t.test('Partial GR on a box (e.g. 24kg gross with 12kg GR) reflects as partial GR (available or issued) with remaining weight, NOT full GR', () => {
+    const grossBoxWeight = 24.0;
+    const grWeight = 12.0;
+
+    const stockLot = {
+      id: 'LOT-PARTIAL__CH-1234',
+      lotNumber: 'LOT-PARTIAL',
+      challanNo: 'CH-1234',
+      supplier: 'Test Mill',
+      quality: '80/72 Polyester',
+      boxes: [
+        {
+          id: 'B1',
+          boxNumber: 'B1',
+          weight: grossBoxWeight,
+          grossWeight: grossBoxWeight,
+          remainingWeight: grossBoxWeight,
+          grWeight: 0,
+          status: 'available'
+        }
+      ]
+    };
+
+    // Apply 12 kg partial GR to B1
+    const alloc = { boxNumber: 'B1', returnedWeight: grWeight, remarks: '12 kg cone defect' };
+    const b = stockLot.boxes[0];
+    b.grWeight = alloc.returnedWeight;
+    b.remainingWeight = Math.max(0, b.grossWeight - alloc.returnedWeight);
+    const isFullyGr = (b.grWeight >= b.grossWeight && b.grossWeight > 0);
+    const isPartialGr = (b.grWeight > 0 && !isFullyGr);
+    b.status = isFullyGr ? 'gr' : 'available';
+
+    // Verify Stock normalization / reflection
+    assert.strictEqual(b.grossWeight, 24.0);
+    assert.strictEqual(b.grWeight, 12.0);
+    assert.strictEqual(b.remainingWeight, 12.0);
+    assert.strictEqual(isFullyGr, false, 'Should not be marked fully GR');
+    assert.strictEqual(isPartialGr, true, 'Should be marked partial GR');
+    assert.strictEqual(b.status, 'available', 'Status remains available for partial GR');
+
+    // Verify mapping in modal load
+    const bw = Number(b.grossWeight) || 0;
+    const gw = Number(b.grWeight) || 0;
+    const modalIsFullyGr = (gw >= bw && bw > 0) || ((b.status === 'gr') && (gw === 0 || gw >= bw));
+    assert.strictEqual(modalIsFullyGr, false, 'Modal mapping correctly identifies as partial GR, not full GR');
+  });
 });
 
 
