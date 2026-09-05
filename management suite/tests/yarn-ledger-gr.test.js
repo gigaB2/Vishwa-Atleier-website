@@ -1943,6 +1943,75 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     const modalIsFullyGr = (gw >= bw && bw > 0) || ((b.status === 'gr') && (gw === 0 || gw >= bw));
     assert.strictEqual(modalIsFullyGr, false, 'Modal mapping correctly identifies as partial GR, not full GR');
   });
+
+  test('Legacy database partial GR box with status: "gr" is correctly normalized as partial GR, not full GR', () => {
+    // Simulate legacy box stored in database/localStorage with status: 'gr' from older buggy code
+    const legacyBox1 = {
+      id: 'B1',
+      boxNumber: 'B1',
+      cones: 24,
+      grossWeight: 24.0,
+      weight: 12.0,
+      remainingWeight: 12.0,
+      grWeight: 12.0,
+      status: 'gr' // Legacy saved state
+    };
+
+    const grWeight = parseFloat(legacyBox1.grWeight || legacyBox1.returnedWeight) || 0;
+    const rawWeight = parseFloat(legacyBox1.weight) || 0;
+    const grossCandidates = [
+      parseFloat(legacyBox1.grossWeight) || 0,
+      rawWeight,
+      legacyBox1.remainingWeight !== undefined ? (parseFloat(legacyBox1.remainingWeight) + grWeight) : 0
+    ];
+    if (grWeight > 0 && rawWeight > 0 && rawWeight !== grWeight) {
+      grossCandidates.push(rawWeight + grWeight);
+    }
+    const actualGross = Math.max(...grossCandidates, grWeight);
+
+    const remainingWeight = (legacyBox1.remainingWeight !== undefined && parseFloat(legacyBox1.remainingWeight) >= 0 && (parseFloat(legacyBox1.remainingWeight) > 0 || grWeight >= actualGross))
+      ? parseFloat(legacyBox1.remainingWeight)
+      : Math.max(0, Number((actualGross - grWeight).toFixed(2)));
+
+    const isFullyGr = (grWeight > 0 && grWeight >= actualGross - 0.001 && actualGross > 0) || 
+      (legacyBox1.status === 'gr' && (grWeight === 0 || grWeight >= actualGross - 0.001) && remainingWeight <= 0);
+    const isPartialGr = grWeight > 0 && !isFullyGr;
+
+    assert.strictEqual(actualGross, 24.0, 'Gross weight correctly resolved to 24.0');
+    assert.strictEqual(remainingWeight, 12.0, 'Remaining weight correctly resolved to 12.0');
+    assert.strictEqual(isFullyGr, false, 'Should not be full GR');
+    assert.strictEqual(isPartialGr, true, 'Should be partial GR');
+
+    // Test box without explicit grossWeight but with remainingWeight
+    const legacyBox2 = {
+      id: 'B2',
+      boxNumber: 'B2',
+      cones: 24,
+      weight: 12.0,
+      remainingWeight: 12.0,
+      grWeight: 12.0,
+      status: 'gr'
+    };
+    const gr2 = parseFloat(legacyBox2.grWeight) || 0;
+    const raw2 = parseFloat(legacyBox2.weight) || 0;
+    const grossCandidates2 = [
+      parseFloat(legacyBox2.grossWeight) || 0,
+      raw2,
+      legacyBox2.remainingWeight !== undefined ? (parseFloat(legacyBox2.remainingWeight) + gr2) : 0
+    ];
+    const actualGross2 = Math.max(...grossCandidates2, gr2);
+    const rem2 = (legacyBox2.remainingWeight !== undefined && parseFloat(legacyBox2.remainingWeight) >= 0)
+      ? parseFloat(legacyBox2.remainingWeight)
+      : Math.max(0, actualGross2 - gr2);
+    const isFullyGr2 = (gr2 > 0 && gr2 >= actualGross2 - 0.001 && actualGross2 > 0) || 
+      (legacyBox2.status === 'gr' && (gr2 === 0 || gr2 >= actualGross2 - 0.001) && rem2 <= 0);
+    const isPartialGr2 = gr2 > 0 && !isFullyGr2;
+
+    assert.strictEqual(actualGross2, 24.0, 'Gross weight correctly derived as 12 + 12 = 24.0');
+    assert.strictEqual(rem2, 12.0, 'Remaining weight correctly resolved to 12.0');
+    assert.strictEqual(isFullyGr2, false, 'Should not be full GR');
+    assert.strictEqual(isPartialGr2, true, 'Should be partial GR');
+  });
 });
 
 

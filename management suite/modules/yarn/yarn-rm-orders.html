@@ -1557,11 +1557,6 @@
 
               const boxes = (batch.boxes || []).map((bx, idx) => {
                 const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
-                const grossWt = Number(bx.weight) || 0;
-                const retWt = Number(bx.returnedWeight) || 0;
-                const remWt = Math.max(0, grossWt - retWt);
-                const isFullyGr = retWt >= grossWt && grossWt > 0;
-                const isPartialGr = retWt > 0 && !isFullyGr;
 
                 const oldB = existingBoxMap.get(`${lotIdVal}__${bId}`) || 
                              (batch.id ? existingBoxMap.get(`${batch.id}__${bId}`) : null) ||
@@ -1569,71 +1564,101 @@
                              (batchLot ? existingBoxMap.get(`${batchLot}__${bId}`) : null) ||
                              (existingLot && Array.isArray(existingLot.boxes) ? existingLot.boxes.find(x => String(x.id || x.boxNumber).trim() === bId) : null);
 
-                  const prevIssueDate = bx.previousIssueDate || oldB?.previousIssueDate || (oldB?.status === 'issued' ? oldB.issueDate : (bx.status === 'issued' ? bx.issueDate : null));
-                  const prevIssuedTo = bx.previousIssuedTo || oldB?.previousIssuedTo || (oldB?.status === 'issued' ? oldB.issuedTo : (bx.status === 'issued' ? bx.issuedTo : null));
+                const retWt = Number(bx.returnedWeight || bx.grWeight || oldB?.grWeight || oldB?.returnedWeight || 0);
 
-                  let isIssued = false;
-                  let issueDate = null;
-                  let issuedTo = null;
-                  let updatedAt = oldB?.updated_at || bx.updated_at || null;
-                  let unissuedAt = oldB?.unissued_at || bx.unissued_at || null;
+                const grossCandidates = [
+                  Number(bx.grossWeight || 0),
+                  Number(oldB?.grossWeight || 0),
+                  Number(bx.weight || 0),
+                  Number(oldB?.weight || 0),
+                  bx.remainingWeight !== undefined ? (Number(bx.remainingWeight) + retWt) : 0,
+                  oldB?.remainingWeight !== undefined ? (Number(oldB.remainingWeight) + retWt) : 0
+                ];
+                if (retWt > 0) {
+                  if (Number(bx.weight || 0) > 0 && Number(bx.weight || 0) !== retWt) {
+                    grossCandidates.push(Number(bx.weight) + retWt);
+                  }
+                  if (Number(oldB?.weight || 0) > 0 && Number(oldB?.weight || 0) !== retWt) {
+                    grossCandidates.push(Number(oldB.weight) + retWt);
+                  }
+                }
+                const grossWt = Math.max(...grossCandidates, retWt, 0);
 
-                  if (oldB && oldB.status === 'issued' && bx.status === 'issued') {
+                const remWt = (bx.remainingWeight !== undefined && Number(bx.remainingWeight) >= 0 && (Number(bx.remainingWeight) > 0 || retWt >= grossWt))
+                  ? Number(bx.remainingWeight)
+                  : (oldB?.remainingWeight !== undefined && Number(oldB.remainingWeight) >= 0 && (Number(oldB.remainingWeight) > 0 || retWt >= grossWt))
+                    ? Number(oldB.remainingWeight)
+                    : Math.max(0, Number((grossWt - retWt).toFixed(2)));
+
+                const isFullyGr = (retWt > 0 && retWt >= grossWt - 0.001 && grossWt > 0) || 
+                  ((bx.status === 'gr' || oldB?.status === 'gr') && (retWt === 0 || retWt >= grossWt - 0.001) && remWt <= 0);
+                const isPartialGr = retWt > 0 && !isFullyGr;
+
+                const prevIssueDate = bx.previousIssueDate || oldB?.previousIssueDate || (oldB?.status === 'issued' ? oldB.issueDate : (bx.status === 'issued' ? bx.issueDate : null));
+                const prevIssuedTo = bx.previousIssuedTo || oldB?.previousIssuedTo || (oldB?.status === 'issued' ? oldB.issuedTo : (bx.status === 'issued' ? bx.issuedTo : null));
+
+                let isIssued = false;
+                let issueDate = null;
+                let issuedTo = null;
+                let updatedAt = oldB?.updated_at || bx.updated_at || null;
+                let unissuedAt = oldB?.unissued_at || bx.unissued_at || null;
+
+                if (oldB && oldB.status === 'issued' && bx.status === 'issued') {
+                  isIssued = true;
+                  issueDate = oldB.issueDate || bx.issueDate || prevIssueDate;
+                  issuedTo = oldB.issuedTo || bx.issuedTo || prevIssuedTo;
+                } else if (oldB && oldB.status === 'issued' && bx.status !== 'issued') {
+                  const oldBTime = Math.max(oldB.updated_at ? new Date(oldB.updated_at).getTime() : 0, oldB.issueDate ? new Date(oldB.issueDate).getTime() : 0);
+                  const bxUnissueTime = bx.unissued_at ? new Date(bx.unissued_at).getTime() : 0;
+                  if (bxUnissueTime > 0 && bxUnissueTime >= oldBTime) {
+                    isIssued = false;
+                  } else {
                     isIssued = true;
-                    issueDate = oldB.issueDate || bx.issueDate || prevIssueDate;
-                    issuedTo = oldB.issuedTo || bx.issuedTo || prevIssuedTo;
-                  } else if (oldB && oldB.status === 'issued' && bx.status !== 'issued') {
-                    const oldBTime = Math.max(oldB.updated_at ? new Date(oldB.updated_at).getTime() : 0, oldB.issueDate ? new Date(oldB.issueDate).getTime() : 0);
-                    const bxUnissueTime = bx.unissued_at ? new Date(bx.unissued_at).getTime() : 0;
-                    if (bxUnissueTime > 0 && bxUnissueTime >= oldBTime) {
-                      isIssued = false;
-                    } else {
-                      isIssued = true;
-                      issueDate = oldB.issueDate || prevIssueDate;
-                      issuedTo = oldB.issuedTo || prevIssuedTo;
-                    }
-                  } else if (bx.status === 'issued' && (!oldB || oldB.status !== 'issued')) {
-                    const bxIssueTime = Math.max(bx.updated_at ? new Date(bx.updated_at).getTime() : 0, bx.issueDate ? new Date(bx.issueDate).getTime() : 0);
-                    const oldBUnissueTime = oldB?.unissued_at ? new Date(oldB.unissued_at).getTime() : 0;
-                    if (oldBUnissueTime > 0 && oldBUnissueTime >= bxIssueTime) {
-                      isIssued = false;
-                    } else {
-                      isIssued = true;
-                      issueDate = bx.issueDate || prevIssueDate;
-                      issuedTo = bx.issuedTo || prevIssuedTo;
-                    }
-                  } else if (!isFullyGr && (prevIssueDate || prevIssuedTo)) {
-                    const issueTime = prevIssueDate ? new Date(prevIssueDate).getTime() : 0;
-                    const unissueTime = unissuedAt ? new Date(unissuedAt).getTime() : 0;
-                    if (unissueTime <= issueTime || !unissuedAt) {
-                      isIssued = true;
-                      issueDate = prevIssueDate;
-                      issuedTo = prevIssuedTo || 'Department';
-                    } else {
-                      isIssued = false;
-                    }
+                    issueDate = oldB.issueDate || prevIssueDate;
+                    issuedTo = oldB.issuedTo || prevIssuedTo;
+                  }
+                } else if (bx.status === 'issued' && (!oldB || oldB.status !== 'issued')) {
+                  const bxIssueTime = Math.max(bx.updated_at ? new Date(bx.updated_at).getTime() : 0, bx.issueDate ? new Date(bx.issueDate).getTime() : 0);
+                  const oldBUnissueTime = oldB?.unissued_at ? new Date(oldB.unissued_at).getTime() : 0;
+                  if (oldBUnissueTime > 0 && oldBUnissueTime >= bxIssueTime) {
+                    isIssued = false;
+                  } else {
+                    isIssued = true;
+                    issueDate = bx.issueDate || prevIssueDate;
+                    issuedTo = bx.issuedTo || prevIssuedTo;
+                  }
+                } else if (!isFullyGr && (prevIssueDate || prevIssuedTo)) {
+                  const issueTime = prevIssueDate ? new Date(prevIssueDate).getTime() : 0;
+                  const unissueTime = unissuedAt ? new Date(unissuedAt).getTime() : 0;
+                  if (unissueTime <= issueTime || !unissuedAt) {
+                    isIssued = true;
+                    issueDate = prevIssueDate;
+                    issuedTo = prevIssuedTo || 'Department';
                   } else {
                     isIssued = false;
                   }
+                } else {
+                  isIssued = false;
+                }
 
-                  return {
-                    id: bId,
-                    boxNumber: bId,
-                    cones: Number(bx.cones) || (oldB?.cones || 0),
-                    grossWeight: grossWt,
-                    remainingWeight: remWt,
-                    weight: isFullyGr ? grossWt : remWt,
-                    status: isFullyGr ? 'gr' : (isIssued ? 'issued' : 'available'),
-                    issueDate: isFullyGr ? null : (isIssued ? issueDate : null),
-                    issuedTo: isFullyGr ? null : (isIssued ? issuedTo : null),
-                    previousIssueDate: prevIssueDate,
-                    previousIssuedTo: prevIssuedTo,
-                    updated_at: updatedAt,
-                    unissued_at: isIssued ? null : unissuedAt,
-                    grWeight: retWt,
-                    grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
-                    grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(2)} kg)` : null)
-                  };
+                return {
+                  id: bId,
+                  boxNumber: bId,
+                  cones: Number(bx.cones) || (oldB?.cones || 0),
+                  grossWeight: grossWt,
+                  remainingWeight: remWt,
+                  weight: isFullyGr ? grossWt : remWt,
+                  status: isFullyGr ? 'gr' : (isIssued ? 'issued' : 'available'),
+                  issueDate: isFullyGr ? null : (isIssued ? issueDate : null),
+                  issuedTo: isFullyGr ? null : (isIssued ? issuedTo : null),
+                  previousIssueDate: prevIssueDate,
+                  previousIssuedTo: prevIssuedTo,
+                  updated_at: updatedAt,
+                  unissued_at: isIssued ? null : unissuedAt,
+                  grWeight: retWt,
+                  grDate: retWt > 0 ? (bx.returnedDate ? bx.returnedDate.split('T')[0] : (oldB?.grDate || '')) : null,
+                  grRemarks: isFullyGr ? 'Fully Returned in Challan GR' : (isPartialGr ? `Partial GR (-${retWt.toFixed(2)} kg)` : null)
+                };
               });
 
               if (boxes.length > 0) {
@@ -3128,9 +3153,31 @@
         const processedBoxes = (batchData.boxes || []).map(box => {
           const bNum = String(box.boxNumber || box.id).trim();
           const oldBx = existingBatchBoxesMap.get(bNum);
-          const grossWt = Number(box.weight) || 0;
-          const retWt = Number(box.returnedWeight) || 0;
-          const isFullyGr = retWt >= grossWt && grossWt > 0;
+          const retWt = Number(box.returnedWeight || box.grWeight || oldBx?.returnedWeight || oldBx?.grWeight || 0);
+
+          const grossCandidates = [
+            Number(box.grossWeight || 0),
+            Number(oldBx?.grossWeight || 0),
+            Number(box.weight || 0),
+            Number(oldBx?.weight || 0),
+            box.remainingWeight !== undefined ? (Number(box.remainingWeight) + retWt) : 0,
+            oldBx?.remainingWeight !== undefined ? (Number(oldBx.remainingWeight) + retWt) : 0
+          ];
+          if (retWt > 0) {
+            if (Number(box.weight || 0) > 0 && Number(box.weight || 0) !== retWt) grossCandidates.push(Number(box.weight) + retWt);
+            if (Number(oldBx?.weight || 0) > 0 && Number(oldBx?.weight || 0) !== retWt) grossCandidates.push(Number(oldBx.weight) + retWt);
+          }
+          const grossWt = Math.max(...grossCandidates, retWt, 0);
+
+          const remWt = (box.remainingWeight !== undefined && Number(box.remainingWeight) >= 0 && (Number(box.remainingWeight) > 0 || retWt >= grossWt))
+            ? Number(box.remainingWeight)
+            : (oldBx?.remainingWeight !== undefined && Number(oldBx.remainingWeight) >= 0 && (Number(oldBx.remainingWeight) > 0 || retWt >= grossWt))
+              ? Number(oldBx.remainingWeight)
+              : Math.max(0, Number((grossWt - retWt).toFixed(2)));
+
+          const isFullyGr = (retWt > 0 && retWt >= grossWt - 0.001 && grossWt > 0) || 
+            ((box.status === 'gr' || oldBx?.status === 'gr') && (retWt === 0 || retWt >= grossWt - 0.001) && remWt <= 0);
+
           const prevIssueDate = box.previousIssueDate || oldBx?.previousIssueDate || (oldBx?.status === 'issued' ? oldBx.issueDate : null);
           const prevIssuedTo = box.previousIssuedTo || oldBx?.previousIssuedTo || (oldBx?.status === 'issued' ? oldBx.issuedTo : null);
           const wasIssued = Boolean((oldBx?.status === 'issued' || prevIssueDate) && !oldBx?.unissued_at);
@@ -3149,6 +3196,9 @@
 
           return {
             ...box,
+            grossWeight: grossWt,
+            remainingWeight: remWt,
+            weight: isFullyGr ? grossWt : remWt,
             status: status,
             issueDate: issueDate,
             issuedTo: issuedTo,
@@ -3193,10 +3243,12 @@
             orderRef: order.orderNumber || order.id,
             boxes: (processedBoxes || []).map((bx, idx) => {
               const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
-              const grossWt = Number(bx.weight) || 0;
-              const retWt = Number(bx.returnedWeight) || 0;
-              const remWt = Math.max(0, grossWt - retWt);
-              const isFullyGr = retWt >= grossWt && grossWt > 0;
+              const grossWt = Number(bx.grossWeight || bx.weight) || 0;
+              const retWt = Number(bx.returnedWeight || bx.grWeight) || 0;
+              const remWt = (bx.remainingWeight !== undefined && Number(bx.remainingWeight) >= 0 && (Number(bx.remainingWeight) > 0 || retWt >= grossWt))
+                ? Number(bx.remainingWeight)
+                : Math.max(0, Number((grossWt - retWt).toFixed(2)));
+              const isFullyGr = (retWt > 0 && retWt >= grossWt - 0.001 && grossWt > 0) || (bx.status === 'gr' && (retWt === 0 || retWt >= grossWt - 0.001) && remWt <= 0);
               const isPartialGr = retWt > 0 && !isFullyGr;
               const prevIssueDate = bx.previousIssueDate || null;
               const prevIssuedTo = bx.previousIssuedTo || null;
@@ -3226,13 +3278,19 @@
             stockLot.boxes = stockLot.boxes.map(b => {
               const oldB = existingBoxMap.get(String(b.id));
               if (!oldB) return b;
-              const isFullyGr = (b.grWeight || 0) >= (b.grossWeight || b.weight) && (b.grossWeight || b.weight) > 0;
+              const gross = Number(b.grossWeight || oldB.grossWeight || b.weight || 0);
+              const gr = Number(b.grWeight || oldB.grWeight || 0);
+              const rem = (b.remainingWeight !== undefined ? Number(b.remainingWeight) : (oldB.remainingWeight !== undefined ? Number(oldB.remainingWeight) : Math.max(0, gross - gr)));
+              const isFullyGr = (gr > 0 && gr >= gross - 0.001 && gross > 0) || (b.status === 'gr' && (gr === 0 || gr >= gross - 0.001) && rem <= 0);
               const prevIssueDate = b.previousIssueDate || oldB.previousIssueDate || (oldB.status === 'issued' ? oldB.issueDate : null);
               const prevIssuedTo = b.previousIssuedTo || oldB.previousIssuedTo || (oldB.status === 'issued' ? oldB.issuedTo : null);
 
               if (isFullyGr) {
                 return {
                   ...b,
+                  grossWeight: gross,
+                  remainingWeight: 0,
+                  weight: gross,
                   status: 'gr',
                   issueDate: null,
                   issuedTo: null,
@@ -3244,6 +3302,9 @@
               if (oldB.status === 'issued' || (!oldB.unissued_at && (prevIssueDate || prevIssuedTo))) {
                 return {
                   ...b,
+                  grossWeight: gross,
+                  remainingWeight: rem,
+                  weight: rem,
                   status: 'issued',
                   issueDate: oldB.issueDate || prevIssueDate,
                   issuedTo: oldB.issuedTo || prevIssuedTo || 'Department',
@@ -3253,6 +3314,12 @@
               }
               return {
                 ...b,
+                grossWeight: gross,
+                remainingWeight: rem,
+                weight: rem,
+                status: 'available',
+                issueDate: null,
+                issuedTo: null,
                 previousIssueDate: prevIssueDate,
                 previousIssuedTo: prevIssuedTo
               };

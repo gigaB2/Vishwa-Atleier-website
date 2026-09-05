@@ -588,12 +588,38 @@
           const prevIssueDate = incBox.previousIssueDate || curBox.previousIssueDate || (incBox.status === 'issued' ? incBox.issueDate : (curBox.status === 'issued' ? curBox.issueDate : null));
           const prevIssuedTo = incBox.previousIssuedTo || curBox.previousIssuedTo || (incBox.status === 'issued' ? incBox.issuedTo : (curBox.status === 'issued' ? curBox.issuedTo : null));
 
-          const isWinnerGr = (winner.status === 'gr') || (winner.grWeight > 0 && winner.grWeight >= (winner.grossWeight || winner.weight || 1));
+          const winnerRet = Math.max(Number(curBox.grWeight || curBox.returnedWeight || 0), Number(incBox.grWeight || incBox.returnedWeight || 0), Number(winner.grWeight || winner.returnedWeight || 0));
+          const grossCandidates = [
+            Number(curBox.grossWeight || 0),
+            Number(incBox.grossWeight || 0),
+            Number(winner.grossWeight || 0),
+            Number(curBox.weight || 0),
+            Number(incBox.weight || 0),
+            Number(winner.weight || 0),
+            curBox.remainingWeight !== undefined ? (Number(curBox.remainingWeight) + winnerRet) : 0,
+            incBox.remainingWeight !== undefined ? (Number(incBox.remainingWeight) + winnerRet) : 0,
+            winner.remainingWeight !== undefined ? (Number(winner.remainingWeight) + winnerRet) : 0
+          ];
+          if (winnerRet > 0) {
+            if (Number(curBox.weight || 0) > 0 && Number(curBox.weight || 0) !== winnerRet) grossCandidates.push(Number(curBox.weight) + winnerRet);
+            if (Number(incBox.weight || 0) > 0 && Number(incBox.weight || 0) !== winnerRet) grossCandidates.push(Number(incBox.weight) + winnerRet);
+            if (Number(winner.weight || 0) > 0 && Number(winner.weight || 0) !== winnerRet) grossCandidates.push(Number(winner.weight) + winnerRet);
+          }
+          const winnerGross = Math.max(...grossCandidates, winnerRet, 1);
+          const winnerRem = (winner.remainingWeight !== undefined && Number(winner.remainingWeight) >= 0 && (Number(winner.remainingWeight) > 0 || winnerRet >= winnerGross))
+            ? Number(winner.remainingWeight)
+            : Math.max(0, Number((winnerGross - winnerRet).toFixed(2)));
+
+          const isWinnerGr = (winnerRet > 0 && winnerRet >= winnerGross - 0.001 && winnerGross > 0) || 
+            (winner.status === 'gr' && (winnerRet === 0 || winnerRet >= winnerGross - 0.001) && winnerRem <= 0);
 
           if (isWinnerGr) {
             boxMap.set(bId, {
               ...loser,
               ...winner,
+              grossWeight: winnerGross,
+              remainingWeight: 0,
+              weight: winnerGross,
               status: 'gr',
               issueDate: null,
               issuedTo: null,
@@ -863,12 +889,38 @@
                 const prevIssueDate = locBx.previousIssueDate || remBx.previousIssueDate || (locBx.status === 'issued' ? locBx.issueDate : (remBx.status === 'issued' ? remBx.issueDate : null));
                 const prevIssuedTo = locBx.previousIssuedTo || remBx.previousIssuedTo || (locBx.status === 'issued' ? locBx.issuedTo : (remBx.status === 'issued' ? remBx.issuedTo : null));
 
-                const isWinnerGr = (winner.status === 'gr') || (Number(winner.returnedWeight) > 0 && Number(winner.returnedWeight) >= (Number(winner.weight) || 1));
+                const winnerRet = Math.max(Number(locBx.returnedWeight || locBx.grWeight || 0), Number(remBx.returnedWeight || remBx.grWeight || 0), Number(winner.returnedWeight || winner.grWeight || 0));
+                const grossCandidates = [
+                  Number(locBx.grossWeight || 0),
+                  Number(remBx.grossWeight || 0),
+                  Number(winner.grossWeight || 0),
+                  Number(locBx.weight || 0),
+                  Number(remBx.weight || 0),
+                  Number(winner.weight || 0),
+                  locBx.remainingWeight !== undefined ? (Number(locBx.remainingWeight) + winnerRet) : 0,
+                  remBx.remainingWeight !== undefined ? (Number(remBx.remainingWeight) + winnerRet) : 0,
+                  winner.remainingWeight !== undefined ? (Number(winner.remainingWeight) + winnerRet) : 0
+                ];
+                if (winnerRet > 0) {
+                  if (Number(locBx.weight || 0) > 0 && Number(locBx.weight || 0) !== winnerRet) grossCandidates.push(Number(locBx.weight) + winnerRet);
+                  if (Number(remBx.weight || 0) > 0 && Number(remBx.weight || 0) !== winnerRet) grossCandidates.push(Number(remBx.weight) + winnerRet);
+                  if (Number(winner.weight || 0) > 0 && Number(winner.weight || 0) !== winnerRet) grossCandidates.push(Number(winner.weight) + winnerRet);
+                }
+                const winnerGross = Math.max(...grossCandidates, winnerRet, 1);
+                const winnerRem = (winner.remainingWeight !== undefined && Number(winner.remainingWeight) >= 0 && (Number(winner.remainingWeight) > 0 || winnerRet >= winnerGross))
+                  ? Number(winner.remainingWeight)
+                  : Math.max(0, Number((winnerGross - winnerRet).toFixed(2)));
+
+                const isWinnerGr = (winnerRet > 0 && winnerRet >= winnerGross - 0.001 && winnerGross > 0) || 
+                  (winner.status === 'gr' && (winnerRet === 0 || winnerRet >= winnerGross - 0.001) && winnerRem <= 0);
 
                 if (isWinnerGr) {
                   bBoxMap.set(bxId, {
                     ...loser,
                     ...winner,
+                    grossWeight: winnerGross,
+                    remainingWeight: 0,
+                    weight: winnerGross,
                     status: 'gr',
                     issueDate: null,
                     issuedTo: null,

@@ -2587,15 +2587,25 @@
       const boxes = Array.isArray(lot.boxes) ? lot.boxes.map((b, bIdx) => {
         const boxId = String(b.id || b.boxNumber || `B${bIdx + 1}`).trim();
         const cones = parseInt(b.cones, 10) || 0;
-        const grWeight = parseFloat(b.grWeight || b.returnedWeight) || 0;
+        const grWeight = parseFloat(b.grWeight || b.returnedWeight || b.grQty || b.returnedQty) || 0;
         const rawWeight = parseFloat(b.weight) || parseFloat(lot.boxWeight) || 0;
-        const grossWeight = parseFloat(b.grossWeight) || (b.remainingWeight !== undefined ? (parseFloat(b.remainingWeight) + grWeight) : (rawWeight + (b.status !== 'gr' && grWeight > 0 ? grWeight : 0))) || rawWeight;
-        const actualGross = Math.max(grossWeight, rawWeight, grWeight);
-        const remainingWeight = b.remainingWeight !== undefined 
-          ? parseFloat(b.remainingWeight) 
-          : Math.max(0, actualGross - grWeight);
 
-        const isFullyGr = (b.status === 'gr') || (grWeight > 0 && grWeight >= actualGross && actualGross > 0);
+        const grossCandidates = [
+          parseFloat(b.grossWeight) || 0,
+          rawWeight,
+          b.remainingWeight !== undefined ? (parseFloat(b.remainingWeight) + grWeight) : 0
+        ];
+        if (grWeight > 0 && rawWeight > 0 && rawWeight !== grWeight) {
+          grossCandidates.push(rawWeight + grWeight);
+        }
+        const actualGross = Math.max(...grossCandidates, grWeight);
+
+        const remainingWeight = (b.remainingWeight !== undefined && parseFloat(b.remainingWeight) >= 0 && (parseFloat(b.remainingWeight) > 0 || grWeight >= actualGross))
+          ? parseFloat(b.remainingWeight)
+          : Math.max(0, Number((actualGross - grWeight).toFixed(2)));
+
+        const isFullyGr = (grWeight > 0 && grWeight >= actualGross - 0.001 && actualGross > 0) || 
+          (b.status === 'gr' && (grWeight === 0 || grWeight >= actualGross - 0.001) && remainingWeight <= 0);
         const isPartialGr = grWeight > 0 && !isFullyGr;
 
         const prevIssueDate = b.previousIssueDate || (b.status === 'issued' ? b.issueDate : null);
@@ -2636,7 +2646,7 @@
           previousIssueDate: prevIssueDate,
           previousIssuedTo: prevIssuedTo,
           grDate: grWeight > 0 ? (b.grDate || b.returnedDate || null) : null,
-          grRemarks: isFullyGr ? (b.grRemarks || 'Fully Returned in Challan GR') : (isPartialGr ? `Partial GR (-${grWeight.toFixed(2)} kg)` : null),
+          grRemarks: isFullyGr ? (b.grRemarks || 'Fully Returned in Challan GR') : (isPartialGr ? (b.grRemarks && b.grRemarks.startsWith('Partial') ? b.grRemarks : `Partial GR (-${grWeight.toFixed(2)} kg)`) : null),
           grWeight: grWeight
         };
       }) : [];
@@ -2801,17 +2811,42 @@
 
                 const boxes = (batch.boxes || []).map((bx, idx) => {
                   const bId = String(bx.boxNumber || `B${idx + 1}`).trim();
-                  const grossWt = Number(bx.weight) || 0;
-                  const retWt = Number(bx.returnedWeight) || 0;
-                  const remWt = Math.max(0, grossWt - retWt);
-                  const isFullyGr = retWt >= grossWt && grossWt > 0;
-                  const isPartialGr = retWt > 0 && !isFullyGr;
 
                   const oldB = existingBoxMap.get(`${lotIdVal}__${bId}`) || 
                                (batch.id ? existingBoxMap.get(`${batch.id}__${bId}`) : null) ||
                                (batchLot && batchChallan ? existingBoxMap.get(`${batchLot}__${batchChallan}__${bId}`) : null) ||
                                (batchLot ? existingBoxMap.get(`${batchLot}__${bId}`) : null) ||
                                (existingLot && Array.isArray(existingLot.boxes) ? existingLot.boxes.find(x => String(x.id || x.boxNumber).trim() === bId) : null);
+
+                  const retWt = Number(bx.returnedWeight || bx.grWeight || oldB?.grWeight || oldB?.returnedWeight || 0);
+
+                  const grossCandidates = [
+                    Number(bx.grossWeight || 0),
+                    Number(oldB?.grossWeight || 0),
+                    Number(bx.weight || 0),
+                    Number(oldB?.weight || 0),
+                    bx.remainingWeight !== undefined ? (Number(bx.remainingWeight) + retWt) : 0,
+                    oldB?.remainingWeight !== undefined ? (Number(oldB.remainingWeight) + retWt) : 0
+                  ];
+                  if (retWt > 0) {
+                    if (Number(bx.weight || 0) > 0 && Number(bx.weight || 0) !== retWt) {
+                      grossCandidates.push(Number(bx.weight) + retWt);
+                    }
+                    if (Number(oldB?.weight || 0) > 0 && Number(oldB?.weight || 0) !== retWt) {
+                      grossCandidates.push(Number(oldB.weight) + retWt);
+                    }
+                  }
+                  const grossWt = Math.max(...grossCandidates, retWt, 0);
+
+                  const remWt = (bx.remainingWeight !== undefined && Number(bx.remainingWeight) >= 0 && (Number(bx.remainingWeight) > 0 || retWt >= grossWt))
+                    ? Number(bx.remainingWeight)
+                    : (oldB?.remainingWeight !== undefined && Number(oldB.remainingWeight) >= 0 && (Number(oldB.remainingWeight) > 0 || retWt >= grossWt))
+                      ? Number(oldB.remainingWeight)
+                      : Math.max(0, Number((grossWt - retWt).toFixed(2)));
+
+                  const isFullyGr = (retWt > 0 && retWt >= grossWt - 0.001 && grossWt > 0) || 
+                    ((bx.status === 'gr' || oldB?.status === 'gr') && (retWt === 0 || retWt >= grossWt - 0.001) && remWt <= 0);
+                  const isPartialGr = retWt > 0 && !isFullyGr;
 
                   const prevIssueDate = bx.previousIssueDate || oldB?.previousIssueDate || (oldB?.status === 'issued' ? oldB.issueDate : (bx.status === 'issued' ? bx.issueDate : null));
                   const prevIssuedTo = bx.previousIssuedTo || oldB?.previousIssuedTo || (oldB?.status === 'issued' ? oldB.issuedTo : (bx.status === 'issued' ? bx.issuedTo : null));
@@ -5284,18 +5319,20 @@ Return ONLY a JSON object matching this schema:
 
         lot.boxes.forEach(box => {
           totalBoxesCount++;
-          const gross = box.grossWeight || (box.weight + (box.grWeight || 0));
+          const rem = (box.remainingWeight !== undefined ? Number(box.remainingWeight) : Number(box.weight || 0));
+          const gr = Number(box.grWeight || box.returnedWeight || 0);
+          const gross = Number(box.grossWeight || (rem + gr) || box.weight || 0);
           totalBoxesWeight += gross;
-          const rem = (box.remainingWeight !== undefined ? box.remainingWeight : box.weight);
-          const gr = box.grWeight || 0;
 
-          if (box.status === 'issued') {
+          const isFullyGr = (gr > 0 && gr >= gross - 0.001 && gross > 0) || (box.status === 'gr' && (gr === 0 || gr >= gross - 0.001) && rem <= 0);
+
+          if (isFullyGr) {
+            grBoxesCount++;
+            grBoxesWeight += (gr || gross || box.weight || 0);
+          } else if (box.status === 'issued') {
             issuedBoxesCount++;
             issuedBoxesWeight += rem;
             if (gr > 0) grBoxesWeight += gr;
-          } else if (box.status === 'gr') {
-            grBoxesCount++;
-            grBoxesWeight += (gr || gross || box.weight || 0);
           } else {
             availBoxesCount++;
             availBoxesWeight += rem;
@@ -5371,17 +5408,20 @@ Return ONLY a JSON object matching this schema:
         lots.forEach(l => {
           l.boxes.forEach(b => {
             qTotalBoxes++;
-            const rem = (b.remainingWeight !== undefined ? b.remainingWeight : b.weight);
-            const gr = b.grWeight || 0;
-            if (b.status === 'available') {
-              qAvailBoxes++;
-              qAvailWeight += rem;
-              if (gr > 0) qGrWeight += gr;
+            const rem = (b.remainingWeight !== undefined ? Number(b.remainingWeight) : Number(b.weight || 0));
+            const gr = Number(b.grWeight || b.returnedWeight || 0);
+            const gross = Number(b.grossWeight || (rem + gr) || b.weight || 0);
+            const isFullyGr = (gr > 0 && gr >= gross - 0.001 && gross > 0) || (b.status === 'gr' && (gr === 0 || gr >= gross - 0.001) && rem <= 0);
+
+            if (isFullyGr) {
+              qGrWeight += (gr || gross || b.weight || 0);
             } else if (b.status === 'issued') {
               qIssuedWeight += rem;
               if (gr > 0) qGrWeight += gr;
-            } else if (b.status === 'gr') {
-              qGrWeight += (gr || b.grossWeight || b.weight || 0);
+            } else {
+              qAvailBoxes++;
+              qAvailWeight += rem;
+              if (gr > 0) qGrWeight += gr;
             }
           });
         });
@@ -5402,17 +5442,20 @@ Return ONLY a JSON object matching this schema:
 
           lot.boxes.forEach(b => {
             lotTotalBoxes++;
-            const rem = (b.remainingWeight !== undefined ? b.remainingWeight : b.weight);
-            const gr = b.grWeight || 0;
-            if (b.status === 'available') {
-              lotAvailBoxes++;
-              lotAvailWeight += rem;
-              if (gr > 0) lotGrWeight += gr;
+            const rem = (b.remainingWeight !== undefined ? Number(b.remainingWeight) : Number(b.weight || 0));
+            const gr = Number(b.grWeight || b.returnedWeight || 0);
+            const gross = Number(b.grossWeight || (rem + gr) || b.weight || 0);
+            const isFullyGr = (gr > 0 && gr >= gross - 0.001 && gross > 0) || (b.status === 'gr' && (gr === 0 || gr >= gross - 0.001) && rem <= 0);
+
+            if (isFullyGr) {
+              lotGrWeight += (gr || gross || b.weight || 0);
             } else if (b.status === 'issued') {
               lotIssuedWeight += rem;
               if (gr > 0) lotGrWeight += gr;
-            } else if (b.status === 'gr') {
-              lotGrWeight += (gr || b.grossWeight || b.weight || 0);
+            } else {
+              lotAvailBoxes++;
+              lotAvailWeight += rem;
+              if (gr > 0) lotGrWeight += gr;
             }
           });
 
@@ -5422,9 +5465,15 @@ Return ONLY a JSON object matching this schema:
           );
 
           const filteredBoxes = lot.boxes.filter(b => {
-            if (statusFilter === 'available' && b.status !== 'available') return false;
-            if (statusFilter === 'issued' && b.status !== 'issued') return false;
-            if (statusFilter === 'gr' && b.status !== 'gr' && !(b.grWeight > 0)) return false;
+            const rem = (b.remainingWeight !== undefined ? Number(b.remainingWeight) : Number(b.weight || 0));
+            const gr = Number(b.grWeight || b.returnedWeight || 0);
+            const gross = Number(b.grossWeight || (rem + gr) || b.weight || 0);
+            const isFullyGr = (gr > 0 && gr >= gross - 0.001 && gross > 0) || (b.status === 'gr' && (gr === 0 || gr >= gross - 0.001) && rem <= 0);
+            const effectiveStatus = isFullyGr ? 'gr' : (b.status === 'issued' ? 'issued' : 'available');
+
+            if (statusFilter === 'available' && effectiveStatus !== 'available') return false;
+            if (statusFilter === 'issued' && effectiveStatus !== 'issued') return false;
+            if (statusFilter === 'gr' && !isFullyGr && !(gr > 0)) return false;
 
             if (dateFilter) {
               const matchesLotReceiveDate = (lot.receiveDate === dateFilter);
@@ -5449,13 +5498,14 @@ Return ONLY a JSON object matching this schema:
           let boxesGridHtml = '';
           filteredBoxes.forEach(box => {
             const isSelected = selectedBoxes.some(sb => sb.lotId === lot.id && sb.boxId === box.id);
-            const isPartialGr = box.grWeight > 0 && box.status !== 'gr';
-            const isFullyGr = box.status === 'gr';
-            const boxClass = `${box.status} ${isSelected ? 'selected' : ''} ${isPartialGr ? 'has-partial-gr' : ''}`;
+            const rem = (box.remainingWeight !== undefined ? Number(box.remainingWeight) : Number(box.weight || 0));
+            const gr = Number(box.grWeight || box.returnedWeight || 0);
+            const gross = Number(box.grossWeight || (rem + gr) || box.weight || 0);
 
-            const rem = (box.remainingWeight !== undefined ? box.remainingWeight : box.weight);
-            const gr = box.grWeight || 0;
-            const gross = box.grossWeight || (rem + gr);
+            const isFullyGr = (gr > 0 && gr >= gross - 0.001 && gross > 0) || (box.status === 'gr' && (gr === 0 || gr >= gross - 0.001) && rem <= 0);
+            const isPartialGr = gr > 0 && !isFullyGr;
+            const effectiveStatus = isFullyGr ? 'gr' : (box.status === 'issued' ? 'issued' : 'available');
+            const boxClass = `${effectiveStatus} ${isSelected ? 'selected' : ''} ${isPartialGr ? 'has-partial-gr' : ''}`;
 
             let weightHtml = '';
             let tooltipText = '';
@@ -5465,11 +5515,11 @@ Return ONLY a JSON object matching this schema:
               tooltipText = `GR (Fully Returned): -${gr.toFixed(2)} kg on ${formatDateDisplay(box.grDate)} ${box.grRemarks ? `(${box.grRemarks})` : ''}`;
             } else if (isPartialGr) {
               weightHtml = `
-                <span class="box-weight" style="font-weight: 700; color: ${box.status === 'issued' ? '#3b82f6' : 'var(--success)'};">${rem.toFixed(2)} kg</span>
+                <span class="box-weight" style="font-weight: 700; color: ${effectiveStatus === 'issued' ? '#3b82f6' : 'var(--success)'};">${rem.toFixed(2)} kg</span>
                 <span class="box-gr-pill">(-${gr.toFixed(2)} GR)</span>
               `;
               tooltipText = `Remaining Qty: ${rem.toFixed(2)} kg (Original Gross: ${gross.toFixed(2)} kg, Returned GR: -${gr.toFixed(2)} kg on ${formatDateDisplay(box.grDate)})`;
-            } else if (box.status === 'issued') {
+            } else if (effectiveStatus === 'issued') {
               weightHtml = `<span class="box-weight" style="color: #3b82f6; font-weight: 600;">${rem.toFixed(2)} kg</span><span style="font-size: 0.65rem; font-weight: 700; color: #3b82f6;">ISSUED ↺</span>`;
               tooltipText = `Issued to: ${box.issuedTo || 'Unknown'} on ${formatDateDisplay(box.issueDate)} (Click to Un-issue / Revert to Available)`;
             } else {
@@ -5477,12 +5527,12 @@ Return ONLY a JSON object matching this schema:
               tooltipText = `Available Qty: ${rem.toFixed(2)} kg ${box.cones ? `(${box.cones} cones)` : ''} (Click to Select)`;
             }
 
-            const dateLabel = box.status === 'issued' 
+            const dateLabel = effectiveStatus === 'issued' 
               ? formatDateDisplay(box.issueDate) 
               : (isFullyGr ? formatDateDisplay(box.grDate) : '');
 
             boxesGridHtml += `
-              <div class="box-item ${boxClass}" onclick="toggleBoxSelection('${lot.id}', '${box.id}', '${box.status}')">
+              <div class="box-item ${boxClass}" onclick="toggleBoxSelection('${lot.id}', '${box.id}', '${effectiveStatus}')">
                 <div class="box-top-row">
                   <span class="box-num">${box.id}</span>
                   <span class="box-status-dot"></span>
