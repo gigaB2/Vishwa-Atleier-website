@@ -7054,7 +7054,10 @@
         const gstDisplay = `<span style="white-space: nowrap;">${gstRateVal}%</span> <span class="muted" style="font-size:0.75rem; white-space: nowrap;">(₹${gstVal.toFixed(2)})</span>`;
 
         const customerDisplay = s.customerName 
-          ? `<span style="font-weight: 600; white-space: nowrap;">${s.customerName}</span>${s.agentName ? `<span style="font-size: 0.75rem; color: var(--muted); margin-left: 6px; white-space: nowrap;" title="Agent: ${s.agentName}"><i class="fas fa-user-tie" style="margin-right: 3px; font-size: 0.7rem;"></i>${s.agentName}</span>` : ''}`
+          ? `<div style="line-height: 1.35;">
+              <div style="font-weight: 600; color: var(--fg); white-space: nowrap;">${s.customerName}</div>
+              ${s.agentName ? `<div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px; white-space: nowrap; display: flex; align-items: center; gap: 4px;"><i class="fas fa-user-tie" style="font-size: 0.68rem; color: var(--accent); opacity: 0.9;"></i><span>${s.agentName}</span></div>` : ''}
+            </div>`
           : '-';
 
         tr.innerHTML = `
