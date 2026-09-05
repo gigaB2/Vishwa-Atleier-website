@@ -724,39 +724,46 @@
       try {
         const parsedOrders = typeof rawOrders === 'string' ? JSON.parse(rawOrders) : rawOrders;
         if (Array.isArray(parsedOrders)) {
-          const activeKeys = new Set();
-          parsedOrders.forEach(ord => {
-            if (!ord) return;
-            if (ord.id) activeKeys.add(String(ord.id).trim());
-            if (ord.orderNumber) activeKeys.add(String(ord.orderNumber).trim());
-            (ord.batches || []).forEach(b => {
-              if (!b) return;
-              if (b.id) activeKeys.add(String(b.id).trim());
-              const bLot = String(b.lotNumber || '').trim();
-              const bChallan = String(b.challanNumber || '').trim();
-              if (bLot && bChallan) activeKeys.add(`${bLot}__${bChallan}`);
-              if (bLot) activeKeys.add(`lot_${bLot}`);
+          if (parsedOrders.length > 0) {
+            const activeKeys = new Set();
+            parsedOrders.forEach(ord => {
+              if (!ord) return;
+              if (ord.id) activeKeys.add(String(ord.id).trim());
+              if (ord.orderNumber) activeKeys.add(String(ord.orderNumber).trim());
+              (ord.batches || []).forEach(b => {
+                if (!b) return;
+                if (b.id) activeKeys.add(String(b.id).trim());
+                const bLot = String(b.lotNumber || '').trim();
+                const bChallan = String(b.challanNumber || '').trim();
+                if (bLot && bChallan) activeKeys.add(`${bLot}__${bChallan}`);
+                if (bLot) activeKeys.add(`lot_${bLot}`);
+              });
             });
-          });
 
-          const filteredLots = allMergedLots.filter(lot => {
-            if (!lot) return false;
-            const lId = String(lot.id || '').trim();
-            const bId = String(lot.batchId || '').trim();
-            const oRef = String(lot.orderRef || '').trim();
-            const lNum = String(lot.lotNumber || '').trim();
-            const lChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+            if (activeKeys.size > 0) {
+              const filteredLots = allMergedLots.filter(lot => {
+                if (!lot) return false;
+                const lId = String(lot.id || '').trim();
+                const bId = String(lot.batchId || '').trim();
+                const oRef = String(lot.orderRef || '').trim();
+                const lNum = String(lot.lotNumber || '').trim();
+                const lChallan = String(lot.challanNo || lot.challanNumber || '').trim();
 
-            if (bId && activeKeys.has(bId)) return true;
-            if (lId && activeKeys.has(lId)) return true;
-            if (oRef && activeKeys.has(oRef)) return true;
-            if (lNum && lChallan && activeKeys.has(`${lNum}__${lChallan}`)) return true;
-            if (lNum && activeKeys.has(`lot_${lNum}`)) return true;
+                if (bId && activeKeys.has(bId)) return true;
+                if (lId && activeKeys.has(lId)) return true;
+                if (oRef && activeKeys.has(oRef)) return true;
+                if (lNum && lChallan && activeKeys.has(`${lNum}__${lChallan}`)) return true;
+                if (lNum && activeKeys.has(`lot_${lNum}`)) return true;
 
-            return false;
-          });
+                return false;
+              });
 
-          return filteredLots;
+              return filteredLots;
+            }
+          } else if (cleanRemote.length === 0 && cleanLocal.length > 0 && Array.isArray(remoteArr) && remoteArr.length === 0) {
+            // Both remote stock is explicitly empty AND orders are explicitly empty -> stock is empty
+            return [];
+          }
         }
       } catch(e) {}
     }
@@ -847,6 +854,7 @@
               if (!bBoxMap.has(bxId)) {
                 if (isLocallyActive) bBoxMap.set(bxId, { ...locBx });
               } else {
+                const remBx = bBoxMap.get(bxId);
                 const locUpdated = locBx.updated_at ? new Date(locBx.updated_at).getTime() : 0;
                 const remUpdated = remBx.updated_at ? new Date(remBx.updated_at).getTime() : 0;
                 const winner = (locUpdated >= remUpdated) ? locBx : remBx;
@@ -2656,11 +2664,15 @@
     // Debounced and Hash-Guarded Persistent Database Write (Zero Wasted POST Quota)
     set(key, value, isImmediate = false) {
       if (isLocalOnlyKey(key)) return false;
+      const valStr = typeof value === 'string' ? value : JSON.stringify(value);
+      // Guard against pre-hydration empty state overwriting cloud tables
+      if (!isHydrated && (valStr === '[]' || valStr === '{}')) {
+        return false;
+      }
       try {
         lastLocalWrites[key] = Date.now();
 
         const nowIso = new Date().toISOString();
-        const valStr = typeof value === 'string' ? value : JSON.stringify(value);
         const payloadHash = computeHash(valStr);
 
         // Always update in-memory cache and safe local storage synchronously for this client
@@ -3022,7 +3034,7 @@
                       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
                     }
                   }).catch(() => {});
-                } else if (value.length === 0) {
+                } else if (value.length === 0 && isHydrated) {
                   await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_boxes`, {
                     method: 'DELETE',
                     headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
@@ -3209,7 +3221,7 @@
                       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
                     }
                   }).catch(() => {});
-                } else if (value.length === 0) {
+                } else if (value.length === 0 && isHydrated) {
                   await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_order_boxes`, {
                     method: 'DELETE',
                     headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }

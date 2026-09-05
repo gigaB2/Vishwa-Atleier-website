@@ -15,7 +15,8 @@ const testFiles = [
   path.join(__dirname, 'sync-engine.test.js'),
   path.join(__dirname, 'costing-math.test.js'),
   path.join(__dirname, 'presence-engine.test.js'),
-  path.join(__dirname, 'yarn-ledger-gr.test.js')
+  path.join(__dirname, 'yarn-ledger-gr.test.js'),
+  path.join(__dirname, 'yarn-concurrency.test.js')
 ];
 
 const runner = spawn(process.execPath, ['--test', ...testFiles], {

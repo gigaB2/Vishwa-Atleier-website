@@ -38,10 +38,10 @@ test('Multi-User Concurrency & Merge Validation', async (t) => {
       },
       navigator: { onLine: true },
       console: console,
-      setTimeout: setTimeout,
-      clearTimeout: clearTimeout,
-      setInterval: setInterval,
-      clearInterval: clearInterval,
+      setTimeout: (fn) => {},
+      clearTimeout: () => {},
+      setInterval: () => ({ unref: () => {} }),
+      clearInterval: () => {},
       Date: Date
     };
 
@@ -557,7 +557,7 @@ test('Multi-User Concurrency & Merge Validation', async (t) => {
 
   await t.test('Yarn Sales: Stale or legacy tombstones do not delete active Challans', async () => {
     // Suppose legacy tombstones contain raw digits '1' or '2'
-    sandbox.localStorage.setItem('vf_deleted_entity_ids', JSON.stringify(['1', '2', 'CH-0001', 's_old_deleted_id']));
+    env.localStorage.setItem('vf_deleted_entity_ids', JSON.stringify(['1', '2', 'CH-0001', 's_old_deleted_id']));
 
     const activeSale1 = {
       id: 's_' + Date.now() + '_active1',
@@ -791,6 +791,66 @@ test('Multi-User Concurrency & Merge Validation', async (t) => {
     const mergedStock = vSupabase.mergeDatasets('vishwa_yarn_rm_stock_data', staleStock, []);
     assert.strictEqual(mergedStock.length, 0, 'Stock is strictly empty when all orders are deleted');
   });
+
+  await t.test('Supabase Single Source of Truth: Fresh PC with empty localStorage pulls all lots and boxes directly from Supabase without PC 1 online', () => {
+    // 1. PC 1 created stock on server
+    const remoteServerLots = [
+      {
+        id: 'LOT-POLY-889',
+        lotNumber: 'L-889',
+        challanNo: 'CH-1002',
+        quality: '20/1 BRT POLY',
+        supplier: 'National Textile',
+        receiveDate: '2026-09-05',
+        boxes: [
+          { id: 'B1', boxNumber: 'B1', weight: 25.0, status: 'available', cones: 24 },
+          { id: 'B2', boxNumber: 'B2', weight: 25.2, status: 'issued', issueDate: '2026-09-05', issuedTo: 'Doubler', cones: 24 }
+        ]
+      },
+      {
+        id: 'LOT-COTTON-501',
+        lotNumber: 'L-501',
+        challanNo: 'CH-1003',
+        quality: '30s Combed Cotton',
+        supplier: 'Vardhman',
+        receiveDate: '2026-09-05',
+        boxes: [
+          { id: 'B1', boxNumber: 'B1', weight: 30.0, status: 'available', cones: 30 }
+        ]
+      }
+    ];
+
+    // 2. PC 2 opens with completely blank localStorage (fresh browser/device)
+    const pc2LocalEmpty = [];
+
+    // PC 2 merges local empty state with authoritative remote server data
+    const pc2HydratedStock = vSupabase.mergeDatasets('vishwa_yarn_rm_stock_data', pc2LocalEmpty, remoteServerLots);
+
+    assert.strictEqual(pc2HydratedStock.length, 2, 'Fresh PC must have 2 lots loaded from Supabase');
+    const polyLot = pc2HydratedStock.find(l => l.id === 'LOT-POLY-889');
+    assert.ok(polyLot, 'Poly lot exists on PC 2');
+    assert.strictEqual(polyLot.boxes.length, 2, 'Poly lot has 2 boxes');
+    assert.strictEqual(polyLot.boxes.find(b => b.id === 'B2').status, 'issued', 'Issued status preserved on fresh PC');
+    assert.strictEqual(polyLot.boxes.find(b => b.id === 'B2').issuedTo, 'Doubler', 'IssuedTo preserved on fresh PC');
+    assert.strictEqual(polyLot.boxes.find(b => b.id === 'B1').status, 'available', 'Available status preserved on fresh PC');
+
+    const cottonLot = pc2HydratedStock.find(l => l.id === 'LOT-COTTON-501');
+    assert.ok(cottonLot, 'Cotton lot exists on PC 2');
+  });
+
+  await t.test('Supabase Single Source of Truth: Pre-hydration empty state does not wipe cloud storage', () => {
+    // Create new unhydrated environment
+    const freshEnv = createTestEnv();
+    const freshSupabase = freshEnv.window.VishwaSupabase;
+
+    // isHydrated is false initially
+    assert.strictEqual(freshSupabase.isHydrated(), false, 'isHydrated is initially false');
+
+    // Calling set with empty array while unhydrated must be refused
+    const setResult = freshSupabase.set('vishwa_yarn_rm_stock_data', []);
+    assert.strictEqual(setResult, false, 'Unhydrated empty set must be blocked from writing to Supabase');
+  });
 });
+
 
 

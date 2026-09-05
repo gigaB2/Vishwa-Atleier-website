@@ -2904,10 +2904,16 @@
               });
             });
 
+            // Preserve direct inward lots that may not have orderRef
+            existingStockList.forEach(exLot => {
+              if (!exLot) return;
+              const hasInFresh = freshStockList.some(fl => fl.id === exLot.id || (fl.lotNumber && fl.challanNo && fl.lotNumber === exLot.lotNumber && fl.challanNo === exLot.challanNo));
+              if (!hasInFresh && !exLot.orderRef) {
+                freshStockList.push(exLot);
+              }
+            });
+
             stockData = freshStockList.map(normalizeLot).filter(l => l && Array.isArray(l.boxes) && l.boxes.length > 0);
-            
-            // Reconcile and save synced stockData
-            saveStockData();
             return;
           }
         }
@@ -2920,7 +2926,6 @@
       } else {
         stockData = [];
       }
-      saveStockData();
     }
 
     function saveStockData() {
