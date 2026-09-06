@@ -3245,20 +3245,20 @@
     </div>
   </div>
 
-  <!-- TAB: FINISHED PRODUCT (FP) PURCHASERS / PURCHASING PARTIES -->
+  <!-- TAB: FINISHED PRODUCT (FP) SUPPLIERS / PURCHASING PARTIES -->
   <div id="tab-fp-suppliers" class="tab-content">
     <!-- Tab Header -->
     <div class="placeholder-header">
       <div class="placeholder-header-inner">
         <div class="placeholder-header-title-wrap">
-          <h1>Manage FP Purchasers</h1>
+          <h1>Manage FP Suppliers</h1>
         </div>
       </div>
       <p>Final product purchasing parties, buyer billing &amp; consignee details, GSTIN &amp; sales references for yarn sales</p>
     </div>
 
     <div class="card">
-      <h3 id="fp-supplier-form-title">Add New FP Purchaser / Purchasing Party</h3>
+      <h3 id="fp-supplier-form-title">Add New FP Supplier / Purchasing Party</h3>
       <div class="form-grid" style="margin-top: 1.5rem;">
         <div class="form-group">
           <label>Party / Buyer Name *</label>
@@ -3312,7 +3312,7 @@
 
         <div class="form-group fps-form-actions">
           <button id="btn-cancel-fp-supplier-edit" class="btn" style="display: none; background: var(--border); color: var(--fg);" onclick="cancelFpSupplierEdit()">Cancel</button>
-          <button id="btn-add-fp-supplier" class="btn btn-primary" onclick="addOrUpdateFpSupplier()">Add FP Purchaser</button>
+          <button id="btn-add-fp-supplier" class="btn btn-primary" onclick="addOrUpdateFpSupplier()">Add FP Supplier</button>
         </div>
       </div>
     </div>
@@ -3320,14 +3320,14 @@
     <div class="card" style="margin-bottom: 1.5rem; background: var(--surface); border: 1.5px solid var(--border);">
       <div class="form-group" style="margin-bottom: 0;">
         <label style="font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-          <span>🔍</span> Universal Search FP Purchasers
+          <span>🔍</span> Universal Search FP Suppliers
         </label>
         <input type="text" id="fp-supplier-search-bar" placeholder="Search party name, GSTIN, contact person, phone, address, notes…" oninput="handleFpSupplierSearch(this.value)" style="width: 100%; height: 40px; padding: 0.6rem 0.75rem; border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; background-color: var(--surface); color: var(--fg); border: 1.5px solid var(--border);">
       </div>
     </div>
 
     <div class="card">
-      <h3>Available FP Purchasers</h3>
+      <h3>Available Manage FP Suppliers</h3>
       <style>
         #fp-supplier-mgmt-table td.fp-supplier-address-col {
           max-width: none !important;
@@ -3351,7 +3351,7 @@
             </tr>
           </thead>
           <tbody id="fp-supplier-mgmt-body">
-            <!-- FP Purchasers list injected here -->
+            <!-- FP Suppliers list injected here -->
           </tbody>
         </table>
       </div>
@@ -7438,7 +7438,7 @@ function showToast(message, type = 'info') {
     }
 
     if (filtered.length === 0) {
-      body.innerHTML = `<tr><td colspan="7" style="color: var(--muted); padding: 2rem; text-align: center;">${fpSupplierSearchQuery.trim() ? 'No FP purchasing parties matching search criteria.' : 'No FP Purchasers found. Add your final product purchasing parties above!'}</td></tr>`;
+      body.innerHTML = `<tr><td colspan="7" style="color: var(--muted); padding: 2rem; text-align: center;">${fpSupplierSearchQuery.trim() ? 'No FP purchasing parties matching search criteria.' : 'No FP Suppliers found. Add your final product purchasing parties above!'}</td></tr>`;
       return;
     }
 
@@ -7537,7 +7537,7 @@ function showToast(message, type = 'info') {
       cancelFpSupplierEdit();
     } else {
       if ((rawMaterialFpSuppliers || []).some(s => (s.name || '').toLowerCase() === name.toLowerCase())) {
-        alert(`FP Purchaser "${name}" already exists!`);
+        alert(`FP Supplier "${name}" already exists!`);
         return;
       }
 
@@ -7572,7 +7572,7 @@ function showToast(message, type = 'info') {
     }
 
     saveFpSuppliersState();
-    showToast('FP Purchaser saved successfully!', 'success');
+    showToast('FP Supplier saved successfully!', 'success');
   }
 
   function editFpSupplier(id) {
@@ -7592,7 +7592,7 @@ function showToast(message, type = 'info') {
     document.getElementById('new-fp-supplier-notes').value = s.notes || '';
 
     const submitBtn = document.getElementById('btn-add-fp-supplier');
-    submitBtn.innerText = 'Update FP Purchaser';
+    submitBtn.innerText = 'Update FP Supplier';
     submitBtn.style.background = 'var(--accent3)';
     document.getElementById('btn-cancel-fp-supplier-edit').style.display = 'inline-block';
 
@@ -7613,7 +7613,7 @@ function showToast(message, type = 'info') {
     document.getElementById('new-fp-supplier-notes').value = '';
 
     const submitBtn = document.getElementById('btn-add-fp-supplier');
-    submitBtn.innerText = 'Add FP Purchaser';
+    submitBtn.innerText = 'Add FP Supplier';
     submitBtn.style.background = '';
     document.getElementById('btn-cancel-fp-supplier-edit').style.display = 'none';
   }
@@ -7622,7 +7622,7 @@ function showToast(message, type = 'info') {
     const s = (rawMaterialFpSuppliers || []).find(item => item.id === id);
     if (!s) return;
 
-    if (!confirm(`Are you sure you want to delete FP Purchaser "${s.name}"?`)) {
+    if (!confirm(`Are you sure you want to delete FP Supplier "${s.name}"?`)) {
       return;
     }
 
@@ -7636,7 +7636,7 @@ function showToast(message, type = 'info') {
     }
     rawMaterialFpSuppliers = (rawMaterialFpSuppliers || []).filter(item => item.id !== id);
     saveFpSuppliersState();
-    showToast('FP Purchaser removed.', 'success');
+    showToast('FP Supplier removed.', 'success');
   }
 
   // Active Tab management
@@ -7691,7 +7691,7 @@ function showToast(message, type = 'info') {
       'raw-material-qualities': 'Manage RM Qualities',
       'fp-qualities': 'Manage FP Qualities',
       'raw-material-suppliers': 'Manage RM Suppliers',
-      'fp-suppliers': 'Manage FP Purchasers'
+      'fp-suppliers': 'Manage FP Suppliers'
     };
     document.title = tabNames[tabId] || 'Manage';
 
