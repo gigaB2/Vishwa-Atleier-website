@@ -3325,7 +3325,7 @@
         dropdown.innerHTML = `
           <div class="dropdown-item" style="text-align: center; padding: 12px; color: var(--muted); cursor: default;">
             <div>No matching parties found</div>
-            <a href="../manage.html?tab=fp-suppliers" target="_blank" style="display: inline-block; margin-top: 6px; font-size: 0.8rem; color: var(--accent); text-decoration: underline; font-weight: 600;">+ Add in Manage FP Suppliers</a>
+            <a href="../manage.html?tab=fp-suppliers" target="_blank" style="display: inline-block; margin-top: 6px; font-size: 0.8rem; color: var(--accent); text-decoration: underline; font-weight: 600;">+ Add in Manage FP Purchasers</a>
           </div>
         `;
         return;
@@ -8800,7 +8800,7 @@
             <div class="form-group" style="flex: 1.8 1 200px; position: relative;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                 <label for="modal-sales-customer" style="margin: 0;">Buyer / Customer Name</label>
-                <a href="../manage.html?tab=fp-suppliers" target="_blank" style="font-size: 0.72rem; color: var(--accent); text-decoration: none; font-weight: 600;" title="Manage FP Suppliers / Purchasing Parties">⚙️ Manage Parties</a>
+                <a href="../manage.html?tab=fp-suppliers" target="_blank" style="font-size: 0.72rem; color: var(--accent); text-decoration: none; font-weight: 600;" title="Manage FP Purchasers / Purchasing Parties">⚙️ Manage Parties</a>
               </div>
               <input type="text" id="modal-sales-customer" placeholder="Search / Select Party or Type..." autocomplete="off" onfocus="showSalesPartyDropdown()" oninput="filterSalesPartyDropdown()" required>
               <div id="sales-party-dropdown" class="dropdown-list" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 10000; max-height: 240px; overflow-y: auto; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-lg);"></div>

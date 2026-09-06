@@ -555,7 +555,7 @@
         </a>
         <a class="vf-sb-link child" href="modules/manage.html?tab=fp-suppliers">
           <span class="vf-sb-icon vf-sb-icon-purple vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
-          Manage FP Suppliers
+          Manage FP Purchasers
         </a>
       </div>
     </div>
@@ -951,7 +951,7 @@
     'raw-material-qualities': ['raw-material-qualities', 'manage rm qualities', 'rm qualities', 'tab-raw-material-qualities'],
     'fp-qualities': ['fp-qualities', 'manage fp qualities', 'fp qualities', 'finished product qualities', 'tab-fp-qualities'],
     'raw-material-suppliers': ['raw-material-suppliers', 'manage rm suppliers', 'rm suppliers', 'tab-raw-material-suppliers'],
-    'fp-suppliers': ['fp-suppliers', 'manage fp suppliers', 'fp suppliers', 'fp parties', 'purchasing parties', 'tab-fp-suppliers'],
+    'fp-suppliers': ['fp-suppliers', 'manage fp purchasers', 'manage fp suppliers', 'fp purchasers', 'fp suppliers', 'fp purchaser', 'fp parties', 'purchasing parties', 'tab-fp-suppliers'],
     'tab-manifest': ['tab-manifest', 'manifest'],
     'tab-visualizer': ['tab-visualizer', 'visualizer'],
     'tab-jala': ['tab-jala', 'jala'],
@@ -1004,7 +1004,7 @@
       'raw-material-qualities': 'Manage RM Qualities',
       'fp-qualities': 'Manage FP Qualities',
       'raw-material-suppliers': 'Manage RM Suppliers',
-      'fp-suppliers': 'Manage FP Suppliers'
+      'fp-suppliers': 'Manage FP Purchasers'
     };
     return map[tab.toLowerCase()] || tab.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
