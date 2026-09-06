@@ -3256,232 +3256,6 @@
       return base.toISOString().split('T')[0];
     }
 
-    // FP Suppliers / Purchasing Parties Selection & Auto-fill Engine
-    let salesPartyOptions = [];
-
-    function getFpSuppliersList() {
-      try {
-        const stored = localStorage.getItem('yarn-fp-suppliers');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) return parsed;
-        }
-      } catch (e) {}
-      return [];
-    }
-
-    function populateSalesPartyDropdown() {
-      const suppliers = getFpSuppliersList();
-      salesPartyOptions = suppliers.map(s => {
-        const name = (s && s.name) ? s.name.trim() : '';
-        if (!name) return null;
-        return {
-          id: s.id,
-          name: name,
-          contactPerson: s.contactPerson || '',
-          phone: s.phone || '',
-          email: s.email || '',
-          gstin: s.gstin || '',
-          billingAddress: s.billingAddress || '',
-          consigneeName: s.consigneeName || name,
-          consigneeAddress: s.consigneeAddress || s.billingAddress || '',
-          broker: s.broker || '',
-          creditDays: s.creditDays,
-          defaultHsn: s.defaultHsn || '',
-          notes: s.notes || '',
-          isFpSupplier: true
-        };
-      }).filter(Boolean);
-
-      // Also gather unique historical customer names from past sales
-      const seen = new Set(salesPartyOptions.map(p => p.name.toLowerCase()));
-      ['covering', 'tfo', 'doubler'].forEach(div => {
-        (dataStore[div]?.sales || []).forEach(s => {
-          if (s && s.customerName && s.customerName.trim()) {
-            const cName = s.customerName.trim();
-            if (!seen.has(cName.toLowerCase())) {
-              seen.add(cName.toLowerCase());
-              salesPartyOptions.push({
-                id: 'hist_' + cName,
-                name: cName,
-                phone: s.buyerPhone || '',
-                gstin: s.buyerGstin || s.buyerGst || s.gstin || '',
-                billingAddress: s.customerAddress || '',
-                consigneeName: s.consigneeName || cName,
-                consigneeAddress: s.consigneeAddress || s.customerAddress || '',
-                broker: s.broker || s.agentName || '',
-                creditDays: s.creditDays,
-                defaultHsn: s.hsnCode || '',
-                notes: s.remarks || '',
-                isFpSupplier: false
-              });
-            }
-          }
-        });
-      });
-    }
-
-    function renderSalesPartyDropdown(optionsList) {
-      const dropdown = document.getElementById('sales-party-dropdown');
-      if (!dropdown) return;
-      dropdown.innerHTML = '';
-      if (!optionsList || optionsList.length === 0) {
-        dropdown.innerHTML = `
-          <div class="dropdown-item" style="text-align: center; padding: 12px; color: var(--muted); cursor: default;">
-            <div>No matching parties found</div>
-            <a href="../manage.html?tab=fp-suppliers" target="_blank" style="display: inline-block; margin-top: 6px; font-size: 0.8rem; color: var(--accent); text-decoration: underline; font-weight: 600;">+ Add in Manage FP Suppliers</a>
-          </div>
-        `;
-        return;
-      }
-
-      optionsList.forEach(party => {
-        const div = document.createElement('div');
-        div.className = 'dropdown-item';
-        div.style.padding = '8px 12px';
-        div.style.borderBottom = '1px solid var(--border)';
-        div.style.cursor = 'pointer';
-        div.style.transition = 'all 0.15s ease';
-
-        const gstinBadge = party.gstin ? `<span style="font-size: 0.72rem; color: var(--accent); background: rgba(139, 92, 246, 0.12); padding: 1px 6px; border-radius: 4px; font-weight: 600; white-space: nowrap;">GST: ${party.gstin}</span>` : '';
-        const fpBadge = party.isFpSupplier ? `<span style="font-size: 0.68rem; color: #10b981; background: rgba(16, 185, 129, 0.12); padding: 1px 5px; border-radius: 4px; font-weight: 700; white-space: nowrap;">FP PARTY</span>` : '';
-        const phoneLabel = party.phone ? `<span style="font-size: 0.75rem; color: var(--muted);">📞 ${party.phone}</span>` : '';
-        const cityOrAddr = party.billingAddress ? `<span style="font-size: 0.75rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; display: inline-block;">📍 ${party.billingAddress}</span>` : '';
-
-        div.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 2px;">
-            <strong style="font-size: 0.88rem; color: var(--fg);">${party.name}</strong>
-            <div style="display: flex; gap: 4px; align-items: center;">
-              ${fpBadge}
-              ${gstinBadge}
-            </div>
-          </div>
-          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            ${phoneLabel}
-            ${cityOrAddr}
-          </div>
-        `;
-
-        div.onmousedown = function(e) {
-          e.preventDefault();
-          selectSalesParty(party);
-        };
-        dropdown.appendChild(div);
-      });
-    }
-
-    window.showSalesPartyDropdown = function() {
-      populateSalesPartyDropdown();
-      const dropdown = document.getElementById('sales-party-dropdown');
-      if (dropdown) dropdown.style.display = 'block';
-      const input = document.getElementById('modal-sales-customer');
-      const val = input ? input.value.trim().toLowerCase() : '';
-      if (val) {
-        filterSalesPartyDropdown();
-      } else {
-        renderSalesPartyDropdown(salesPartyOptions);
-      }
-    };
-
-    window.filterSalesPartyDropdown = function() {
-      const input = document.getElementById('modal-sales-customer');
-      const search = input ? input.value.trim().toLowerCase() : '';
-      const filtered = salesPartyOptions.filter(p => {
-        return (p.name && p.name.toLowerCase().includes(search)) ||
-               (p.gstin && p.gstin.toLowerCase().includes(search)) ||
-               (p.phone && p.phone.toLowerCase().includes(search)) ||
-               (p.billingAddress && p.billingAddress.toLowerCase().includes(search));
-      });
-      renderSalesPartyDropdown(filtered);
-    };
-
-    window.selectSalesParty = function(party) {
-      if (!party) return;
-      const custInput = document.getElementById('modal-sales-customer');
-      if (custInput) {
-        custInput.value = party.name;
-        triggerFieldSync(custInput);
-      }
-
-      const phoneInput = document.getElementById('modal-sales-buyer-phone');
-      if (phoneInput && party.phone) {
-        phoneInput.value = party.phone;
-        triggerFieldSync(phoneInput);
-      }
-
-      const gstinInput = document.getElementById('modal-sales-buyer-gstin');
-      if (gstinInput && party.gstin) {
-        gstinInput.value = party.gstin;
-        triggerFieldSync(gstinInput);
-      }
-
-      const addrInput = document.getElementById('modal-sales-address');
-      if (addrInput && party.billingAddress) {
-        addrInput.value = party.billingAddress;
-        triggerFieldSync(addrInput);
-      }
-
-      const consNameInput = document.getElementById('modal-sales-consignee-name');
-      if (consNameInput) {
-        consNameInput.value = party.consigneeName || party.name;
-        triggerFieldSync(consNameInput);
-      }
-
-      const consAddrInput = document.getElementById('modal-sales-consignee-address');
-      if (consAddrInput) {
-        consAddrInput.value = party.consigneeAddress || party.billingAddress || '';
-        triggerFieldSync(consAddrInput);
-      }
-
-      const brokerInput = document.getElementById('modal-sales-agent');
-      if (brokerInput && party.broker) {
-        brokerInput.value = party.broker;
-        triggerFieldSync(brokerInput);
-      }
-
-      const creditInput = document.getElementById('modal-sales-credit-days');
-      if (creditInput && party.creditDays !== undefined && party.creditDays !== null && party.creditDays !== '') {
-        creditInput.value = party.creditDays;
-        triggerFieldSync(creditInput);
-      }
-
-      const dueInput = document.getElementById('modal-sales-due-date');
-      const dateEl = document.getElementById('modal-sales-date');
-      if (dueInput && dateEl && dateEl.value) {
-        const days = creditInput ? (parseInt(creditInput.value) || 0) : 30;
-        dueInput.value = calculateDueDate(dateEl.value, days);
-        triggerFieldSync(dueInput);
-      }
-
-      const hsnInput = document.getElementById('modal-sales-hsn');
-      if (hsnInput && party.defaultHsn) {
-        hsnInput.value = party.defaultHsn;
-        triggerFieldSync(hsnInput);
-      }
-
-      const remInput = document.getElementById('modal-sales-remarks');
-      if (remInput && party.notes && !remInput.value) {
-        remInput.value = party.notes;
-        triggerFieldSync(remInput);
-      }
-
-      const dropdown = document.getElementById('sales-party-dropdown');
-      if (dropdown) dropdown.style.display = 'none';
-
-      showToast(`Selected "${party.name}" - Party & billing details auto-filled`, 'success');
-    };
-
-    // Close party dropdown on click outside
-    document.addEventListener('click', function(e) {
-      const custInput = document.getElementById('modal-sales-customer');
-      const dropdown = document.getElementById('sales-party-dropdown');
-      if (dropdown && dropdown.style.display === 'block') {
-        if (!dropdown.contains(e.target) && e.target !== custInput) {
-          dropdown.style.display = 'none';
-        }
-      }
-    });
-
     function autoSyncBuyerToConsignee() {
       const buyerName = document.getElementById('modal-sales-customer') ? document.getElementById('modal-sales-customer').value : '';
       const buyerAddr = document.getElementById('modal-sales-address') ? document.getElementById('modal-sales-address').value : '';
@@ -3494,47 +3268,9 @@
         consigneeAddrEl.value = buyerAddr;
       }
 
-      // Auto-suggest/auto-populate GSTIN, Phone, Address from FP Suppliers or customer history
+      // Auto-suggest/auto-populate GSTIN, Phone, Address from customer history if user entered them previously
       if (buyerName && buyerName.trim().length >= 2) {
         const trimmed = buyerName.trim().toLowerCase();
-        
-        // 1. Check FP Suppliers list first
-        const fpSuppliers = getFpSuppliersList();
-        const matchedFp = fpSuppliers.find(s => s && s.name && s.name.trim().toLowerCase() === trimmed);
-        if (matchedFp) {
-          const gstinInput = document.getElementById('modal-sales-buyer-gstin');
-          const phoneInput = document.getElementById('modal-sales-buyer-phone');
-          const addrInput = document.getElementById('modal-sales-address');
-          const brokerInput = document.getElementById('modal-sales-agent');
-          const creditInput = document.getElementById('modal-sales-credit-days');
-          const hsnInput = document.getElementById('modal-sales-hsn');
-
-          if (gstinInput && !gstinInput.value && matchedFp.gstin) gstinInput.value = matchedFp.gstin;
-          if (phoneInput && !phoneInput.value && matchedFp.phone) phoneInput.value = matchedFp.phone;
-          if (addrInput && (!addrInput.value || addrInput.value === 'Industrial Area, Surat, Gujarat, India') && matchedFp.billingAddress) {
-            addrInput.value = matchedFp.billingAddress;
-            if (consigneeAddrEl && (!consigneeAddrEl.value || consigneeAddrEl.getAttribute('data-manual') !== 'true')) {
-              consigneeAddrEl.value = matchedFp.consigneeAddress || matchedFp.billingAddress;
-            }
-          }
-          if (brokerInput && (!brokerInput.value || brokerInput.value === 'DIRECT') && matchedFp.broker) {
-            brokerInput.value = matchedFp.broker;
-          }
-          if (creditInput && matchedFp.creditDays !== undefined && matchedFp.creditDays !== null && matchedFp.creditDays !== '') {
-            creditInput.value = matchedFp.creditDays;
-            const dueInput = document.getElementById('modal-sales-due-date');
-            const dateEl = document.getElementById('modal-sales-date');
-            if (dueInput && dateEl && dateEl.value) {
-              dueInput.value = calculateDueDate(dateEl.value, matchedFp.creditDays);
-            }
-          }
-          if (hsnInput && matchedFp.defaultHsn) {
-            hsnInput.value = matchedFp.defaultHsn;
-          }
-          return;
-        }
-
-        // 2. Check past sales history
         let matched = null;
         if (typeof dataStore !== 'undefined') {
           for (const div of Object.keys(dataStore)) {
@@ -8039,7 +7775,7 @@
 
     let remoteSyncDebounceTimer = null;
     function handleRemoteDataSync(key) {
-      if (!key || key.startsWith('yarn_') || key === 'yarn-fp-suppliers' || key.startsWith('costing-') || key.includes('production') || key.includes('sales') || key === 'vf_deleted_entity_ids') {
+      if (!key || key.startsWith('yarn_') || key.startsWith('costing-') || key.includes('production') || key.includes('sales') || key === 'vf_deleted_entity_ids') {
         clearTimeout(remoteSyncDebounceTimer);
         remoteSyncDebounceTimer = setTimeout(() => {
           refreshAllViews();
@@ -8813,13 +8549,9 @@
 
           <!-- Top Row 3: Buyer Details (Name, Phone, GSTIN, Address) -->
           <div class="form-inline" style="padding-bottom: 10px; margin-bottom: 10px; gap: 0.75rem; flex-wrap: wrap;">
-            <div class="form-group" style="flex: 1.8 1 200px; position: relative;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <label for="modal-sales-customer" style="margin: 0;">Buyer / Customer Name</label>
-                <a href="../manage.html?tab=fp-suppliers" target="_blank" style="font-size: 0.72rem; color: var(--accent); text-decoration: none; font-weight: 600;" title="Manage FP Suppliers / Purchasing Parties">⚙️ Manage Parties</a>
-              </div>
-              <input type="text" id="modal-sales-customer" placeholder="Search / Select Party or Type..." autocomplete="off" onfocus="showSalesPartyDropdown()" oninput="filterSalesPartyDropdown()" required>
-              <div id="sales-party-dropdown" class="dropdown-list" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 10000; max-height: 240px; overflow-y: auto; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-lg);"></div>
+            <div class="form-group" style="flex: 1.8 1 180px;">
+              <label for="modal-sales-customer">Buyer / Customer Name</label>
+              <input type="text" id="modal-sales-customer" placeholder="Enter Buyer Name" oninput="autoSyncBuyerToConsignee()" required>
             </div>
             <div class="form-group" style="flex: 1 1 120px;">
               <label for="modal-sales-buyer-phone">Buyer Phone</label>
