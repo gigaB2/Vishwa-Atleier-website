@@ -3282,12 +3282,10 @@
           phone: s.phone || '',
           email: s.email || '',
           gstin: s.gstin || '',
-          billingAddress: s.billingAddress || '',
+          billingAddress: s.address || s.billingAddress || '',
           consigneeName: s.consigneeName || name,
-          consigneeAddress: s.consigneeAddress || s.billingAddress || '',
-          broker: s.broker || '',
+          consigneeAddress: s.consigneeAddress || s.address || s.billingAddress || '',
           creditDays: s.creditDays,
-          defaultHsn: s.defaultHsn || '',
           notes: s.notes || '',
           isFpSupplier: true
         };
@@ -3309,9 +3307,7 @@
                 billingAddress: s.customerAddress || '',
                 consigneeName: s.consigneeName || cName,
                 consigneeAddress: s.consigneeAddress || s.customerAddress || '',
-                broker: s.broker || s.agentName || '',
                 creditDays: s.creditDays,
-                defaultHsn: s.hsnCode || '',
                 notes: s.remarks || '',
                 isFpSupplier: false
               });
@@ -3433,12 +3429,6 @@
         triggerFieldSync(consAddrInput);
       }
 
-      const brokerInput = document.getElementById('modal-sales-agent');
-      if (brokerInput && party.broker) {
-        brokerInput.value = party.broker;
-        triggerFieldSync(brokerInput);
-      }
-
       const creditInput = document.getElementById('modal-sales-credit-days');
       if (creditInput && party.creditDays !== undefined && party.creditDays !== null && party.creditDays !== '') {
         creditInput.value = party.creditDays;
@@ -3451,12 +3441,6 @@
         const days = creditInput ? (parseInt(creditInput.value) || 0) : 30;
         dueInput.value = calculateDueDate(dateEl.value, days);
         triggerFieldSync(dueInput);
-      }
-
-      const hsnInput = document.getElementById('modal-sales-hsn');
-      if (hsnInput && party.defaultHsn) {
-        hsnInput.value = party.defaultHsn;
-        triggerFieldSync(hsnInput);
       }
 
       const remInput = document.getElementById('modal-sales-remarks');
