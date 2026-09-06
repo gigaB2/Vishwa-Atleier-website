@@ -8680,7 +8680,7 @@
         <button type="button" class="modal-close-btn" onclick="closeBatchSellModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <form id="modal-sales-form" onsubmit="submitBatchSell(event)">
+        <form id="modal-sales-form" onsubmit="submitBatchSell(event)" autocomplete="off">
           <input type="hidden" id="modal-sales-edit-id">
           
           <!-- Top Row 1: Seller Company, Challan, Invoice No, Date & Lot No -->
@@ -8736,7 +8736,7 @@
                 <label for="modal-sales-customer" style="margin: 0;">Buyer / Customer Name</label>
                 <span style="font-size: 0.72rem; color: var(--accent); font-weight: 600;">✨ Auto-Suggest</span>
               </div>
-              <input type="text" id="modal-sales-customer" placeholder="Search / Select Party or Type..." autocomplete="off" onfocus="showSalesPartyDropdown()" oninput="filterSalesPartyDropdown()" required>
+              <input type="text" id="modal-sales-customer" name="yarn_sales_buyer_search_field_no_autofill" placeholder="Search / Select Party or Type..." autocomplete="new-password" autocorrect="off" autocapitalize="words" spellcheck="false" data-lpignore="true" data-form-type="other" onfocus="showSalesPartyDropdown()" oninput="filterSalesPartyDropdown()" required>
               <div id="sales-party-dropdown" class="dropdown-list" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 10000; max-height: 240px; overflow-y: auto; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-lg);"></div>
             </div>
             <div class="form-group" style="flex: 1 1 120px;">
