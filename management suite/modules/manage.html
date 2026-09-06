@@ -3282,8 +3282,16 @@
           <input type="text" id="new-fp-supplier-gstin" placeholder="e.g. 24AAECS1234F1Z9" maxlength="15" autocomplete="off" onblur="this.value = this.value.trim().toUpperCase()" oninput="this.value = this.value.toUpperCase();" style="text-transform: uppercase;">
         </div>
         <div class="form-group">
+          <label>Default Broker / Agent</label>
+          <input type="text" id="new-fp-supplier-broker" placeholder="e.g. DIRECT or Broker Name" value="DIRECT">
+        </div>
+        <div class="form-group">
           <label>Credit Days</label>
           <input type="number" id="new-fp-supplier-credit-days" min="0" max="365" value="30" placeholder="30">
+        </div>
+        <div class="form-group">
+          <label>Default HSN Code</label>
+          <input type="text" id="new-fp-supplier-hsn" placeholder="e.g. 54033100" value="54033100">
         </div>
 
         <div class="form-group fps-field-half">
@@ -3322,7 +3330,7 @@
         <label style="font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
           <span>🔍</span> Universal Search FP Suppliers
         </label>
-        <input type="text" id="fp-supplier-search-bar" placeholder="Search party name, GSTIN, contact person, phone, address, notes…" oninput="handleFpSupplierSearch(this.value)" style="width: 100%; height: 40px; padding: 0.6rem 0.75rem; border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; background-color: var(--surface); color: var(--fg); border: 1.5px solid var(--border);">
+        <input type="text" id="fp-supplier-search-bar" placeholder="Search party name, GSTIN, contact person, phone, address, broker, notes…" oninput="handleFpSupplierSearch(this.value)" style="width: 100%; height: 40px; padding: 0.6rem 0.75rem; border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; background-color: var(--surface); color: var(--fg); border: 1.5px solid var(--border);">
       </div>
     </div>
 
@@ -3345,7 +3353,7 @@
               <th>GSTIN &amp; Phone</th>
               <th class="fp-supplier-address-col">Billing Address</th>
               <th class="fp-supplier-address-col">Consignee Details</th>
-              <th>Credit Days</th>
+              <th>Terms</th>
               <th>Notes</th>
               <th>Actions</th>
             </tr>
@@ -7432,7 +7440,7 @@ function showToast(message, type = 'info') {
     if (fpSupplierSearchQuery.trim()) {
       const terms = fpSupplierSearchQuery.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
       filtered = (rawMaterialFpSuppliers || []).filter(s => {
-        const text = `${s.name || ''} ${s.contactPerson || ''} ${s.phone || ''} ${s.email || ''} ${s.gstin || ''} ${s.pan || ''} ${s.address || ''} ${s.consigneeName || ''} ${s.consigneeAddress || ''} ${s.notes || ''}`.toLowerCase();
+        const text = `${s.name || ''} ${s.contactPerson || ''} ${s.phone || ''} ${s.email || ''} ${s.gstin || ''} ${s.pan || ''} ${s.address || ''} ${s.consigneeName || ''} ${s.consigneeAddress || ''} ${s.broker || ''} ${s.hsn || ''} ${s.notes || ''}`.toLowerCase();
         return terms.every(t => text.includes(t));
       });
     }
@@ -7451,7 +7459,13 @@ function showToast(message, type = 'info') {
       const consigneeName = s.consigneeName ? `<div style="font-weight: 600; font-size: 0.82rem; color: var(--fg);">${s.consigneeName}</div>` : '';
       const consigneeAddress = s.consigneeAddress ? `<div style="font-size: 0.78rem; color: var(--muted);">${s.consigneeAddress}</div>` : '<div style="font-size: 0.78rem; color: var(--muted); font-style: italic;">Same as billing</div>';
       
-      const creditDaysDisplay = `<div style="font-size: 0.85rem; font-weight: 600; color: var(--fg);">${s.creditDays !== undefined && s.creditDays !== '' ? s.creditDays : 30} Days</div>`;
+      const termsDisplay = `
+        <div style="font-size: 0.78rem; line-height: 1.4;">
+          <div>Broker: <strong>${s.broker || 'DIRECT'}</strong></div>
+          <div>Credit: <strong>${s.creditDays !== undefined && s.creditDays !== '' ? s.creditDays : 30} Days</strong></div>
+          <div>HSN: <strong>${s.hsn || '54033100'}</strong></div>
+        </div>
+      `;
 
       return `
         <tr>
@@ -7472,7 +7486,7 @@ function showToast(message, type = 'info') {
             ${consigneeAddress}
           </td>
           <td>
-            ${creditDaysDisplay}
+            ${termsDisplay}
           </td>
           <td style="font-size: 0.82rem; color: var(--muted); max-width: 150px; white-space: normal; word-break: break-word;">
             ${s.notes || '-'}
@@ -7494,7 +7508,9 @@ function showToast(message, type = 'info') {
     const phoneInput = document.getElementById('new-fp-supplier-phone');
     const emailInput = document.getElementById('new-fp-supplier-email');
     const gstinInput = document.getElementById('new-fp-supplier-gstin');
+    const brokerInput = document.getElementById('new-fp-supplier-broker');
     const creditDaysInput = document.getElementById('new-fp-supplier-credit-days');
+    const hsnInput = document.getElementById('new-fp-supplier-hsn');
     const addressInput = document.getElementById('new-fp-supplier-address');
     const consigneeAddressInput = document.getElementById('new-fp-supplier-consignee-address');
     const consigneeNameInput = document.getElementById('new-fp-supplier-consignee-name');
@@ -7505,7 +7521,9 @@ function showToast(message, type = 'info') {
     const phone = (phoneInput.value || '').trim();
     const email = (emailInput.value || '').trim();
     const gstin = (gstinInput.value || '').trim().toUpperCase();
+    const broker = (brokerInput.value || '').trim() || 'DIRECT';
     const creditDays = creditDaysInput.value !== '' ? parseInt(creditDaysInput.value, 10) : 30;
+    const hsn = (hsnInput.value || '').trim() || '54033100';
     const address = (addressInput.value || '').trim();
     const consigneeAddress = (consigneeAddressInput.value || '').trim() || address;
     const consigneeName = (consigneeNameInput.value || '').trim() || name;
@@ -7527,7 +7545,9 @@ function showToast(message, type = 'info') {
         s.phone = phone;
         s.email = email;
         s.gstin = gstin;
+        s.broker = broker;
         s.creditDays = creditDays;
+        s.hsn = hsn;
         s.address = address;
         s.consigneeAddress = consigneeAddress;
         s.consigneeName = consigneeName;
@@ -7550,7 +7570,9 @@ function showToast(message, type = 'info') {
         phone,
         email,
         gstin,
+        broker,
         creditDays,
+        hsn,
         address,
         consigneeAddress,
         consigneeName,
@@ -7564,7 +7586,9 @@ function showToast(message, type = 'info') {
       phoneInput.value = '';
       emailInput.value = '';
       gstinInput.value = '';
+      brokerInput.value = 'DIRECT';
       creditDaysInput.value = '30';
+      hsnInput.value = '54033100';
       addressInput.value = '';
       consigneeAddressInput.value = '';
       consigneeNameInput.value = '';
@@ -7585,7 +7609,9 @@ function showToast(message, type = 'info') {
     document.getElementById('new-fp-supplier-phone').value = s.phone || '';
     document.getElementById('new-fp-supplier-email').value = s.email || '';
     document.getElementById('new-fp-supplier-gstin').value = s.gstin || '';
+    document.getElementById('new-fp-supplier-broker').value = s.broker || 'DIRECT';
     document.getElementById('new-fp-supplier-credit-days').value = s.creditDays !== undefined ? s.creditDays : 30;
+    document.getElementById('new-fp-supplier-hsn').value = s.hsn || '54033100';
     document.getElementById('new-fp-supplier-address').value = s.address || '';
     document.getElementById('new-fp-supplier-consignee-address').value = s.consigneeAddress || '';
     document.getElementById('new-fp-supplier-consignee-name').value = s.consigneeName || '';
@@ -7606,7 +7632,9 @@ function showToast(message, type = 'info') {
     document.getElementById('new-fp-supplier-phone').value = '';
     document.getElementById('new-fp-supplier-email').value = '';
     document.getElementById('new-fp-supplier-gstin').value = '';
+    document.getElementById('new-fp-supplier-broker').value = 'DIRECT';
     document.getElementById('new-fp-supplier-credit-days').value = '30';
+    document.getElementById('new-fp-supplier-hsn').value = '54033100';
     document.getElementById('new-fp-supplier-address').value = '';
     document.getElementById('new-fp-supplier-consignee-address').value = '';
     document.getElementById('new-fp-supplier-consignee-name').value = '';
