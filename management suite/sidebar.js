@@ -553,6 +553,10 @@
           <span class="vf-sb-icon vf-sb-icon-purple vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 010 7.75"/></svg></span>
           Manage RM Suppliers
         </a>
+        <a class="vf-sb-link child" href="modules/manage.html?tab=fp-suppliers">
+          <span class="vf-sb-icon vf-sb-icon-purple vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+          Manage FP Suppliers
+        </a>
       </div>
     </div>
     <a class="vf-sb-link" data-mode="common" href="modules/settings.html">
@@ -947,6 +951,7 @@
     'raw-material-qualities': ['raw-material-qualities', 'manage rm qualities', 'rm qualities', 'tab-raw-material-qualities'],
     'fp-qualities': ['fp-qualities', 'manage fp qualities', 'fp qualities', 'finished product qualities', 'tab-fp-qualities'],
     'raw-material-suppliers': ['raw-material-suppliers', 'manage rm suppliers', 'rm suppliers', 'tab-raw-material-suppliers'],
+    'fp-suppliers': ['fp-suppliers', 'manage fp suppliers', 'fp suppliers', 'fp parties', 'purchasing parties', 'tab-fp-suppliers'],
     'tab-manifest': ['tab-manifest', 'manifest'],
     'tab-visualizer': ['tab-visualizer', 'visualizer'],
     'tab-jala': ['tab-jala', 'jala'],
@@ -998,7 +1003,8 @@
       'staff': 'Manage Staff',
       'raw-material-qualities': 'Manage RM Qualities',
       'fp-qualities': 'Manage FP Qualities',
-      'raw-material-suppliers': 'Manage RM Suppliers'
+      'raw-material-suppliers': 'Manage RM Suppliers',
+      'fp-suppliers': 'Manage FP Suppliers'
     };
     return map[tab.toLowerCase()] || tab.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
@@ -1878,7 +1884,9 @@
     'manage-machine-parts': 'machine-parts.html',
     'manage-staff': 'manage.html?tab=staff',
     'manage-rm-qualities': 'manage.html?tab=raw-material-qualities',
+    'manage-fp-qualities': 'manage.html?tab=fp-qualities',
     'manage-rm-suppliers': 'manage.html?tab=raw-material-suppliers',
+    'manage-fp-suppliers': 'manage.html?tab=fp-suppliers',
     'manage-year-end': 'manage.html?tab=year-end-rollover',
 
     // Tools & Gear Charts
@@ -1963,7 +1971,9 @@
     { pattern: /manage\.html\?tab=fanis/i, key: 'manage-fanis', parent: 'manage' },
     { pattern: /manage\.html\?tab=staff/i, key: 'manage-staff', parent: 'manage' },
     { pattern: /manage\.html\?tab=raw-material-qualities/i, key: 'manage-rm-qualities', parent: 'manage' },
+    { pattern: /manage\.html\?tab=fp-qualities/i, key: 'manage-fp-qualities', parent: 'manage' },
     { pattern: /manage\.html\?tab=raw-material-suppliers/i, key: 'manage-rm-suppliers', parent: 'manage' },
+    { pattern: /manage\.html\?tab=fp-suppliers/i, key: 'manage-fp-suppliers', parent: 'manage' },
 
     // Tools & Gear
     { pattern: /ep-parser\.html/i, key: 'ep-parser', parent: null },

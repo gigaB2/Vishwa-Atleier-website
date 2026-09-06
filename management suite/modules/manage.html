@@ -1723,6 +1723,42 @@
     padding: 0 1.25rem;
   }
 
+  /* —— Manage FP Suppliers (Purchasing Parties) —— */
+  #tab-fp-suppliers .form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+    align-items: flex-end;
+  }
+  #tab-fp-suppliers .fps-field-full {
+    grid-column: 1 / -1;
+  }
+  #tab-fp-suppliers .fps-field-half {
+    grid-column: span 2;
+  }
+  #tab-fp-suppliers .fps-form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    align-items: center;
+    margin-top: 0.5rem;
+  }
+  @media (max-width: 900px) {
+    #tab-fp-suppliers .form-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    #tab-fp-suppliers .fps-field-half {
+      grid-column: 1 / -1 !important;
+    }
+  }
+  @media (max-width: 600px) {
+    #tab-fp-suppliers .form-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
   .custom-dropdown-container {
     position: relative;
     width: 100%;
@@ -3203,6 +3239,127 @@
           </thead>
           <tbody id="supplier-mgmt-body">
             <!-- Suppliers list injected here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: FINISHED PRODUCT (FP) SUPPLIERS / PURCHASING PARTIES -->
+  <div id="tab-fp-suppliers" class="tab-content">
+    <!-- Tab Header -->
+    <div class="placeholder-header">
+      <div class="placeholder-header-inner">
+        <div class="placeholder-header-title-wrap">
+          <h1>Manage FP Suppliers</h1>
+        </div>
+      </div>
+      <p>Final product purchasing parties, buyer billing &amp; consignee details, GSTIN &amp; sales references for yarn sales</p>
+    </div>
+
+    <div class="card">
+      <h3 id="fp-supplier-form-title">Add New FP Supplier / Purchasing Party</h3>
+      <div class="form-grid" style="margin-top: 1.5rem;">
+        <div class="form-group">
+          <label>Party / Buyer Name *</label>
+          <input type="text" id="new-fp-supplier-name" placeholder="e.g. SITA TEXTILES PVT LTD" autocomplete="off" onblur="this.value = this.value.trim().toUpperCase()" oninput="this.value = this.value.toUpperCase();" style="text-transform: uppercase;">
+        </div>
+        <div class="form-group">
+          <label>Contact Person</label>
+          <input type="text" id="new-fp-supplier-contact" placeholder="e.g. Ramesh Bhai">
+        </div>
+        <div class="form-group">
+          <label>Phone / Mobile</label>
+          <input type="text" id="new-fp-supplier-phone" placeholder="10-digit number">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="new-fp-supplier-email" placeholder="accounts@example.com">
+        </div>
+
+        <div class="form-group">
+          <label>GSTIN Number</label>
+          <input type="text" id="new-fp-supplier-gstin" placeholder="e.g. 24AAECS1234F1Z9" maxlength="15" autocomplete="off" onblur="this.value = this.value.trim().toUpperCase()" oninput="this.value = this.value.toUpperCase();" style="text-transform: uppercase;">
+        </div>
+        <div class="form-group">
+          <label>Default Broker / Agent</label>
+          <input type="text" id="new-fp-supplier-broker" placeholder="e.g. DIRECT or Broker Name" value="DIRECT">
+        </div>
+        <div class="form-group">
+          <label>Credit Days</label>
+          <input type="number" id="new-fp-supplier-credit-days" min="0" max="365" value="30" placeholder="30">
+        </div>
+        <div class="form-group">
+          <label>Default HSN Code</label>
+          <input type="text" id="new-fp-supplier-hsn" placeholder="e.g. 54033100" value="54033100">
+        </div>
+
+        <div class="form-group fps-field-half">
+          <label>Buyer Billing Address *</label>
+          <input type="text" id="new-fp-supplier-address" placeholder="Full billing address (e.g. Plot No, GIDC, Surat, Gujarat)">
+        </div>
+        <div class="form-group fps-field-half">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <label style="margin: 0;">Consignee Delivery Address</label>
+            <button type="button" class="btn btn-sm" onclick="copyFpSupplierBillingToConsignee()" style="padding: 2px 8px; font-size: 0.72rem; height: 22px; background: var(--accent-light); color: var(--accent);">Copy Billing Address</button>
+          </div>
+          <input type="text" id="new-fp-supplier-consignee-address" placeholder="Delivery destination address (if different)">
+        </div>
+
+        <div class="form-group fps-field-half">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <label style="margin: 0;">Consignee / Shipped To Name</label>
+            <button type="button" class="btn btn-sm" onclick="copyFpSupplierNameToConsignee()" style="padding: 2px 8px; font-size: 0.72rem; height: 22px; background: var(--accent-light); color: var(--accent);">Same as Party</button>
+          </div>
+          <input type="text" id="new-fp-supplier-consignee-name" placeholder="Consignee unit or name">
+        </div>
+        <div class="form-group fps-field-half">
+          <label>Notes / Payment Terms</label>
+          <input type="text" id="new-fp-supplier-notes" placeholder="Special payment terms, delivery notes, etc.">
+        </div>
+
+        <div class="form-group fps-form-actions">
+          <button id="btn-cancel-fp-supplier-edit" class="btn" style="display: none; background: var(--border); color: var(--fg);" onclick="cancelFpSupplierEdit()">Cancel</button>
+          <button id="btn-add-fp-supplier" class="btn btn-primary" onclick="addOrUpdateFpSupplier()">Add FP Supplier</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 1.5rem; background: var(--surface); border: 1.5px solid var(--border);">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label style="font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🔍</span> Universal Search FP Suppliers
+        </label>
+        <input type="text" id="fp-supplier-search-bar" placeholder="Search party name, GSTIN, contact person, phone, address, broker, notes…" oninput="handleFpSupplierSearch(this.value)" style="width: 100%; height: 40px; padding: 0.6rem 0.75rem; border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; background-color: var(--surface); color: var(--fg); border: 1.5px solid var(--border);">
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Available Manage FP Suppliers</h3>
+      <style>
+        #fp-supplier-mgmt-table td.fp-supplier-address-col {
+          max-width: none !important;
+          overflow: visible !important;
+          white-space: normal !important;
+          word-break: normal !important;
+          overflow-wrap: break-word !important;
+        }
+      </style>
+      <div class="table-container" style="margin-top: 1rem;">
+        <table id="fp-supplier-mgmt-table">
+          <thead>
+            <tr>
+              <th>Party Name &amp; Contact</th>
+              <th>GSTIN &amp; Phone</th>
+              <th class="fp-supplier-address-col">Billing Address</th>
+              <th class="fp-supplier-address-col">Consignee Details</th>
+              <th>Terms</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="fp-supplier-mgmt-body">
+            <!-- FP Suppliers list injected here -->
           </tbody>
         </table>
       </div>
@@ -6031,10 +6188,12 @@ function showToast(message, type = 'info') {
   const defaultQualities = [];
 
   const defaultSuppliers = [];
+  const defaultFpSuppliers = [];
 
   let rawMaterialQualities = loadInitialState('yarn-qualities', defaultQualities);
   let rawMaterialFpQualities = loadInitialState('yarn-fp-qualities', []);
   let rawMaterialSuppliers = loadInitialState('yarn-suppliers', defaultSuppliers);
+  let rawMaterialFpSuppliers = loadInitialState('yarn-fp-suppliers', defaultFpSuppliers);
 
   function getStoredBeams() {
     const stored = localStorage.getItem('warp-beams');
@@ -6059,6 +6218,7 @@ function showToast(message, type = 'info') {
       rawMaterialQualities: JSON.parse(JSON.stringify(rawMaterialQualities)),
       rawMaterialFpQualities: JSON.parse(JSON.stringify(rawMaterialFpQualities)),
       rawMaterialSuppliers: JSON.parse(JSON.stringify(rawMaterialSuppliers)),
+      rawMaterialFpSuppliers: JSON.parse(JSON.stringify(rawMaterialFpSuppliers)),
       beams: getStoredBeams()
     };
     undoStack.push(snapshot);
@@ -6080,6 +6240,7 @@ function showToast(message, type = 'info') {
     rawMaterialQualities = snapshot.rawMaterialQualities || [];
     rawMaterialFpQualities = snapshot.rawMaterialFpQualities || [];
     rawMaterialSuppliers = snapshot.rawMaterialSuppliers || [];
+    rawMaterialFpSuppliers = snapshot.rawMaterialFpSuppliers || [];
 
     localStorage.setItem('warp-beams', JSON.stringify(snapshot.beams));
     localStorage.setItem('machines', JSON.stringify(state.machines));
@@ -6090,6 +6251,7 @@ function showToast(message, type = 'info') {
     localStorage.setItem('yarn-qualities', JSON.stringify(rawMaterialQualities));
     localStorage.setItem('yarn-fp-qualities', JSON.stringify(rawMaterialFpQualities));
     localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
+    localStorage.setItem('yarn-fp-suppliers', JSON.stringify(rawMaterialFpSuppliers));
 
     if (state.employees) {
       let fullState = {};
@@ -6136,6 +6298,12 @@ function showToast(message, type = 'info') {
     renderQualities();
   }
 
+  function saveFpSuppliersState() {
+    localStorage.setItem('yarn-fp-suppliers', JSON.stringify(rawMaterialFpSuppliers));
+    window.dispatchEvent(new Event('storage'));
+    renderFpSuppliers();
+  }
+
   function saveState() {
     localStorage.setItem('machines', JSON.stringify(state.machines));
     localStorage.setItem('productionLogs', JSON.stringify(state.productionLogs));
@@ -6157,6 +6325,9 @@ function showToast(message, type = 'info') {
     }
     if (rawMaterialSuppliers && rawMaterialSuppliers.length > 0) {
       localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
+    }
+    if (rawMaterialFpSuppliers && rawMaterialFpSuppliers.length > 0) {
+      localStorage.setItem('yarn-fp-suppliers', JSON.stringify(rawMaterialFpSuppliers));
     }
     
     // Save employees to its custom key
@@ -7236,6 +7407,266 @@ function showToast(message, type = 'info') {
     showToast('Supplier removed.', 'success');
   }
 
+  // --- MANAGE FP SUPPLIERS (Purchasing Parties / Buyers) ---
+  let editingFpSupplierId = null;
+  let fpSupplierSearchQuery = '';
+
+  window.handleFpSupplierSearch = function(val) {
+    fpSupplierSearchQuery = val;
+    renderFpSuppliers();
+  };
+
+  window.copyFpSupplierBillingToConsignee = function() {
+    const billing = (document.getElementById('new-fp-supplier-address').value || '').trim();
+    if (billing) {
+      document.getElementById('new-fp-supplier-consignee-address').value = billing;
+      showToast('Copied Billing Address to Consignee Address', 'info');
+    }
+  };
+
+  window.copyFpSupplierNameToConsignee = function() {
+    const name = (document.getElementById('new-fp-supplier-name').value || '').trim();
+    if (name) {
+      document.getElementById('new-fp-supplier-consignee-name').value = name;
+      showToast('Copied Party Name to Consignee Name', 'info');
+    }
+  };
+
+  function renderFpSuppliers() {
+    const body = document.getElementById('fp-supplier-mgmt-body');
+    if (!body) return;
+
+    let filtered = rawMaterialFpSuppliers || [];
+    if (fpSupplierSearchQuery.trim()) {
+      const terms = fpSupplierSearchQuery.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      filtered = (rawMaterialFpSuppliers || []).filter(s => {
+        const text = `${s.name || ''} ${s.contactPerson || ''} ${s.phone || ''} ${s.email || ''} ${s.gstin || ''} ${s.pan || ''} ${s.address || ''} ${s.consigneeName || ''} ${s.consigneeAddress || ''} ${s.broker || ''} ${s.hsn || ''} ${s.notes || ''}`.toLowerCase();
+        return terms.every(t => text.includes(t));
+      });
+    }
+
+    if (filtered.length === 0) {
+      body.innerHTML = `<tr><td colspan="7" style="color: var(--muted); padding: 2rem; text-align: center;">${fpSupplierSearchQuery.trim() ? 'No FP purchasing parties matching search criteria.' : 'No FP Suppliers found. Add your final product purchasing parties above!'}</td></tr>`;
+      return;
+    }
+
+    body.innerHTML = filtered.map(s => {
+      const gstinBadge = s.gstin ? `<span style="font-family: monospace; font-size: 0.8rem; background: rgba(139,92,246,0.12); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(139,92,246,0.25);">${s.gstin}</span>` : '<span style="color: var(--muted); font-size: 0.8rem;">-</span>';
+      const contactSubtitle = s.contactPerson ? `<div style="font-size: 0.78rem; color: var(--muted); margin-top: 2px;">👤 ${s.contactPerson}</div>` : '';
+      const phoneDisplay = s.phone ? `<div style="font-size: 0.8rem; margin-top: 2px;">📞 ${s.phone}</div>` : '';
+      const emailDisplay = s.email ? `<div style="font-size: 0.75rem; color: var(--muted);">✉️ ${s.email}</div>` : '';
+      
+      const consigneeName = s.consigneeName ? `<div style="font-weight: 600; font-size: 0.82rem; color: var(--fg);">${s.consigneeName}</div>` : '';
+      const consigneeAddress = s.consigneeAddress ? `<div style="font-size: 0.78rem; color: var(--muted);">${s.consigneeAddress}</div>` : '<div style="font-size: 0.78rem; color: var(--muted); font-style: italic;">Same as billing</div>';
+      
+      const termsDisplay = `
+        <div style="font-size: 0.78rem; line-height: 1.4;">
+          <div>Broker: <strong>${s.broker || 'DIRECT'}</strong></div>
+          <div>Credit: <strong>${s.creditDays !== undefined && s.creditDays !== '' ? s.creditDays : 30} Days</strong></div>
+          <div>HSN: <strong>${s.hsn || '54033100'}</strong></div>
+        </div>
+      `;
+
+      return `
+        <tr>
+          <td>
+            <div style="font-weight: 700; color: var(--fg); font-size: 0.95rem;">${s.name}</div>
+            ${contactSubtitle}
+          </td>
+          <td>
+            <div>${gstinBadge}</div>
+            ${phoneDisplay}
+            ${emailDisplay}
+          </td>
+          <td style="max-width: 260px; white-space: normal; word-break: break-word; font-size: 0.85rem;">
+            ${s.address || '-'}
+          </td>
+          <td style="max-width: 260px; white-space: normal; word-break: break-word;">
+            ${consigneeName}
+            ${consigneeAddress}
+          </td>
+          <td>
+            ${termsDisplay}
+          </td>
+          <td style="font-size: 0.82rem; color: var(--muted); max-width: 150px; white-space: normal; word-break: break-word;">
+            ${s.notes || '-'}
+          </td>
+          <td>
+            <div style="display: flex; gap: 0.5rem; justify-content: center;">
+              <button class="btn btn-sm" style="padding: 0.3rem 0.65rem; font-size: 0.75rem; background: var(--accent-light); color: var(--accent);" onclick="editFpSupplier('${s.id}')">Edit</button>
+              <button class="btn btn-sm badge-error" style="padding: 0.3rem 0.65rem; font-size: 0.75rem; color: white;" onclick="deleteFpSupplier('${s.id}')">Remove</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function addOrUpdateFpSupplier() {
+    const nameInput = document.getElementById('new-fp-supplier-name');
+    const contactInput = document.getElementById('new-fp-supplier-contact');
+    const phoneInput = document.getElementById('new-fp-supplier-phone');
+    const emailInput = document.getElementById('new-fp-supplier-email');
+    const gstinInput = document.getElementById('new-fp-supplier-gstin');
+    const brokerInput = document.getElementById('new-fp-supplier-broker');
+    const creditDaysInput = document.getElementById('new-fp-supplier-credit-days');
+    const hsnInput = document.getElementById('new-fp-supplier-hsn');
+    const addressInput = document.getElementById('new-fp-supplier-address');
+    const consigneeAddressInput = document.getElementById('new-fp-supplier-consignee-address');
+    const consigneeNameInput = document.getElementById('new-fp-supplier-consignee-name');
+    const notesInput = document.getElementById('new-fp-supplier-notes');
+
+    const name = (nameInput.value || '').trim().toUpperCase();
+    const contactPerson = (contactInput.value || '').trim();
+    const phone = (phoneInput.value || '').trim();
+    const email = (emailInput.value || '').trim();
+    const gstin = (gstinInput.value || '').trim().toUpperCase();
+    const broker = (brokerInput.value || '').trim() || 'DIRECT';
+    const creditDays = creditDaysInput.value !== '' ? parseInt(creditDaysInput.value, 10) : 30;
+    const hsn = (hsnInput.value || '').trim() || '54033100';
+    const address = (addressInput.value || '').trim();
+    const consigneeAddress = (consigneeAddressInput.value || '').trim() || address;
+    const consigneeName = (consigneeNameInput.value || '').trim() || name;
+    const notes = (notesInput.value || '').trim();
+
+    if (!name) {
+      alert('Party / Buyer Name is required!');
+      nameInput.focus();
+      return;
+    }
+
+    pushToUndo();
+
+    if (editingFpSupplierId !== null) {
+      const s = (rawMaterialFpSuppliers || []).find(item => item.id === editingFpSupplierId);
+      if (s) {
+        s.name = name;
+        s.contactPerson = contactPerson;
+        s.phone = phone;
+        s.email = email;
+        s.gstin = gstin;
+        s.broker = broker;
+        s.creditDays = creditDays;
+        s.hsn = hsn;
+        s.address = address;
+        s.consigneeAddress = consigneeAddress;
+        s.consigneeName = consigneeName;
+        s.notes = notes;
+        s.updatedAt = new Date().toISOString();
+      }
+      cancelFpSupplierEdit();
+    } else {
+      if ((rawMaterialFpSuppliers || []).some(s => (s.name || '').toLowerCase() === name.toLowerCase())) {
+        alert(`FP Supplier "${name}" already exists!`);
+        return;
+      }
+
+      const newId = 'FPS_' + Date.now();
+      if (!Array.isArray(rawMaterialFpSuppliers)) rawMaterialFpSuppliers = [];
+      rawMaterialFpSuppliers.push({
+        id: newId,
+        name,
+        contactPerson,
+        phone,
+        email,
+        gstin,
+        broker,
+        creditDays,
+        hsn,
+        address,
+        consigneeAddress,
+        consigneeName,
+        notes,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      nameInput.value = '';
+      contactInput.value = '';
+      phoneInput.value = '';
+      emailInput.value = '';
+      gstinInput.value = '';
+      brokerInput.value = 'DIRECT';
+      creditDaysInput.value = '30';
+      hsnInput.value = '54033100';
+      addressInput.value = '';
+      consigneeAddressInput.value = '';
+      consigneeNameInput.value = '';
+      notesInput.value = '';
+    }
+
+    saveFpSuppliersState();
+    showToast('FP Supplier saved successfully!', 'success');
+  }
+
+  function editFpSupplier(id) {
+    const s = (rawMaterialFpSuppliers || []).find(item => item.id === id);
+    if (!s) return;
+    editingFpSupplierId = id;
+
+    document.getElementById('new-fp-supplier-name').value = s.name || '';
+    document.getElementById('new-fp-supplier-contact').value = s.contactPerson || '';
+    document.getElementById('new-fp-supplier-phone').value = s.phone || '';
+    document.getElementById('new-fp-supplier-email').value = s.email || '';
+    document.getElementById('new-fp-supplier-gstin').value = s.gstin || '';
+    document.getElementById('new-fp-supplier-broker').value = s.broker || 'DIRECT';
+    document.getElementById('new-fp-supplier-credit-days').value = s.creditDays !== undefined ? s.creditDays : 30;
+    document.getElementById('new-fp-supplier-hsn').value = s.hsn || '54033100';
+    document.getElementById('new-fp-supplier-address').value = s.address || '';
+    document.getElementById('new-fp-supplier-consignee-address').value = s.consigneeAddress || '';
+    document.getElementById('new-fp-supplier-consignee-name').value = s.consigneeName || '';
+    document.getElementById('new-fp-supplier-notes').value = s.notes || '';
+
+    const submitBtn = document.getElementById('btn-add-fp-supplier');
+    submitBtn.innerText = 'Update FP Supplier';
+    submitBtn.style.background = 'var(--accent3)';
+    document.getElementById('btn-cancel-fp-supplier-edit').style.display = 'inline-block';
+
+    document.getElementById('fp-supplier-form-title').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function cancelFpSupplierEdit() {
+    editingFpSupplierId = null;
+    document.getElementById('new-fp-supplier-name').value = '';
+    document.getElementById('new-fp-supplier-contact').value = '';
+    document.getElementById('new-fp-supplier-phone').value = '';
+    document.getElementById('new-fp-supplier-email').value = '';
+    document.getElementById('new-fp-supplier-gstin').value = '';
+    document.getElementById('new-fp-supplier-broker').value = 'DIRECT';
+    document.getElementById('new-fp-supplier-credit-days').value = '30';
+    document.getElementById('new-fp-supplier-hsn').value = '54033100';
+    document.getElementById('new-fp-supplier-address').value = '';
+    document.getElementById('new-fp-supplier-consignee-address').value = '';
+    document.getElementById('new-fp-supplier-consignee-name').value = '';
+    document.getElementById('new-fp-supplier-notes').value = '';
+
+    const submitBtn = document.getElementById('btn-add-fp-supplier');
+    submitBtn.innerText = 'Add FP Supplier';
+    submitBtn.style.background = '';
+    document.getElementById('btn-cancel-fp-supplier-edit').style.display = 'none';
+  }
+
+  function deleteFpSupplier(id) {
+    const s = (rawMaterialFpSuppliers || []).find(item => item.id === id);
+    if (!s) return;
+
+    if (!confirm(`Are you sure you want to delete FP Supplier "${s.name}"?`)) {
+      return;
+    }
+
+    pushToUndo();
+    const supplierAliases = [s.id, s.name, s.gstin].filter(Boolean);
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+      window.VishwaSupabase.recordDeletion('yarn-fp-suppliers', supplierAliases.length ? supplierAliases : id);
+    }
+    if (editingFpSupplierId === id) {
+      cancelFpSupplierEdit();
+    }
+    rawMaterialFpSuppliers = (rawMaterialFpSuppliers || []).filter(item => item.id !== id);
+    saveFpSuppliersState();
+    showToast('FP Supplier removed.', 'success');
+  }
+
   // Active Tab management
   function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -7287,7 +7718,8 @@ function showToast(message, type = 'info') {
       'loans': 'Loans for Staff',
       'raw-material-qualities': 'Manage RM Qualities',
       'fp-qualities': 'Manage FP Qualities',
-      'raw-material-suppliers': 'Manage RM Suppliers'
+      'raw-material-suppliers': 'Manage RM Suppliers',
+      'fp-suppliers': 'Manage FP Suppliers'
     };
     document.title = tabNames[tabId] || 'Manage';
 
@@ -7310,6 +7742,9 @@ function showToast(message, type = 'info') {
     }
     if (tabId === 'raw-material-suppliers') {
       if (typeof renderSuppliers === 'function') renderSuppliers();
+    }
+    if (tabId === 'fp-suppliers') {
+      if (typeof renderFpSuppliers === 'function') renderFpSuppliers();
     }
 
     window.__vf_active_tab = tabId;
@@ -9575,6 +10010,7 @@ function showToast(message, type = 'info') {
     rawMaterialQualities = loadInitialState('yarn-qualities', []);
     rawMaterialFpQualities = loadInitialState('yarn-fp-qualities', []);
     rawMaterialSuppliers = loadInitialState('yarn-suppliers', []);
+    rawMaterialFpSuppliers = loadInitialState('yarn-fp-suppliers', []);
     populateMachineDropdowns();
     renderAll();
     refreshData();
@@ -9615,6 +10051,9 @@ function showToast(message, type = 'info') {
       renderSuppliers();
       populateSupplierDropdown();
       renderQualities();
+    } else if (key === 'yarn-fp-suppliers') {
+      rawMaterialFpSuppliers = loadInitialState('yarn-fp-suppliers', []);
+      renderFpSuppliers();
     }
   });
 
@@ -9626,6 +10065,7 @@ function showToast(message, type = 'info') {
     if (editingQualityId === idStr) cancelQualityEdit();
     if (editingFpQualityId === idStr) cancelFpQualityEdit();
     if (editingSupplierId === idStr) cancelSupplierEdit();
+    if (editingFpSupplierId === idStr) cancelFpSupplierEdit();
     if (editingLoomId === idStr) cancelLoomEdit();
     if (editingJacquardId === idStr) cancelJacquardEdit();
     if (editingJalaId === idStr) cancelJalaEdit();
@@ -9644,6 +10084,9 @@ function showToast(message, type = 'info') {
       renderSuppliers();
       populateSupplierDropdown();
       renderQualities();
+    } else if (key === 'yarn-fp-suppliers') {
+      rawMaterialFpSuppliers = loadInitialState('yarn-fp-suppliers', []);
+      renderFpSuppliers();
     } else if (key === 'manage-looms' || key === 'looms') {
       looms = loadInitialState('manage-looms', []);
       renderLooms();
@@ -9674,6 +10117,7 @@ function showToast(message, type = 'info') {
     if (!localStorage.getItem('yarn-qualities') && rawMaterialQualities && rawMaterialQualities.length > 0) localStorage.setItem('yarn-qualities', JSON.stringify(rawMaterialQualities));
     if (!localStorage.getItem('yarn-fp-qualities') && rawMaterialFpQualities && rawMaterialFpQualities.length > 0) localStorage.setItem('yarn-fp-qualities', JSON.stringify(rawMaterialFpQualities));
     if (!localStorage.getItem('yarn-suppliers') && rawMaterialSuppliers && rawMaterialSuppliers.length > 0) localStorage.setItem('yarn-suppliers', JSON.stringify(rawMaterialSuppliers));
+    if (!localStorage.getItem('yarn-fp-suppliers') && rawMaterialFpSuppliers && rawMaterialFpSuppliers.length > 0) localStorage.setItem('yarn-fp-suppliers', JSON.stringify(rawMaterialFpSuppliers));
 
     // Auto-migrate: migrate sub-roles to standard "Beam Loading"
     let currentEmployees = loadEmployeesState();
