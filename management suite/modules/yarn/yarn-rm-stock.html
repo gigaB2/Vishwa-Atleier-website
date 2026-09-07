@@ -5756,7 +5756,11 @@ Return ONLY a JSON object matching this schema:
         return;
       }
 
-      // Sort quality groups so active qualities appear on top and completed qualities stack at the bottom
+      // Sort quality groups with stable deterministic order:
+      // 1. Active in-stock qualities first, completed/zero-stock at the bottom
+      // 2. Alphabetical quality name (A-Z)
+      // 3. Code (A-Z)
+      // 4. Color (A-Z)
       const sortedQualityNames = Object.keys(grouped).sort((aName, bName) => {
         const aLots = grouped[aName];
         const bLots = grouped[bName];
@@ -5764,12 +5768,31 @@ Return ONLY a JSON object matching this schema:
         const bAvail = bLots.reduce((sum, l) => sum + l.boxes.filter(b => b.status === 'available').length, 0);
         if (aAvail > 0 && bAvail === 0) return -1;
         if (aAvail === 0 && bAvail > 0) return 1;
-        return 0;
+
+        const aQ = (aLots[0]?.quality || aName.split('___')[0] || '').toLowerCase();
+        const bQ = (bLots[0]?.quality || bName.split('___')[0] || '').toLowerCase();
+        const qComp = aQ.localeCompare(bQ, undefined, { numeric: true, sensitivity: 'base' });
+        if (qComp !== 0) return qComp;
+
+        const aCode = (aLots[0]?.code || aName.split('___')[1] || '').toLowerCase();
+        const bCode = (bLots[0]?.code || bName.split('___')[1] || '').toLowerCase();
+        const codeComp = aCode.localeCompare(bCode, undefined, { numeric: true, sensitivity: 'base' });
+        if (codeComp !== 0) return codeComp;
+
+        const aColor = (aLots[0]?.color || aName.split('___')[2] || '').toLowerCase();
+        const bColor = (bLots[0]?.color || bName.split('___')[2] || '').toLowerCase();
+        return aColor.localeCompare(bColor, undefined, { numeric: true, sensitivity: 'base' });
       });
 
       // Build Quality HTML Blocks
       sortedQualityNames.forEach(groupKey => {
         const lots = grouped[groupKey];
+        // Ensure lots within each quality maintain stable sort order (receiveDate descending, then lotNumber)
+        lots.sort((la, lb) => {
+          const dateComp = new Date(lb.receiveDate || 0) - new Date(la.receiveDate || 0);
+          if (dateComp !== 0) return dateComp;
+          return String(la.lotNumber || '').localeCompare(String(lb.lotNumber || ''), undefined, { numeric: true });
+        });
         const qualityName = lots[0] ? lots[0].quality : groupKey.split('___')[0];
 
         let qAvailBoxes = 0;
@@ -6271,8 +6294,18 @@ Return ONLY a JSON object matching this schema:
         qualitiesList = qualitiesList.filter(q => q.availWeight <= 0.001);
       }
 
-      // Sort by available weight descending
-      qualitiesList.sort((a, b) => b.availWeight - a.availWeight);
+      // Deterministic stable sort: Available weight descending, then alphabetical quality, lot, code, color
+      qualitiesList.sort((a, b) => {
+        const diff = b.availWeight - a.availWeight;
+        if (Math.abs(diff) > 0.001) return diff;
+        const qComp = (a.quality || '').localeCompare(b.quality || '', undefined, { numeric: true, sensitivity: 'base' });
+        if (qComp !== 0) return qComp;
+        const lotComp = String(a.lotNo || '').localeCompare(String(b.lotNo || ''), undefined, { numeric: true });
+        if (lotComp !== 0) return lotComp;
+        const codeComp = String(a.code || '').localeCompare(String(b.code || ''), undefined, { numeric: true });
+        if (codeComp !== 0) return codeComp;
+        return String(a.color || '').localeCompare(String(b.color || ''), undefined, { numeric: true });
+      });
 
       // Render Table Rows
       const tbody = document.getElementById('dash-table-tbody');
