@@ -1712,6 +1712,333 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
+
+    /* =========================================================
+       6-MOVE RESPONSIVE MOBILE & TABLET UX PATTERN (Instagram Reel)
+       ========================================================= */
+    :root {
+      --surface-subtle: rgba(255, 255, 255, 0.03);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --primary-gradient: linear-gradient(135deg, #8b5cf6, #ec4899);
+    }
+    body:not(.dark-mode) {
+      --surface-subtle: #f6f5fb;
+      --border-subtle: #e5e3f0;
+      --primary-gradient: linear-gradient(135deg, #7c3aed, #ec4899);
+    }
+
+    /* Move 5: Mobile Quick Filter Chips Strip */
+    .mobile-quick-filter-strip {
+      display: none;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 2px 10px 2px;
+      margin-bottom: 0.85rem;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .mobile-quick-filter-strip::-webkit-scrollbar {
+      display: none;
+    }
+    .mobile-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--fg);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      box-shadow: var(--shadow-sm);
+      min-height: 40px;
+    }
+    .mobile-filter-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .mobile-filter-chip:active {
+      transform: scale(0.96);
+    }
+    .mobile-filter-chip.active {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+    }
+    .mobile-filter-chip .chip-count {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.08);
+    }
+    .mobile-filter-chip.active .chip-count {
+      background: rgba(255, 255, 255, 0.28);
+      color: #ffffff;
+    }
+
+    /* Stock Mobile Cards Container */
+    .stock-dash-mobile-cards {
+      display: none;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .yarn-mobile-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+      position: relative;
+      width: 100%;
+      box-sizing: border-box;
+      contain: layout style;
+    }
+    .yarn-mobile-card:hover,
+    .yarn-mobile-card:focus-within {
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+      border-color: rgba(124, 58, 237, 0.45);
+    }
+    .yarn-mobile-card.is-instock {
+      border-left: 5px solid var(--success);
+    }
+    .yarn-mobile-card.is-zerostock {
+      border-left: 5px solid var(--muted);
+    }
+    .yarn-mobile-card.has-gr {
+      border-left: 5px solid var(--accent3);
+    }
+
+    /* Move 1: Hierarchical Card Header */
+    .mobile-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 0.95rem 1.15rem 0.75rem 1.15rem;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-subtle);
+      gap: 0.75rem;
+      box-sizing: border-box;
+    }
+    .mobile-card-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+    .mobile-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .mobile-card-party-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--fg);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: -0.2px;
+    }
+    .mobile-card-badges {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* Move 2: Key Metric Highlight Pill */
+    .mobile-card-highlight {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1.15rem;
+      background: rgba(16, 185, 129, 0.05);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .mobile-highlight-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .mobile-highlight-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .mobile-highlight-value {
+      font-family: var(--font-mono);
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--fg);
+    }
+
+    /* Move 3: 2-Column High-Density Grid */
+    .mobile-card-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem 1rem;
+      padding: 0.9rem 1.15rem;
+      box-sizing: border-box;
+    }
+    .mobile-card-field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .mobile-field-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .mobile-field-value {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--fg);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Move 6: Card Actions & Touch Controls */
+    .mobile-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1.15rem;
+      border-top: 1px solid var(--border-subtle);
+      background: var(--surface);
+      gap: 0.5rem;
+    }
+    .mobile-btn-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 40px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--fg);
+    }
+    .mobile-btn-pill.primary {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+    }
+    .mobile-btn-pill.primary:hover {
+      box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+    }
+    .mobile-btn-pill:active {
+      transform: scale(0.96);
+    }
+
+    @media (max-width: 1024px) {
+      .mobile-quick-filter-strip {
+        display: flex;
+      }
+      .stock-dash-mobile-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+      }
+      .dash-table-wrapper {
+        display: none !important;
+      }
+      .dash-table-card {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        margin-bottom: 1.5rem !important;
+      }
+      .dash-table-header {
+        background: var(--surface) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 14px !important;
+        padding: 0.85rem 1rem !important;
+        margin-bottom: 0.75rem !important;
+      }
+      .chart-card {
+        padding: 1rem 0.85rem !important;
+      }
+      .rm-container {
+        padding: 1rem 0.75rem 3rem 0.75rem;
+      }
+      .dash-kpi-grid,
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.75rem;
+      }
+      .dash-toolbar,
+      .filter-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+      }
+      .dash-search-group,
+      .filter-options {
+        flex-direction: column;
+        width: 100%;
+      }
+      .dash-search-group .search-box,
+      .dash-search-group select,
+      .filter-options .form-control {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .rm-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+      }
+      .quality-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      .quality-summary {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .lot-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      .lot-summary {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1827,6 +2154,28 @@
             Showing 0 qualities
           </div>
         </div>
+
+        <!-- Move 5: Mobile Quick Filter Chips Strip for Dashboard -->
+        <div class="mobile-quick-filter-strip" id="dash-mobile-filter-strip">
+          <button type="button" class="mobile-filter-chip active" data-filter="all" onclick="setDashMobileFilter('all')">
+            All <span class="chip-count" id="dash-chip-count-all">0</span>
+          </button>
+          <button type="button" class="mobile-filter-chip" data-filter="in-stock" onclick="setDashMobileFilter('in-stock')">
+            🟢 In Stock <span class="chip-count" id="dash-chip-count-instock">0</span>
+          </button>
+          <button type="button" class="mobile-filter-chip" data-filter="out-of-stock" onclick="setDashMobileFilter('out-of-stock')">
+            ⚪ Zero Stock <span class="chip-count" id="dash-chip-count-outstock">0</span>
+          </button>
+          <button type="button" class="mobile-filter-chip" data-filter="gr" onclick="setDashMobileFilter('gr')">
+            📦 Has GR <span class="chip-count" id="dash-chip-count-gr">0</span>
+          </button>
+        </div>
+
+        <!-- Move 1-4: Mobile Card Deck for Dashboard -->
+        <div class="stock-dash-mobile-cards" id="dash-mobile-cards-container">
+          <!-- Populated by renderExecutiveDashboard() -->
+        </div>
+
         <div class="dash-table-wrapper">
           <table class="dash-table">
             <thead>
@@ -1911,8 +2260,27 @@
         </div>
       </div>
 
+      <!-- Move 5: Mobile Quick Filter Chips for Stock Book -->
+      <div class="mobile-quick-filter-strip" id="stock-book-mobile-filter-strip">
+        <button type="button" class="mobile-filter-chip active" data-sbfilter="all" onclick="setStockBookMobileFilter('all')">
+          All Boxes
+        </button>
+        <button type="button" class="mobile-filter-chip" data-sbfilter="available" onclick="setStockBookMobileFilter('available')">
+          🟢 Available Only
+        </button>
+        <button type="button" class="mobile-filter-chip" data-sbfilter="issued" onclick="setStockBookMobileFilter('issued')">
+          🔵 Issued / Used
+        </button>
+        <button type="button" class="mobile-filter-chip" data-sbfilter="gr" onclick="setStockBookMobileFilter('gr')">
+          🟠 GR Returned
+        </button>
+      </div>
+
       <!-- Stock Ledger Groups -->
       <div id="stock-groups-container">
+        <!-- Dynamic Quality & Lot Cards render here -->
+      </div>
+    </div>
         <!-- Dynamic Quality & Lot Cards render here -->
       </div>
     </div>
@@ -5969,6 +6337,154 @@ Return ONLY a JSON object matching this schema:
                   </button>
                 </td>
               </tr>
+            `;
+          }).join('');
+        }
+      }
+
+    let currentDashMobileFilter = 'all';
+
+    function setDashMobileFilter(filterKey) {
+      currentDashMobileFilter = filterKey;
+      const chips = document.querySelectorAll('#dash-mobile-filter-strip .mobile-filter-chip');
+      chips.forEach(c => {
+        if (c.getAttribute('data-filter') === filterKey) {
+          c.classList.add('active');
+        } else {
+          c.classList.remove('active');
+        }
+      });
+      renderExecutiveDashboard();
+    }
+
+    function setStockBookMobileFilter(filterKey) {
+      const select = document.getElementById('status-filter');
+      if (select) {
+        select.value = filterKey;
+      }
+      const chips = document.querySelectorAll('#stock-book-mobile-filter-strip .mobile-filter-chip');
+      chips.forEach(c => {
+        if (c.getAttribute('data-sbfilter') === filterKey) {
+          c.classList.add('active');
+        } else {
+          c.classList.remove('active');
+        }
+      });
+      renderStockBook();
+    }
+
+      // Update Mobile Chip Counts
+      const totalAll = qualitiesList.length;
+      const totalInStock = qualitiesList.filter(q => q.availWeight > 0.001).length;
+      const totalZeroStock = qualitiesList.filter(q => q.availWeight <= 0.001).length;
+      const totalGr = qualitiesList.filter(q => q.grKg > 0.001).length;
+
+      const elChipAll = document.getElementById('dash-chip-count-all');
+      if (elChipAll) elChipAll.textContent = totalAll;
+      const elChipIn = document.getElementById('dash-chip-count-instock');
+      if (elChipIn) elChipIn.textContent = totalInStock;
+      const elChipOut = document.getElementById('dash-chip-count-outstock');
+      if (elChipOut) elChipOut.textContent = totalZeroStock;
+      const elChipGr = document.getElementById('dash-chip-count-gr');
+      if (elChipGr) elChipGr.textContent = totalGr;
+
+      // Filter for Mobile Card View
+      let mobileList = qualitiesList;
+      if (currentDashMobileFilter === 'in-stock') {
+        mobileList = qualitiesList.filter(q => q.availWeight > 0.001);
+      } else if (currentDashMobileFilter === 'out-of-stock') {
+        mobileList = qualitiesList.filter(q => q.availWeight <= 0.001);
+      } else if (currentDashMobileFilter === 'gr') {
+        mobileList = qualitiesList.filter(q => q.grKg > 0.001);
+      }
+
+      const mobileCardsContainer = document.getElementById('dash-mobile-cards-container');
+      if (mobileCardsContainer) {
+        if (mobileList.length === 0) {
+          mobileCardsContainer.innerHTML = `
+            <div style="text-align: center; padding: 3rem 1rem; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 16px;">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+              <div style="font-weight: 600; font-size: 1rem; color: var(--fg); margin-bottom: 0.25rem;">No Qualities Found</div>
+              <div>No yarn qualities match the current filters.</div>
+            </div>
+          `;
+        } else {
+          mobileCardsContainer.innerHTML = mobileList.map(q => {
+            const hasStock = q.availWeight > 0.001;
+            const hasGR = q.grKg > 0.001;
+            const statusClass = hasStock ? 'is-instock' : (hasGR ? 'has-gr' : 'is-zerostock');
+            const statusBadge = hasStock
+              ? `<span class="badge badge-success">In Stock</span>`
+              : `<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: var(--muted);">Zero Stock</span>`;
+
+            const escapedQName = q.quality.replace(/'/g, "\\'");
+            const escapedSupplier = q.supplier.replace(/'/g, "\\'");
+            const escapedLotNo = (q.lotNo || '').replace(/'/g, "\\'");
+
+            return `
+              <div class="yarn-mobile-card ${statusClass}">
+                <div class="mobile-card-header">
+                  <div class="mobile-card-title-group">
+                    <div class="mobile-card-meta">
+                      <span class="badge badge-primary" style="font-size: 0.72rem; padding: 2px 6px;">${q.itemType || 'Polyester'}</span>
+                      ${q.lotNo && q.lotNo !== '-' 
+                        ? `<span class="badge" style="font-family: var(--font-mono); font-size: 0.74rem; background: rgba(139, 92, 246, 0.12); color: var(--accent); font-weight: 700; padding: 2px 7px;">Lot: ${q.lotNo}</span>` 
+                        : ''}
+                    </div>
+                    <div class="mobile-card-party-name" title="${q.quality}">${q.quality}</div>
+                    <div style="font-size: 0.78rem; color: var(--muted);">${q.supplier || '—'}</div>
+                  </div>
+                  <div class="mobile-card-badges">
+                    ${statusBadge}
+                  </div>
+                </div>
+
+                <div class="mobile-card-highlight">
+                  <div class="mobile-highlight-item">
+                    <span class="mobile-highlight-label">Available Weight</span>
+                    <span class="mobile-highlight-value" style="color: ${hasStock ? 'var(--success)' : 'var(--muted)'};">
+                      ${q.availWeight.toFixed(2)} <span style="font-size: 0.75rem; font-weight: 500;">kg</span>
+                    </span>
+                  </div>
+                  <div class="mobile-highlight-item" style="align-items: flex-end;">
+                    <span class="mobile-highlight-label">Received / Boxes</span>
+                    <span class="mobile-highlight-value" style="color: var(--fg); font-size: 0.95rem;">
+                      ${q.totalReceivedKg.toFixed(1)} kg (${q.availBoxes}/${q.totalBoxes} bx)
+                    </span>
+                  </div>
+                </div>
+
+                <div class="mobile-card-grid">
+                  <div class="mobile-card-field">
+                    <span class="mobile-field-label">Code / Color</span>
+                    <span class="mobile-field-value">${q.code || '-'} / ${q.color || '-'}</span>
+                  </div>
+                  <div class="mobile-card-field">
+                    <span class="mobile-field-label">Available Cones</span>
+                    <span class="mobile-field-value">
+                      <span class="cones-pill" style="font-size: 0.75rem; padding: 2px 7px;">🧵 ${q.availCones.toLocaleString()}</span>
+                    </span>
+                  </div>
+                  <div class="mobile-card-field">
+                    <span class="mobile-field-label">Used / Issued</span>
+                    <span class="mobile-field-value" style="color: #3b82f6;">${q.usedKg.toFixed(2)} kg</span>
+                  </div>
+                  <div class="mobile-card-field">
+                    <span class="mobile-field-label">GR Returned</span>
+                    <span class="mobile-field-value" style="color: var(--accent3);">${q.grKg > 0 ? `${q.grKg.toFixed(2)} kg` : '0.00 kg'}</span>
+                  </div>
+                </div>
+
+                <div class="mobile-card-footer">
+                  <span style="font-size: 0.78rem; color: var(--muted); font-family: var(--font-mono);">
+                    ${q.availBoxes} available box${q.availBoxes !== 1 ? 'es' : ''}
+                  </span>
+                  <button class="mobile-btn-pill primary" onclick="goToStockBookQuality('${escapedQName}', '${escapedSupplier}', '${escapedLotNo}')">
+                    <span>Stock Book</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                  </button>
+                </div>
+              </div>
             `;
           }).join('');
         }
