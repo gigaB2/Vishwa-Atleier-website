@@ -5559,7 +5559,7 @@
                   <div class="c-sub">${companySub}</div>
                 </div>
 
-                <!-- ROW 2: BOX / BORI NUMBER (1/3 height, 54px text, Ink-Optimized) -->
+                <!-- ROW 2: BOX / BORI NUMBER (54px text, Ink-Optimized) -->
                 <div class="g-cell c-box-hero">
                   <div class="box-caption">BOX / BORI NUMBER</div>
                   <div class="box-val">${item.boriNo || '-'}</div>
@@ -5600,32 +5600,34 @@
                   </div>
                 </div>
 
-                <!-- ROW 6: WEIGHTS & ROLLS (4 Columns) -->
-                <div class="g-row-4">
+                <!-- ROW 6: SECONDARY METRICS (Rolls, Gross Wt, Tare Wt) -->
+                <div class="g-row-3 c-wt-sub-row">
                   <div class="g-cell">
-                    <span class="k-lbl">ROLLS</span>
+                    <span class="k-lbl">TOTAL ROLLS</span>
                     <span class="v-wt">${item.rollsQty || 0} <span class="u">NOS</span></span>
                   </div>
                   <div class="g-cell">
-                    <span class="k-lbl">GROSS WT</span>
+                    <span class="k-lbl">GROSS WEIGHT</span>
                     <span class="v-wt">${grossDisplay}</span>
                   </div>
                   <div class="g-cell">
-                    <span class="k-lbl">TARE WT</span>
+                    <span class="k-lbl">TARE WEIGHT</span>
                     <span class="v-wt">${tareDisplay}</span>
-                  </div>
-                  <div class="g-cell c-net">
-                    <span class="k-lbl">NET WT</span>
-                    <span class="v-net">${netValNum.toFixed(2)} <span class="u-net">KG</span></span>
                   </div>
                 </div>
 
-                <!-- ROW 7: QUALITY WARNING NOTICE -->
+                <!-- ROW 7: MASSIVE NET WEIGHT HERO BANNER -->
+                <div class="g-cell c-net-hero">
+                  <div class="net-caption">NET WEIGHT</div>
+                  <div class="net-val-huge">${netValNum.toFixed(2)} <span class="net-unit-huge">KG</span></div>
+                </div>
+
+                <!-- ROW 8: QUALITY WARNING NOTICE -->
                 <div class="g-cell c-notice">
                   ⚠️ STRICTLY DO NOT MIX DIFFERENT LOTS IN WEAVING / WARPING / KNITTING
                 </div>
 
-                <!-- ROW 8: SIGNATURES -->
+                <!-- ROW 9: SIGNATURES -->
                 <div class="g-cell c-footer">
                   <span>PACKED BY: ____________</span>
                   <span>CHECKED BY: ____________</span>
@@ -5752,7 +5754,7 @@
               max-height: 139mm;
               background: #ffffff;
               box-sizing: border-box;
-              padding: 2.5mm;
+              padding: 2mm;
               overflow: hidden;
             }
             .sticker-card.empty-slot {
@@ -5760,7 +5762,7 @@
               background: transparent;
             }
 
-            /* Continuous Full-Height Grid Frame: No empty space */
+            /* Continuous Full-Height Grid Frame: Exactly fills 100% of sticker height */
             .sticker-grid-frame {
               width: 100%;
               height: 100%;
@@ -5772,7 +5774,7 @@
             }
 
             .g-cell {
-              padding: 3px 5px;
+              padding: 3px 6px;
               box-sizing: border-box;
               display: flex;
               flex-direction: column;
@@ -5791,44 +5793,35 @@
 
             .g-row-3 {
               display: grid;
-              grid-template-columns: 1.2fr 0.9fr 1.1fr;
+              grid-template-columns: 1.15fr 0.9fr 1.15fr;
               border-bottom: 1.5px solid #000000;
             }
             .g-row-3 > .g-cell:not(:last-child) {
               border-right: 1.5px solid #000000;
             }
 
-            .g-row-4 {
-              display: grid;
-              grid-template-columns: 0.9fr 1fr 1fr 1.35fr;
-              border-bottom: 1.5px solid #000000;
-            }
-            .g-row-4 > .g-cell:not(:last-child) {
-              border-right: 1.5px solid #000000;
-            }
-
             /* Typography & Labels */
             .k-lbl {
-              font-size: 7px;
+              font-size: 7.5px;
               font-weight: 800;
               text-transform: uppercase;
-              letter-spacing: 0.4px;
+              letter-spacing: 0.5px;
               color: #000000;
               line-height: 1;
-              margin-bottom: 1.5px;
+              margin-bottom: 2px;
             }
             .v-val {
-              font-size: 13px;
+              font-size: 13.5px;
               font-weight: 900;
               line-height: 1.1;
               color: #000000;
             }
             .lot-strong {
-              font-size: 14.5px;
+              font-size: 15px;
               letter-spacing: 0.5px;
             }
             .v-spec {
-              font-size: 11.5px;
+              font-size: 12px;
               font-weight: 900;
               color: #000000;
               line-height: 1.1;
@@ -5837,14 +5830,14 @@
               text-overflow: ellipsis;
             }
             .v-wt {
-              font-size: 13px;
+              font-size: 13.5px;
               font-weight: 900;
               color: #000000;
               line-height: 1.1;
               white-space: nowrap;
             }
             .u {
-              font-size: 7.5px;
+              font-size: 8px;
               font-weight: 800;
             }
             .dash-fill {
@@ -5855,7 +5848,7 @@
             /* 1. Header */
             .c-header {
               border-bottom: 2px solid #000000;
-              padding: 3px 6px;
+              padding: 4px 6px;
             }
             .c-top-row {
               display: flex;
@@ -5863,7 +5856,7 @@
               align-items: center;
             }
             .c-title {
-              font-size: 14px;
+              font-size: 14.5px;
               font-weight: 900;
               text-transform: uppercase;
               letter-spacing: 0.5px;
@@ -5874,32 +5867,31 @@
               text-overflow: ellipsis;
             }
             .c-badge {
-              font-size: 8px;
+              font-size: 8.5px;
               font-weight: 900;
-              border: 1px solid #000000;
-              padding: 1px 5px;
+              border: 1.5px solid #000000;
+              padding: 1px 6px;
               border-radius: 2px;
               letter-spacing: 0.6px;
               white-space: nowrap;
             }
             .c-sub {
-              font-size: 7px;
+              font-size: 7.5px;
               font-weight: 700;
               color: #222222;
-              letter-spacing: 0.3px;
+              letter-spacing: 0.4px;
               margin-top: 1px;
             }
 
-            /* 2. BOX HERO - 1/3 height, 54px text, ink-optimized clean white */
+            /* 2. BOX HERO - 54px text, ink-optimized clean white */
             .c-box-hero {
-              flex: 1;
-              min-height: 42mm;
-              max-height: 46mm;
+              flex: 1.2;
+              min-height: 36mm;
               border-bottom: 2px solid #000000;
               text-align: center;
               align-items: center;
               justify-content: center;
-              padding: 2px 4px;
+              padding: 4px 6px;
               background: #ffffff;
             }
             .box-caption {
@@ -5931,10 +5923,10 @@
             /* 3. Quality Row */
             .c-quality {
               border-bottom: 1.5px solid #000000;
-              padding: 3px 6px;
+              padding: 4px 6px;
             }
             .v-quality {
-              font-size: 13.5px;
+              font-size: 14px;
               font-weight: 900;
               color: #000000;
               line-height: 1.15;
@@ -5943,37 +5935,59 @@
               text-overflow: ellipsis;
             }
 
-            /* Highlight Net Wt */
-            .c-net {
-              border-left: 2px solid #000000 !important;
+            /* Secondary Weights Row */
+            .c-wt-sub-row {
+              background: #ffffff;
             }
-            .v-net {
-              font-size: 16px;
+
+            /* 7. MASSIVE NET WEIGHT HERO BANNER - Fills bottom, high impact */
+            .c-net-hero {
+              flex: 0.9;
+              min-height: 20mm;
+              border-bottom: 2px solid #000000;
+              border-top: 2px solid #000000;
+              text-align: center;
+              align-items: center;
+              justify-content: center;
+              padding: 3px 6px;
+              background: #ffffff;
+            }
+            .net-caption {
+              font-size: 10px;
               font-weight: 900;
+              letter-spacing: 2px;
+              text-transform: uppercase;
               color: #000000;
-              line-height: 1.1;
-              white-space: nowrap;
+              line-height: 1;
+              margin-bottom: 2px;
             }
-            .u-net {
-              font-size: 9px;
+            .net-val-huge {
+              font-size: 32px;
+              font-weight: 900;
+              line-height: 1;
+              color: #000000;
+              letter-spacing: 0.5px;
+            }
+            .net-unit-huge {
+              font-size: 16px;
               font-weight: 900;
             }
 
-            /* 7. Notice */
+            /* 8. Notice */
             .c-notice {
               border-bottom: 1.5px solid #000000;
-              padding: 2px 4px;
-              font-size: 7px;
+              padding: 3px 4px;
+              font-size: 7.2px;
               font-weight: 800;
               line-height: 1.1;
               text-align: center;
-              letter-spacing: 0.2px;
+              letter-spacing: 0.3px;
             }
 
-            /* 8. Signatures Footer */
+            /* 9. Signatures Footer */
             .c-footer {
-              padding: 3px 6px;
-              font-size: 7.5px;
+              padding: 4px 6px;
+              font-size: 8px;
               font-weight: 800;
               flex-direction: row;
               justify-content: space-between;
