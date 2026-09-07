@@ -2479,6 +2479,8 @@
         box-sizing: border-box !important;
       }
       .sheet-wrapper {
+        display: flex !important;
+        flex-direction: column !important;
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
@@ -2488,19 +2490,30 @@
       .sheet-scroll-container {
         display: none !important;
       }
-      .mobile-quick-filter-strip {
-        display: flex !important;
-      }
-      .ledger-mobile-cards {
-        display: flex !important;
-      }
       .sheet-footer-bar {
+        order: -1 !important;
         background: var(--surface) !important;
         border: 1.5px solid var(--border) !important;
         border-radius: 16px !important;
         box-shadow: var(--shadow-sm) !important;
-        margin-top: 1rem !important;
+        margin-top: 0 !important;
+        margin-bottom: 1rem !important;
         padding: 1rem 1.15rem !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.85rem !important;
+      }
+      .sheet-footer-bar > div {
+        gap: 0.65rem 1.15rem !important;
+        justify-content: flex-start !important;
+      }
+      .mobile-quick-filter-strip {
+        order: 1 !important;
+        display: flex !important;
+      }
+      .ledger-mobile-cards {
+        order: 2 !important;
+        display: flex !important;
       }
       .kpi-grid {
         grid-template-columns: 1fr !important;
