@@ -1986,6 +1986,8 @@
 
     // Refresh all tables, dropdowns, KPIs, and dashboard views with latest data
     function refreshAllViews() {
+      if (typeof isCellSelecting !== 'undefined' && isCellSelecting) return;
+      if (document.querySelector('.action-menu-dropdown.show')) return;
       loadLogs();
       calculateSummaryMetrics();
       populateProductNameDropdown();
@@ -7339,10 +7341,6 @@
       }
     });
 
-    // Close action dropdowns on window scroll or resize
-    window.addEventListener('scroll', closeAllActionMenus, true);
-    window.addEventListener('resize', closeAllActionMenus);
-
     // Keyboard shortcuts: Escape to close menus, Ctrl+Z / Ctrl+Y for Undo/Redo
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
@@ -7945,9 +7943,11 @@
 
     let remoteSyncDebounceTimer = null;
     function handleRemoteDataSync(key) {
+      if (document.querySelector('.action-menu-dropdown.show')) return;
       if (!key || key.startsWith('yarn_') || key.startsWith('costing-') || key.includes('production') || key.includes('sales') || key === 'vf_deleted_entity_ids') {
         clearTimeout(remoteSyncDebounceTimer);
         remoteSyncDebounceTimer = setTimeout(() => {
+          if (document.querySelector('.action-menu-dropdown.show')) return;
           refreshAllViews();
         }, 30);
       }
@@ -8649,12 +8649,16 @@
         handleRemoteDataSync();
       });
       window.addEventListener('focus', () => {
-        refreshAllViews();
+        if (!document.querySelector('.action-menu-dropdown.show')) {
+          refreshAllViews();
+        }
         broadcastYarnPresence();
       });
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
-          refreshAllViews();
+          if (!document.querySelector('.action-menu-dropdown.show')) {
+            refreshAllViews();
+          }
           broadcastYarnPresence();
         }
       });
