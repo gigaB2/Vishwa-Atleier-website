@@ -5162,6 +5162,8 @@
 
                                         <th>Role / Department</th>
 
+                                        <th style="text-align: center;">Calculation Basis</th>
+
                                         <th>Salary Amount (₹)</th>
 
                                         <th>Advance (₹)</th>
@@ -9639,6 +9641,30 @@
             return totalRemaining;
         }
 
+        function getCalculationBasisBadge(salaryStyle, role, hasMeters) {
+            const sStyle = salaryStyle || '';
+            const r = role || '';
+            if (sStyle === 'Per Shift' || sStyle === 'Per Day') {
+                return { label: 'Per Shift', icon: 'ri-time-line', bg: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' };
+            }
+            if (sStyle.includes('Meter') || sStyle.includes('Piece Rate') || sStyle.includes('Pick') || r === 'Karigar (Weaving)' || (r.includes('Weaving') && hasMeters)) {
+                return { label: 'Per Meter', icon: 'ri-ruler-line', bg: 'rgba(16, 185, 129, 0.1)', color: '#10b981' };
+            }
+            if (sStyle === 'Per Month Fixed' || sStyle === 'Per Month') {
+                return { label: 'Per Month Fixed', icon: 'ri-calendar-line', bg: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' };
+            }
+            if (sStyle === 'Per Machine/Month' || sStyle.includes('Machine')) {
+                return { label: 'Per Machine', icon: 'ri-settings-4-line', bg: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' };
+            }
+            if (sStyle === 'Per Spindle/Month' || sStyle.includes('Spindle')) {
+                return { label: 'Per Spindle', icon: 'ri-disc-line', bg: 'rgba(236, 72, 153, 0.1)', color: '#ec4899' };
+            }
+            if (sStyle.includes('Beam Loading') || r.includes('Beam Loading')) {
+                return { label: 'Beam Loading Pay', icon: 'ri-inbox-archive-line', bg: 'rgba(6, 182, 212, 0.1)', color: '#06b6d4' };
+            }
+            return { label: sStyle || 'Fixed', icon: 'ri-wallet-3-line', bg: 'rgba(100, 116, 139, 0.1)', color: 'var(--muted)' };
+        }
+
         // --- Role-Segregated All Employees Salary Calculation Table ---
 
         function renderRoleSegregatedSalaryTable(filteredLogs, monthFilter) {
@@ -9911,7 +9937,7 @@
 
             if (processedEmployees.length === 0) {
 
-                tableBody.innerHTML = `<tr><td colspan="7" style="padding: 2rem; text-align: center; color: var(--muted);">No employee calculation data for selected month.</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="9" style="padding: 2rem; text-align: center; color: var(--muted);">No employee calculation data for selected month.</td></tr>`;
 
                 return;
 
@@ -10030,7 +10056,7 @@
 
                     <tr class="role-group-header-row" style="background: rgba(139, 92, 246, 0.08); border-top: 2px solid var(--accent);">
 
-                        <td colspan="8" style="text-align: left; padding: 0.65rem 1rem; font-weight: 800; font-size: 0.85rem; color: var(--accent); letter-spacing: 0.03em;">
+                        <td colspan="9" style="text-align: left; padding: 0.65rem 1rem; font-weight: 800; font-size: 0.85rem; color: var(--accent); letter-spacing: 0.03em;">
 
                             🏷️ ${roleName} <span style="font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-left: 0.5rem;">(${emps.length} ${emps.length === 1 ? 'Employee' : 'Employees'})</span>
 
@@ -10243,6 +10269,9 @@
                         }
                     }
 
+                    const isWeavingKarigar = (emp.role === 'Karigar (Weaving)' || emp.role === 'Karigar' || (emp.role && emp.role.toLowerCase().includes('weaving'))) && (emp.meters > 0 || emp.shifts > 0);
+                    const calcBasis = getCalculationBasisBadge(emp.salaryStyle, emp.role, emp.meters > 0);
+
                     html += `
 
                         <tr class="role-emp-row" data-emp-name="${emp.name}" data-calc-salary="${emp.calculatedSalary}">
@@ -10251,14 +10280,25 @@
 
                                 <div style="display: flex; align-items: center; gap: 0.6rem;">
 
-                                    <div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800;">
+                                    <div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; flex-shrink: 0;">
 
                                         ${emp.name.charAt(0)}
 
                                     </div>
 
                                     <div>
+
                                         <strong style="font-size: 0.88rem; color: var(--fg);">${emp.name}</strong>
+
+                                        ${isWeavingKarigar ? `
+                                            <div style="font-size: 0.73rem; color: var(--muted); margin-top: 0.15rem; line-height: 1.35;">
+                                                <div><i class="ri-time-line" style="font-size: 0.72rem; vertical-align: -1px;"></i> ${emp.shifts} Shift${emp.shifts !== 1 ? 's' : ''} Logged (${(emp.hours || 0).toFixed(1)} hrs)</div>
+                                                <div style="color: var(--accent); font-weight: 600;"><i class="ri-ruler-line" style="font-size: 0.72rem; vertical-align: -1px;"></i> ${(emp.meters || 0).toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} Meters</div>
+                                            </div>
+                                        ` : `
+                                            <div style="font-size: 0.73rem; color: var(--muted); margin-top: 0.1rem;">${emp.workMetricsStr || emp.salaryStyle}</div>
+                                        `}
+
                                     </div>
 
                                 </div>
@@ -10266,6 +10306,12 @@
                             </td>
 
                             <td><span class="badge badge-accent" style="font-size: 0.72rem;">${displayRoleText}</span></td>
+
+                            <td style="text-align: center;">
+                                <span class="badge" style="background: ${calcBasis.bg}; color: ${calcBasis.color}; font-weight: 600; font-size: 0.72rem; border-radius: 6px; padding: 0.2rem 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap;">
+                                    <i class="${calcBasis.icon}" style="font-size: 0.72rem;"></i> ${calcBasis.label}
+                                </span>
+                            </td>
 
                             <td><strong style="color: var(--accent); font-size: 0.9rem;">₹ ${emp.calculatedSalary.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
 
@@ -10293,7 +10339,7 @@
 
                 <tr class="summary-row" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(16, 185, 129, 0.15)); font-weight: 800; font-size: 1rem; border-top: 2.5px solid var(--accent);">
 
-                    <td colspan="2" style="text-align: right; padding-right: 1rem; color: var(--fg); text-transform: uppercase; letter-spacing: 0.04em;">
+                    <td colspan="3" style="text-align: right; padding-right: 1rem; color: var(--fg); text-transform: uppercase; letter-spacing: 0.04em;">
 
                         🏆 GRAND TOTAL MONTHLY PAYROLL (ALL ${grandTotalEmployees} EMPLOYEES):
 
@@ -11034,7 +11080,7 @@
             if (!tableBody) return;
 
             if (processedEmployees.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="8" style="padding: 2.5rem; text-align: center; color: var(--muted); font-size: 0.95rem;">No employee calculation data for the selected date range.</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="9" style="padding: 2.5rem; text-align: center; color: var(--muted); font-size: 0.95rem;">No employee calculation data for the selected date range.</td></tr>`;
                 updateDashboardKPIs(0, 0, 0, 0);
                 updateDashboardPeriodSummary(fromDate, toDate, daysCount);
                 return;
@@ -11084,7 +11130,7 @@
 
                 html += `
                     <tr class="role-group-header-row" style="background: rgba(139, 92, 246, 0.08); border-top: 2px solid var(--accent);">
-                        <td colspan="8" style="text-align: left; padding: 0.65rem 1rem; font-weight: 800; font-size: 0.85rem; color: var(--accent); letter-spacing: 0.03em;">
+                        <td colspan="9" style="text-align: left; padding: 0.65rem 1rem; font-weight: 800; font-size: 0.85rem; color: var(--accent); letter-spacing: 0.03em;">
                             🏷️ ${roleName} <span style="font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-left: 0.5rem;">(${emps.length} ${emps.length === 1 ? 'Employee' : 'Employees'})</span>
                         </td>
                     </tr>
@@ -11192,14 +11238,30 @@
                         statusBadge = `<span class="badge badge-warning" style="font-size: 0.72rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 700;">Pending</span>`;
                     }
 
+                    const isWeavingKarigar = (emp.role === 'Karigar (Weaving)' || emp.role === 'Karigar' || (emp.role && emp.role.toLowerCase().includes('weaving'))) && (emp.meters > 0 || emp.shifts > 0);
+                    const calcBasis = getCalculationBasisBadge(emp.salaryStyle, emp.role, emp.meters > 0);
+
                     html += `
                         <tr data-calc-salary="${emp.calculatedSalary}" style="border-bottom: 1px solid var(--border);">
                             <td style="text-align: left; padding-left: 1.2rem;">
                                 <div style="font-weight: 700; font-size: 0.9rem; color: var(--fg);">${emp.name}</div>
-                                <div style="font-size: 0.75rem; color: var(--muted);">${emp.workMetricsStr || emp.salaryStyle}</div>
+                                ${isWeavingKarigar ? `
+                                    <div style="font-size: 0.74rem; color: var(--muted); margin-top: 0.2rem; line-height: 1.35;">
+                                        <div><i class="ri-time-line" style="font-size: 0.72rem; vertical-align: -1px;"></i> ${emp.shifts} Shift${emp.shifts !== 1 ? 's' : ''} Logged (${(emp.hours || 0).toFixed(1)} hrs)</div>
+                                        <div style="color: var(--accent); font-weight: 600;"><i class="ri-ruler-line" style="font-size: 0.72rem; vertical-align: -1px;"></i> ${(emp.meters || 0).toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} Meters</div>
+                                        ${(emp.workMetricsStr && emp.workMetricsStr.includes('Beam Loading')) ? `<div style="color: var(--info); font-weight: 500; font-size: 0.72rem;">+ Beam Loading Pay</div>` : ''}
+                                    </div>
+                                ` : `
+                                    <div style="font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem;">${emp.workMetricsStr || emp.salaryStyle}</div>
+                                `}
                             </td>
                             <td>
                                 <span class="badge" style="background: rgba(139, 92, 246, 0.1); color: var(--accent); font-weight: 600; font-size: 0.75rem;">${emp.role}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="badge" style="background: ${calcBasis.bg}; color: ${calcBasis.color}; font-weight: 600; font-size: 0.74rem; border-radius: 6px; padding: 0.22rem 0.55rem; display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap;">
+                                    <i class="${calcBasis.icon}" style="font-size: 0.75rem;"></i> ${calcBasis.label}
+                                </span>
                             </td>
                             <td style="font-weight: 700; color: var(--fg);">
                                 ₹ ${emp.calculatedSalary.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -11218,7 +11280,7 @@
                 // Role Subtotal Row
                 html += `
                     <tr style="background: rgba(0, 0, 0, 0.02); font-weight: 700; border-bottom: 2px solid var(--border); font-size: 0.82rem;">
-                        <td style="text-align: left; padding-left: 1.2rem; color: var(--muted);" colspan="2">Subtotal ${roleName}:</td>
+                        <td style="text-align: left; padding-left: 1.2rem; color: var(--muted);" colspan="3">Subtotal ${roleName}:</td>
                         <td style="color: var(--fg);">₹ ${roleSubtotalSalary.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td style="color: var(--muted);">₹ ${roleSubtotalAdvance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td style="color: var(--muted); text-align: center;">₹ ${roleSubtotalLoan.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -11232,7 +11294,7 @@
             // Grand Total Row
             html += `
                 <tr style="background: var(--surface); font-weight: 800; border-top: 3px solid var(--accent); border-bottom: 2px solid var(--accent);">
-                    <td style="text-align: left; padding-left: 1.2rem; font-size: 0.95rem;" colspan="2">GRAND TOTAL (All Personnel):</td>
+                    <td style="text-align: left; padding-left: 1.2rem; font-size: 0.95rem;" colspan="3">GRAND TOTAL (All Personnel):</td>
                     <td style="color: var(--accent); font-size: 1.05rem; font-family: var(--font-display);">
                         ₹ ${grandTotalPayroll.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
