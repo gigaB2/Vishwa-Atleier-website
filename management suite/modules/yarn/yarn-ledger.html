@@ -2044,6 +2044,494 @@
       from { transform: translateY(20px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
+
+    /* =========================================================
+       6-MOVE RESPONSIVE MOBILE TABLE RESTRUCTURING (DESIGN SYSTEM)
+       ========================================================= */
+    .mobile-quick-filter-strip {
+      display: none;
+      overflow-x: auto;
+      white-space: nowrap;
+      padding: 0.35rem 0.25rem 0.85rem 0.25rem;
+      gap: 0.6rem;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .mobile-quick-filter-strip::-webkit-scrollbar {
+      display: none;
+    }
+    .mobile-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      min-height: 40px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      color: var(--fg);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-sm);
+    }
+    .mobile-filter-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .mobile-filter-chip:active {
+      transform: scale(0.96);
+    }
+    .mobile-filter-chip.active {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+    }
+    .mobile-filter-chip .chip-count {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.07);
+    }
+    .mobile-filter-chip.active .chip-count {
+      background: rgba(255, 255, 255, 0.28);
+      color: #ffffff;
+    }
+
+    /* Mobile Card Container */
+    .ledger-mobile-cards {
+      display: none;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .ledger-mobile-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .ledger-mobile-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: rgba(124, 58, 237, 0.4);
+      transform: translateY(-2px);
+    }
+    .ledger-mobile-card.is-overdue {
+      border-left: 5px solid var(--error);
+    }
+    .ledger-mobile-card.is-paid {
+      border-left: 5px solid var(--success);
+    }
+
+    /* Move 1: Hierarchical Card Header */
+    .mobile-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 0.95rem 1.15rem 0.75rem 1.15rem;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-subtle);
+      gap: 0.75rem;
+      box-sizing: border-box;
+    }
+    .mobile-card-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+    .mobile-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .mobile-card-idx {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .mobile-card-date {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 500;
+    }
+    .mobile-card-challan-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: rgba(124, 58, 237, 0.09);
+      border: 1px solid rgba(124, 58, 237, 0.25);
+      padding: 3px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .mobile-card-challan-badge:hover {
+      background: rgba(124, 58, 237, 0.18);
+      transform: scale(1.02);
+    }
+    .mobile-card-party {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--fg);
+      white-space: normal;
+      word-break: break-word;
+      line-height: 1.35;
+      margin-top: 2px;
+    }
+
+    /* Move 2: Key Metric Highlight Band */
+    .mobile-card-highlight {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1.15rem;
+      background: linear-gradient(180deg, rgba(124, 58, 237, 0.04) 0%, rgba(124, 58, 237, 0.01) 100%);
+      border-bottom: 1px solid var(--border-subtle);
+      box-sizing: border-box;
+    }
+    .mobile-card-amount-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .mobile-card-amount-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .mobile-card-amount-val {
+      font-family: var(--font-mono);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--fg);
+      letter-spacing: -0.01em;
+    }
+    .mobile-card-status-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+    }
+
+    /* Move 3: 2-Column Responsive Data Grid */
+    .mobile-card-body {
+      padding: 0.85rem 1.15rem;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem 1.1rem;
+      font-size: 0.86rem;
+      box-sizing: border-box;
+    }
+    .mobile-kv-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+    .mobile-kv-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .mobile-kv-val {
+      font-weight: 600;
+      color: var(--fg);
+      white-space: normal;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+    .mobile-kv-val.font-mono {
+      font-family: var(--font-mono);
+    }
+
+    /* Move 4: Progressive Disclosure Accordion Drawer */
+    .mobile-card-drawer {
+      display: none;
+      padding: 0.95rem 1.15rem;
+      background: var(--surface-subtle);
+      border-top: 1px dashed var(--border);
+      border-bottom: 1px solid var(--border-subtle);
+      animation: fadeIn 0.2s ease;
+      box-sizing: border-box;
+    }
+    .mobile-card-drawer.is-expanded {
+      display: block;
+    }
+    .mobile-card-drawer-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem 1.1rem;
+      font-size: 0.82rem;
+      margin-bottom: 0.75rem;
+      box-sizing: border-box;
+    }
+    .mobile-boxes-badge-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 6px;
+    }
+    .mobile-box-pill {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(249, 115, 22, 0.12);
+      color: var(--accent3);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+    }
+
+    /* Move 6: Mobile Card Actions Bar */
+    .mobile-card-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.15rem;
+      background: var(--surface);
+      gap: 8px;
+      box-sizing: border-box;
+    }
+    .mobile-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface-subtle);
+      border: 1.5px solid var(--border);
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 7px 12px;
+      min-height: 38px;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+    }
+    .mobile-toggle-btn:hover {
+      background: var(--surface);
+      border-color: var(--accent);
+    }
+    .mobile-toggle-btn svg {
+      transition: transform 0.25s ease;
+    }
+    .mobile-toggle-btn.is-expanded svg {
+      transform: rotate(180deg);
+    }
+    .mobile-action-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mobile-btn-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 14px;
+      min-height: 38px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--fg);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      box-shadow: var(--shadow-sm);
+    }
+    .mobile-btn-pill:hover {
+      background: var(--surface-subtle);
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .mobile-btn-pill:active {
+      transform: scale(0.96);
+    }
+    .mobile-btn-pill.gr-btn {
+      background: rgba(249, 115, 22, 0.08);
+      color: var(--accent3);
+      border-color: rgba(249, 115, 22, 0.35);
+    }
+    .mobile-btn-pill.gr-btn:hover {
+      background: rgba(249, 115, 22, 0.16);
+      border-color: var(--accent3);
+      color: var(--accent3);
+    }
+    .mobile-btn-pill.primary {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+      padding: 7px 12px;
+      min-width: 44px;
+    }
+    .mobile-btn-pill.primary:hover {
+      box-shadow: 0 6px 16px rgba(124, 58, 237, 0.45);
+      color: #ffffff;
+    }
+
+    /* Mobile Bottom Action Sheet */
+    .mobile-sheet-modal {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-radius: 24px 24px 0 0;
+      box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.35);
+      border-top: 1.5px solid var(--border);
+      z-index: 2100;
+      padding: 1.25rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 12px)) 1.25rem;
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      max-height: 85vh;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .mobile-sheet-drag-handle {
+      width: 44px;
+      height: 5px;
+      border-radius: 3px;
+      background: var(--muted-light);
+      opacity: 0.5;
+      margin: 0 auto 1.25rem auto;
+    }
+    .mobile-sheet-action-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      min-height: 52px;
+      padding: 0.95rem 1.15rem;
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: var(--surface-subtle);
+      border: 1.5px solid var(--border);
+      color: var(--fg);
+      cursor: pointer;
+      margin-bottom: 0.65rem;
+      text-align: left;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-sizing: border-box;
+    }
+    .mobile-sheet-action-item:hover, .mobile-sheet-action-item:active {
+      background: var(--surface);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .mobile-sheet-action-item.danger {
+      color: var(--error);
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+    .mobile-sheet-action-item.danger:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: var(--error);
+    }
+
+    /* Media queries to switch table to mobile cards without container clipping */
+    @media (max-width: 860px) {
+      .ledger-container {
+        padding: 1rem 0.85rem 3rem 0.85rem !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
+      }
+      .sheet-wrapper {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        border-radius: 0 !important;
+      }
+      .sheet-scroll-container {
+        display: none !important;
+      }
+      .mobile-quick-filter-strip {
+        display: flex !important;
+      }
+      .ledger-mobile-cards {
+        display: flex !important;
+      }
+      .sheet-footer-bar {
+        background: var(--surface) !important;
+        border: 1.5px solid var(--border) !important;
+        border-radius: 16px !important;
+        box-shadow: var(--shadow-sm) !important;
+        margin-top: 1rem !important;
+        padding: 1rem 1.15rem !important;
+      }
+      .kpi-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
+      }
+      .kpi-card {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 1rem 1.15rem !important;
+      }
+      .kpi-card:nth-child(5) {
+        grid-column: auto !important;
+      }
+      .kpi-value {
+        font-size: 1.45rem !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+      }
+      .sheet-toolbar {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+      }
+      .toolbar-left, .toolbar-right {
+        width: 100% !important;
+        flex-wrap: wrap !important;
+      }
+      .search-input-wrap {
+        min-width: 100% !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -2315,6 +2803,39 @@
         </table>
       </div>
 
+      <!-- Mobile Quick Filter Chips Strip (Move 5) -->
+      <div class="mobile-quick-filter-strip" id="mobile-quick-filter-strip">
+        <button class="mobile-filter-chip active" data-filter="all" onclick="setMobileStatusFilter('all')">
+          <span>All</span>
+          <span class="chip-count" id="mobile-count-all">0</span>
+        </button>
+        <button class="mobile-filter-chip" data-filter="overdue" onclick="setMobileStatusFilter('overdue')">
+          <span>🔴 Overdue</span>
+          <span class="chip-count" id="mobile-count-overdue">0</span>
+        </button>
+        <button class="mobile-filter-chip" data-filter="pending" onclick="setMobileStatusFilter('pending')">
+          <span>🔵 Pending</span>
+          <span class="chip-count" id="mobile-count-pending">0</span>
+        </button>
+        <button class="mobile-filter-chip" data-filter="partial" onclick="setMobileStatusFilter('partial')">
+          <span>🟡 Partial</span>
+          <span class="chip-count" id="mobile-count-partial">0</span>
+        </button>
+        <button class="mobile-filter-chip" data-filter="paid" onclick="setMobileStatusFilter('paid')">
+          <span>🟢 Paid</span>
+          <span class="chip-count" id="mobile-count-paid">0</span>
+        </button>
+        <button class="mobile-filter-chip" data-filter="gr" onclick="setMobileStatusFilter('gr')">
+          <span>📦 GR Issued</span>
+          <span class="chip-count" id="mobile-count-gr">0</span>
+        </button>
+      </div>
+
+      <!-- Restructured Mobile Cards Container (Moves 1-4, 6) -->
+      <div class="ledger-mobile-cards" id="ledger-mobile-cards">
+        <!-- Dynamic mobile cards rendered here by JS -->
+      </div>
+
       <!-- Footer Totals Bar -->
       <div class="sheet-footer-bar">
         <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;">
@@ -2541,6 +3062,25 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           Apply GR &amp; Sync RM Orders / Stock
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Action Bottom Sheet (Move 6) -->
+  <div class="modal-overlay" id="mobile-action-sheet" style="display: none; z-index: 2800;" onclick="if(event.target === this) closeMobileActionSheet();">
+    <div class="mobile-sheet-modal">
+      <div class="mobile-sheet-drag-handle"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem;">
+        <div>
+          <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--muted); font-weight: 700;" id="sheet-target-date">Transaction</div>
+          <div style="font-size: 1.1rem; font-weight: 800; color: var(--fg); font-family: var(--font-display);" id="sheet-target-party">Party Details</div>
+          <div style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--accent); font-weight: 700;" id="sheet-target-challan">Challan #</div>
+        </div>
+        <button class="modal-close-btn" onclick="closeMobileActionSheet()">&times;</button>
+      </div>
+
+      <div id="mobile-sheet-action-list">
+        <!-- Injected dynamically based on row permissions -->
       </div>
     </div>
   </div>
@@ -4844,6 +5384,379 @@
           }
         }
       }
+
+      // Render 6-Move Mobile Restructured Cards (Moves 1-4, 6)
+      renderMobileCards(rows);
+      updateMobileFilterCounts();
+      updateMobileFilterChipStyles(statusFilter);
+    }
+
+    // Set of expanded mobile card IDs for progressive disclosure persistence
+    const expandedMobileCardIds = new Set();
+
+    // Render 6-Move Mobile Restructured Cards
+    function renderMobileCards(rows) {
+      const container = document.getElementById('ledger-mobile-cards');
+      if (!container) return;
+
+      if (!rows || rows.length === 0) {
+        container.innerHTML = `
+          <div style="background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius-md); padding: 2.5rem 1rem; text-align: center; color: var(--muted);">
+            <div style="font-weight: 700; color: var(--fg); margin-bottom: 4px; font-size: 1rem;">No transactions found</div>
+            <div style="font-size: 0.8rem;">Try adjusting your search or active filter chips above.</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = rows.map((row, idx) => {
+        const comp = computeRowFinancials(row);
+        const isLocked = (row.source && row.source !== 'manual') && !row.isManual;
+        const isExpanded = expandedMobileCardIds.has(row.id);
+        const grossWeight = Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))) || 0;
+        const grWeight = Number(row.grQty) || 0;
+        const netWeight = Number(row.qty) || 0;
+        const hasGr = grWeight > 0;
+
+        return `
+          <div class="ledger-mobile-card ${comp.status === 'overdue' ? 'is-overdue' : (comp.status === 'paid' ? 'is-paid' : '')}" id="mob-card-${row.id}">
+            
+            <!-- Move 1: Header (Index + Date + Challan + Party + Status) -->
+            <div class="mobile-card-header">
+              <div class="mobile-card-title-group">
+                <div class="mobile-card-meta">
+                  <span class="mobile-card-idx">#${idx + 1}</span>
+                  <span class="mobile-card-date">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    ${formatDateDisplay(row.date)}
+                  </span>
+                  <span class="mobile-card-challan-badge" onclick="openChallanModal('${row.id}')" title="Click to view full challan">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    ${escapeHtml(row.challanNo || 'No Challan')}
+                  </span>
+                </div>
+                <div class="mobile-card-party">${escapeHtml(row.partyName || (activeTab === 'sales' ? 'Unnamed Customer' : 'Unnamed Supplier'))}</div>
+              </div>
+
+              <div>
+                ${renderStatusBadge(comp.status)}
+              </div>
+            </div>
+
+            <!-- Move 2: Key Metric Highlight (Grand Total & Outstanding Balance) -->
+            <div class="mobile-card-highlight">
+              <div class="mobile-card-amount-wrap">
+                <span class="mobile-card-amount-label">Grand Total</span>
+                <span class="mobile-card-amount-val">${formatCurrency(row.grandTotal)}</span>
+                ${hasGr ? `<span style="font-size: 0.7rem; color: var(--accent3); font-weight: 700;">(-${formatCurrency(row.grAmount || (row.grQty * row.rate))} GR Deducted)</span>` : ''}
+              </div>
+
+              <div class="mobile-card-status-wrap">
+                <span class="mobile-card-amount-label">${comp.principalOutstanding > 0 ? 'Balance Due' : 'Status'}</span>
+                <span class="font-mono bold" style="font-size: 0.95rem; color: ${comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)'};">
+                  ${comp.principalOutstanding > 0 ? formatCurrency(comp.principalOutstanding) : 'Settled'}
+                </span>
+                ${comp.interestAmount > 0 ? `<span style="font-size: 0.72rem; color: var(--warning); font-weight: 700;">+${formatCurrency(comp.interestAmount)} Late Int.</span>` : ''}
+              </div>
+            </div>
+
+            <!-- Move 3: 2-Column Responsive Data Grid -->
+            <div class="mobile-card-body">
+              <div class="mobile-kv-item">
+                <span class="mobile-kv-label">Quality / Item</span>
+                <span class="mobile-kv-val" title="${escapeHtml(row.quality || '-')}">${escapeHtml(row.quality || '-')}</span>
+              </div>
+
+              <div class="mobile-kv-item">
+                <span class="mobile-kv-label">Gross / GR (Kg)</span>
+                <span class="mobile-kv-val font-mono">
+                  ${grossWeight.toFixed(2)}
+                  ${hasGr ? `<span style="color: var(--accent3); font-weight: 700;"> (-${grWeight.toFixed(2)})</span>` : ''}
+                </span>
+              </div>
+
+              <div class="mobile-kv-item">
+                <span class="mobile-kv-label">Net Wt / Rate</span>
+                <span class="mobile-kv-val font-mono">${netWeight.toFixed(2)} Kg @ ₹${Number(row.rate || 0).toFixed(2)}</span>
+              </div>
+
+              <div class="mobile-kv-item">
+                <span class="mobile-kv-label">Due Date</span>
+                <span class="mobile-kv-val font-mono" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'};">
+                  ${formatDateDisplay(comp.dueDate)}
+                  ${comp.overdueDays > 0 ? ` <span style="font-weight: 800; font-size: 0.72rem;">(${comp.overdueDays}d overdue)</span>` : ''}
+                </span>
+              </div>
+            </div>
+
+            <!-- Move 4: Progressive Disclosure Accordion Drawer -->
+            <div class="mobile-card-drawer ${isExpanded ? 'is-expanded' : ''}" id="mob-drawer-${row.id}">
+              <div class="mobile-card-drawer-grid">
+                <div class="mobile-kv-item">
+                  <span class="mobile-kv-label">Taxable Subtotal</span>
+                  <span class="mobile-kv-val font-mono">${formatCurrency(row.subtotal)}</span>
+                </div>
+                <div class="mobile-kv-item">
+                  <span class="mobile-kv-label">GST Rate / Amount</span>
+                  <span class="mobile-kv-val font-mono">${row.gstPercent !== undefined ? row.gstPercent : 5.0}% (${formatCurrency((row.subtotal * (row.gstPercent !== undefined ? row.gstPercent : 5.0))/100)})</span>
+                </div>
+                <div class="mobile-kv-item">
+                  <span class="mobile-kv-label">Paid Principal</span>
+                  <span class="mobile-kv-val font-mono" style="color: var(--success); font-weight: 700;">${formatCurrency(row.paidAmount || 0)}</span>
+                </div>
+                <div class="mobile-kv-item">
+                  <span class="mobile-kv-label">Payment Date</span>
+                  <span class="mobile-kv-val font-mono">${row.paymentDate ? formatDateDisplay(row.paymentDate) : 'Not paid'}</span>
+                </div>
+                <div class="mobile-kv-item">
+                  <span class="mobile-kv-label">Credit Terms</span>
+                  <span class="mobile-kv-val font-mono">${row.creditDays || defaultCreditDays} Days</span>
+                </div>
+                <div class="mobile-kv-item">
+                  <span class="mobile-kv-label">Annual Late Interest</span>
+                  <span class="mobile-kv-val font-mono">${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}% p.a.</span>
+                </div>
+                ${comp.interestAmount > 0 ? `
+                  <div class="mobile-kv-item">
+                    <span class="mobile-kv-label">Accrued Late Interest</span>
+                    <span class="mobile-kv-val font-mono" style="color: var(--warning); font-weight: 700;">${formatCurrency(comp.interestAmount)}</span>
+                  </div>
+                  <div class="mobile-kv-item">
+                    <span class="mobile-kv-label">Paid Interest</span>
+                    <span class="mobile-kv-val font-mono" style="color: var(--warning);">${formatCurrency(row.interestPaid || 0)}</span>
+                  </div>
+                ` : ''}
+              </div>
+
+              ${Array.isArray(row.grBoxes) && row.grBoxes.length > 0 ? `
+                <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-subtle);">
+                  <span class="mobile-kv-label">Returned GR Boxes (${row.grBoxes.length}):</span>
+                  <div class="mobile-boxes-badge-list">
+                    ${row.grBoxes.map(b => `<span class="mobile-box-pill">Box #${escapeHtml(b.boxNumber || b.boxNo)} (${Number(b.weight || b.netWeight || 0).toFixed(2)} Kg)</span>`).join('')}
+                  </div>
+                </div>
+              ` : ''}
+
+              ${row.remarks ? `
+                <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-subtle);">
+                  <span class="mobile-kv-label">Remarks / Payment Notes:</span>
+                  <div style="font-size: 0.8rem; color: var(--fg); font-style: italic; margin-top: 2px;">${escapeHtml(row.remarks)}</div>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Move 6: Touch-Friendly Card Actions Bar -->
+            <div class="mobile-card-actions">
+              <button class="mobile-toggle-btn ${isExpanded ? 'is-expanded' : ''}" onclick="toggleMobileCardDetails('${row.id}')">
+                <span>${isExpanded ? 'Hide' : 'Details'}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+
+              <div class="mobile-action-btn-group">
+                <button class="mobile-btn-pill" onclick="openChallanModal('${row.id}')" title="View Full Challan & Details">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>View</span>
+                </button>
+                <button class="mobile-btn-pill gr-btn" onclick="openIssueGrModal('${row.id}')" title="Issue or Edit Goods Return (GR)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  <span>GR</span>
+                </button>
+                <button class="mobile-btn-pill primary" onclick="openMobileActionSheet('${row.id}')" title="More Actions">
+                  <span>•••</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Toggle Mobile Card Accordion
+    function toggleMobileCardDetails(rowId) {
+      if (expandedMobileCardIds.has(rowId)) {
+        expandedMobileCardIds.delete(rowId);
+      } else {
+        expandedMobileCardIds.add(rowId);
+      }
+      const drawer = document.getElementById(`mob-drawer-${rowId}`);
+      const card = document.getElementById(`mob-card-${rowId}`);
+      const btn = card ? card.querySelector('.mobile-toggle-btn') : null;
+      if (drawer) {
+        drawer.classList.toggle('is-expanded', expandedMobileCardIds.has(rowId));
+      }
+      if (btn) {
+        btn.classList.toggle('is-expanded', expandedMobileCardIds.has(rowId));
+        const span = btn.querySelector('span');
+        if (span) span.textContent = expandedMobileCardIds.has(rowId) ? 'Hide' : 'Details';
+      }
+    }
+
+    // Set Mobile Filter Chip and sync with desktop filter
+    function setMobileStatusFilter(status) {
+      const select = document.getElementById('filter-status');
+      if (select) {
+        select.value = status;
+      }
+      activeKpiFilter = null;
+      updateMobileFilterChipStyles(status);
+      renderTable();
+    }
+
+    function updateMobileFilterChipStyles(currentStatus) {
+      const chips = document.querySelectorAll('.mobile-filter-chip');
+      chips.forEach(chip => {
+        const filterVal = chip.dataset.filter;
+        if (filterVal === currentStatus) {
+          chip.classList.add('active');
+        } else {
+          chip.classList.remove('active');
+        }
+      });
+    }
+
+    // Update Mobile Quick Filter Counts
+    function updateMobileFilterCounts() {
+      const allRows = ledgerData[activeTab] || [];
+      let cAll = allRows.length;
+      let cOverdue = 0;
+      let cPending = 0;
+      let cPartial = 0;
+      let cPaid = 0;
+      let cGr = 0;
+
+      allRows.forEach(r => {
+        const comp = computeRowFinancials(r);
+        if (comp.status === 'overdue' || comp.status === 'int-due') cOverdue++;
+        else if (comp.status === 'pending') cPending++;
+        else if (comp.status === 'partial') cPartial++;
+        else if (comp.status === 'paid') cPaid++;
+        if (Number(r.grQty) > 0) cGr++;
+      });
+
+      const elAll = document.getElementById('mobile-count-all');
+      if (elAll) elAll.textContent = cAll;
+      const elOverdue = document.getElementById('mobile-count-overdue');
+      if (elOverdue) elOverdue.textContent = cOverdue;
+      const elPending = document.getElementById('mobile-count-pending');
+      if (elPending) elPending.textContent = cPending;
+      const elPartial = document.getElementById('mobile-count-partial');
+      if (elPartial) elPartial.textContent = cPartial;
+      const elPaid = document.getElementById('mobile-count-paid');
+      if (elPaid) elPaid.textContent = cPaid;
+      const elGr = document.getElementById('mobile-count-gr');
+      if (elGr) elGr.textContent = cGr;
+    }
+
+    // Open Mobile Action Bottom Sheet
+    function openMobileActionSheet(rowId) {
+      const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
+      if (!row) return;
+
+      const comp = computeRowFinancials(row);
+      const isLocked = (row.source && row.source !== 'manual') && !row.isManual;
+
+      const dateEl = document.getElementById('sheet-target-date');
+      if (dateEl) dateEl.textContent = `${activeTab === 'sales' ? 'Sale' : 'Purchase'} Transaction • ${formatDateDisplay(row.date)}`;
+
+      const partyEl = document.getElementById('sheet-target-party');
+      if (partyEl) partyEl.textContent = row.partyName || (activeTab === 'sales' ? 'Customer' : 'Supplier');
+
+      const challanEl = document.getElementById('sheet-target-challan');
+      if (challanEl) challanEl.textContent = `Challan: ${row.challanNo || 'N/A'} • ${formatCurrency(row.grandTotal)}`;
+
+      const actionList = document.getElementById('mobile-sheet-action-list');
+      if (actionList) {
+        actionList.innerHTML = `
+          <button class="mobile-sheet-action-item" onclick="closeMobileActionSheet(); openChallanModal('${row.id}');">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div>View Full Details &amp; Print</div>
+              <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">Inspect complete item lines, tax calculations &amp; print voucher</span>
+            </div>
+          </button>
+
+          <button class="mobile-sheet-action-item" onclick="closeMobileActionSheet(); openIssueGrModal('${row.id}');">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent3)" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div>Issue / Edit Goods Return (GR)</div>
+              <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">Specify returned boxes, deductions and auto-sync stock</span>
+            </div>
+          </button>
+
+          <button class="mobile-sheet-action-item" onclick="closeMobileActionSheet(); quickMobilePaymentPrompt('${row.id}');">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div>Record / Update Settlement Amount</div>
+              <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">Current settled: ${formatCurrency(row.paidAmount || 0)} (Bal: ${formatCurrency(comp.principalOutstanding)})</span>
+            </div>
+          </button>
+
+          <button class="mobile-sheet-action-item" onclick="closeMobileActionSheet(); editMobileRowNotes('${row.id}');">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div>Edit Remarks &amp; Notes</div>
+              <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">Update cheque number or ledger notes</span>
+            </div>
+          </button>
+
+          ${!isLocked ? `
+            <button class="mobile-sheet-action-item danger" onclick="closeMobileActionSheet(); deleteRow('${row.id}');">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              <div style="display:flex; flex-direction:column; gap:2px;">
+                <div>Delete Ledger Entry</div>
+                <span style="font-size:0.75rem; opacity:0.85; font-weight:400;">Permanently remove entry across all synchronized devices</span>
+              </div>
+            </button>
+          ` : ''}
+        `;
+      }
+
+      document.getElementById('mobile-action-sheet').style.display = 'flex';
+    }
+
+    function closeMobileActionSheet() {
+      const sheet = document.getElementById('mobile-action-sheet');
+      if (sheet) sheet.style.display = 'none';
+    }
+
+    // Quick Mobile Payment Settlement Prompt
+    function quickMobilePaymentPrompt(rowId) {
+      const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
+      if (!row) return;
+
+      const currentPaid = row.paidAmount || 0;
+      const input = prompt(`Enter total settled / received principal amount (₹) for ${row.challanNo || row.partyName}:`, currentPaid);
+      if (input === null) return;
+
+      const parsed = parseFloat(input);
+      if (isNaN(parsed) || parsed < 0) {
+        showToast('Please enter a valid positive payment amount', 'error');
+        return;
+      }
+
+      handleCellChange(rowId, 'paidAmount', parsed, false);
+      if (!row.paymentDate) {
+        const today = new Date().toISOString().split('T')[0];
+        handleCellChange(rowId, 'paymentDate', today, false);
+      }
+      saveLedgers(false, true);
+      renderTable();
+      showToast(`Settlement updated to ${formatCurrency(parsed)}`, 'success');
+    }
+
+    // Quick Mobile Edit Notes
+    function editMobileRowNotes(rowId) {
+      const row = (ledgerData[activeTab] || []).find(r => r.id === rowId);
+      if (!row) return;
+
+      const input = prompt(`Edit remarks / cheque notes for ${row.challanNo || row.partyName}:`, row.remarks || '');
+      if (input === null) return;
+
+      handleCellChange(rowId, 'remarks', input.trim(), false);
+      saveLedgers(false, true);
+      renderTable();
+      showToast('Remarks updated', 'success');
     }
 
     // Toggle Late Payment Interest Calculation
