@@ -5241,6 +5241,7 @@
       
       const company = getSellerCompanyInfo(sale);
       const companyName = company.sellerName || "Vishwa Fashions";
+      const companySub = company.subTitle || "YARN MANUFACTURING & PROCESSING DIVISION";
       const companyAddress = company.sellerAddress || "Plot No. 124, GIDC Industrial Estate, Pandesara, Surat, Gujarat - 394221";
       const companyPhone = company.sellerPhone || "+91 98251 12345";
       const companyEmail = company.sellerEmail || "sales@vishwafashions.com";
@@ -5269,87 +5270,84 @@
           return `
             <div class="sticker-card">
               <div class="sticker-inner">
-                <!-- Massive Prominent Box Number Header for Purchaser Readability -->
-                <div class="sticker-bori-banner">
-                  <div class="bori-banner-left">
-                    <span class="bori-banner-tag">BOX / BORI NO.</span>
-                    <div class="bori-banner-num">${item.boriNo || '-'}</div>
+                <!-- 1. TOP: COMPANY NAME & DIVISION -->
+                <div class="sticker-top-header">
+                  <div class="company-brand-row">
+                    <div class="company-name-text">${companyName}</div>
+                    <div class="slip-type-tag">PACKING SLIP</div>
                   </div>
-                  <div class="bori-banner-right">
-                    <div class="sticker-badge">PACKING SLIP</div>
-                    <div class="bori-division-tag">${activeDivision.toUpperCase()}</div>
-                  </div>
+                  <div class="company-sub-text">${companySub}</div>
                 </div>
 
-                <!-- Company Header -->
-                <div class="sticker-company-bar">
-                  <div class="sticker-company-name">${companyName}</div>
-                  <div class="sticker-company-sub">YARN MANUFACTURING & PROCESSING DIVISION</div>
+                <!-- 2. ~1/3 HEIGHT: HUGE CENTERED BOX NUMBER (Ink-Optimized Clean White Background) -->
+                <div class="sticker-box-section">
+                  <div class="box-tag-label">BOX / BORI NUMBER</div>
+                  <div class="box-number-display">${item.boriNo || '-'}</div>
+                  <div class="box-div-badge">${activeDivision.toUpperCase()}</div>
                 </div>
 
-                <!-- Date and Lot Number Section -->
+                <!-- 3. DATE & LOT NUMBER -->
                 <div class="sticker-meta-strip">
-                  <div class="meta-cell">
-                    <span class="meta-label">DATE</span>
-                    <span class="meta-val">${formatDate(sale.date)}</span>
+                  <div class="meta-item">
+                    <span class="meta-k">DATE:</span>
+                    <span class="meta-v">${formatDate(sale.date)}</span>
                   </div>
-                  <div class="meta-cell highlight-lot">
-                    <span class="meta-label">LOT NO.</span>
-                    <span class="meta-val lot-val">${itemLot}</span>
-                  </div>
-                </div>
-
-                <!-- Quality & Specs Full Coverage -->
-                <div class="sticker-quality-hero">
-                  <span class="hero-lbl">NAME / QUALITY</span>
-                  <div class="hero-val">${cleanYarnQualityName(item.composition)}</div>
-                </div>
-
-                <div class="sticker-specs-grid">
-                  <div class="spec-block">
-                    <span class="spec-lbl">SHADE / COLOR</span>
-                    <span class="spec-val">${item.color || '-'}</span>
-                  </div>
-                  <div class="spec-block">
-                    <span class="spec-lbl">DENIER</span>
-                    <span class="spec-val">${item.denier ? item.denier + 'D' : '-'}</span>
-                  </div>
-                  <div class="spec-block">
-                    <span class="spec-lbl">TPM / TWIST</span>
-                    <span class="spec-val">${item.tpm ? item.tpm + ' TPM' : ''}${item.twist ? ' (' + item.twist + ')' : '-'}</span>
-                  </div>
-                  <div class="spec-block highlight-rolls">
-                    <span class="spec-lbl">TOTAL ROLLS</span>
-                    <span class="spec-val rolls-val">${item.rollsQty || 0} <small>Nos</small></span>
+                  <div class="meta-item meta-lot-item">
+                    <span class="meta-k">LOT NO:</span>
+                    <span class="meta-v lot-text">${itemLot}</span>
                   </div>
                 </div>
 
-                <!-- Weight Summary Grid -->
-                <div class="sticker-weights-row">
-                  <div class="wt-cell">
-                    <span class="wt-lbl">GROSS WT</span>
-                    <span class="wt-val ${grossValNum > 0 ? '' : 'wt-dash'}">${grossDisplay}</span>
+                <!-- 4. QUALITY & DETAILS -->
+                <div class="sticker-quality-strip">
+                  <span class="strip-label">QUALITY:</span>
+                  <span class="strip-value quality-text">${cleanYarnQualityName(item.composition)}</span>
+                </div>
+
+                <div class="sticker-specs-row">
+                  <div class="spec-col">
+                    <span class="spec-k">SHADE/COLOR:</span>
+                    <span class="spec-v">${item.color || '-'}</span>
                   </div>
-                  <div class="wt-cell">
-                    <span class="wt-lbl">TARE WT</span>
-                    <span class="wt-val ${tareValNum > 0 ? '' : 'wt-dash'}">${tareDisplay}</span>
+                  <div class="spec-col">
+                    <span class="spec-k">DENIER:</span>
+                    <span class="spec-v">${item.denier ? item.denier + 'D' : '-'}</span>
                   </div>
-                  <div class="wt-cell highlight-net">
-                    <span class="wt-lbl">NET WEIGHT</span>
-                    <span class="wt-val net-val">${netValNum.toFixed(2)} <small>Kg</small></span>
+                  <div class="spec-col">
+                    <span class="spec-k">TPM/TWIST:</span>
+                    <span class="spec-v">${item.tpm ? item.tpm + ' TPM' : ''}${item.twist ? ' (' + item.twist + ')' : '-'}</span>
                   </div>
                 </div>
 
-                <!-- Quality Warning Note -->
-                <div class="sticker-notice-box">
-                  ⚠️ <strong>Quality Notice:</strong> Strictly do not mix lots in weaving/processing.
+                <!-- 5. WEIGHTS & ROLLS -->
+                <div class="sticker-metrics-grid">
+                  <div class="metric-cell">
+                    <span class="metric-k">ROLLS</span>
+                    <span class="metric-v">${item.rollsQty || 0} <small>Nos</small></span>
+                  </div>
+                  <div class="metric-cell">
+                    <span class="metric-k">GROSS WT</span>
+                    <span class="metric-v ${grossValNum > 0 ? '' : 'dash-v'}">${grossDisplay}</span>
+                  </div>
+                  <div class="metric-cell">
+                    <span class="metric-k">TARE WT</span>
+                    <span class="metric-v ${tareValNum > 0 ? '' : 'dash-v'}">${tareDisplay}</span>
+                  </div>
+                  <div class="metric-cell highlight-net">
+                    <span class="metric-k">NET WEIGHT</span>
+                    <span class="metric-v net-v">${netValNum.toFixed(2)} <small>Kg</small></span>
+                  </div>
                 </div>
 
-                <!-- Signatures -->
-                <div class="sticker-foot-signatures">
-                  <span>Packed: <strong>_______</strong></span>
-                  <span>Checked: <strong>_______</strong></span>
-                  <span>Auth Sign: <strong>_______</strong></span>
+                <!-- 6. QUALITY NOTICE & SIGNATURES -->
+                <div class="sticker-notice-row">
+                  ⚠️ Strictly do not mix different lots in weaving/processing.
+                </div>
+
+                <div class="sticker-signature-row">
+                  <span>Packed: _______</span>
+                  <span>Checked: _______</span>
+                  <span>Sign: _______</span>
                 </div>
               </div>
             </div>
@@ -5389,7 +5387,7 @@
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
               color: #000000;
               background-color: #ffffff;
-              line-height: 1.2;
+              line-height: 1.15;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
@@ -5470,11 +5468,11 @@
               height: 139mm;
               max-width: 99.1mm;
               max-height: 139mm;
-              border: 2px solid #000000;
-              border-radius: 4px;
+              border: 1.5px solid #000000;
+              border-radius: 3px;
               background: #ffffff;
               box-sizing: border-box;
-              padding: 5mm;
+              padding: 4.5mm;
               overflow: hidden;
             }
             .sticker-card.empty-slot {
@@ -5487,266 +5485,239 @@
               display: flex;
               flex-direction: column;
               justify-content: space-between;
-            }
-
-            /* Massive Box Number Banner */
-            .sticker-bori-banner {
-              display: flex;
-              justify-content: space-between;
-              align-items: stretch;
-              background: #000000;
-              color: #ffffff;
-              border-radius: 4px;
-              padding: 4px 8px;
-              margin-bottom: 2px;
-            }
-            .bori-banner-left {
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-            }
-            .bori-banner-tag {
-              font-size: 8px;
-              font-weight: 900;
-              letter-spacing: 0.8px;
-              color: #f1f5f9;
-              text-transform: uppercase;
-              line-height: 1;
-            }
-            .bori-banner-num {
-              font-size: 30px;
-              font-weight: 900;
-              line-height: 1;
-              color: #ffffff;
-              letter-spacing: 0.5px;
-              word-break: break-word;
-            }
-            .bori-banner-right {
-              display: flex;
-              flex-direction: column;
-              align-items: flex-end;
-              justify-content: space-between;
-            }
-            .sticker-badge {
               background: #ffffff;
-              color: #000000;
-              font-size: 9.5px;
-              font-weight: 900;
-              padding: 2px 7px;
-              border-radius: 3px;
-              letter-spacing: 0.8px;
-              white-space: nowrap;
-            }
-            .bori-division-tag {
-              font-size: 8.5px;
-              font-weight: 800;
-              color: #cbd5e1;
-              letter-spacing: 0.5px;
             }
 
-            /* Company Info */
-            .sticker-company-bar {
+            /* 1. TOP HEADER */
+            .sticker-top-header {
               border-bottom: 1.5px solid #000000;
               padding-bottom: 2px;
-              margin-bottom: 2px;
             }
-            .sticker-company-name {
-              font-size: 14px;
+            .company-brand-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            .company-name-text {
+              font-size: 13.5px;
               font-weight: 900;
               text-transform: uppercase;
-              letter-spacing: 0.4px;
+              letter-spacing: 0.5px;
               color: #000000;
               line-height: 1.1;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
             }
-            .sticker-company-sub {
-              font-size: 7.5px;
-              font-weight: 800;
-              color: #333333;
+            .slip-type-tag {
+              font-size: 8.5px;
+              font-weight: 900;
+              border: 1px solid #000000;
+              padding: 1px 5px;
+              border-radius: 2px;
+              letter-spacing: 0.6px;
+              white-space: nowrap;
+            }
+            .company-sub-text {
+              font-size: 7px;
+              font-weight: 700;
+              color: #222222;
               letter-spacing: 0.3px;
               margin-top: 1px;
             }
 
-            /* Date & Lot Strip */
-            .sticker-meta-strip {
-              display: grid;
-              grid-template-columns: 1fr 1.2fr;
-              gap: 4px;
-              margin-bottom: 2px;
-            }
-            .meta-cell {
-              border: 1.5px solid #000000;
+            /* 2. ~1/3 BOX NUMBER CENTERED (Ink-Optimized Clean Design) */
+            .sticker-box-section {
+              border: 2px solid #000000;
               border-radius: 3px;
-              padding: 2px 5px;
+              text-align: center;
+              padding: 4px 6px;
               display: flex;
               flex-direction: column;
               justify-content: center;
+              align-items: center;
               background: #ffffff;
+              margin: 2px 0;
+              min-height: 38mm;
+              max-height: 42mm;
             }
-            .meta-cell.highlight-lot {
-              background: #f8fafc;
-              border: 2px solid #000000;
-            }
-            .meta-label {
-              font-size: 7.5px;
-              font-weight: 800;
-              color: #475569;
-              text-transform: uppercase;
-              letter-spacing: 0.3px;
-            }
-            .meta-val {
-              font-size: 12px;
+            .box-tag-label {
+              font-size: 9px;
               font-weight: 900;
+              letter-spacing: 1px;
               color: #000000;
-              line-height: 1.1;
+              text-transform: uppercase;
+              line-height: 1;
+              margin-bottom: 1px;
             }
-            .meta-val.lot-val {
-              font-size: 14px;
+            .box-number-display {
+              font-size: 46px;
               font-weight: 900;
+              line-height: 1;
+              color: #000000;
+              letter-spacing: 1px;
+              word-break: break-word;
+            }
+            .box-div-badge {
+              font-size: 8px;
+              font-weight: 800;
+              color: #333333;
+              letter-spacing: 0.8px;
+              margin-top: 1px;
+              line-height: 1;
             }
 
-            /* Quality Hero Card */
-            .sticker-quality-hero {
+            /* 3. DATE & LOT STRIP */
+            .sticker-meta-strip {
+              display: flex;
               border: 1.5px solid #000000;
               border-radius: 3px;
-              padding: 3px 6px;
-              background: #f8fafc;
-              margin-bottom: 2px;
+              background: #ffffff;
             }
-            .hero-lbl {
-              font-size: 7.5px;
+            .meta-item {
+              flex: 1;
+              padding: 2px 5px;
+              display: flex;
+              align-items: center;
+              gap: 4px;
+            }
+            .meta-lot-item {
+              border-left: 1.5px solid #000000;
+            }
+            .meta-k {
+              font-size: 8px;
               font-weight: 800;
-              color: #475569;
+              color: #000000;
               text-transform: uppercase;
-              letter-spacing: 0.3px;
-              display: block;
             }
-            .hero-val {
-              font-size: 13px;
+            .meta-v {
+              font-size: 11.5px;
               font-weight: 900;
               color: #000000;
-              line-height: 1.15;
+            }
+            .meta-v.lot-text {
+              font-size: 13px;
+            }
+
+            /* 4. QUALITY STRIP */
+            .sticker-quality-strip {
+              border: 1.5px solid #000000;
+              border-radius: 3px;
+              padding: 2.5px 5px;
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              background: #ffffff;
+            }
+            .strip-label {
+              font-size: 8px;
+              font-weight: 900;
+              color: #000000;
+              text-transform: uppercase;
+              white-space: nowrap;
+            }
+            .strip-value.quality-text {
+              font-size: 12.5px;
+              font-weight: 900;
+              color: #000000;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
             }
 
-            /* Specs Grid */
-            .sticker-specs-grid {
+            /* SPECS ROW */
+            .sticker-specs-row {
               display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 3px;
-              border: 1.5px solid #000000;
+              grid-template-columns: 1.1fr 0.9fr 1fr;
+              gap: 2px;
+              border: 1px solid #000000;
               border-radius: 3px;
-              padding: 3px 4px;
+              padding: 2px 4px;
               background: #ffffff;
-              margin-bottom: 2px;
             }
-            .spec-block {
+            .spec-col {
               display: flex;
               flex-direction: column;
               min-width: 0;
             }
-            .spec-block.highlight-rolls {
-              border-left: 1px dashed #000000;
-              padding-left: 4px;
-            }
-            .spec-lbl {
-              font-size: 7px;
+            .spec-k {
+              font-size: 6.5px;
               font-weight: 800;
-              color: #475569;
+              color: #333333;
               text-transform: uppercase;
-              letter-spacing: 0.2px;
             }
-            .spec-val {
-              font-size: 11px;
-              font-weight: 900;
+            .spec-v {
+              font-size: 10px;
+              font-weight: 800;
               color: #000000;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
-              line-height: 1.15;
-            }
-            .spec-val.rolls-val {
-              font-size: 13px;
-              color: #000000;
-            }
-            .spec-val.rolls-val small {
-              font-size: 8.5px;
             }
 
-            /* Weights Summary */
-            .sticker-weights-row {
+            /* 5. WEIGHTS & ROLLS METRICS */
+            .sticker-metrics-grid {
               display: grid;
-              grid-template-columns: 1fr 1fr 1.35fr;
-              gap: 3px;
-              margin-bottom: 2px;
+              grid-template-columns: 0.9fr 1fr 1fr 1.3fr;
+              gap: 2px;
             }
-            .wt-cell {
+            .metric-cell {
               border: 1.5px solid #000000;
               border-radius: 3px;
-              padding: 2px 4px;
+              padding: 2px 3px;
               text-align: center;
-              background: #ffffff;
               display: flex;
               flex-direction: column;
               justify-content: center;
+              background: #ffffff;
             }
-            .wt-cell.highlight-net {
+            .metric-cell.highlight-net {
               border: 2px solid #000000;
-              background: #f1f5f9;
             }
-            .wt-lbl {
-              font-size: 7px;
+            .metric-k {
+              font-size: 6.5px;
               font-weight: 800;
-              color: #475569;
+              color: #000000;
               text-transform: uppercase;
-              letter-spacing: 0.2px;
+              line-height: 1;
+              margin-bottom: 1px;
             }
-            .wt-val {
-              font-size: 12.5px;
+            .metric-v {
+              font-size: 11.5px;
               font-weight: 900;
               color: #000000;
-              line-height: 1.1;
+              line-height: 1;
             }
-            .wt-val.net-val {
-              font-size: 16px;
-              font-weight: 900;
+            .metric-v.net-v {
+              font-size: 14.5px;
             }
-            .wt-val small {
-              font-size: 8.5px;
+            .metric-v small {
+              font-size: 7.5px;
               font-weight: 800;
             }
-            .wt-val.wt-dash {
-              color: #475569;
+            .metric-v.dash-v {
+              font-size: 10px;
               font-weight: 500;
               letter-spacing: 1px;
-              font-size: 11px;
             }
 
-            /* Notice Box */
-            .sticker-notice-box {
+            /* 6. NOTICE & SIGNATURES */
+            .sticker-notice-row {
               border: 1px dashed #000000;
-              background: #fafafa;
-              padding: 2px 4px;
+              padding: 1.5px 3px;
               border-radius: 2px;
-              font-size: 7px;
-              line-height: 1.2;
-              color: #111111;
-              text-transform: uppercase;
-              letter-spacing: 0.2px;
-              margin-bottom: 2px;
+              font-size: 6.8px;
+              font-weight: 700;
+              line-height: 1.1;
+              color: #000000;
+              text-align: center;
             }
-
-            /* Footer */
-            .sticker-foot-signatures {
+            .sticker-signature-row {
               display: flex;
               justify-content: space-between;
-              border-top: 1.5px solid #000000;
-              padding-top: 2px;
-              font-size: 8px;
+              border-top: 1px solid #000000;
+              padding-top: 1.5px;
+              font-size: 7.5px;
               font-weight: 800;
               color: #000000;
             }
