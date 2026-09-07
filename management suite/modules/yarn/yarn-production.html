@@ -5526,8 +5526,8 @@
       const companyEmail = company.sellerEmail || "sales@vishwafashions.com";
       const companyGst = company.sellerGstin || "24AAAFV1234A1Z5";
 
-      // Group items into chunks of 3 for 3 slips per A4 page
-      const chunkSize = 3;
+      // Group items into chunks of 4 for 4 stickers per A4 page (Desmat A4ST4-100S: 2x2 grid, 139mm x 99.1mm)
+      const chunkSize = 4;
       const pageChunks = [];
       for (let i = 0; i < items.length; i += chunkSize) {
         pageChunks.push(items.slice(i, i + chunkSize));
@@ -5539,7 +5539,6 @@
           const itemLot = item.lotNo && String(item.lotNo).trim() && String(item.lotNo).trim() !== '-' 
             ? String(item.lotNo).trim() 
             : saleLotNo;
-          const specs = `${item.denier ? item.denier + 'D' : ''}${item.tpm ? ' | ' + item.tpm + ' TPM' : ''}${item.twist ? ' | ' + item.twist : ''}`.trim() || '-';
           const grossValNum = parseFloat(item.grossWeight) || 0;
           const tareValNum = parseFloat(item.tareWeight) || 0;
           const netValNum = parseFloat(item.saleQty) || 0;
@@ -5548,88 +5547,95 @@
           const tareDisplay = tareValNum > 0 ? `${tareValNum.toFixed(2)} <small>Kg</small>` : `_______ <small>Kg</small>`;
           
           return `
-            <div class="slip-card">
-              <div class="slip-bori-col">
-                <div class="bori-col-header">BOX / BORI NO</div>
-                <div class="bori-col-num">${item.boriNo}</div>
-                <div class="bori-col-sub">${activeDivision.toUpperCase()}</div>
-              </div>
-
-              <div class="slip-main-col">
-                <div class="slip-header">
-                  <div class="slip-header-left">
-                    <div class="slip-company-name">${companyName}</div>
-                    <div class="slip-company-sub">${companySub}</div>
+            <div class="sticker-card">
+              <div class="sticker-inner">
+                <div class="sticker-header">
+                  <div class="sticker-header-left">
+                    <div class="sticker-company-name">${companyName}</div>
+                    <div class="sticker-company-sub">${companySub}</div>
                   </div>
-                  <div class="slip-badge">PACKING SLIP</div>
+                  <div class="sticker-badge">PACKING SLIP</div>
                 </div>
 
-                <div class="slip-meta-strip">
-                  <div class="meta-cell">
-                    <span class="meta-label">DATE</span>
-                    <span class="meta-val">${formatDate(sale.date)}</span>
+                <div class="sticker-top-row">
+                  <div class="bori-badge-box">
+                    <div class="bori-lbl">BORI / BOX NO</div>
+                    <div class="bori-val">${item.boriNo || '-'}</div>
                   </div>
-                  <div class="meta-cell">
-                    <span class="meta-label">LOT NO</span>
-                    <span class="meta-val lot-val">${itemLot}</span>
-                  </div>
-                </div>
-
-                <div class="slip-details-grid">
-                  <div class="detail-block">
-                    <span class="detail-label">NAME / QUALITY</span>
-                    <span class="detail-value quality-val">${cleanYarnQualityName(item.composition)}</span>
-                  </div>
-                  <div class="detail-block">
-                    <span class="detail-label">SHADE / COLOR</span>
-                    <span class="detail-value color-val">${item.color || '-'}</span>
-                  </div>
-                  <div class="detail-block">
-                    <span class="detail-label">TWIST</span>
-                    <span class="detail-value twist-val">${item.twist || '-'}</span>
+                  <div class="meta-side-box">
+                    <div class="meta-mini-cell">
+                      <span class="mini-lbl">DATE</span>
+                      <span class="mini-val">${formatDate(sale.date)}</span>
+                    </div>
+                    <div class="meta-mini-cell">
+                      <span class="mini-lbl">LOT NO</span>
+                      <span class="mini-val lot-val">${itemLot}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div class="slip-metrics-row">
+                <div class="sticker-specs-grid">
+                  <div class="spec-cell span-2">
+                    <span class="spec-lbl">NAME / QUALITY</span>
+                    <span class="spec-val quality-name">${cleanYarnQualityName(item.composition)}</span>
+                  </div>
+                  <div class="spec-cell">
+                    <span class="spec-lbl">SHADE / COLOR</span>
+                    <span class="spec-val">${item.color || '-'}</span>
+                  </div>
+                  <div class="spec-cell">
+                    <span class="spec-lbl">DENIER</span>
+                    <span class="spec-val">${item.denier ? item.denier + 'D' : '-'}</span>
+                  </div>
+                  <div class="spec-cell">
+                    <span class="spec-lbl">TPM / TWIST</span>
+                    <span class="spec-val">${item.tpm ? item.tpm + ' TPM' : ''}${item.twist ? ' (' + item.twist + ')' : ''}</span>
+                  </div>
+                  <div class="spec-cell">
+                    <span class="spec-lbl">ROLLS QTY</span>
+                    <span class="spec-val rolls-val">${item.rollsQty || 0} Nos</span>
+                  </div>
+                </div>
+
+                <div class="sticker-metrics-row">
                   <div class="metric-box">
-                    <span class="metric-lbl">TOTAL ROLLS</span>
-                    <span class="metric-num">${item.rollsQty || 0} <small>Nos</small></span>
+                    <span class="metric-lbl">GROSS WT</span>
+                    <span class="metric-num ${grossValNum > 0 ? '' : 'gross-placeholder'}">${grossDisplay}</span>
                   </div>
                   <div class="metric-box">
-                    <span class="metric-lbl">GROSS WEIGHT</span>
-                    <span class="metric-num ${grossValNum > 0 ? '' : 'gross-val'}">${grossDisplay}</span>
+                    <span class="metric-lbl">TARE WT</span>
+                    <span class="metric-num ${tareValNum > 0 ? '' : 'gross-placeholder'}">${tareDisplay}</span>
                   </div>
-                  <div class="metric-box">
-                    <span class="metric-lbl">TARE WEIGHT</span>
-                    <span class="metric-num ${tareValNum > 0 ? '' : 'gross-val'}">${tareDisplay}</span>
-                  </div>
-                  <div class="metric-box highlight-metric">
-                    <span class="metric-lbl">NET WEIGHT</span>
+                  <div class="metric-box highlight-net">
+                    <span class="metric-lbl">NET WT</span>
                     <span class="metric-num">${netValNum.toFixed(2)} <small>Kg</small></span>
                   </div>
                 </div>
 
-                <div class="slip-lot-notice">
-                  ⚠️ <strong>Quality Notice:</strong> Strictly do not mix different lots in weaving/processing. Supplier is not liable for shade variation or defects arising from intermixed lots.
+                <div class="sticker-quality-warning">
+                  ⚠️ <strong>Quality Notice:</strong> Strictly do not mix different lots in weaving/processing.
                 </div>
 
-                <div class="slip-footer">
-                  <div class="footer-sig">Packed By: ______________</div>
-                  <div class="footer-sig">Checked By: ______________</div>
-                  <div class="footer-sig">Authorized Signatory: ______________</div>
+                <div class="sticker-footer">
+                  <span>Packed: ________</span>
+                  <span>Checked: ________</span>
+                  <span>Sign: ________</span>
                 </div>
               </div>
             </div>
           `;
-        }).join(`
-          <div class="cut-line">
-            <span>✂ CUT HERE ✂</span>
-          </div>
-        `);
+        }).join('');
+
+        // Pad with empty sticker slots if chunk has fewer than 4 items to preserve grid positions
+        let emptyStickersHtml = '';
+        for (let k = chunk.length; k < 4; k++) {
+          emptyStickersHtml += '<div class="sticker-card empty-slot"></div>';
+        }
 
         return `
           <div class="page-box">
             ${slipsHtml}
+            ${emptyStickersHtml}
           </div>
         `;
       }).join('');
@@ -5642,7 +5648,7 @@
           <style>
             @page {
               size: A4 portrait;
-              margin: 5mm 7mm;
+              margin: 9.5mm 5.5mm;
             }
             * {
               margin: 0;
@@ -5653,8 +5659,10 @@
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
               color: #000000;
               background-color: #ffffff;
-              line-height: 1.3;
-              font-size: 12px;
+              line-height: 1.25;
+              font-size: 11px;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             @media print {
               .no-print {
@@ -5666,351 +5674,318 @@
               }
               .page-box {
                 page-break-after: always;
-                height: 287mm;
-                max-height: 287mm;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                overflow: hidden;
+                page-break-inside: avoid;
+                break-after: page;
+                margin: 0 !important;
+                box-shadow: none !important;
               }
               .page-box:last-child {
                 page-break-after: auto;
+                break-after: auto;
               }
             }
             @media screen {
               body {
-                background: #f1f5f9;
-                padding: 20px;
+                background: #e2e8f0;
+                padding: 24px;
               }
               .page-box {
                 background: #ffffff;
-                width: 210mm;
-                min-height: 287mm;
                 margin: 0 auto 30px auto;
-                padding: 5mm 7mm;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
+                box-shadow: 0 6px 24px rgba(0,0,0,0.18);
               }
             }
             .no-print-bar {
-              width: 210mm;
-              margin: 0 auto 20px auto;
+              width: 200mm;
+              margin: 0 auto 16px auto;
               display: flex;
-              gap: 10px;
+              gap: 12px;
               justify-content: flex-end;
-              padding: 10px 14px;
+              padding: 10px 16px;
               background: #ffffff;
               border-radius: 8px;
-              border: 1px solid #e2e8f0;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+              box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             }
             .no-print-btn {
-              padding: 8px 18px;
+              padding: 9px 20px;
               border-radius: 6px;
               font-size: 13px;
-              font-weight: 600;
+              font-weight: 700;
               cursor: pointer;
               border: none;
-              transition: opacity 0.2s;
             }
             .btn-print {
               background: #10b981;
               color: #ffffff;
             }
             .btn-close {
-              background: #e2e8f0;
-              color: #334155;
+              background: #cbd5e1;
+              color: #1e293b;
             }
-            .slip-card {
-              border: 1.5px solid #000000;
-              border-radius: 4px;
-              background: #ffffff;
-              display: flex;
-              flex-direction: row;
-              height: 90mm;
-              max-height: 90mm;
+            
+            /* A4 Sheet Container for Desmat A4ST4-100S: 2 columns x 2 rows */
+            .page-box {
+              width: 199mm;
+              height: 278mm;
+              display: grid;
+              grid-template-columns: 96.5mm 96.5mm;
+              grid-template-rows: 137mm 137mm;
+              column-gap: 6mm;
+              row-gap: 4mm;
               box-sizing: border-box;
               overflow: hidden;
             }
-            .slip-bori-col {
-              width: 120px;
-              min-width: 120px;
-              max-width: 120px;
-              border-right: 1.5px solid #000000;
+
+            .sticker-card {
+              width: 100%;
+              height: 100%;
+              border: 1.5px solid #000000;
+              border-radius: 5px;
               background: #ffffff;
+              box-sizing: border-box;
+              padding: 6px 8px;
               display: flex;
               flex-direction: column;
-              align-items: center;
               justify-content: space-between;
-              padding: 8px 6px;
-              text-align: center;
-              box-sizing: border-box;
+              overflow: hidden;
             }
-            .bori-col-header {
-              font-size: 9.5px;
-              font-weight: 900;
-              color: #000000;
-              letter-spacing: 0.6px;
-              text-transform: uppercase;
-              border-bottom: 1px solid #000000;
-              width: 100%;
-              padding-bottom: 4px;
+            .sticker-card.empty-slot {
+              border: 1px dashed #cccccc;
+              background: transparent;
             }
-            .bori-col-num {
-              font-size: 38px;
-              font-weight: 900;
-              color: #000000;
-              line-height: 1;
-              word-break: break-word;
-              margin: auto 0;
-              padding: 4px 0;
+            .sticker-inner {
+              height: 100%;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
             }
-            .bori-col-sub {
-              font-size: 8.5px;
-              font-weight: 800;
-              color: #000000;
-              letter-spacing: 0.5px;
-              border-top: 1px solid #000000;
-              width: 100%;
-              padding-top: 4px;
+
+            .sticker-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 1.5px solid #000000;
+              padding-bottom: 3px;
             }
-            .slip-main-col {
+            .sticker-header-left {
               flex: 1;
               min-width: 0;
-              display: flex;
-              flex-direction: column;
-              justify-content: space-between;
-              padding: 6px 10px;
-              background: #ffffff;
-              box-sizing: border-box;
             }
-            .slip-header {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              border-bottom: 1px solid #000000;
-              padding-bottom: 4px;
-              margin-bottom: 3px;
-            }
-            .slip-company-name {
-              font-size: 16px;
+            .sticker-company-name {
+              font-size: 13px;
               font-weight: 900;
               text-transform: uppercase;
-              letter-spacing: 0.6px;
+              letter-spacing: 0.4px;
               color: #000000;
               line-height: 1.1;
-            }
-            .slip-company-sub {
-              font-size: 8.5px;
-              color: #222222;
-              font-weight: 700;
-              letter-spacing: 0.4px;
-              margin-top: 1px;
-            }
-            .slip-badge {
-              border: 1.5px solid #000000;
-              background: #ffffff;
-              color: #000000;
-              font-size: 10.5px;
-              font-weight: 900;
-              padding: 2px 8px;
-              border-radius: 3px;
-              letter-spacing: 0.8px;
-              white-space: nowrap;
-            }
-            .slip-meta-strip {
-              display: flex;
-              border: 1px solid #000000;
-              background: #ffffff;
-              border-radius: 3px;
-              margin-bottom: 3px;
-            }
-            .meta-cell {
-              flex: 1;
-              padding: 3px 6px;
-              border-right: 1px solid #000000;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-            }
-            .meta-cell:last-child {
-              border-right: none;
-            }
-            .meta-label {
-              font-size: 7.5px;
-              font-weight: 800;
-              color: #333333;
-              text-transform: uppercase;
-              letter-spacing: 0.3px;
-              margin-bottom: 1px;
-            }
-            .meta-val {
-              font-size: 12px;
-              font-weight: 800;
-              color: #000000;
-              white-space: nowrap;
-            }
-            .meta-val.lot-val {
-              font-size: 12.5px;
-              font-weight: 900;
-              color: #000000;
-            }
-            .slip-details-grid {
-              display: grid;
-              grid-template-columns: 2fr 1.1fr 0.9fr;
-              gap: 5px;
-              border: 1px solid #000000;
-              background: #ffffff;
-              border-radius: 3px;
-              padding: 4px 6px;
-              margin-bottom: 3px;
-            }
-            .detail-block {
-              display: flex;
-              flex-direction: column;
-              min-width: 0;
-            }
-            .detail-label {
-              font-size: 7.5px;
-              font-weight: 800;
-              color: #333333;
-              text-transform: uppercase;
-              letter-spacing: 0.3px;
-              margin-bottom: 1px;
-            }
-            .detail-value {
-              font-size: 12px;
-              font-weight: 800;
-              color: #000000;
-              line-height: 1.2;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
             }
-            .detail-value.quality-val {
-              font-size: 13px;
+            .sticker-company-sub {
+              font-size: 7px;
+              font-weight: 700;
+              color: #333333;
+              letter-spacing: 0.3px;
+              margin-top: 1px;
+            }
+            .sticker-badge {
+              border: 1.5px solid #000000;
+              background: #000000;
+              color: #ffffff;
+              font-size: 9px;
+              font-weight: 900;
+              padding: 2px 6px;
+              border-radius: 3px;
+              letter-spacing: 0.6px;
+              white-space: nowrap;
+            }
+
+            /* Bori and Meta Top Row */
+            .sticker-top-row {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 4px;
+              margin-top: 3px;
+            }
+            .bori-badge-box {
+              border: 1.5px solid #000000;
+              border-radius: 3px;
+              background: #f8fafc;
+              padding: 2px 4px;
+              text-align: center;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+            }
+            .bori-lbl {
+              font-size: 6.5px;
+              font-weight: 800;
+              letter-spacing: 0.4px;
+              color: #475569;
+              text-transform: uppercase;
+            }
+            .bori-val {
+              font-size: 20px;
               font-weight: 900;
               color: #000000;
+              line-height: 1.1;
+              word-break: break-word;
             }
-            .detail-value.color-val, .detail-value.twist-val {
-              font-size: 12px;
-              font-weight: 800;
-            }
-            .slip-metrics-row {
+            .meta-side-box {
               display: flex;
-              gap: 6px;
-              margin-bottom: 3px;
+              flex-direction: column;
+              gap: 2px;
+            }
+            .meta-mini-cell {
+              flex: 1;
+              border: 1px solid #000000;
+              border-radius: 3px;
+              padding: 2px 4px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              background: #ffffff;
+            }
+            .mini-lbl {
+              font-size: 7px;
+              font-weight: 800;
+              color: #475569;
+              text-transform: uppercase;
+            }
+            .mini-val {
+              font-size: 10px;
+              font-weight: 800;
+              color: #000000;
+            }
+            .mini-val.lot-val {
+              font-size: 11px;
+              font-weight: 900;
+            }
+
+            /* Specs Grid */
+            .sticker-specs-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 2.5px;
+              border: 1px solid #000000;
+              border-radius: 3px;
+              padding: 3px;
+              background: #ffffff;
+              margin-top: 3px;
+            }
+            .spec-cell {
+              display: flex;
+              flex-direction: column;
+              min-width: 0;
+            }
+            .spec-cell.span-2 {
+              grid-column: span 2;
+              border-bottom: 1px dashed #cccccc;
+              padding-bottom: 2px;
+              margin-bottom: 1px;
+            }
+            .spec-lbl {
+              font-size: 6.5px;
+              font-weight: 800;
+              color: #475569;
+              text-transform: uppercase;
+              letter-spacing: 0.2px;
+            }
+            .spec-val {
+              font-size: 9.5px;
+              font-weight: 800;
+              color: #000000;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              line-height: 1.15;
+            }
+            .spec-val.quality-name {
+              font-size: 11px;
+              font-weight: 900;
+            }
+            .spec-val.rolls-val {
+              font-weight: 900;
+            }
+
+            /* Weight Metrics Row */
+            .sticker-metrics-row {
+              display: flex;
+              gap: 3px;
+              margin-top: 3px;
             }
             .metric-box {
               flex: 1;
               border: 1px solid #000000;
               border-radius: 3px;
-              padding: 3px 6px;
+              padding: 2px 3px;
               text-align: center;
               background: #ffffff;
               display: flex;
               flex-direction: column;
               justify-content: center;
             }
-            .metric-box.highlight-metric {
-              flex: 1.2;
+            .metric-box.highlight-net {
+              flex: 1.25;
               border: 1.5px solid #000000;
+              background: #f8fafc;
             }
             .metric-lbl {
-              display: block;
-              font-size: 7.5px;
+              font-size: 6.5px;
               font-weight: 800;
-              color: #333333;
+              color: #475569;
               text-transform: uppercase;
-              letter-spacing: 0.3px;
-              margin-bottom: 1px;
+              letter-spacing: 0.2px;
             }
             .metric-num {
-              font-size: 16px;
+              font-size: 13px;
               font-weight: 900;
               color: #000000;
               line-height: 1.1;
             }
-            .metric-box.highlight-metric .metric-num {
-              font-size: 18px;
-              font-weight: 900;
-              color: #000000;
+            .metric-box.highlight-net .metric-num {
+              font-size: 15px;
             }
             .metric-num small {
-              font-size: 9.5px;
+              font-size: 8px;
               font-weight: 700;
-              color: #222222;
             }
-            .metric-num.gross-val {
-              color: #222222;
+            .metric-num.gross-placeholder {
+              color: #333333;
               font-weight: 400;
-              letter-spacing: 2px;
-              font-size: 13px;
+              letter-spacing: 1px;
+              font-size: 10px;
             }
-            .metric-num.gross-val small {
-              letter-spacing: normal;
-              font-weight: 700;
-              color: #000000;
-            }
-            .slip-lot-notice {
+
+            /* Notice & Signatures */
+            .sticker-quality-warning {
               border: 1px dashed #000000;
               background: #fafafa;
-              padding: 2px 6px;
+              padding: 2px 4px;
               border-radius: 2px;
-              font-size: 7.2px;
-              line-height: 1.25;
+              font-size: 6.5px;
+              line-height: 1.2;
               color: #111111;
               text-transform: uppercase;
               letter-spacing: 0.2px;
-              margin: 2px 0 1px 0;
+              margin-top: 3px;
             }
-            .slip-footer {
+            .sticker-footer {
               display: flex;
               justify-content: space-between;
               border-top: 1px solid #000000;
-              padding-top: 3px;
-              margin-top: 1px;
-            }
-            .footer-sig {
-              font-size: 8.5px;
+              padding-top: 2px;
+              margin-top: 3px;
+              font-size: 7px;
+              font-weight: 700;
               color: #000000;
-              font-weight: 700;
-            }
-            .cut-line {
-              text-align: center;
-              position: relative;
-              margin: 1px 0;
-              height: 8px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            }
-            .cut-line::before {
-              content: "";
-              position: absolute;
-              left: 0;
-              right: 0;
-              top: 50%;
-              border-top: 1px dashed #666666;
-              z-index: 1;
-            }
-            .cut-line span {
-              position: relative;
-              z-index: 2;
-              background: #ffffff;
-              padding: 0 6px;
-              font-size: 7.5px;
-              font-weight: 700;
-              color: #444444;
-              letter-spacing: 1.2px;
             }
           </style>
         </head>
         <body>
           <div class="no-print no-print-bar">
-            <button type="button" class="no-print-btn btn-print" onclick="window.print()">Print Packing Slips</button>
+            <button type="button" class="no-print-btn btn-print" onclick="window.print()">Print Stickers (A4ST4-100S)</button>
             <button type="button" class="no-print-btn btn-close" onclick="window.close()">Close</button>
           </div>
           ${pagesHtml}
