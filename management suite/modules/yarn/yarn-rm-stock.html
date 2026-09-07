@@ -282,7 +282,7 @@
       margin-bottom: 1.75rem;
       box-shadow: var(--shadow-sm);
       display: grid;
-      grid-template-columns: 2fr repeat(4, 1fr);
+      grid-template-columns: 2fr repeat(4, 1fr) auto;
       gap: 0.65rem;
       align-items: center;
     }
@@ -2123,7 +2123,11 @@
             <option value="out-of-stock">Zero Stock Only</option>
           </select>
         </div>
-        <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="btn btn-secondary" onclick="resetStockDashboardFilters()" title="Reset Dashboard filters and search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset
+          </button>
           <button class="btn btn-secondary" onclick="renderStockDashboard()" title="Refresh Dashboard">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
             Refresh
@@ -2257,6 +2261,10 @@
           <select class="form-control" id="quality-filter" onchange="renderStockBook()">
             <option value="all">All Qualities</option>
           </select>
+          <button type="button" class="btn btn-secondary" onclick="resetStockBookFilters()" title="Reset all filters and search" style="height: 42px; padding: 0.35rem 0.85rem; font-size: 0.85rem; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            <span>Reset</span>
+          </button>
         </div>
       </div>
 
@@ -2278,9 +2286,6 @@
 
       <!-- Stock Ledger Groups -->
       <div id="stock-groups-container">
-        <!-- Dynamic Quality & Lot Cards render here -->
-      </div>
-    </div>
         <!-- Dynamic Quality & Lot Cards render here -->
       </div>
     </div>
@@ -6371,6 +6376,49 @@ Return ONLY a JSON object matching this schema:
         }
       });
       renderStockBook();
+    }
+
+    function resetStockBookFilters() {
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) searchInput.value = '';
+      const dateFilter = document.getElementById('date-filter');
+      if (dateFilter) dateFilter.value = '';
+      const statusFilter = document.getElementById('status-filter');
+      if (statusFilter) statusFilter.value = 'all';
+      const itemTypeFilter = document.getElementById('item-type-filter');
+      if (itemTypeFilter) itemTypeFilter.value = 'all';
+      const qualityFilter = document.getElementById('quality-filter');
+      if (qualityFilter) qualityFilter.value = 'all';
+
+      const chips = document.querySelectorAll('#stock-book-mobile-filter-strip .mobile-filter-chip');
+      chips.forEach(c => {
+        if (c.getAttribute('data-sbfilter') === 'all') {
+          c.classList.add('active');
+        } else {
+          c.classList.remove('active');
+        }
+      });
+      renderStockBook();
+    }
+
+    function resetStockDashboardFilters() {
+      const dashSearchInput = document.getElementById('dash-search-input');
+      if (dashSearchInput) dashSearchInput.value = '';
+      const dashItemType = document.getElementById('dash-filter-item-type');
+      if (dashItemType) dashItemType.value = 'all';
+      const dashAvail = document.getElementById('dash-filter-availability');
+      if (dashAvail) dashAvail.value = 'in-stock';
+
+      currentDashMobileFilter = 'all';
+      const chips = document.querySelectorAll('#dash-mobile-filter-strip .mobile-filter-chip');
+      chips.forEach(c => {
+        if (c.getAttribute('data-filter') === 'all') {
+          c.classList.add('active');
+        } else {
+          c.classList.remove('active');
+        }
+      });
+      renderStockDashboard();
     }
 
       // Update Mobile Chip Counts
