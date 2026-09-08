@@ -3256,6 +3256,24 @@
           </div>
         </div>
 
+        <!-- Company / Sender Selector -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label for="wa-company-select" style="font-size: 0.78rem; font-weight: 700; color: var(--fg); text-transform: uppercase; letter-spacing: 0.04em;">
+              Sending Company (Sender Header)
+            </label>
+            <a href="../settings.html#company-profiles-card" target="_blank" style="font-size: 0.72rem; color: var(--accent); text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="Manage Company Profiles in Settings">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>Manage in Settings</span>
+            </a>
+          </div>
+          <div style="position: relative;">
+            <select id="wa-company-select" style="width: 100%; box-sizing: border-box; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--fg); font-size: 0.9rem; font-weight: 600; outline: none; transition: border-color 0.15s; cursor: pointer;" onchange="onWhatsAppCompanyChange()">
+              <!-- Dynamically populated from settings -->
+            </select>
+          </div>
+        </div>
+
         <!-- Phone Number Input -->
         <div>
           <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--fg); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;">
@@ -3919,7 +3937,7 @@
         }
 
         // 2. Orders, Stock, Sales logs, Settings, or Deletions
-        if (targetKey && (targetKey === 'yarn-rm-orders' || targetKey === 'vishwa_yarn_rm_stock_data' || targetKey.endsWith('_sales_logs') || targetKey.endsWith('_production_logs') || targetKey === 'yarn_ledger_settings' || targetKey === 'yarn_ledger_deleted_keys' || targetKey === 'vf_deleted_entity_ids')) {
+        if (targetKey && (targetKey === 'yarn-rm-orders' || targetKey === 'vishwa_yarn_rm_stock_data' || targetKey.endsWith('_sales_logs') || targetKey.endsWith('_production_logs') || targetKey === 'yarn_ledger_settings' || targetKey === 'vf_companies' || targetKey === 'yarn_ledger_deleted_keys' || targetKey === 'vf_deleted_entity_ids')) {
           if (incomingVal) {
             try {
               cachedCloudDataMap[targetKey] = typeof incomingVal === 'string' ? JSON.parse(incomingVal) : incomingVal;
@@ -4118,6 +4136,7 @@
     // All required Cloud Keys for Ledger operation
     const CLOUD_LEDGER_KEYS = [
       'yarn_ledger_settings',
+      'vf_companies',
       'yarn_sales_ledger_data',
       'yarn_purchase_ledger_data',
       'yarn-rm-orders',
@@ -7091,7 +7110,93 @@
       return '';
     }
 
-    function generateWhatsAppMessage(row, comp, preset = 'standard') {
+    function getAvailableCompanies() {
+      let companies = [];
+      try {
+        if (cachedCloudDataMap && cachedCloudDataMap['vf_companies']) {
+          const cloud = cachedCloudDataMap['vf_companies'];
+          companies = typeof cloud === 'string' ? JSON.parse(cloud) : cloud;
+        }
+      } catch (e) {}
+
+      if (!Array.isArray(companies) || companies.length === 0) {
+        try {
+          const raw = localStorage.getItem('vf_companies');
+          if (raw) companies = JSON.parse(raw) || [];
+        } catch (e) {}
+      }
+
+      if (Array.isArray(companies) && companies.length > 0) {
+        return companies;
+      }
+
+      let legacyName = "Vishwa Fashions";
+      try {
+        const stored = localStorage.getItem('vishwa_fashions_settings');
+        if (stored) {
+          const s = JSON.parse(stored);
+          if (s.sellerName) legacyName = s.sellerName;
+        }
+      } catch (e) {}
+
+      const c = localStorage.getItem('vf_company_name');
+      if (c && c.trim()) legacyName = c.trim();
+
+      return [{
+        id: 'comp-default',
+        sellerName: legacyName,
+        isDefault: true
+      }];
+    }
+
+    function getSelectedWhatsAppCompanyName() {
+      const select = document.getElementById('wa-company-select');
+      if (select && select.value) {
+        return select.value;
+      }
+      const saved = localStorage.getItem('vf_wa_selected_company');
+      if (saved) return saved;
+      const companies = getAvailableCompanies();
+      const def = companies.find(c => c.isDefault) || companies[0];
+      return def ? (def.sellerName || 'Vishwa Fashions') : 'Vishwa Fashions';
+    }
+
+    function populateWhatsAppCompanySelect(preferredCompanyName = null) {
+      const select = document.getElementById('wa-company-select');
+      if (!select) return;
+
+      const companies = getAvailableCompanies();
+      const saved = preferredCompanyName || localStorage.getItem('vf_wa_selected_company');
+
+      select.innerHTML = '';
+      companies.forEach(comp => {
+        const name = comp.sellerName || comp.name || 'Company';
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = `${name}${comp.isDefault ? ' (Default)' : ''}`;
+        if (saved && saved.trim().toLowerCase() === name.trim().toLowerCase()) {
+          opt.selected = true;
+        } else if (!saved && comp.isDefault) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+
+      if (!select.value && select.options.length > 0) {
+        select.selectedIndex = 0;
+      }
+    }
+
+    function onWhatsAppCompanyChange() {
+      const select = document.getElementById('wa-company-select');
+      if (select && select.value) {
+        localStorage.setItem('vf_wa_selected_company', select.value);
+      }
+      updateWhatsAppMessageContent();
+    }
+
+    function generateWhatsAppMessage(row, comp, preset = 'standard', customCompanyName = null) {
+      const companyName = customCompanyName || getSelectedWhatsAppCompanyName() || 'Vishwa Fashions';
       const party = row.partyName || 'Valued Customer';
       const challan = row.challanNo ? `#${row.challanNo}` : '-';
       const date = formatDateDisplay(row.date);
@@ -7113,7 +7218,7 @@
       const interestLineUrgent = `• Accrued Late Interest: *${interestFormatted}* (${comp.overdueDays} days @ ${rateMonthly}%/mo)\n`;
 
       if (preset === 'gentle') {
-        return `*Greetings from Vishwa Fashions* 🙏\n\n` +
+        return `*Greetings from ${companyName}* 🙏\n\n` +
           `Dear *${party}*,\n\n` +
           `Hope you are doing well!\n\n` +
           `This is a gentle follow-up regarding invoice *${challan}* dated *${date}* for *${quality}* (${qty} Kg @ ₹${rate}/Kg).\n\n` +
@@ -7126,11 +7231,11 @@
           `• Due Date: ${dueDate}${overdueNote}\n\n` +
           `Kindly review and schedule the clearance of the pending amount of *${balance}* at your earliest convenience.\n\n` +
           `Thank you for your continued support and partnership!\n\n` +
-          `Warm regards,\n*Vishwa Fashions*`;
+          `Warm regards,\n*${companyName}*`;
       }
 
       if (preset === 'urgent') {
-        return `*URGENT: PAYMENT OVERDUE NOTICE*\n*Vishwa Fashions*\n\n` +
+        return `*URGENT: PAYMENT OVERDUE NOTICE*\n*${companyName}*\n\n` +
           `Attention: *${party}*\n\n` +
           `This is an important reminder that payment for invoice *${challan}* is currently *OVERDUE*.\n\n` +
           `*Invoice Details:*\n` +
@@ -7145,11 +7250,11 @@
           `• Payment Due Date: *${dueDate}*${overdueNote}\n\n` +
           `We kindly request you to prioritize and clear the overdue balance of *${balance}* immediately to maintain regular supply and credit limits.\n\n` +
           `Please share the payment UTR / transaction confirmation once processed.\n\n` +
-          `Regards,\n*Vishwa Fashions*`;
+          `Regards,\n*${companyName}*`;
       }
 
       // Default 'standard'
-      return `*PAYMENT REMINDER*\n*Vishwa Fashions*\n\n` +
+      return `*PAYMENT REMINDER*\n*${companyName}*\n\n` +
         `Dear *${party}*,\n\n` +
         `This is a polite reminder regarding pending payment for the following invoice:\n\n` +
         `📄 *Invoice / Challan:* ${challan}\n` +
@@ -7164,7 +7269,7 @@
         `📆 *Due Date:* ${dueDate}${overdueNote}\n\n` +
         `Kindly arrange the payment of *${balance}* at your earliest convenience.\n\n` +
         `If payment has already been initiated, kindly disregard this message or share the payment reference.\n\n` +
-        `Thank you,\n*Vishwa Fashions*`;
+        `Thank you,\n*${companyName}*`;
     }
 
     function openWhatsAppReminderModal(rowId) {
@@ -7178,6 +7283,9 @@
 
       // Auto-select urgent preset if account is overdue
       activeWhatsAppPreset = comp.overdueDays > 0 ? 'urgent' : 'standard';
+
+      // Populate company dropdown
+      populateWhatsAppCompanySelect(row.companyName || row.sellerName || null);
 
       // Populate summary fields
       const partyEl = document.getElementById('wa-summary-party');
@@ -7256,7 +7364,8 @@
       const row = (ledgerData[activeTab] || ledgerData.sales || []).find(r => r.id === activeWhatsAppRowId);
       if (!row) return;
       const comp = computeRowFinancials(row);
-      const text = generateWhatsAppMessage(row, comp, activeWhatsAppPreset);
+      const companyName = getSelectedWhatsAppCompanyName();
+      const text = generateWhatsAppMessage(row, comp, activeWhatsAppPreset, companyName);
       const textarea = document.getElementById('wa-message-textarea');
       if (textarea) {
         textarea.value = text;
