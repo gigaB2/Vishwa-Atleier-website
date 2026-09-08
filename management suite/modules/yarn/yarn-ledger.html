@@ -2968,64 +2968,52 @@
               <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="creditDays" data-col-index="12" data-col-name="Credit Days" onclick="requestTableSort('creditDays', event)" title="Click to sort by Credit Days | Right-click to freeze">
                 <div class="th-content-wrap"><span>Cr. Days</span><span class="th-sort-indicator" id="sort-ind-creditDays">↕</span></div>
               </th>
-              <!-- 13: Disc % -->
-              <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="discountPercent" data-col-index="13" data-col-name="Disc. %" onclick="requestTableSort('discountPercent', event)" title="Click to sort by Early Payment Discount % | Right-click to freeze">
-                <div class="th-content-wrap"><span style="color: var(--success);">Disc. %</span><span class="th-sort-indicator" id="sort-ind-discountPercent">↕</span></div>
+              <!-- 13: Monthly Int / Disc % Rate -->
+              <th style="width: 115px; min-width: 110px;" class="num-col sortable" data-sort-key="rateMonthly" data-col-index="13" data-col-name="Int./Disc. %/mo" onclick="requestTableSort('rateMonthly', event)" title="Click to sort by Monthly Interest/Discount Rate % (e.g. 1.5%/mo = 18% p.a.) | Right-click to freeze">
+                <div class="th-content-wrap"><span>Int/Disc %/mo</span><span class="th-sort-indicator" id="sort-ind-rateMonthly">↕</span></div>
               </th>
               <!-- 14: Due Date -->
               <th style="width: 130px; min-width: 125px;" class="sortable" data-sort-key="dueDate" data-col-index="14" data-col-name="Due Date" onclick="requestTableSort('dueDate', event)" title="Click to sort by Due Date | Right-click to freeze">
                 <div class="th-content-wrap"><span>Due Date</span><span class="th-sort-indicator" id="sort-ind-dueDate">↕</span></div>
               </th>
-              <!-- 15: Late Days (Interest col) -->
-              <th style="width: 100px; min-width: 95px;" class="num-col interest-col sortable" data-sort-key="overdueDays" data-col-index="15" data-col-name="Late Days" onclick="requestTableSort('overdueDays', event)" title="Click to sort by Overdue Days | Right-click to freeze">
-                <div class="th-content-wrap"><span>Late Days</span><span class="th-sort-indicator" id="sort-ind-overdueDays">↕</span></div>
+              <!-- 15: Early / Late Days -->
+              <th style="width: 110px; min-width: 105px;" class="num-col sortable" data-sort-key="statusDays" data-col-index="15" data-col-name="Early / Late Days" onclick="requestTableSort('statusDays', event)" title="Click to sort by Days Early or Overdue | Right-click to freeze">
+                <div class="th-content-wrap"><span>Early / Late</span><span class="th-sort-indicator" id="sort-ind-statusDays">↕</span></div>
               </th>
-              <!-- 16: Acquired / Accrued Interest (Interest col) -->
-              <th style="width: 145px; min-width: 140px;" class="num-col interest-col sortable" data-sort-key="interestAmount" data-col-index="16" data-col-name="Accrued Int. (₹)" onclick="requestTableSort('interestAmount', event)" title="Click to sort by Accrued Interest | Right-click to freeze">
-                <div class="th-content-wrap"><span>Accrued Int. (₹)</span><span class="th-sort-indicator" id="sort-ind-interestAmount">↕</span></div>
+              <!-- 16: Calculated Adjustment (₹) -->
+              <th style="width: 145px; min-width: 140px; background: rgba(124, 58, 237, 0.04);" class="num-col sortable" data-sort-key="calcAdjAmount" data-col-index="16" data-col-name="Calc. Adj. (₹)" onclick="requestTableSort('calcAdjAmount', event)" title="Click to sort by Auto-Calculated Adjustment (Early Discount or Late Interest) | Right-click to freeze">
+                <div class="th-content-wrap"><span>Calc. Adj. (₹)</span><span class="th-sort-indicator" id="sort-ind-calcAdjAmount">↕</span></div>
               </th>
-              <!-- 17: Payment Date -->
-              <th style="width: 190px; min-width: 185px;" class="sortable" data-sort-key="paymentDate" data-col-index="17" data-col-name="Payment Date" onclick="requestTableSort('paymentDate', event)" title="Click to sort by Payment Date | Right-click to freeze">
+              <!-- 17: Actual Adjustment (₹) Override -->
+              <th style="width: 145px; min-width: 140px; background: rgba(124, 58, 237, 0.08);" class="num-col sortable" data-sort-key="actualAdjustment" data-col-index="17" data-col-name="Actual Adj. (₹)" onclick="requestTableSort('actualAdjustment', event)" title="Click to sort by Actual Agreed Adjustment in ₹ (- discount / + interest) | Right-click to freeze">
+                <div class="th-content-wrap"><span style="font-weight: 700;">Actual Adj. (₹)</span><span class="th-sort-indicator" id="sort-ind-actualAdjustment">↕</span></div>
+              </th>
+              <!-- 18: Final Adjusted Bill Amount (₹) -->
+              <th style="width: 160px; min-width: 155px; background: rgba(124, 58, 237, 0.05);" class="num-col sortable" data-sort-key="finalBill" data-col-index="18" data-col-name="Final Bill (₹)" onclick="requestTableSort('finalBill', event)" title="Click to sort by Total Final Bill Amount after Discount / Interest | Right-click to freeze">
+                <div class="th-content-wrap"><span>Final Bill (₹)</span><span class="th-sort-indicator" id="sort-ind-finalBill">↕</span></div>
+              </th>
+              <!-- 19: Payment Date -->
+              <th style="width: 190px; min-width: 185px;" class="sortable" data-sort-key="paymentDate" data-col-index="19" data-col-name="Payment Date" onclick="requestTableSort('paymentDate', event)" title="Click to sort by Payment Date | Right-click to freeze">
                 <div class="th-content-wrap"><span>Payment Date</span><span class="th-sort-indicator" id="sort-ind-paymentDate">↕</span></div>
               </th>
-              <!-- 18: Principle Paid -->
-              <th style="width: 160px; min-width: 155px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="paidAmount" data-col-index="18" data-col-name="Paid Principal (₹)" onclick="requestTableSort('paidAmount', event)" title="Click to sort by Paid Principal | Right-click to freeze">
-                <div class="th-content-wrap"><span>Paid Principal (₹)</span><span class="th-sort-indicator" id="sort-ind-paidAmount">↕</span></div>
+              <!-- 20: Total Payment (Paid ₹) -->
+              <th style="width: 160px; min-width: 155px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="paidAmount" data-col-index="20" data-col-name="Total Paid (₹)" onclick="requestTableSort('paidAmount', event)" title="Click to sort by Total Payment Paid / Received | Right-click to freeze">
+                <div class="th-content-wrap"><span style="color: var(--success); font-weight: 700;">Total Paid (₹)</span><span class="th-sort-indicator" id="sort-ind-paidAmount">↕</span></div>
               </th>
-              <!-- 19: Calc Discount -->
-              <th style="width: 145px; min-width: 140px; background: rgba(16, 185, 129, 0.05);" class="num-col sortable" data-sort-key="calcDiscountAmount" data-col-index="19" data-col-name="Calc. Disc. (₹)" onclick="requestTableSort('calcDiscountAmount', event)" title="Click to sort by Calculated Pro-Rata Discount (₹) | Right-click to freeze">
-                <div class="th-content-wrap"><span style="color: var(--success);">Calc. Disc. (₹)</span><span class="th-sort-indicator" id="sort-ind-calcDiscountAmount">↕</span></div>
-              </th>
-              <!-- 20: Actual Discount -->
-              <th style="width: 145px; min-width: 140px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="actualDiscount" data-col-index="20" data-col-name="Actual Disc. (₹)" onclick="requestTableSort('actualDiscount', event)" title="Click to sort by Actual Discount (₹) | Right-click to freeze">
-                <div class="th-content-wrap"><span style="color: var(--success); font-weight: 700;">Actual Disc. (₹)</span><span class="th-sort-indicator" id="sort-ind-actualDiscount">↕</span></div>
-              </th>
-              <!-- 21: Principal Bal -->
-              <th style="width: 160px; min-width: 155px; background: rgba(239, 68, 68, 0.08);" class="num-col sortable" data-sort-key="principalOutstanding" data-col-index="21" data-col-name="Principal Bal (₹)" onclick="requestTableSort('principalOutstanding', event)" title="Click to sort by Principal Balance | Right-click to freeze">
-                <div class="th-content-wrap"><span>Principal Bal (₹)</span><span class="th-sort-indicator" id="sort-ind-principalOutstanding">↕</span></div>
+              <!-- 21: Net Balance (₹) -->
+              <th style="width: 160px; min-width: 155px; background: rgba(239, 68, 68, 0.08);" class="num-col sortable" data-sort-key="netBalance" data-col-index="21" data-col-name="Net Balance (₹)" onclick="requestTableSort('netBalance', event)" title="Click to sort by Net Remaining Balance | Right-click to freeze">
+                <div class="th-content-wrap"><span>Net Balance (₹)</span><span class="th-sort-indicator" id="sort-ind-netBalance">↕</span></div>
               </th>
               <!-- 22: Status -->
               <th style="width: 120px; min-width: 115px;" class="center-col sortable" data-sort-key="status" data-col-index="22" data-col-name="Status" onclick="requestTableSort('status', event)" title="Click to sort by Payment Status | Right-click to freeze">
                 <div class="th-content-wrap"><span>Status</span><span class="th-sort-indicator" id="sort-ind-status">↕</span></div>
               </th>
-              <!-- 23: Int. % p.a. (Interest col) -->
-              <th style="width: 105px; min-width: 100px;" class="num-col interest-col sortable" data-sort-key="interestRate" data-col-index="23" data-col-name="Int. % p.a." onclick="requestTableSort('interestRate', event)" title="Click to sort by Interest Rate | Right-click to freeze">
-                <div class="th-content-wrap"><span>Int. % p.a.</span><span class="th-sort-indicator" id="sort-ind-interestRate">↕</span></div>
-              </th>
-              <!-- 24: Paid Int. (Interest col) -->
-              <th style="width: 145px; min-width: 140px; background: rgba(245, 158, 11, 0.08);" class="num-col interest-col sortable" data-sort-key="interestPaid" data-col-index="24" data-col-name="Paid Int. (₹)" onclick="requestTableSort('interestPaid', event)" title="Click to sort by Paid Interest | Right-click to freeze">
-                <div class="th-content-wrap"><span>Paid Int. (₹)</span><span class="th-sort-indicator" id="sort-ind-interestPaid">↕</span></div>
-              </th>
-              <!-- 25: Net Bal -->
-              <th style="width: 165px; min-width: 160px;" class="num-col sortable" data-sort-key="netOutstanding" data-col-index="25" data-col-name="Net Bal (₹)" onclick="requestTableSort('netOutstanding', event)" title="Click to sort by Net Balance | Right-click to freeze">
-                <div class="th-content-wrap"><span>Net Bal (₹)</span><span class="th-sort-indicator" id="sort-ind-netOutstanding">↕</span></div>
-              </th>
-              <!-- 26: Remarks -->
-              <th style="width: 280px; min-width: 260px;" class="sortable" data-sort-key="remarks" data-col-index="26" data-col-name="Remarks" onclick="requestTableSort('remarks', event)" title="Click to sort by Remarks | Right-click to freeze">
+              <!-- 23: Remarks -->
+              <th style="width: 280px; min-width: 260px;" class="sortable" data-sort-key="remarks" data-col-index="23" data-col-name="Remarks" onclick="requestTableSort('remarks', event)" title="Click to sort by Remarks / Cheque No | Right-click to freeze">
                 <div class="th-content-wrap"><span>Remarks / Cheque No</span><span class="th-sort-indicator" id="sort-ind-remarks">↕</span></div>
               </th>
-              <!-- 27: Actions -->
-              <th style="width: 100px; min-width: 100px;" class="center-col actions-col" data-col-index="27" data-col-name="Actions">Actions</th>
+              <!-- 24: Actions -->
+              <th style="width: 100px; min-width: 100px;" class="center-col actions-col" data-col-index="24" data-col-name="Actions">Actions</th>
             </tr>
           </thead>
           <tbody id="excel-table-body">
@@ -3321,9 +3309,8 @@
     // State Variables
     let activeTab = 'sales'; // 'sales' or 'purchase'
     let calculateInterest = true;
-    let defaultInterestRate = 18.0; // 18% per annum
+    let defaultRateMonthly = 1.5; // 1.5% per month (18% per annum)
     let defaultCreditDays = 30; // 30 days
-    let defaultDiscountPercent = 1.5; // 1.5% max discount for early payment
     let frozenColumnsCount = 4; // Default freeze up to Party Name (Cols 0, 1, 2, 3)
     let contextMenuTargetColIndex = -1;
     let liveSaveTimer = null;
@@ -3361,7 +3348,7 @@
     let isHistoryAction = false;
 
     // Allowed editable fields for auto-synced rows
-    const SYNCED_EDITABLE_FIELDS = ['grQty', 'grossQty', 'gstPercent', 'discountPercent', 'actualDiscount', 'paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
+    const SYNCED_EDITABLE_FIELDS = ['grQty', 'grossQty', 'gstPercent', 'rateMonthly', 'actualAdjustment', 'paidAmount', 'paymentDate', 'creditDays', 'remarks'];
 
     // Semantic Status Badge Renderer with SVG Icons
     function renderStatusBadge(status) {
@@ -4815,9 +4802,8 @@
         paidAmount: 0,
         paymentDate: '',
         creditDays: defaultCreditDays,
-        discountPercent: defaultDiscountPercent,
-        interestRate: defaultInterestRate,
-        interestPaid: 0,
+        rateMonthly: defaultRateMonthly,
+        actualAdjustment: null,
         remarks: '',
         isManual: true,
         created_at: nowIso,
@@ -4885,13 +4871,21 @@
         return;
       }
 
-      if (field === 'qty' || field === 'grossQty' || field === 'grQty' || field === 'rate' || field === 'gstPercent' || field === 'discountPercent' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate' || field === 'interestPaid') {
+      if (field === 'qty' || field === 'grossQty' || field === 'grQty' || field === 'rate' || field === 'gstPercent' || field === 'rateMonthly' || field === 'discountPercent' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate' || field === 'interestPaid') {
         row[field] = Number(value) || 0;
+      } else if (field === 'actualAdjustment') {
+        if (value === '' || value === null || value === undefined) {
+          row.actualAdjustment = null;
+        } else {
+          row.actualAdjustment = Number(value) || 0;
+        }
       } else if (field === 'actualDiscount') {
         if (value === '' || value === null || value === undefined) {
           row.actualDiscount = null;
+          row.actualAdjustment = null;
         } else {
           row.actualDiscount = Number(value) || 0;
+          row.actualAdjustment = -Math.abs(Number(value) || 0);
         }
       } else {
         row[field] = value;
@@ -4986,13 +4980,11 @@
       updateFieldInput('qty', row.qty || 0);
       updateFieldInput('rate', row.rate || 0);
       updateFieldInput('gstPercent', row.gstPercent !== undefined ? row.gstPercent : 5.0);
-      updateFieldInput('discountPercent', row.discountPercent !== undefined ? row.discountPercent : defaultDiscountPercent);
-      updateFieldInput('actualDiscount', row.actualDiscount !== undefined && row.actualDiscount !== null ? row.actualDiscount : '', comp.calcDiscountAmount > 0 ? comp.calcDiscountAmount.toFixed(2) : '0.00');
+      updateFieldInput('creditDays', row.creditDays || defaultCreditDays);
+      updateFieldInput('rateMonthly', row.rateMonthly !== undefined ? row.rateMonthly : defaultRateMonthly);
+      updateFieldInput('actualAdjustment', (row.actualAdjustment !== undefined && row.actualAdjustment !== null) ? row.actualAdjustment : (row.actualDiscount !== undefined && row.actualDiscount !== null ? -Math.abs(row.actualDiscount) : ''), comp.calcAdjAmount !== 0 ? comp.calcAdjAmount.toFixed(2) : '0.00');
       updateFieldInput('paidAmount', row.paidAmount || 0);
       updateFieldInput('paymentDate', row.paymentDate || '');
-      updateFieldInput('creditDays', row.creditDays || defaultCreditDays);
-      updateFieldInput('interestRate', row.interestRate !== undefined ? row.interestRate : defaultInterestRate);
-      updateFieldInput('interestPaid', row.interestPaid || 0);
       updateFieldInput('remarks', row.remarks || '');
       updateFieldInput('quality', row.quality || '');
 
@@ -5032,50 +5024,51 @@
       const elGrandTotal = tr.querySelector('.col-val-grandtotal');
       if (elGrandTotal) elGrandTotal.textContent = formatCurrency(row.grandTotal);
 
-      const elCalcDiscount = tr.querySelector('.col-val-calc-discount') || tr.querySelector('.col-val-discount-amount');
-      if (elCalcDiscount) {
-        if (comp.calcDiscountAmount > 0) {
-          elCalcDiscount.innerHTML = `
-            <div style="color: var(--success); font-weight: 700;">-${formatCurrency(comp.calcDiscountAmount)}</div>
-            <div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">(${comp.effectiveDiscountPct.toFixed(2)}% eff.)</div>
-          `;
-        } else {
-          elCalcDiscount.textContent = '-';
-          elCalcDiscount.style.color = 'var(--muted)';
-          elCalcDiscount.style.fontWeight = 'normal';
-        }
-      }
-
       const elDueDate = tr.querySelector('.col-val-due-date');
       if (elDueDate) elDueDate.textContent = formatDateDisplay(comp.dueDate);
 
-      const elOutstanding = tr.querySelector('.col-val-outstanding');
-      if (elOutstanding) {
-        elOutstanding.textContent = formatCurrency(comp.principalOutstanding);
-        elOutstanding.style.color = comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)';
+      const elStatusDays = tr.querySelector('.col-val-status-days');
+      if (elStatusDays) {
+        if (comp.earlyDays > 0) {
+          elStatusDays.innerHTML = `<span style="color: var(--success); font-weight: 700;">${comp.earlyDays}d early</span>`;
+        } else if (comp.overdueDays > 0) {
+          elStatusDays.innerHTML = `<span style="color: var(--error); font-weight: 700;">${comp.overdueDays}d late</span>`;
+        } else {
+          elStatusDays.innerHTML = `<span style="color: var(--muted);">-</span>`;
+        }
+      }
+
+      const elCalcAdj = tr.querySelector('.col-val-calc-adj');
+      if (elCalcAdj) {
+        if (comp.calcAdjAmount < 0) {
+          elCalcAdj.innerHTML = `
+            <div style="color: var(--success); font-weight: 700;">-${formatCurrency(Math.abs(comp.calcAdjAmount))}</div>
+            <div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">(${comp.calcAdjPct.toFixed(2)}% Disc)</div>
+          `;
+        } else if (comp.calcAdjAmount > 0) {
+          elCalcAdj.innerHTML = `
+            <div style="color: var(--warning); font-weight: 700;">+${formatCurrency(comp.calcAdjAmount)}</div>
+            <div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">(${comp.calcAdjPct.toFixed(2)}% Int)</div>
+          `;
+        } else {
+          elCalcAdj.textContent = '-';
+          elCalcAdj.style.color = 'var(--muted)';
+          elCalcAdj.style.fontWeight = 'normal';
+        }
+      }
+
+      const elFinalBill = tr.querySelector('.col-val-final-bill');
+      if (elFinalBill) elFinalBill.textContent = formatCurrency(comp.finalBill);
+
+      const elNetBalance = tr.querySelector('.col-val-net-balance') || tr.querySelector('.col-val-net-total') || tr.querySelector('.col-val-outstanding');
+      if (elNetBalance) {
+        elNetBalance.textContent = formatCurrency(comp.netBalance);
+        elNetBalance.style.color = comp.netBalance > 0 ? 'var(--error)' : 'var(--success)';
       }
 
       const elStatus = tr.querySelector('.col-val-status');
       if (elStatus) {
         elStatus.innerHTML = `<div class="cell-readonly" style="justify-content: center;">${renderStatusBadge(comp.status)}</div>`;
-      }
-
-      const elOverdueDays = tr.querySelector('.col-val-overdue-days');
-      if (elOverdueDays) {
-        elOverdueDays.textContent = comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-';
-        elOverdueDays.style.color = comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)';
-        elOverdueDays.style.fontWeight = comp.overdueDays > 0 ? '700' : 'normal';
-      }
-
-      const elInterest = tr.querySelector('.col-val-interest-amount');
-      if (elInterest) {
-        elInterest.textContent = comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-';
-      }
-
-      const elNetTotal = tr.querySelector('.col-val-net-total');
-      if (elNetTotal) {
-        elNetTotal.textContent = formatCurrency(comp.netOutstanding);
-        elNetTotal.style.color = comp.netOutstanding > 0 ? 'var(--accent)' : 'var(--success)';
       }
     }
 
@@ -5105,8 +5098,8 @@
         // KPI Filter Check
         if (activeKpiFilter) {
           if (activeKpiFilter === 'settled' && computed.status !== 'paid') return false;
-          if (activeKpiFilter === 'outstanding' && computed.principalOutstanding <= 0) return false;
-          if (activeKpiFilter === 'interest' && computed.interestAmount <= 0) return false;
+          if (activeKpiFilter === 'outstanding' && computed.netBalance <= 0) return false;
+          if (activeKpiFilter === 'interest' && computed.calcAdjAmount <= 0) return false;
           if (activeKpiFilter === 'overdue' && computed.status !== 'overdue' && computed.status !== 'int-due') return false;
         }
 
@@ -5114,12 +5107,11 @@
       });
 
       let totalBilled = 0;
+      let totalFinalBill = 0;
       let totalSettled = 0;
-      let totalDiscount = 0;
-      let totalPrincipalOutstanding = 0;
+      let totalDiscounts = 0;
       let totalInterest = 0;
-      let totalInterestPaid = 0;
-      let totalNetOutstanding = 0;
+      let totalNetBalance = 0;
       let overdueCount = 0;
       let totalGrossWeight = 0;
       let totalWeight = 0;
@@ -5129,12 +5121,16 @@
       rows.forEach(row => {
         const computed = computeRowFinancials(row);
         totalBilled += Number(row.grandTotal) || 0;
-        totalSettled += (Number(row.paidAmount) || 0) + (Number(row.interestPaid) || 0);
-        totalDiscount += computed.discountAmount;
-        totalPrincipalOutstanding += computed.principalOutstanding;
-        totalInterest += computed.interestAmount;
-        totalInterestPaid += computed.interestPaid;
-        totalNetOutstanding += computed.netOutstanding;
+        totalFinalBill += computed.finalBill;
+        totalSettled += Number(row.paidAmount) || 0;
+        if (computed.effectiveAdjAmount < 0) {
+          totalDiscounts += Math.abs(computed.effectiveAdjAmount);
+        } else if (computed.effectiveAdjAmount > 0) {
+          totalInterest += computed.effectiveAdjAmount;
+        }
+        if (computed.netBalance > 0) {
+          totalNetBalance += computed.netBalance;
+        }
         const gw = Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))) || 0;
         totalGrossWeight += gw;
         totalWeight += Number(row.qty) || 0;
@@ -5145,25 +5141,26 @@
 
       // Update KPI Cards
       const kpiBilled = document.getElementById('kpi-val-total-billed');
-      if (kpiBilled) kpiBilled.textContent = formatCurrency(totalBilled);
+      if (kpiBilled) kpiBilled.textContent = formatCurrency(totalFinalBill || totalBilled);
       const kpiSubBilled = document.getElementById('kpi-sub-total-billed');
       if (kpiSubBilled) kpiSubBilled.textContent = totalGrWeight > 0 ? `${rows.length} txns (incl. -${totalGrWeight.toFixed(2)} Kg GR)` : `${rows.length} transactions`;
 
       const kpiSettled = document.getElementById('kpi-val-total-settled');
       if (kpiSettled) kpiSettled.textContent = formatCurrency(totalSettled);
-      const recoveryPct = totalBilled > 0 ? ((totalSettled / totalBilled) * 100).toFixed(1) : 0;
+      const targetBilled = totalFinalBill || totalBilled;
+      const recoveryPct = targetBilled > 0 ? ((totalSettled / targetBilled) * 100).toFixed(1) : 0;
       const kpiSubSettled = document.getElementById('kpi-sub-total-settled');
-      if (kpiSubSettled) kpiSubSettled.textContent = `${recoveryPct}% settled (incl. interest)`;
+      if (kpiSubSettled) kpiSubSettled.textContent = `${recoveryPct}% collected / paid`;
 
       const kpiOutstanding = document.getElementById('kpi-val-total-outstanding');
-      if (kpiOutstanding) kpiOutstanding.textContent = formatCurrency(totalPrincipalOutstanding);
+      if (kpiOutstanding) kpiOutstanding.textContent = formatCurrency(totalNetBalance);
       const kpiSubOutstanding = document.getElementById('kpi-sub-total-outstanding');
-      if (kpiSubOutstanding) kpiSubOutstanding.textContent = `${((totalPrincipalOutstanding / (totalBilled || 1)) * 100).toFixed(1)}% unpaid`;
+      if (kpiSubOutstanding) kpiSubOutstanding.textContent = `${((totalNetBalance / (targetBilled || 1)) * 100).toFixed(1)}% remaining balance`;
 
       const kpiInterest = document.getElementById('kpi-val-total-interest');
       if (kpiInterest) kpiInterest.textContent = formatCurrency(totalInterest);
       const kpiSubInterest = document.getElementById('kpi-sub-total-interest');
-      if (kpiSubInterest) kpiSubInterest.textContent = calculateInterest ? `Settled: ${formatCurrency(totalInterestPaid)}` : 'Disabled';
+      if (kpiSubInterest) kpiSubInterest.textContent = calculateInterest ? `Discounts: -${formatCurrency(totalDiscounts)}` : 'Disabled';
 
       const kpiOverdue = document.getElementById('kpi-val-overdue-count');
       if (kpiOverdue) kpiOverdue.textContent = overdueCount;
@@ -5192,9 +5189,9 @@
       const statDiscWrap = document.getElementById('stat-discount-wrapper');
       const statDiscVal = document.getElementById('stat-total-discount');
       if (statDiscWrap && statDiscVal) {
-        if (totalDiscount > 0) {
+        if (totalDiscounts > 0) {
           statDiscWrap.style.display = 'flex';
-          statDiscVal.textContent = `-${formatCurrency(totalDiscount)}`;
+          statDiscVal.textContent = `-${formatCurrency(totalDiscounts)}`;
         } else {
           statDiscWrap.style.display = 'none';
         }
@@ -5205,11 +5202,11 @@
       const statPaid = document.getElementById('stat-total-paid');
       if (statPaid) statPaid.textContent = formatCurrency(totalSettled);
       const statOutstanding = document.getElementById('stat-total-outstanding');
-      if (statOutstanding) statOutstanding.textContent = formatCurrency(totalPrincipalOutstanding);
+      if (statOutstanding) statOutstanding.textContent = formatCurrency(totalNetBalance);
       const statInterest = document.getElementById('stat-total-interest');
       if (statInterest) statInterest.textContent = formatCurrency(totalInterest);
       const statNet = document.getElementById('stat-net-total');
-      if (statNet) statNet.textContent = formatCurrency(totalNetOutstanding);
+      if (statNet) statNet.textContent = formatCurrency(totalNetBalance);
 
       updateKpiCardStyles();
       renderActiveFilterChips();
@@ -5234,7 +5231,7 @@
       return Math.floor(diffTime / (1000 * 60 * 60 * 24));
     }
 
-    // Compute Calculated Metrics for a Row with Pro-Rata Early Payment Discount, Interest Settlement & GR
+    // Compute Calculated Metrics for a Row with Unified Monthly Rate, Merged Discount/Interest & Total Payment Model
     function computeRowFinancials(row) {
       const grandTotal = Number(row.grandTotal) || 0;
       const paid = Number(row.paidAmount) || 0;
@@ -5247,72 +5244,85 @@
       const refDate = (row.paymentDate && row.paymentDate.trim()) ? row.paymentDate : today;
       const daysTaken = (row.date && refDate) ? daysBetween(row.date, refDate) : 0;
 
-      // Discount & Overdue Calculation
-      const discPct = (row.discountPercent !== undefined && row.discountPercent !== null && row.discountPercent !== '')
-        ? Number(row.discountPercent)
-        : defaultDiscountPercent;
+      // Rate per month: user can specify rateMonthly or legacy discountPercent/interestRate
+      let rateMonthly = defaultRateMonthly;
+      if (row.rateMonthly !== undefined && row.rateMonthly !== null && row.rateMonthly !== '') {
+        rateMonthly = Number(row.rateMonthly);
+      } else if (row.discountPercent !== undefined && row.discountPercent !== null && row.discountPercent !== '') {
+        rateMonthly = Number(row.discountPercent);
+      } else if (row.interestRate !== undefined && row.interestRate !== null && row.interestRate !== '') {
+        rateMonthly = Number(row.interestRate) / 12;
+      }
 
-      let effectiveDiscountPct = 0;
-      let calcDiscountAmount = 0;
+      let earlyDays = 0;
       let overdueDays = 0;
+      let adjType = 'none'; // 'discount', 'interest', 'none'
+      let calcAdjAmount = 0; // Negative for discount, positive for interest
+      let calcAdjPct = 0;
 
       if (isFullyReturned) {
+        adjType = 'none';
+        earlyDays = 0;
         overdueDays = 0;
-        effectiveDiscountPct = 0;
-        calcDiscountAmount = 0;
-      } else if (daysTaken <= creditDays && creditDays > 0 && discPct > 0) {
-        // Payment made on or before credit days: Pro-rata Early Payment Discount applies
-        // e.g. 1.5% max discount on 30 credit days: day 1 gets full ~1.5%, day 15 gets (30-15)/30 * 1.5% = 0.75%
-        const remainingTermDays = Math.max(0, creditDays - Math.max(0, daysTaken));
-        effectiveDiscountPct = Number((discPct * (remainingTermDays / creditDays)).toFixed(4));
-        calcDiscountAmount = Number(((grandTotal * effectiveDiscountPct) / 100).toFixed(2));
+        calcAdjAmount = 0;
+        calcAdjPct = 0;
+      } else if (daysTaken <= creditDays && creditDays > 0 && rateMonthly > 0) {
+        // Paid / settled on or before credit term: Early Payment Discount applies
+        earlyDays = Math.max(0, creditDays - Math.max(0, daysTaken));
         overdueDays = 0;
+        adjType = 'discount';
+        // Pro-rata early discount based on monthly rate:
+        // rateMonthly % for 30 days -> (earlyDays / 30) * rateMonthly %
+        calcAdjPct = Number(((earlyDays / 30) * rateMonthly).toFixed(4));
+        const discValue = Number(((grandTotal * calcAdjPct) / 100).toFixed(2));
+        calcAdjAmount = discValue === 0 ? 0 : -discValue; // Negative adjustment (deduction)
       } else if (daysTaken > creditDays) {
-        // Payment made after credit days: 0% discount and late interest applies
-        effectiveDiscountPct = 0;
-        calcDiscountAmount = 0;
+        // Paid / settling after credit term: Late Payment Interest applies
+        earlyDays = 0;
         if (dueDate) {
           overdueDays = Math.max(0, daysBetween(dueDate, refDate));
         }
+        if (calculateInterest && overdueDays > 0 && rateMonthly > 0) {
+          adjType = 'interest';
+          // Late interest based on monthly rate:
+          // Daily interest = (rateMonthly / 30) %, over overdueDays
+          calcAdjPct = Number(((overdueDays / 30) * rateMonthly).toFixed(4));
+          const intValue = Number(((grandTotal * calcAdjPct) / 100).toFixed(2));
+          calcAdjAmount = intValue; // Positive adjustment (charge)
+        } else {
+          adjType = 'none';
+          calcAdjAmount = 0;
+          calcAdjPct = 0;
+        }
       }
 
-      // Actual Discount override handling
-      const actualDiscount = (row.actualDiscount !== undefined && row.actualDiscount !== null && row.actualDiscount !== '')
-        ? Number(row.actualDiscount)
-        : null;
-      const effectiveDiscountAmount = (actualDiscount !== null && !isNaN(actualDiscount))
-        ? actualDiscount
-        : calcDiscountAmount;
-      const discountAmount = effectiveDiscountAmount;
-
-      // Net Invoiced Amount after discount deduction
-      const netBilled = Math.max(0, Number((grandTotal - discountAmount).toFixed(2)));
-      const principalOutstanding = Math.max(0, Number((netBilled - paid).toFixed(2)));
-
-      // Interest Calculation
-      const ratePct = row.interestRate !== undefined ? Number(row.interestRate) : defaultInterestRate;
-      let interestAmount = 0;
-      if (!isFullyReturned && calculateInterest && overdueDays > 0 && ratePct > 0) {
-        // Formula: Outstanding * (rate / 100) * (overdueDays / 365)
-        const baseAmount = principalOutstanding > 0 ? principalOutstanding : netBilled;
-        interestAmount = Number(((baseAmount * (ratePct / 100) * overdueDays) / 365).toFixed(2));
+      // Actual Adjustment Override Handling
+      // Can be entered in row.actualAdjustment or legacy row.actualDiscount
+      let actualAdj = null;
+      if (row.actualAdjustment !== undefined && row.actualAdjustment !== null && row.actualAdjustment !== '') {
+        actualAdj = Number(row.actualAdjustment);
+      } else if (row.actualDiscount !== undefined && row.actualDiscount !== null && row.actualDiscount !== '') {
+        // Legacy actualDiscount was positive for discount
+        actualAdj = -Math.abs(Number(row.actualDiscount));
       }
 
-      // Interest Settlement
-      const interestPaid = Number(row.interestPaid) || 0;
-      const interestOutstanding = Math.max(0, Number((interestAmount - interestPaid).toFixed(2)));
-      const netOutstanding = Number((principalOutstanding + interestOutstanding).toFixed(2));
-      const netTotal = Number((netBilled + interestAmount).toFixed(2));
+      const effectiveAdjAmount = (actualAdj !== null && !isNaN(actualAdj))
+        ? actualAdj
+        : calcAdjAmount;
 
-      // Payment Status
+      // Final Adjusted Bill Amount: Grand Total + Effective Adjustment (minus discount or plus interest)
+      const finalBill = Math.max(0, Number((grandTotal + effectiveAdjAmount).toFixed(2)));
+
+      // Net Balance: Final Adjusted Bill - Total Payment
+      const netBalance = Number((finalBill - paid).toFixed(2));
+
+      // Determine Payment Status
       let status = 'pending';
       if (isFullyReturned) {
         status = 'gr';
-      } else if (principalOutstanding <= 0 && interestOutstanding <= 0) {
+      } else if (paid > 0 && netBalance <= 0) {
         status = 'paid';
-      } else if (principalOutstanding <= 0 && interestOutstanding > 0) {
-        status = 'int-due';
-      } else if (paid > 0 && principalOutstanding > 0) {
+      } else if (paid > 0 && netBalance > 0) {
         status = overdueDays > 0 ? 'overdue' : 'partial';
       } else if (overdueDays > 0) {
         status = 'overdue';
@@ -5320,23 +5330,26 @@
 
       return {
         dueDate,
-        outstanding: principalOutstanding,
-        principalOutstanding,
-        discountPercent: discPct,
-        effectiveDiscountPct,
-        calcDiscountAmount,
-        actualDiscount,
-        effectiveDiscountAmount,
-        discountAmount,
-        netBilled,
+        rateMonthly,
         daysTaken,
+        earlyDays,
         overdueDays,
+        adjType,
+        calcAdjPct,
+        calcAdjAmount,
+        actualAdj,
+        effectiveAdjAmount,
+        finalBill,
+        paid,
+        netBalance,
         status,
-        interestAmount,
-        interestPaid,
-        interestOutstanding,
-        netOutstanding,
-        netTotal
+        // Backward-compatibility aliases for legacy exports/reports
+        discountAmount: effectiveAdjAmount < 0 ? Math.abs(effectiveAdjAmount) : 0,
+        calcDiscountAmount: calcAdjAmount < 0 ? Math.abs(calcAdjAmount) : 0,
+        interestAmount: effectiveAdjAmount > 0 ? effectiveAdjAmount : 0,
+        principalOutstanding: netBalance > 0 ? netBalance : 0,
+        netOutstanding: netBalance > 0 ? netBalance : 0,
+        netBilled: finalBill
       };
     }
 
@@ -5670,9 +5683,9 @@
               <input type="number" step="1" data-field="creditDays" class="cell-input num-font" style="width: 80px;" value="${row.creditDays || defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
             </td>
 
-            <!-- 13: Editable Early Payment Discount % -->
+            <!-- 13: Editable Monthly Interest / Discount Rate % -->
             <td data-col-index="13" class="num-col">
-              <input type="number" step="0.1" data-field="discountPercent" class="cell-input num-font" style="width: 75px; color: var(--success); font-weight: 600;" value="${row.discountPercent !== undefined ? row.discountPercent : defaultDiscountPercent}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'discountPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'discountPercent', this.value, true)" title="Max Early Payment Discount %">
+              <input type="number" step="0.1" data-field="rateMonthly" class="cell-input num-font" style="width: 85px; color: var(--accent); font-weight: 700;" value="${row.rateMonthly !== undefined && row.rateMonthly !== null && row.rateMonthly !== '' ? row.rateMonthly : defaultRateMonthly}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'rateMonthly', this.value, false)" onchange="handleCellChange('${row.id}', 'rateMonthly', this.value, true)" title="Monthly Int/Disc Rate % (e.g. 1.5%/mo = 18% p.a.)">
             </td>
 
             <!-- 14: Due Date -->
@@ -5680,44 +5693,55 @@
               <div class="cell-readonly font-mono col-val-due-date" style="font-size: 0.85rem; color: var(--muted);">${formatDateDisplay(comp.dueDate)}</div>
             </td>
 
-            <!-- 15: Late / Overdue Days (Interest col) -->
-            <td data-col-index="15" class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
-              <div class="cell-readonly num font-mono col-val-overdue-days" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</div>
-            </td>
-
-            <!-- 16: Acquired / Accrued Interest (Interest col) -->
-            <td data-col-index="16" class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
-              <div class="cell-readonly num bold font-mono col-val-interest-amount" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</div>
-            </td>
-
-            <!-- 17: Editable Payment Date (Expanded & Click anywhere to open calendar) -->
-            <td data-col-index="17" style="min-width: 185px;">
-              <input type="date" data-field="paymentDate" class="cell-input date-picker-input" style="width: 100%; min-width: 170px; cursor: pointer;" value="${row.paymentDate || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'paymentDate', this.value, false)" onchange="handleCellChange('${row.id}', 'paymentDate', this.value, true)" title="Click to pick payment date">
-            </td>
-
-            <!-- 18: Editable Paid / Received Principal Amount -->
-            <td data-col-index="18" class="num-col" style="background: rgba(16, 185, 129, 0.05);">
-              <input type="number" step="0.01" data-field="paidAmount" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Enter paid/received principal amount">
-            </td>
-
-            <!-- 19: Computed Pro-Rata Discount Amount -->
-            <td data-col-index="19" class="num-col cell-locked-bg" style="background: rgba(16, 185, 129, 0.05);">
-              <div class="cell-readonly num bold font-mono col-val-calc-discount" title="Calculated Pro-Rata Discount: ${comp.effectiveDiscountPct.toFixed(2)}% on ₹${Number(row.grandTotal).toFixed(2)}">
-                ${comp.calcDiscountAmount > 0 
-                  ? `<div style="color: var(--success); font-weight: 700;">-${formatCurrency(comp.calcDiscountAmount)}</div><div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">(${comp.effectiveDiscountPct.toFixed(2)}% eff.)</div>`
-                  : `<span style="color: var(--muted); font-weight: normal;">-</span>`
+            <!-- 15: Early / Late Days -->
+            <td data-col-index="15" class="num-col cell-locked-bg">
+              <div class="cell-readonly num font-mono col-val-status-days">
+                ${comp.earlyDays > 0 
+                  ? `<span style="color: var(--success); font-weight: 700;">${comp.earlyDays}d early</span>`
+                  : (comp.overdueDays > 0 
+                    ? `<span style="color: var(--error); font-weight: 700;">${comp.overdueDays}d late</span>` 
+                    : `<span style="color: var(--muted);">-</span>`
+                  )
                 }
               </div>
             </td>
 
-            <!-- 20: Editable Actual Discount in ₹ (Overrides calculated discount) -->
-            <td data-col-index="20" class="num-col" style="background: rgba(16, 185, 129, 0.08);">
-              <input type="number" step="0.01" data-field="actualDiscount" class="cell-input num-font" style="width: 100px; color: var(--success); font-weight: 700;" value="${row.actualDiscount !== undefined && row.actualDiscount !== null ? row.actualDiscount : ''}" placeholder="${comp.calcDiscountAmount > 0 ? comp.calcDiscountAmount.toFixed(2) : '0.00'}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'actualDiscount', this.value, false)" onchange="handleCellChange('${row.id}', 'actualDiscount', this.value, true)" title="Actual Discount in ₹ (Manual override for final calculation)">
+            <!-- 16: Calculated Adjustment (₹) -->
+            <td data-col-index="16" class="num-col cell-locked-bg" style="background: rgba(124, 58, 237, 0.04);">
+              <div class="cell-readonly num font-mono col-val-calc-adj" title="Auto-Calculated Adjustment based on payment timing vs due date">
+                ${comp.calcAdjAmount < 0 
+                  ? `<div style="color: var(--success); font-weight: 700;">-${formatCurrency(Math.abs(comp.calcAdjAmount))}</div><div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">(${comp.calcAdjPct.toFixed(2)}% Disc)</div>`
+                  : (comp.calcAdjAmount > 0 
+                    ? `<div style="color: var(--warning); font-weight: 700;">+${formatCurrency(comp.calcAdjAmount)}</div><div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">(${comp.calcAdjPct.toFixed(2)}% Int)</div>`
+                    : `<span style="color: var(--muted); font-weight: normal;">-</span>`
+                  )
+                }
+              </div>
             </td>
 
-            <!-- 21: Principal Balance -->
-            <td data-col-index="21" class="num-col cell-locked-bg" style="background: rgba(239, 68, 68, 0.05);">
-              <div class="cell-readonly num bold font-mono col-val-outstanding" style="color: ${comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.principalOutstanding)}</div>
+            <!-- 17: Actual Agreed Adjustment in ₹ (Manual override) -->
+            <td data-col-index="17" class="num-col" style="background: rgba(124, 58, 237, 0.08);">
+              <input type="number" step="0.01" data-field="actualAdjustment" class="cell-input num-font" style="width: 105px; font-weight: 700; color: var(--fg);" value="${row.actualAdjustment !== undefined && row.actualAdjustment !== null ? row.actualAdjustment : (row.actualDiscount !== undefined && row.actualDiscount !== null ? -Math.abs(row.actualDiscount) : '')}" placeholder="${comp.calcAdjAmount !== 0 ? comp.calcAdjAmount.toFixed(2) : '0.00'}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'actualAdjustment', this.value, false)" onchange="handleCellChange('${row.id}', 'actualAdjustment', this.value, true)" title="Actual Agreed Adjustment in ₹ (- for discount, + for late interest)">
+            </td>
+
+            <!-- 18: Final Adjusted Bill Amount (₹) -->
+            <td data-col-index="18" class="num-col cell-locked-bg" style="background: rgba(124, 58, 237, 0.05);">
+              <div class="cell-readonly num bold font-mono col-val-final-bill" style="color: var(--accent); font-weight: 800;" title="Final Bill Amount after Discount or Interest">${formatCurrency(comp.finalBill)}</div>
+            </td>
+
+            <!-- 19: Editable Payment Date -->
+            <td data-col-index="19" style="min-width: 185px;">
+              <input type="date" data-field="paymentDate" class="cell-input date-picker-input" style="width: 100%; min-width: 170px; cursor: pointer;" value="${row.paymentDate || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'paymentDate', this.value, false)" onchange="handleCellChange('${row.id}', 'paymentDate', this.value, true)" title="Click to pick payment date">
+            </td>
+
+            <!-- 20: Total Paid (₹) -->
+            <td data-col-index="20" class="num-col" style="background: rgba(16, 185, 129, 0.08);">
+              <input type="number" step="0.01" data-field="paidAmount" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Total payment made or received">
+            </td>
+
+            <!-- 21: Net Balance (₹) -->
+            <td data-col-index="21" class="num-col cell-locked-bg" style="background: rgba(239, 68, 68, 0.08);">
+              <div class="cell-readonly num bold font-mono col-val-net-balance" style="color: ${comp.netBalance > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.netBalance)}</div>
             </td>
 
             <!-- 22: Status -->
@@ -5725,28 +5749,13 @@
               <div class="cell-readonly" style="justify-content: center;">${renderStatusBadge(comp.status)}</div>
             </td>
 
-            <!-- 23: Editable Interest Rate -->
-            <td data-col-index="23" class="num-col interest-col" style="${calculateInterest ? '' : 'display:none;'}">
-              <input type="number" step="0.1" data-field="interestRate" class="cell-input num-font" style="width: 85px;" value="${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestRate', this.value, false)" onchange="handleCellChange('${row.id}', 'interestRate', this.value, true)" title="Annual late interest %">
-            </td>
-
-            <!-- 24: Editable Paid Interest (Settlement of Late Interest!) -->
-            <td data-col-index="24" class="num-col interest-col" style="background: rgba(245, 158, 11, 0.05); ${calculateInterest ? '' : 'display:none;'}">
-              <input type="number" step="0.01" data-field="interestPaid" class="cell-input num-font col-input-interest-paid" style="color: var(--warning); font-weight: 700; width: 110px;" value="${row.interestPaid || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestPaid', this.value, false)" onchange="handleCellChange('${row.id}', 'interestPaid', this.value, true)" title="Enter paid/settled late interest amount">
-            </td>
-
-            <!-- 25: Net Balance -->
-            <td data-col-index="25" class="num-col cell-locked-bg">
-              <div class="cell-readonly num bold font-mono col-val-net-total" style="color: ${comp.netOutstanding > 0 ? 'var(--accent)' : 'var(--success)'};">${formatCurrency(comp.netOutstanding)}</div>
-            </td>
-
-            <!-- 26: Editable Remarks -->
-            <td data-col-index="26">
+            <!-- 23: Editable Remarks -->
+            <td data-col-index="23">
               <input type="text" data-field="remarks" class="cell-input" value="${escapeHtml(row.remarks || '')}" placeholder="Payment notes / Cheque #" oninput="handleCellChange('${row.id}', 'remarks', this.value, false)" onchange="handleCellChange('${row.id}', 'remarks', this.value, true)">
             </td>
 
-            <!-- 27: Actions -->
-            <td data-col-index="27" class="center-col actions-col cell-locked-bg">
+            <!-- 24: Actions -->
+            <td data-col-index="24" class="center-col actions-col cell-locked-bg">
               <div class="actions-cell-wrap">
                 <button class="btn-action-icon btn-view-row" onclick="openChallanModal('${row.id}')" title="View Bill / Challan Details">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -5839,20 +5848,21 @@
               </div>
             </div>
 
-            <!-- Move 2: Key Metric Highlight (Grand Total & Outstanding Balance) -->
+            <!-- Move 2: Key Metric Highlight (Final Bill & Net Balance) -->
             <div class="mobile-card-highlight">
               <div class="mobile-card-amount-wrap">
-                <span class="mobile-card-amount-label">Grand Total</span>
-                <span class="mobile-card-amount-val">${formatCurrency(row.grandTotal)}</span>
+                <span class="mobile-card-amount-label">Final Bill</span>
+                <span class="mobile-card-amount-val" style="color: var(--accent);">${formatCurrency(comp.finalBill)}</span>
                 ${hasGr ? `<span style="font-size: 0.7rem; color: var(--accent3); font-weight: 700;">(-${formatCurrency(row.grAmount || (row.grQty * row.rate))} GR Deducted)</span>` : ''}
+                ${comp.effectiveAdjAmount !== 0 ? `<span style="font-size: 0.72rem; color: ${comp.effectiveAdjAmount < 0 ? 'var(--success)' : 'var(--warning)'}; font-weight: 700;">${comp.effectiveAdjAmount < 0 ? '-' + formatCurrency(Math.abs(comp.effectiveAdjAmount)) + ' Disc' : '+' + formatCurrency(comp.effectiveAdjAmount) + ' Int'}</span>` : ''}
               </div>
 
               <div class="mobile-card-status-wrap">
-                <span class="mobile-card-amount-label">${comp.principalOutstanding > 0 ? 'Balance Due' : 'Status'}</span>
-                <span class="font-mono bold" style="font-size: 0.95rem; color: ${comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)'};">
-                  ${comp.principalOutstanding > 0 ? formatCurrency(comp.principalOutstanding) : 'Settled'}
+                <span class="mobile-card-amount-label">${comp.netBalance > 0 ? 'Balance Due' : 'Status'}</span>
+                <span class="font-mono bold" style="font-size: 0.95rem; color: ${comp.netBalance > 0 ? 'var(--error)' : 'var(--success)'};">
+                  ${comp.netBalance > 0 ? formatCurrency(comp.netBalance) : 'Settled'}
                 </span>
-                ${comp.interestAmount > 0 ? `<span style="font-size: 0.72rem; color: var(--warning); font-weight: 700;">+${formatCurrency(comp.interestAmount)} Late Int.</span>` : ''}
+                <span style="font-size: 0.72rem; color: var(--muted); font-weight: 600;">Paid: ${formatCurrency(row.paidAmount || 0)}</span>
               </div>
             </div>
 
@@ -5880,7 +5890,7 @@
                 <span class="mobile-kv-label">Due Date</span>
                 <span class="mobile-kv-val font-mono" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'};">
                   ${formatDateDisplay(comp.dueDate)}
-                  ${comp.overdueDays > 0 ? ` <span style="font-weight: 800; font-size: 0.72rem;">(${comp.overdueDays}d overdue)</span>` : ''}
+                  ${comp.overdueDays > 0 ? ` <span style="font-weight: 800; font-size: 0.72rem;">(${comp.overdueDays}d late)</span>` : (comp.earlyDays > 0 ? ` <span style="color:var(--success); font-weight: 800; font-size: 0.72rem;">(${comp.earlyDays}d early)</span>` : '')}
                 </span>
               </div>
             </div>
@@ -5889,31 +5899,31 @@
             <div class="mobile-card-drawer ${isExpanded ? 'is-expanded' : ''}" id="mob-drawer-${row.id}">
               <div class="mobile-card-drawer-grid">
                 <div class="mobile-kv-item">
-                  <span class="mobile-kv-label">Taxable Subtotal</span>
-                  <span class="mobile-kv-val font-mono">${formatCurrency(row.subtotal)}</span>
+                  <span class="mobile-kv-label">Grand Total (Pre-Adj)</span>
+                  <span class="mobile-kv-val font-mono">${formatCurrency(row.grandTotal)}</span>
                 </div>
                 <div class="mobile-kv-item">
-                  <span class="mobile-kv-label">GST Rate / Amount</span>
-                  <span class="mobile-kv-val font-mono">${row.gstPercent !== undefined ? row.gstPercent : 5.0}% (${formatCurrency((row.subtotal * (row.gstPercent !== undefined ? row.gstPercent : 5.0))/100)})</span>
+                  <span class="mobile-kv-label">Int/Disc %/mo</span>
+                  <span class="mobile-kv-val font-mono" style="color: var(--accent); font-weight: 700;">${row.rateMonthly !== undefined ? row.rateMonthly : defaultRateMonthly}% / mo</span>
                 </div>
                 <div class="mobile-kv-item">
-                  <span class="mobile-kv-label">Calculated Disc.</span>
-                  <span class="mobile-kv-val font-mono" style="color: var(--success);">
-                    ${comp.calcDiscountAmount > 0 
-                      ? `-${formatCurrency(comp.calcDiscountAmount)} (${comp.effectiveDiscountPct.toFixed(2)}%)` 
-                      : `${row.discountPercent !== undefined ? row.discountPercent : defaultDiscountPercent}% terms (₹0.00)`}
-                  </span>
-                </div>
-                <div class="mobile-kv-item">
-                  <span class="mobile-kv-label">Actual Disc. (Applied)</span>
-                  <span class="mobile-kv-val font-mono" style="color: var(--success); font-weight: 700;">
-                    ${comp.discountAmount > 0 
-                      ? `-${formatCurrency(comp.discountAmount)}${comp.actualDiscount !== null ? ' (Actual Override)' : ''}` 
+                  <span class="mobile-kv-label">Calc. Adjustment</span>
+                  <span class="mobile-kv-val font-mono" style="color: ${comp.calcAdjAmount < 0 ? 'var(--success)' : (comp.calcAdjAmount > 0 ? 'var(--warning)' : 'var(--muted)')};">
+                    ${comp.calcAdjAmount !== 0 
+                      ? `${comp.calcAdjAmount < 0 ? '-' + formatCurrency(Math.abs(comp.calcAdjAmount)) : '+' + formatCurrency(comp.calcAdjAmount)} (${comp.calcAdjPct.toFixed(2)}%)` 
                       : '₹0.00'}
                   </span>
                 </div>
                 <div class="mobile-kv-item">
-                  <span class="mobile-kv-label">Paid Principal</span>
+                  <span class="mobile-kv-label">Actual Adj. (Applied)</span>
+                  <span class="mobile-kv-val font-mono" style="color: ${comp.effectiveAdjAmount < 0 ? 'var(--success)' : (comp.effectiveAdjAmount > 0 ? 'var(--warning)' : 'var(--muted)')}; font-weight: 700;">
+                    ${comp.effectiveAdjAmount !== 0 
+                      ? `${comp.effectiveAdjAmount < 0 ? '-' + formatCurrency(Math.abs(comp.effectiveAdjAmount)) : '+' + formatCurrency(comp.effectiveAdjAmount)}${comp.actualAdj !== null ? ' (Actual)' : ''}` 
+                      : '₹0.00'}
+                  </span>
+                </div>
+                <div class="mobile-kv-item">
+                  <span class="mobile-kv-label">Total Paid (₹)</span>
                   <span class="mobile-kv-val font-mono" style="color: var(--success); font-weight: 700;">${formatCurrency(row.paidAmount || 0)}</span>
                 </div>
                 <div class="mobile-kv-item">
@@ -5925,19 +5935,9 @@
                   <span class="mobile-kv-val font-mono">${row.creditDays || defaultCreditDays} Days</span>
                 </div>
                 <div class="mobile-kv-item">
-                  <span class="mobile-kv-label">Annual Late Interest</span>
-                  <span class="mobile-kv-val font-mono">${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}% p.a.</span>
+                  <span class="mobile-kv-label">Net Balance</span>
+                  <span class="mobile-kv-val font-mono" style="color: ${comp.netBalance > 0 ? 'var(--error)' : 'var(--success)'}; font-weight: 700;">${formatCurrency(comp.netBalance)}</span>
                 </div>
-                ${comp.interestAmount > 0 ? `
-                  <div class="mobile-kv-item">
-                    <span class="mobile-kv-label">Accrued Late Interest</span>
-                    <span class="mobile-kv-val font-mono" style="color: var(--warning); font-weight: 700;">${formatCurrency(comp.interestAmount)}</span>
-                  </div>
-                  <div class="mobile-kv-item">
-                    <span class="mobile-kv-label">Paid Interest</span>
-                    <span class="mobile-kv-val font-mono" style="color: var(--warning);">${formatCurrency(row.interestPaid || 0)}</span>
-                  </div>
-                ` : ''}
               </div>
 
               ${Array.isArray(row.grBoxes) && row.grBoxes.length > 0 ? `
@@ -6382,7 +6382,7 @@
       printPartyName.textContent = party ? `PARTY: ${party}` : '';
 
       if (!party) {
-        tbody.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 1rem; font-weight: 600;">Please select a customer or supplier party from the dropdown above</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 1rem; font-weight: 600;">Please select a customer or supplier party from the dropdown above</td></tr>';
         tfoot.innerHTML = '';
         document.getElementById('statement-total-invoiced').textContent = '₹0.00';
         document.getElementById('statement-total-settled').textContent = '₹0.00';
@@ -6395,16 +6395,15 @@
       partyRows.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
 
       let totalInvoiced = 0;
-      let totalDiscount = 0;
-      let totalPaidPrincipal = 0;
-      let totalPrincipalBal = 0;
-      let totalInterest = 0;
-      let totalInterestPaid = 0;
+      let totalFinalBill = 0;
+      let totalAdjustment = 0;
+      let totalPaid = 0;
       let totalNetBal = 0;
       let totalGrossWeight = 0;
       let totalWeight = 0;
       let totalGrWeight = 0;
       let totalGrAmount = 0;
+      let totalInterest = 0;
 
       tbody.innerHTML = partyRows.map((row, idx) => {
         const comp = computeRowFinancials(row);
@@ -6416,12 +6415,11 @@
         const grAmount = Number(row.grAmount || (grQty * row.rate)) || 0;
 
         totalInvoiced += billed;
-        totalDiscount += comp.discountAmount;
-        totalPaidPrincipal += paid;
-        totalPrincipalBal += comp.principalOutstanding;
-        totalInterest += comp.interestAmount;
-        totalInterestPaid += comp.interestPaid;
-        totalNetBal += comp.netOutstanding;
+        totalFinalBill += comp.finalBill;
+        totalAdjustment += comp.effectiveAdjAmount;
+        totalPaid += paid;
+        if (comp.netBalance > 0) totalNetBal += comp.netBalance;
+        if (comp.effectiveAdjAmount > 0) totalInterest += comp.effectiveAdjAmount;
         totalGrossWeight += grossQty;
         totalWeight += qty;
         totalGrWeight += grQty;
@@ -6440,12 +6438,14 @@
               <div>${formatCurrency(billed)}</div>
               ${grQty > 0 ? `<div style="font-size: 0.68rem; color: var(--accent3); font-weight: 700;">(-${formatCurrency(grAmount)} GR)</div>` : ''}
             </td>
-            <td class="num-col font-mono" style="color: var(--success); font-weight: 700;">${comp.discountAmount > 0 ? `-${formatCurrency(comp.discountAmount)}` : '-'}</td>
+            <td class="num-col font-mono" style="color: ${comp.effectiveAdjAmount < 0 ? 'var(--success)' : (comp.effectiveAdjAmount > 0 ? 'var(--warning)' : 'var(--muted)')}; font-weight: 700;">
+              ${comp.effectiveAdjAmount !== 0 ? (comp.effectiveAdjAmount < 0 ? '-' + formatCurrency(Math.abs(comp.effectiveAdjAmount)) : '+' + formatCurrency(comp.effectiveAdjAmount)) : '-'}
+            </td>
             <td class="num-col font-mono" style="color: var(--success); font-weight: 700;">${paid > 0 ? formatCurrency(paid) : '-'}</td>
-            <td class="num-col font-mono bold" style="color: ${comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.principalOutstanding)}</td>
+            <td class="num-col font-mono bold" style="color: ${comp.netBalance > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.netBalance)}</td>
             <td style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); white-space: nowrap;">${formatDateDisplay(comp.dueDate)}</td>
-            <td class="num-col font-mono" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</td>
-            <td class="num-col font-mono bold" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</td>
+            <td class="num-col font-mono" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : (comp.earlyDays > 0 ? 'var(--success)' : 'var(--muted)')}; font-weight: ${comp.overdueDays > 0 || comp.earlyDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + 'd late' : (comp.earlyDays > 0 ? comp.earlyDays + 'd early' : '-')}</td>
+            <td class="num-col font-mono bold" style="color: var(--accent);">${formatCurrency(comp.finalBill)}</td>
             <td class="center-col">${renderStatusBadge(comp.status)}</td>
           </tr>
         `;
@@ -6463,17 +6463,19 @@
             <div>${formatCurrency(totalInvoiced)}</div>
             ${totalGrAmount > 0 ? `<div style="font-size: 0.68rem; color: var(--accent3); font-weight: 700;">(-${formatCurrency(totalGrAmount)} GR)</div>` : ''}
           </td>
-          <td class="num-col font-mono bold" style="color: var(--success);">${totalDiscount > 0 ? `-${formatCurrency(totalDiscount)}` : '-'}</td>
-          <td class="num-col font-mono bold" style="color: var(--success);">${formatCurrency(totalPaidPrincipal)}</td>
-          <td class="num-col font-mono bold" style="color: var(--error);">${formatCurrency(totalPrincipalBal)}</td>
+          <td class="num-col font-mono bold" style="color: ${totalAdjustment < 0 ? 'var(--success)' : (totalAdjustment > 0 ? 'var(--warning)' : 'var(--muted)')};">
+            ${totalAdjustment !== 0 ? (totalAdjustment < 0 ? '-' + formatCurrency(Math.abs(totalAdjustment)) : '+' + formatCurrency(totalAdjustment)) : '-'}
+          </td>
+          <td class="num-col font-mono bold" style="color: var(--success);">${formatCurrency(totalPaid)}</td>
+          <td class="num-col font-mono bold" style="color: var(--error);">${formatCurrency(totalNetBal)}</td>
           <td colspan="2"></td>
-          <td class="num-col font-mono bold" style="color: var(--warning);">${formatCurrency(totalInterest)}</td>
+          <td class="num-col font-mono bold" style="color: var(--accent);">${formatCurrency(totalFinalBill)}</td>
           <td></td>
         </tr>
       `;
 
       document.getElementById('statement-total-invoiced').textContent = formatCurrency(totalInvoiced);
-      document.getElementById('statement-total-settled').textContent = formatCurrency(totalPaidPrincipal + totalInterestPaid);
+      document.getElementById('statement-total-settled').textContent = formatCurrency(totalPaid);
       document.getElementById('statement-total-balance').textContent = formatCurrency(totalNetBal);
       document.getElementById('statement-total-interest').textContent = formatCurrency(totalInterest);
     }
@@ -6691,46 +6693,43 @@
               <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700;">${formatCurrency((row.grandTotal || 0) - (row.subtotal || 0))}</div>
             </div>
             <div style="padding: 1rem; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);">
-              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Discount Deducted</div>
-              <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700; color: var(--success);">${comp.discountAmount > 0 ? `-${formatCurrency(comp.discountAmount)}` : '₹0.00'}</div>
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Int / Disc Adjustment</div>
+              <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700; color: ${comp.effectiveAdjAmount < 0 ? 'var(--success)' : (comp.effectiveAdjAmount > 0 ? 'var(--warning)' : 'var(--muted)')};">
+                ${comp.effectiveAdjAmount !== 0 ? (comp.effectiveAdjAmount < 0 ? '-' + formatCurrency(Math.abs(comp.effectiveAdjAmount)) : '+' + formatCurrency(comp.effectiveAdjAmount)) : '₹0.00'}
+              </div>
               <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">
-                ${comp.actualDiscount !== null ? `Actual: ${formatCurrency(comp.actualDiscount)} (Override)` : `Calculated: ${formatCurrency(comp.calcDiscountAmount)} (${comp.effectiveDiscountPct.toFixed(2)}% eff.)`}
+                ${comp.actualAdj !== null ? `Actual: ${formatCurrency(comp.actualAdj)} (Override)` : `Calculated: ${formatCurrency(comp.calcAdjAmount)} (${comp.calcAdjPct.toFixed(2)}%)`}
               </div>
             </div>
             <div style="padding: 1rem; border-radius: 10px; border: 1px solid var(--accent); background: rgba(124, 58, 237, 0.05);">
-              <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: 700;">Net Invoiced Total</div>
-              <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 800; color: var(--accent);">${formatCurrency(comp.netBilled)}</div>
-              ${comp.discountAmount > 0 ? `<div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">(Gross Total: ${formatCurrency(row.grandTotal)})</div>` : ''}
+              <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: 700;">Final Bill Amount</div>
+              <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 800; color: var(--accent);">${formatCurrency(comp.finalBill)}</div>
+              <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">(Grand Total: ${formatCurrency(row.grandTotal)})</div>
             </div>
           </div>
 
           <div style="border-top: 1px solid var(--border); padding-top: 1rem;">
-            <div style="font-size: 0.85rem; font-weight: 700; color: var(--fg); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Settlement &amp; Late Interest Breakdown</div>
+            <div style="font-size: 0.85rem; font-weight: 700; color: var(--fg); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Payment &amp; Account Settlement Summary</div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem;">
               <div style="background: rgba(16, 185, 129, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
-                <div style="font-size: 0.72rem; color: var(--success); font-weight: 700; text-transform: uppercase;">Paid Principal</div>
-                <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--success);">${formatCurrency(row.paidAmount)}</div>
+                <div style="font-size: 0.72rem; color: var(--success); font-weight: 700; text-transform: uppercase;">Total Paid</div>
+                <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--success);">${formatCurrency(row.paidAmount || 0)}</div>
                 <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">${row.paymentDate ? `Date: ${formatDateDisplay(row.paymentDate)}` : 'Unpaid'}</div>
               </div>
               <div style="background: rgba(239, 68, 68, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
-                <div style="font-size: 0.72rem; color: var(--error); font-weight: 700; text-transform: uppercase;">Principal Due</div>
-                <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--error);">${formatCurrency(comp.principalOutstanding)}</div>
+                <div style="font-size: 0.72rem; color: var(--error); font-weight: 700; text-transform: uppercase;">Net Balance</div>
+                <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--error);">${formatCurrency(comp.netBalance)}</div>
                 <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Due: ${formatDateDisplay(comp.dueDate)}</div>
               </div>
-              <div style="background: rgba(245, 158, 11, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
-                <div style="font-size: 0.72rem; color: var(--warning); font-weight: 700; text-transform: uppercase;">Accrued Interest</div>
-                <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--warning);">${formatCurrency(comp.interestAmount)}</div>
-                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">${comp.overdueDays}d @ ${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}%</div>
-              </div>
-              <div style="background: rgba(245, 158, 11, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
-                <div style="font-size: 0.72rem; color: var(--warning); font-weight: 700; text-transform: uppercase;">Paid Interest</div>
-                <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--warning);">${formatCurrency(comp.interestPaid)}</div>
-                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Bal: ${formatCurrency(comp.interestOutstanding)}</div>
+              <div style="background: rgba(124, 58, 237, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(124, 58, 237, 0.2);">
+                <div style="font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase;">Timing</div>
+                <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--accent);">${comp.earlyDays > 0 ? comp.earlyDays + 'd early' : (comp.overdueDays > 0 ? comp.overdueDays + 'd late' : 'On time')}</div>
+                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">${row.rateMonthly !== undefined ? row.rateMonthly : defaultRateMonthly}% / mo</div>
               </div>
               <div style="background: rgba(124, 58, 237, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(124, 58, 237, 0.2);">
-                <div style="font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase;">Net Outstanding</div>
-                <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 800; color: var(--accent);">${formatCurrency(comp.netOutstanding)}</div>
-                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Status: ${comp.status.toUpperCase()}</div>
+                <div style="font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase;">Status</div>
+                <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 800; color: var(--accent);">${comp.status.toUpperCase()}</div>
+                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Terms: ${row.creditDays || defaultCreditDays}d</div>
               </div>
             </div>
           </div>
@@ -7626,9 +7625,8 @@
       const headers = [
         'Date', 'Bill/Challan No', activeTab === 'sales' ? 'Customer' : 'Supplier', 'Quality',
         'Gross Quantity (Kg)', 'GR Deducted (Kg)', 'Net Quantity (Kg)', 'Rate (₹/Kg)', 'GR Deducted Amount (₹)', 'Subtotal (₹)', 'GST %', 'Grand Total (₹)',
-        'Early Discount %', 'Calc. Discount (₹)', 'Actual Discount (₹)', 'Effective Discount (₹)', 'Net Billed (₹)', 'Paid Principal Amount (₹)',
-        'Payment Date', 'Credit Days', 'Due Date', 'Principal Outstanding (₹)', 'Status',
-        'Interest Rate %', 'Overdue Days', 'Accrued Interest (₹)', 'Paid Interest (₹)', 'Interest Outstanding (₹)', 'Net Outstanding (₹)', 'Remarks'
+        'Credit Days', 'Int/Disc %/mo', 'Due Date', 'Early/Late Days', 'Calc. Adjustment (₹)', 'Actual Adjustment (₹)',
+        'Final Bill (₹)', 'Payment Date', 'Total Paid (₹)', 'Net Balance (₹)', 'Status', 'Remarks'
       ];
 
       const csvRows = [headers.join(',')];
@@ -7638,6 +7636,7 @@
         const gross = r.grossQty !== undefined ? Number(r.grossQty) : (Number(r.qty || 0) + Number(r.grQty || 0));
         const gr = Number(r.grQty) || 0;
         const grAmt = Number(r.grAmount || (gr * (r.rate || 0)));
+        const timingStr = comp.earlyDays > 0 ? `${comp.earlyDays}d early` : (comp.overdueDays > 0 ? `${comp.overdueDays}d late` : 'On time');
         const values = [
           `"${formatDateDisplay(r.date, '')}"`,
           `"${(r.challanNo || '').replace(/"/g, '""')}"`,
@@ -7651,23 +7650,17 @@
           r.subtotal || 0,
           r.gstPercent || 0,
           r.grandTotal || 0,
-          comp.discountPercent,
-          comp.calcDiscountAmount,
-          r.actualDiscount !== undefined && r.actualDiscount !== null ? r.actualDiscount : '',
-          comp.discountAmount,
-          comp.netBilled,
-          r.paidAmount || 0,
-          `"${formatDateDisplay(r.paymentDate, '')}"`,
           r.creditDays || defaultCreditDays,
+          r.rateMonthly !== undefined ? r.rateMonthly : defaultRateMonthly,
           `"${formatDateDisplay(comp.dueDate, '')}"`,
-          comp.principalOutstanding,
+          `"${timingStr}"`,
+          comp.calcAdjAmount,
+          r.actualAdjustment !== undefined && r.actualAdjustment !== null ? r.actualAdjustment : '',
+          comp.finalBill,
+          `"${formatDateDisplay(r.paymentDate, '')}"`,
+          r.paidAmount || 0,
+          comp.netBalance,
           `"${comp.status}"`,
-          r.interestRate || defaultInterestRate,
-          comp.overdueDays,
-          comp.interestAmount,
-          comp.interestPaid,
-          comp.interestOutstanding,
-          comp.netOutstanding,
           `"${(r.remarks || '').replace(/"/g, '""')}"`
         ];
         csvRows.push(values.join(','));
