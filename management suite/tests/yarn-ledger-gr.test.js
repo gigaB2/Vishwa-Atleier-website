@@ -2176,7 +2176,15 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
         }
       }
 
-      const netBilled = Math.max(0, Number((grandTotal - discountAmount).toFixed(2)));
+      // Actual Discount override handling
+      const actualDiscount = (row.actualDiscount !== undefined && row.actualDiscount !== null && row.actualDiscount !== '')
+        ? Number(row.actualDiscount)
+        : null;
+      const effectiveDiscountAmount = (actualDiscount !== null && !isNaN(actualDiscount))
+        ? actualDiscount
+        : discountAmount;
+
+      const netBilled = Math.max(0, Number((grandTotal - effectiveDiscountAmount).toFixed(2)));
       const principalOutstanding = Math.max(0, Number((netBilled - paid).toFixed(2)));
 
       const ratePct = row.interestRate !== undefined ? Number(row.interestRate) : defaultInterestRate;
@@ -2195,7 +2203,10 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
         daysTaken,
         overdueDays,
         effectiveDiscountPct,
-        discountAmount,
+        calcDiscountAmount: discountAmount,
+        actualDiscount,
+        effectiveDiscountAmount,
+        discountAmount: effectiveDiscountAmount,
         netBilled,
         principalOutstanding,
         interestAmount,
@@ -2242,7 +2253,23 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(day15Result.interestAmount, 0);
     assert.strictEqual(day15Result.netOutstanding, 0);
 
-    // Case 3: Payment on Day 30 (On Due Date -> (30-30)/30 * 1.5% = 0% discount, 0 late interest)
+    // Case 3: Actual Discount Override entered by user (e.g. negotiated flat ₹1,200 discount)
+    const actualDiscOverrideResult = computeRowFinancials({
+      date: billDate,
+      grandTotal,
+      creditDays: 30,
+      discountPercent: 1.5,
+      actualDiscount: 1200,
+      paymentDate: '2026-09-16',
+      paidAmount: 98800 // 100000 - 1200 actual discount = 98800
+    });
+    assert.strictEqual(actualDiscOverrideResult.calcDiscountAmount, 750); // Calculated would be 750
+    assert.strictEqual(actualDiscOverrideResult.actualDiscount, 1200); // User entered 1200
+    assert.strictEqual(actualDiscOverrideResult.discountAmount, 1200); // Used for calculation
+    assert.strictEqual(actualDiscOverrideResult.netBilled, 98800);
+    assert.strictEqual(actualDiscOverrideResult.principalOutstanding, 0);
+
+    // Case 4: Payment on Day 30 (On Due Date -> (30-30)/30 * 1.5% = 0% discount, 0 late interest)
     const day30Result = computeRowFinancials({
       date: billDate,
       grandTotal,
@@ -2259,7 +2286,7 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(day30Result.overdueDays, 0);
     assert.strictEqual(day30Result.interestAmount, 0);
 
-    // Case 4: Payment on Day 45 (15 Days Past Due Date -> 0% discount, 15 days late interest at 18% p.a.)
+    // Case 5: Payment on Day 45 (15 Days Past Due Date -> 0% discount, 15 days late interest at 18% p.a.)
     const day45Result = computeRowFinancials({
       date: billDate,
       grandTotal,
