@@ -1609,6 +1609,53 @@
         justify-content: center;
       }
     }
+
+    /* Issued Box Highlighting in Yarn RM Orders (Matches Yarn Ledger & Stock Book) */
+    .yarn-box-row-issued {
+      background: rgba(59, 130, 246, 0.07) !important;
+      border-left: 3px solid #3b82f6 !important;
+    }
+    .dark-mode .yarn-box-row-issued {
+      background: rgba(59, 130, 246, 0.12) !important;
+      border-left: 3px solid #60a5fa !important;
+    }
+    .gr-badge-issued {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(59, 130, 246, 0.15);
+      color: #2563eb;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      line-height: 1.2;
+    }
+    .dark-mode .gr-badge-issued {
+      color: #60a5fa;
+      background: rgba(59, 130, 246, 0.25);
+      border-color: rgba(96, 165, 250, 0.4);
+    }
+    .gr-issued-legend-pill {
+      font-size: 0.72rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: rgba(59, 130, 246, 0.1);
+      color: #2563eb;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+    .dark-mode .gr-issued-legend-pill {
+      color: #60a5fa;
+      background: rgba(59, 130, 246, 0.18);
+      border-color: rgba(96, 165, 250, 0.35);
+    }
   </style>
 </head>
 <body>
@@ -3779,11 +3826,68 @@
       );
     };
 
+    // Helper: Map and resolve runtime box issue status across Order batches and Yarn RM Stock Book
+    const getStockBoxLookupMap = () => {
+      try {
+        const rawStock = localStorage.getItem(YARN_STOCK_STORAGE_KEY);
+        const stockList = rawStock ? JSON.parse(rawStock) : [];
+        if (!Array.isArray(stockList)) return new Map();
+        const map = new Map();
+        stockList.forEach(lot => {
+          if (!lot || !Array.isArray(lot.boxes)) return;
+          const lId = String(lot.id || '').trim();
+          const lNum = String(lot.lotNumber || '').trim();
+          const lChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+          const bId = String(lot.batchId || '').trim();
+
+          lot.boxes.forEach(b => {
+            if (!b) return;
+            const bNum = String(b.id || b.boxNumber || '').trim();
+            if (!bNum) return;
+            if (lId) map.set(`${lId}__${bNum}`, b);
+            if (bId) map.set(`${bId}__${bNum}`, b);
+            if (lNum && lChallan) map.set(`${lNum}__${lChallan}__${bNum}`, b);
+            if (lNum) map.set(`${lNum}__${bNum}`, b);
+            if (lChallan) map.set(`${lChallan}__${bNum}`, b);
+          });
+        });
+        return map;
+      } catch(e) {
+        return new Map();
+      }
+    };
+
+    const resolveBoxIssueDetails = (batch, box, stockBoxMap) => {
+      if (!box) return { isIssued: false, issueDate: null, issuedTo: null };
+      const bNum = String(box.boxNumber || box.id || '').trim();
+      const bLot = String(batch?.lotNumber || '').trim();
+      const bChallan = String(batch?.challanNumber || '').trim();
+      const bId = String(batch?.id || '').trim();
+
+      let stockBox = null;
+      if (stockBoxMap) {
+        if (bId) stockBox = stockBoxMap.get(`${bId}__${bNum}`);
+        if (!stockBox && bLot && bChallan) stockBox = stockBoxMap.get(`${bLot}__${bChallan}__${bNum}`);
+        if (!stockBox && bLot) stockBox = stockBoxMap.get(`${bLot}__${bNum}`);
+        if (!stockBox && bChallan) stockBox = stockBoxMap.get(`${bChallan}__${bNum}`);
+      }
+
+      const directIssued = (box.status === 'issued') || Boolean((box.issueDate || box.issuedTo || box.previousIssueDate || box.previousIssuedTo) && !box.unissued_at && box.status !== 'gr');
+      const stockIssued = stockBox && ((stockBox.status === 'issued') || Boolean((stockBox.issueDate || stockBox.issuedTo || stockBox.previousIssueDate || stockBox.previousIssuedTo) && !stockBox.unissued_at && stockBox.status !== 'gr'));
+
+      const isIssued = Boolean(directIssued || stockIssued);
+      const issueDate = box.issueDate || stockBox?.issueDate || box.previousIssueDate || stockBox?.previousIssueDate || null;
+      const issuedTo = box.issuedTo || stockBox?.issuedTo || box.previousIssuedTo || stockBox?.previousIssuedTo || null;
+
+      return { isIssued, issueDate, issuedTo };
+    };
+
     // Component: Order Details Modal (Exact replica of order-book.html with editable specifications & rate)
     const OrderDetailsModal = ({ order, onClose, onUpdate, onComplete, onRevertActive, qualities, suppliers, geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
       const [showBatchForm, setShowBatchForm] = useState(false);
       const [editingBatch, setEditingBatch] = useState(null);
       const [orderSavedToast, setOrderSavedToast] = useState(false);
+      const stockBoxMap = useMemo(() => getStockBoxLookupMap(), [order.id, order.batches]);
 
       // Order editing form state
       const [orderForm, setOrderForm] = useState({
@@ -4513,8 +4617,14 @@
             </div>
 
             <div style={{marginTop: '2rem'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
-                <h3>Received Batches</h3>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem'}}>
+                <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap'}}>
+                  <h3 style={{margin: 0}}>Received Batches</h3>
+                  <span className="gr-issued-legend-pill" title="Boxes highlighted in blue have already been issued to production floor">
+                    <span style={{width: '7px', height: '7px', borderRadius: '50%', background: '#3b82f6', display: 'inline-block'}}></span>
+                    Blue = Already Issued
+                  </span>
+                </div>
                 {order.status === 'Active' && (
                   <button className="btn btn-primary" onClick={() => { setEditingBatch(null); setShowBatchForm(true); }}>
                     + Add Batch
@@ -4531,6 +4641,7 @@
                   geminiApiKey={geminiApiKey}
                   selectedGeminiModel={selectedGeminiModel}
                   onOpenSettings={onOpenSettings}
+                  stockBoxMap={stockBoxMap}
                 />
               )}
 
@@ -4547,6 +4658,9 @@
                     const conesTotal = (b.boxes || []).reduce((acc, box) => acc + (Number(box.cones) || 0), 0);
                     const netTotal = getBatchNet(b);
                     const boxCount = b.boxes?.length || 0;
+                    const issuedBoxes = (b.boxes || []).filter(bx => resolveBoxIssueDetails(b, bx, stockBoxMap).isIssued);
+                    const issuedCount = issuedBoxes.length;
+                    const issuedWeight = issuedBoxes.reduce((acc, bx) => acc + (Number(bx.weight) || 0), 0);
 
                     return (
                       <div key={`batch-mob-${b.id || bIdx}`} className="yarn-mobile-card" style={{ borderLeft: grTotal > 0 ? '5px solid var(--accent3)' : '5px solid var(--success)' }}>
@@ -4567,6 +4681,11 @@
                             </div>
                           </div>
                           <div className="mobile-card-badges">
+                            {issuedCount > 0 && (
+                              <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#2563eb', border: '1px solid rgba(59, 130, 246, 0.35)', fontWeight: 700 }}>
+                                {issuedCount} Issued
+                              </span>
+                            )}
                             {grTotal > 0 ? (
                               <span className="badge badge-gr">GR Active</span>
                             ) : (
@@ -4601,6 +4720,14 @@
                               {grTotal > 0 ? `${grTotal.toFixed(2)} kg` : '0.00 kg'}
                             </span>
                           </div>
+                          {issuedCount > 0 && (
+                            <div className="mobile-card-field" style={{ gridColumn: 'span 2' }}>
+                              <span className="mobile-field-label" style={{ color: '#2563eb' }}>Floor Issued</span>
+                              <span className="mobile-field-value" style={{ color: '#2563eb', fontWeight: 700 }}>
+                                {issuedCount} box{issuedCount !== 1 ? 'es' : ''} ({issuedWeight.toFixed(2)} kg)
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="mobile-card-footer">
@@ -4672,8 +4799,15 @@
 
                         return (
                           <React.Fragment key={b.id}>
-                            {boxList.map((box, idx) => (
-                              <tr key={`${b.id}-${idx}`}>
+                            {boxList.map((box, idx) => {
+                              const issueInfo = resolveBoxIssueDetails(b, box, stockBoxMap);
+                              const isIssued = issueInfo.isIssued;
+                              const issueTooltip = issueInfo.issuedTo 
+                                ? (issueInfo.issueDate ? `Issued to ${issueInfo.issuedTo} on ${new Date(issueInfo.issueDate).toLocaleDateString('en-GB')}` : `Issued to ${issueInfo.issuedTo}`)
+                                : (issueInfo.issueDate ? `Issued on ${new Date(issueInfo.issueDate).toLocaleDateString('en-GB')}` : 'Already Issued to Production');
+
+                              return (
+                              <tr key={`${b.id}-${idx}`} className={isIssued ? 'yarn-box-row-issued' : ''} style={isIssued ? { background: 'rgba(59, 130, 246, 0.07)' } : undefined}>
                                 {idx === 0 && (
                                   <React.Fragment>
                                     <td rowSpan={rowCount + 1}>{new Date(b.receiveDate).toLocaleDateString('en-GB')}</td>
@@ -4690,9 +4824,25 @@
                                     <td rowSpan={rowCount + 1}><span style={{fontFamily: 'var(--font-mono)'}}>{b.lotNumber || '-'}</span></td>
                                   </React.Fragment>
                                 )}
-                                <td style={{fontWeight: '600'}}>{box.boxNumber}</td>
-                                <td>{box.cones || '-'}</td>
-                                <td>{Number(box.weight || 0).toFixed(2)}</td>
+                                <td style={{fontWeight: '600'}}>
+                                  <div style={{display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap'}}>
+                                    <span style={{fontFamily: 'var(--font-mono)', color: isIssued ? '#2563eb' : 'inherit', fontWeight: '700'}}>
+                                      {box.boxNumber}
+                                    </span>
+                                    {isIssued && (
+                                      <span className="gr-badge-issued" title={issueTooltip}>
+                                        Issued
+                                      </span>
+                                    )}
+                                  </div>
+                                  {isIssued && (issueInfo.issuedTo || issueInfo.issueDate) && (
+                                    <div style={{fontSize: '0.68rem', color: '#2563eb', opacity: 0.9, marginTop: '2px', fontWeight: '600', lineHeight: 1.1}}>
+                                      {issueInfo.issuedTo || 'Floor'}{issueInfo.issueDate ? ` • ${new Date(issueInfo.issueDate).toLocaleDateString('en-GB')}` : ''}
+                                    </div>
+                                  )}
+                                </td>
+                                <td style={{color: isIssued ? '#2563eb' : 'inherit', fontWeight: isIssued ? '600' : 'normal'}}>{box.cones || '-'}</td>
+                                <td style={{color: isIssued ? '#2563eb' : 'inherit', fontWeight: isIssued ? '700' : 'normal'}}>{Number(box.weight || 0).toFixed(2)}</td>
                                 <td style={{color: 'var(--error)', fontWeight: '600'}}>{calcGRCones(box) || '-'}</td>
                                 <td style={{color: Number(box.returnedWeight) > 0 ? 'var(--error)' : 'inherit', fontWeight: Number(box.returnedWeight) > 0 ? '700' : 'normal'}}>
                                   {Number(box.returnedWeight) > 0 ? Number(box.returnedWeight).toFixed(2) : '0.00'}
@@ -4708,7 +4858,8 @@
                                   </td>
                                 )}
                               </tr>
-                            ))}
+                            );
+                            })}
                             <tr key={`${b.id}-total`} style={{background: 'var(--bg)', fontWeight: '700', fontSize: '0.85rem', borderTop: '2px solid var(--border)'}}>
                               <td style={{color: 'var(--muted)', textAlign: 'right', paddingRight: '1rem'}}>BATCH TOTAL</td>
                               <td>{conesTotal || '-'}</td>
@@ -4765,7 +4916,9 @@
     };
 
     // Component: Batch Form with AI Scan & Mobile QR Upload
-    const BatchForm = ({ order, onCancel, onSubmit, initialData, geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
+    const BatchForm = ({ order, onCancel, onSubmit, initialData, geminiApiKey, selectedGeminiModel, onOpenSettings, stockBoxMap }) => {
+      const activeStockBoxMap = useMemo(() => stockBoxMap || getStockBoxLookupMap(), [stockBoxMap]);
+
       const getInitialBoxes = (data) => {
         if (data?.boxes && data.boxes.length > 0) {
           return data.boxes.map(b => ({
@@ -4783,6 +4936,10 @@
       const [boxInputs, setBoxInputs] = useState(() => getInitialBoxes(initialData));
       const [error, setError] = useState(null);
       const [invalidFields, setInvalidFields] = useState({});
+
+      const hasIssuedBoxes = useMemo(() => {
+        return (boxInputs || []).some(b => resolveBoxIssueDetails(initialData, b, activeStockBoxMap).isIssued);
+      }, [boxInputs, initialData, activeStockBoxMap]);
       const [isScanning, setIsScanning] = useState(false);
       const [scanProgress, setScanProgress] = useState(0);
       const [scanStage, setScanStage] = useState('');
@@ -5359,6 +5516,25 @@
             </div>
           </div>
           
+          {hasIssuedBoxes && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 12px',
+              marginBottom: '1rem',
+              borderRadius: '8px',
+              background: 'rgba(59, 130, 246, 0.08)',
+              border: '1px solid rgba(59, 130, 246, 0.25)',
+              fontSize: '0.8rem',
+              color: '#2563eb',
+              fontWeight: '600'
+            }}>
+              <span className="gr-badge-issued">Issued</span>
+              <span>Boxes highlighted in blue have already been issued to the production floor.</span>
+            </div>
+          )}
+
           <div style={{display: 'grid', gridTemplateColumns: '1fr 0.8fr 1fr 1fr 1.5fr auto', gap: '0.5rem', marginBottom: '0.5rem', padding: '0 0.5rem'}}>
             <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--muted)'}}>BOX NUMBER</div>
             <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--muted)'}}>IN CONES</div>
@@ -5368,17 +5544,52 @@
             <div style={{width: '32px'}}></div>
           </div>
 
-          {boxInputs.map((box, i) => (
-            <div key={i} style={{display: 'grid', gridTemplateColumns: '1fr 0.8fr 1fr 1fr 1.5fr auto', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center'}}>
-              <input type="text" value={box.boxNumber} onChange={e => { let n = [...boxInputs]; n[i] = { ...n[i], boxNumber: e.target.value }; setBoxInputs(n); }} />
-              <input type="number" step="1" min="0" style={inputStyle(invalidFields[`cones-${i}`])} placeholder="Cones" value={box.cones} onChange={e => { 
+          {boxInputs.map((box, i) => {
+            const issueInfo = resolveBoxIssueDetails(initialData, box, activeStockBoxMap);
+            const isIssued = issueInfo.isIssued;
+
+            return (
+            <div key={i} style={{
+              display: 'grid', 
+              gridTemplateColumns: '1fr 0.8fr 1fr 1fr 1.5fr auto', 
+              gap: '0.5rem', 
+              marginBottom: '0.5rem', 
+              alignItems: 'center',
+              background: isIssued ? 'rgba(59, 130, 246, 0.07)' : 'transparent',
+              padding: isIssued ? '0.35rem 0.5rem' : '0 0.5rem',
+              borderRadius: '8px',
+              borderLeft: isIssued ? '3px solid #3b82f6' : '3px solid transparent'
+            }}>
+              <div>
+                <input 
+                  type="text" 
+                  value={box.boxNumber} 
+                  style={{
+                    ...(isIssued ? { borderColor: 'rgba(59, 130, 246, 0.45)', color: '#2563eb', fontWeight: '700' } : {})
+                  }}
+                  onChange={e => { let n = [...boxInputs]; n[i] = { ...n[i], boxNumber: e.target.value }; setBoxInputs(n); }} 
+                />
+                {isIssued && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', flexWrap: 'wrap' }}>
+                    <span className="gr-badge-issued" title={issueInfo.issuedTo ? `Issued to ${issueInfo.issuedTo}` : 'Already Issued to Floor'}>
+                      Issued
+                    </span>
+                    {(issueInfo.issuedTo || issueInfo.issueDate) && (
+                      <span style={{ fontSize: '0.68rem', color: '#2563eb', fontWeight: '600' }}>
+                        {issueInfo.issuedTo || 'Floor'}{issueInfo.issueDate ? ` (${issueInfo.issueDate.split('T')[0]})` : ''}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <input type="number" step="1" min="0" style={{ ...inputStyle(invalidFields[`cones-${i}`]), ...(isIssued ? { borderColor: 'rgba(59, 130, 246, 0.3)', color: '#2563eb' } : {}) }} placeholder="Cones" value={box.cones} onChange={e => { 
                 let val = e.target.value;
                 if (val !== '' && Number(val) < 0) return;
                 let n = [...boxInputs]; 
                 n[i] = { ...n[i], cones: val }; 
                 setBoxInputs(n); 
               }} />
-              <input type="number" min="0" style={inputStyle(invalidFields[`weight-${i}`])} placeholder="Weight" value={box.weight} onChange={e => { 
+              <input type="number" min="0" style={{ ...inputStyle(invalidFields[`weight-${i}`]), ...(isIssued ? { borderColor: 'rgba(59, 130, 246, 0.3)', color: '#2563eb', fontWeight: '700' } : {}) }} placeholder="Weight" value={box.weight} onChange={e => { 
                 let val = e.target.value;
                 if (val !== '' && Number(val) < 0) return;
                 let n = [...boxInputs]; 
@@ -5407,7 +5618,8 @@
                 ✖
               </button>
             </div>
-          ))}
+            );
+          })}
           
           <button type="button" className="btn btn-outline" style={{width: '100%', marginTop: '0.5rem'}} onClick={() => setBoxInputs([...boxInputs, { boxNumber: `B${boxInputs.length + 1}`, cones: '', weight: '', returnedWeight: '', returnedDate: '' }])}>
             + Add Box
