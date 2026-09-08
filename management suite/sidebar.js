@@ -3245,6 +3245,9 @@
                             document.title.toLowerCase().includes('stock dashboard')
                           ));
 
+    const isYarnLedger = window.location.href.includes('yarn-ledger') || 
+                         (document.title && document.title.toLowerCase().includes('yarn ledger'));
+
     function formatNumber(numStr, decimals = 2) {
       const cleanNumStr = numStr.replace(/,/g, '');
       const num = parseFloat(cleanNumStr);
@@ -3259,11 +3262,12 @@
       let changed = false;
 
       // Pattern 1: currency symbol / text followed by a number (including commas)
+      const rsDecimals = isYarnLedger ? 2 : 1;
       const newText1 = text.replace(/(₹|Rs\.?|rs\.?)\s*((?:\d{1,3}(?:,\d{2,3})+|\d+)(?:\.\d+)?)/gi, (match, prefix, num) => {
         changed = true;
         let cleanPrefix = prefix;
         if (/Rs\.?/i.test(prefix)) cleanPrefix = 'Rs.';
-        return cleanPrefix + ' ' + formatNumber(num, 1);
+        return cleanPrefix + ' ' + formatNumber(num, rsDecimals);
       });
 
       // Pattern 2: number followed by weight unit (including commas) - 2 decimal places for yarn production & weights

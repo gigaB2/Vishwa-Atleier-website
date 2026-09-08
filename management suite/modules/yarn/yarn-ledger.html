@@ -1,268 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -997,8 +732,43 @@
 
     .excel-table th.is-sorted {
       color: var(--accent) !important;
-      background: rgba(124, 58, 237, 0.08) !important;
+      background: #f5f3ff !important;
+      background-color: #f5f3ff !important;
       border-bottom-color: var(--accent) !important;
+      opacity: 1 !important;
+    }
+
+    body.dark-mode .excel-table th.is-sorted,
+    .dark-mode .excel-table th.is-sorted {
+      color: var(--accent-light) !important;
+      background: #181126 !important;
+      background-color: #181126 !important;
+      border-bottom-color: var(--accent) !important;
+      opacity: 1 !important;
+    }
+
+    .excel-table th.sortable.is-sorted:hover {
+      background: #ede9fe !important;
+      background-color: #ede9fe !important;
+    }
+
+    body.dark-mode .excel-table th.sortable.is-sorted:hover,
+    .dark-mode .excel-table th.sortable.is-sorted:hover {
+      background: #23163a !important;
+      background-color: #23163a !important;
+    }
+
+    .th-freeze-pinned.is-sorted {
+      background: #f5f3ff !important;
+      background-color: #f5f3ff !important;
+      opacity: 1 !important;
+    }
+
+    body.dark-mode .th-freeze-pinned.is-sorted,
+    .dark-mode .th-freeze-pinned.is-sorted {
+      background: #181126 !important;
+      background-color: #181126 !important;
+      opacity: 1 !important;
     }
 
     .excel-table th.is-sorted .th-sort-indicator {
@@ -3351,6 +3121,51 @@
       return false;
     }
 
+    // Format Currency (₹) strictly with 2 decimal places
+    function formatCurrency(num) {
+      if (num === undefined || num === null || num === '' || isNaN(Number(num))) {
+        return '₹ 0.00';
+      }
+      let val = Number(num);
+      if (Math.abs(val) <= 0.0001) {
+        val = 0;
+      }
+      return '₹ ' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Format Date to DD/MM/YYYY
+    function formatDateDisplay(dStr, fallback = '-') {
+      if (!dStr) return fallback;
+      try {
+        const clean = String(dStr).split('T')[0].trim();
+        const parts = clean.split('-');
+        if (parts.length === 3 && parts[0].length === 4) {
+          return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+        }
+        if (clean.includes('/')) return clean;
+      } catch (e) {}
+      return dStr || fallback;
+    }
+
+    // Date math: add days to a date string YYYY-MM-DD
+    function addDays(dateStr, days) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() + Number(days || 0));
+      return d.toISOString().split('T')[0];
+    }
+
+    // Calculate Days Between two dates
+    function daysBetween(fromStr, toStr) {
+      if (!fromStr || !toStr) return 0;
+      const d1 = new Date(fromStr);
+      const d2 = new Date(toStr);
+      if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
+      const diffTime = d2.getTime() - d1.getTime();
+      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    }
+
     // Data Storage for Ledgers
     let ledgerData = {
       sales: [],
@@ -4153,6 +3968,15 @@
         ledgerData.sales = mergeLedgerDatasets(ledgerData.sales, Array.isArray(cloudSales) ? cloudSales : []);
         ledgerData.purchase = mergeLedgerDatasets(ledgerData.purchase, Array.isArray(cloudPurchase) ? cloudPurchase : []);
 
+        // Clear auto-synced details from remarks / cheque number so it remains clean and empty for user entry
+        ['sales', 'purchase'].forEach(tab => {
+          (ledgerData[tab] || []).forEach(r => {
+            if (r && r.remarks && (r.remarks.startsWith('Auto-synced') || r.remarks.includes('Auto-synced'))) {
+              r.remarks = '';
+            }
+          });
+        });
+
         // 3. Source Sync (Orders & Sales Logs)
         let syncAdded = 0;
         let syncUpdated = 0;
@@ -4302,13 +4126,16 @@
                     discountPercent: defaultDiscountPercent,
                     interestRate: defaultInterestRate,
                     interestPaid: 0,
-                    remarks: totalGrQty > 0 ? `Auto-synced from RM Order #${orderNumber} (-${totalGrQty.toFixed(2)} Kg GR deducted)` : `Auto-synced from Yarn RM Order #${orderNumber}`,
+                    remarks: '',
                     isManual: false,
                     created_at: nowIso,
                     updated_at: nowIso
                   });
                   syncAdded++;
                 } else {
+                  if (existingRow.remarks && (existingRow.remarks.startsWith('Auto-synced') || existingRow.remarks.includes('Auto-synced'))) {
+                    existingRow.remarks = '';
+                  }
                   const oldRate = existingRow.rate;
                   const oldQty = existingRow.qty;
                   const oldGrQty = existingRow.grQty;
@@ -4424,13 +4251,16 @@
                   discountPercent: defaultDiscountPercent,
                   interestRate: defaultInterestRate,
                   interestPaid: 0,
-                  remarks: `Auto-synced from ${div.toUpperCase()} Sales`,
+                  remarks: '',
                   isManual: false,
                   created_at: nowIso,
                   updated_at: nowIso
                 });
                 syncAdded++;
               } else if (existingRow) {
+                if (existingRow.remarks && (existingRow.remarks.startsWith('Auto-synced') || existingRow.remarks.includes('Auto-synced'))) {
+                  existingRow.remarks = '';
+                }
                 if (!existingRow.id || existingRow.id.startsWith('SAL-1') || existingRow.id.length > 30) {
                   existingRow.id = deterministicId;
                 }
@@ -5004,16 +4834,16 @@
         }
       };
 
-      updateFieldInput('grossQty', row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0)));
-      updateFieldInput('grQty', row.grQty || 0);
-      updateFieldInput('qty', row.qty || 0);
-      updateFieldInput('rate', row.rate || 0);
+      updateFieldInput('grossQty', row.grossQty !== undefined ? (Number(row.grossQty).toFixed(2)) : (Number(row.qty || 0) + Number(row.grQty || 0)).toFixed(2));
+      updateFieldInput('grQty', row.grQty !== undefined && row.grQty !== null ? Number(row.grQty).toFixed(2) : '0.00');
+      updateFieldInput('qty', row.qty !== undefined && row.qty !== null ? Number(row.qty).toFixed(2) : '0.00');
+      updateFieldInput('rate', row.rate !== undefined && row.rate !== null ? Number(row.rate).toFixed(2) : '0.00');
       updateFieldInput('gstPercent', row.gstPercent !== undefined ? row.gstPercent : 5.0);
       updateFieldInput('creditDays', row.creditDays || defaultCreditDays);
       updateFieldInput('rateMonthly', row.rateMonthly !== undefined ? row.rateMonthly : defaultRateMonthly);
-      updateFieldInput('actualAdjustment', (row.actualAdjustment !== undefined && row.actualAdjustment !== null) ? row.actualAdjustment : (row.actualDiscount !== undefined && row.actualDiscount !== null ? -Math.abs(row.actualDiscount) : ''), comp.calcAdjAmount !== 0 ? comp.calcAdjAmount.toFixed(2) : '0.00');
-      updateFieldInput('roundOff', (row.roundOff !== undefined && row.roundOff !== null) ? row.roundOff : '', '0.00');
-      updateFieldInput('paidAmount', row.paidAmount || 0);
+      updateFieldInput('actualAdjustment', (row.actualAdjustment !== undefined && row.actualAdjustment !== null) ? Number(row.actualAdjustment).toFixed(2) : (row.actualDiscount !== undefined && row.actualDiscount !== null ? (-Math.abs(row.actualDiscount)).toFixed(2) : ''), comp.calcAdjAmount !== 0 ? comp.calcAdjAmount.toFixed(2) : '0.00');
+      updateFieldInput('roundOff', (row.roundOff !== undefined && row.roundOff !== null && row.roundOff !== '') ? Number(row.roundOff).toFixed(2) : '', '0.00');
+      updateFieldInput('paidAmount', row.paidAmount !== undefined && row.paidAmount !== null ? Number(row.paidAmount).toFixed(2) : '0.00');
       updateFieldInput('paymentDate', row.paymentDate || '');
       updateFieldInput('remarks', row.remarks || '');
       updateFieldInput('quality', row.quality || '');
@@ -5043,16 +4873,16 @@
       const elSubtotal = tr.querySelector('.col-val-subtotal');
       if (elSubtotal) {
         elSubtotal.innerHTML = `
-          <div>${formatCurrency(row.subtotal)}</div>
+          <div>${formatCurrency(comp.subtotal)}</div>
           ${Number(row.grQty) > 0 
-            ? `<div style="font-size: 0.7rem; color: var(--accent3); font-weight: 700; letter-spacing: -0.01em;" title="Goods Return Deducted Amount">(-${formatCurrency(row.grAmount || (row.grQty * row.rate))} GR)</div>` 
+            ? `<div style="font-size: 0.7rem; color: var(--accent3); font-weight: 700; letter-spacing: -0.01em;" title="Goods Return Deducted Amount">(-${formatCurrency(comp.grAmount || (row.grQty * (row.rate || 0)))} GR)</div>` 
             : ''
           }
         `;
       }
 
       const elGrandTotal = tr.querySelector('.col-val-grandtotal');
-      if (elGrandTotal) elGrandTotal.textContent = formatCurrency(row.grandTotal);
+      if (elGrandTotal) elGrandTotal.textContent = formatCurrency(comp.grandTotal);
 
       const elDueDate = tr.querySelector('.col-val-due-date');
       if (elDueDate) elDueDate.textContent = formatDateDisplay(comp.dueDate);
@@ -5178,14 +5008,14 @@
       const kpiSettled = document.getElementById('kpi-val-total-settled');
       if (kpiSettled) kpiSettled.textContent = formatCurrency(totalSettled);
       const targetBilled = totalFinalBill || totalBilled;
-      const recoveryPct = targetBilled > 0 ? ((totalSettled / targetBilled) * 100).toFixed(1) : 0;
+      const recoveryPct = targetBilled > 0 ? ((totalSettled / targetBilled) * 100).toFixed(2) : '0.00';
       const kpiSubSettled = document.getElementById('kpi-sub-total-settled');
       if (kpiSubSettled) kpiSubSettled.textContent = `${recoveryPct}% collected / paid`;
 
       const kpiOutstanding = document.getElementById('kpi-val-total-outstanding');
       if (kpiOutstanding) kpiOutstanding.textContent = formatCurrency(totalNetBalance);
       const kpiSubOutstanding = document.getElementById('kpi-sub-total-outstanding');
-      if (kpiSubOutstanding) kpiSubOutstanding.textContent = `${((totalNetBalance / (targetBilled || 1)) * 100).toFixed(1)}% remaining balance`;
+      if (kpiSubOutstanding) kpiSubOutstanding.textContent = `${((totalNetBalance / (targetBilled || 1)) * 100).toFixed(2)}% remaining balance`;
 
       const kpiInterest = document.getElementById('kpi-val-total-interest');
       if (kpiInterest) kpiInterest.textContent = formatCurrency(totalInterest);
@@ -5242,28 +5072,24 @@
       renderActiveFilterChips();
     }
 
-    // Date math: add days to a date string YYYY-MM-DD
-    function addDays(dateStr, days) {
-      if (!dateStr) return '';
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return '';
-      d.setDate(d.getDate() + Number(days || 0));
-      return d.toISOString().split('T')[0];
-    }
-
-    // Calculate Days Between two dates
-    function daysBetween(fromStr, toStr) {
-      if (!fromStr || !toStr) return 0;
-      const d1 = new Date(fromStr);
-      const d2 = new Date(toStr);
-      if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
-      const diffTime = d2.getTime() - d1.getTime();
-      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    }
-
     // Compute Calculated Metrics for a Row with Unified Monthly Rate, Merged Discount/Interest & Total Payment Model
     function computeRowFinancials(row) {
-      const grandTotal = Number(row.grandTotal) || 0;
+      const grQty = Number(row.grQty) || 0;
+      const grossQty = (row.grossQty !== undefined && row.grossQty !== null && row.grossQty !== '') ? Number(row.grossQty) : (Number(row.qty || 0) + grQty);
+      const qty = Math.max(0, Number((row.qty !== undefined && row.qty !== null && row.qty !== '') ? row.qty : (grossQty - grQty)));
+      const rate = Number(row.rate) || 0;
+      const gstPercent = (row.gstPercent !== undefined && row.gstPercent !== null && row.gstPercent !== '') ? Number(row.gstPercent) : 5.0;
+
+      const grossAmount = Number((grossQty * rate).toFixed(2));
+      const grAmount = Number((grQty * rate).toFixed(2));
+      const subtotal = (row.subtotal !== undefined && row.subtotal !== null && row.subtotal !== '' && Number(row.subtotal) > 0)
+        ? Number(Number(row.subtotal).toFixed(2))
+        : Number((qty * rate).toFixed(2));
+      const gstAmount = Number(((subtotal * gstPercent) / 100).toFixed(2));
+      const grandTotal = (row.grandTotal !== undefined && row.grandTotal !== null && row.grandTotal !== '' && Number(row.grandTotal) > 0)
+        ? Number(Number(row.grandTotal).toFixed(2))
+        : Number((subtotal + gstAmount).toFixed(2));
+
       const paid = Number(row.paidAmount) || 0;
       const creditDays = Number(row.creditDays) || defaultCreditDays;
       const dueDate = addDays(row.date, creditDays);
@@ -5366,6 +5192,14 @@
       }
 
       return {
+        grossQty,
+        qty,
+        grossAmount,
+        grAmount,
+        subtotal,
+        gstPercent,
+        gstAmount,
+        grandTotal,
         dueDate,
         rateMonthly,
         daysTaken,
@@ -5391,34 +5225,8 @@
       };
     }
 
-    // Format Currency (₹) strictly with 2 decimal places
-    function formatCurrency(num) {
-      let val = Number(num);
-      if (isNaN(val) || Math.abs(val) <= 0.005) {
-        val = 0;
-      }
-      return '₹ ' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    // Format Date to DD/MM/YYYY
-    function formatDateDisplay(dStr, fallback = '-') {
-      if (!dStr) return fallback;
-      try {
-        const clean = String(dStr).split('T')[0].trim();
-        const parts = clean.split('-');
-        if (parts.length === 3 && parts[0].length === 4) {
-          return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
-        }
-        if (clean.includes('/')) return clean;
-      } catch (e) {}
-      return dStr || fallback;
-    }
-
-    // Render Main Spreadsheet Table & KPI Metrics
-    function renderTable(rebuildFocus = true) {
-      const tbody = document.getElementById('excel-table-body');
-      if (!tbody) return;
-
+    // Get filtered and sorted rows for the current tab
+    function getFilteredRows() {
       const search = (document.getElementById('sheet-search')?.value || '').toLowerCase().trim();
       const partyFilter = document.getElementById('filter-party')?.value || 'all';
       const qualityFilter = document.getElementById('filter-quality')?.value || 'all';
@@ -5426,26 +5234,6 @@
       const fromDate = document.getElementById('filter-from-date')?.value || '';
       const toDate = document.getElementById('filter-to-date')?.value || '';
 
-      // Capture currently focused element before re-rendering
-      const activeEl = document.activeElement;
-      let focusedRowId = null;
-      let focusedField = null;
-      let selStart = null;
-      let selEnd = null;
-
-      if (activeEl && tbody.contains(activeEl)) {
-        const tr = activeEl.closest('tr');
-        if (tr && tr.id && tr.id.startsWith('ledger-row-')) {
-          focusedRowId = tr.id.replace('ledger-row-', '');
-          focusedField = activeEl.dataset.field || '';
-          try {
-            selStart = activeEl.selectionStart;
-            selEnd = activeEl.selectionEnd;
-          } catch(e) {}
-        }
-      }
-
-      // Filter Current Active Ledger
       let rows = (ledgerData[activeTab] || []).filter(row => {
         if (!row) return false;
 
@@ -5489,6 +5277,35 @@
 
       // Dynamic Multi-Column Sort
       rows.sort(compareLedgerRows);
+      return rows;
+    }
+
+    // Render Main Spreadsheet Table & KPI Metrics
+    function renderTable(rebuildFocus = true) {
+      const tbody = document.getElementById('excel-table-body');
+      if (!tbody) return;
+
+      // Capture currently focused element before re-rendering
+      const activeEl = document.activeElement;
+      let focusedRowId = null;
+      let focusedField = null;
+      let selStart = null;
+      let selEnd = null;
+
+      if (activeEl && tbody.contains(activeEl)) {
+        const tr = activeEl.closest('tr');
+        if (tr && tr.id && tr.id.startsWith('ledger-row-')) {
+          focusedRowId = tr.id.replace('ledger-row-', '');
+          focusedField = activeEl.dataset.field || '';
+          try {
+            selStart = activeEl.selectionStart;
+            selEnd = activeEl.selectionEnd;
+          } catch(e) {}
+        }
+      }
+
+      // Filter and Sort Current Active Ledger
+      const rows = getFilteredRows();
 
       // Update Sort Indicators & Visual Highlighting in Header
       const allSortThs = document.querySelectorAll('th.sortable');
@@ -5512,47 +5329,60 @@
 
       // Calculate KPI Aggregates
       let totalBilled = 0;
+      let totalFinalBill = 0;
       let totalSettled = 0;
-      let totalPrincipalOutstanding = 0;
+      let totalDiscounts = 0;
       let totalInterest = 0;
-      let totalInterestPaid = 0;
-      let totalNetOutstanding = 0;
+      let totalNetBalance = 0;
       let overdueCount = 0;
+      let totalGrossWeight = 0;
       let totalWeight = 0;
+      let totalGrWeight = 0;
+      let totalGrAmount = 0;
 
       rows.forEach(row => {
         const computed = computeRowFinancials(row);
         totalBilled += Number(row.grandTotal) || 0;
-        totalSettled += (Number(row.paidAmount) || 0) + (Number(row.interestPaid) || 0);
-        totalPrincipalOutstanding += computed.principalOutstanding;
-        totalInterest += computed.interestAmount;
-        totalInterestPaid += computed.interestPaid;
-        totalNetOutstanding += computed.netOutstanding;
+        totalFinalBill += computed.finalBill;
+        totalSettled += Number(row.paidAmount) || 0;
+        if (computed.effectiveAdjAmount < 0) {
+          totalDiscounts += Math.abs(computed.effectiveAdjAmount);
+        } else if (computed.effectiveAdjAmount > 0) {
+          totalInterest += computed.effectiveAdjAmount;
+        }
+        if (computed.netBalance > 0) {
+          totalNetBalance += computed.netBalance;
+        }
+        const gw = Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))) || 0;
+        totalGrossWeight += gw;
         totalWeight += Number(row.qty) || 0;
+        totalGrWeight += Number(row.grQty) || 0;
+        totalGrAmount += Number(row.grAmount || (row.grQty * row.rate)) || 0;
         if (computed.status === 'overdue' || computed.status === 'int-due') overdueCount++;
       });
 
       // Update KPI Cards
       const kpiBilled = document.getElementById('kpi-val-total-billed');
-      if (kpiBilled) kpiBilled.textContent = formatCurrency(totalBilled);
+      if (kpiBilled) kpiBilled.textContent = formatCurrency(totalFinalBill || totalBilled);
       const kpiSubBilled = document.getElementById('kpi-sub-total-billed');
-      if (kpiSubBilled) kpiSubBilled.textContent = `${rows.length} transactions`;
+      if (kpiSubBilled) kpiSubBilled.textContent = totalGrWeight > 0 ? `${rows.length} txns (incl. -${totalGrWeight.toFixed(2)} Kg GR)` : `${rows.length} transactions`;
 
       const kpiSettled = document.getElementById('kpi-val-total-settled');
       if (kpiSettled) kpiSettled.textContent = formatCurrency(totalSettled);
-      const recoveryPct = totalBilled > 0 ? ((totalSettled / totalBilled) * 100).toFixed(1) : 0;
+      const targetBilled = totalFinalBill || totalBilled;
+      const recoveryPct = targetBilled > 0 ? ((totalSettled / targetBilled) * 100).toFixed(2) : '0.00';
       const kpiSubSettled = document.getElementById('kpi-sub-total-settled');
-      if (kpiSubSettled) kpiSubSettled.textContent = `${recoveryPct}% settled (incl. interest)`;
+      if (kpiSubSettled) kpiSubSettled.textContent = `${recoveryPct}% collected / paid`;
 
       const kpiOutstanding = document.getElementById('kpi-val-total-outstanding');
-      if (kpiOutstanding) kpiOutstanding.textContent = formatCurrency(totalPrincipalOutstanding);
+      if (kpiOutstanding) kpiOutstanding.textContent = formatCurrency(totalNetBalance);
       const kpiSubOutstanding = document.getElementById('kpi-sub-total-outstanding');
-      if (kpiSubOutstanding) kpiSubOutstanding.textContent = `${((totalPrincipalOutstanding / (totalBilled || 1)) * 100).toFixed(1)}% unpaid`;
+      if (kpiSubOutstanding) kpiSubOutstanding.textContent = `${((totalNetBalance / (targetBilled || 1)) * 100).toFixed(2)}% remaining balance`;
 
       const kpiInterest = document.getElementById('kpi-val-total-interest');
       if (kpiInterest) kpiInterest.textContent = formatCurrency(totalInterest);
       const kpiSubInterest = document.getElementById('kpi-sub-total-interest');
-      if (kpiSubInterest) kpiSubInterest.textContent = calculateInterest ? `Settled: ${formatCurrency(totalInterestPaid)}` : 'Disabled';
+      if (kpiSubInterest) kpiSubInterest.textContent = calculateInterest ? `Discounts: -${formatCurrency(totalDiscounts)}` : 'Disabled';
 
       const kpiOverdue = document.getElementById('kpi-val-overdue-count');
       if (kpiOverdue) kpiOverdue.textContent = overdueCount;
@@ -5562,18 +5392,43 @@
       // Update Footer Stats
       const statRowCount = document.getElementById('stat-row-count');
       if (statRowCount) statRowCount.textContent = rows.length;
+      const statGross = document.getElementById('stat-total-gross');
+      if (statGross) statGross.textContent = `${totalGrossWeight.toFixed(2)} Kg`;
       const statWeight = document.getElementById('stat-total-weight');
       if (statWeight) statWeight.textContent = `${totalWeight.toFixed(2)} Kg`;
+
+      const statGrWrap = document.getElementById('stat-gr-wrapper');
+      const statGrVal = document.getElementById('stat-total-gr');
+      if (statGrWrap && statGrVal) {
+        if (totalGrWeight > 0) {
+          statGrWrap.style.display = 'flex';
+          statGrVal.textContent = `-${totalGrWeight.toFixed(2)} Kg`;
+        } else {
+          statGrWrap.style.display = 'none';
+        }
+      }
+
+      const statDiscWrap = document.getElementById('stat-discount-wrapper');
+      const statDiscVal = document.getElementById('stat-total-discount');
+      if (statDiscWrap && statDiscVal) {
+        if (totalDiscounts > 0) {
+          statDiscWrap.style.display = 'flex';
+          statDiscVal.textContent = `-${formatCurrency(totalDiscounts)}`;
+        } else {
+          statDiscWrap.style.display = 'none';
+        }
+      }
+
       const statInvoiced = document.getElementById('stat-total-invoiced');
       if (statInvoiced) statInvoiced.textContent = formatCurrency(totalBilled);
       const statPaid = document.getElementById('stat-total-paid');
       if (statPaid) statPaid.textContent = formatCurrency(totalSettled);
       const statOutstanding = document.getElementById('stat-total-outstanding');
-      if (statOutstanding) statOutstanding.textContent = formatCurrency(totalPrincipalOutstanding);
+      if (statOutstanding) statOutstanding.textContent = formatCurrency(totalNetBalance);
       const statInterest = document.getElementById('stat-total-interest');
       if (statInterest) statInterest.textContent = formatCurrency(totalInterest);
       const statNet = document.getElementById('stat-net-total');
-      if (statNet) statNet.textContent = formatCurrency(totalNetOutstanding);
+      if (statNet) statNet.textContent = formatCurrency(totalNetBalance);
 
       // Interest Column Visibility Toggle
       const intCols = document.querySelectorAll('.interest-col');
@@ -5672,14 +5527,14 @@
             <td data-col-index="5" class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly num font-mono" title="Gross Received Weight: ${Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))).toFixed(2)} Kg">${Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))).toFixed(2)}</div>`
-                : `<input type="number" step="0.01" data-field="grossQty" class="cell-input num-font" value="${row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))}" oninput="handleCellChange('${row.id}', 'grossQty', this.value, false)" onchange="handleCellChange('${row.id}', 'grossQty', this.value, true)" title="Gross Weight (Kg)">`
+                : `<input type="number" step="0.01" data-field="grossQty" class="cell-input num-font" value="${Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))).toFixed(2)}" oninput="handleCellChange('${row.id}', 'grossQty', this.value, false)" onchange="handleCellChange('${row.id}', 'grossQty', this.value, true)" title="Gross Weight (Kg)">`
               }
             </td>
 
             <!-- Goods Return GR (Kg) -->
             <td data-col-index="6" class="num-col ${isLocked ? 'cell-locked-bg' : ''}" style="${Number(row.grQty) > 0 ? 'background: rgba(249, 115, 22, 0.08);' : ''}">
               <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
-                <input type="number" step="0.01" data-field="grQty" class="cell-input num-font" style="width: 70px; text-align: right; ${Number(row.grQty) > 0 ? 'color: var(--accent3); font-weight: 700;' : ''}" value="${row.grQty || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'grQty', this.value, false)" onchange="handleCellChange('${row.id}', 'grQty', this.value, true)" title="Goods Return (GR) Deduction in Kg">
+                <input type="number" step="0.01" data-field="grQty" class="cell-input num-font" style="width: 70px; text-align: right; ${Number(row.grQty) > 0 ? 'color: var(--accent3); font-weight: 700;' : ''}" value="${Number(row.grQty || 0).toFixed(2)}" onfocus="if(this.value==='0.00'||this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'grQty', this.value, false)" onchange="handleCellChange('${row.id}', 'grQty', this.value, true)" title="Goods Return (GR) Deduction in Kg">
                 <button type="button" class="btn-issue-gr-inline" onclick="openIssueGrModal('${row.id}')" title="Issue / Edit Goods Return (GR) Breakdown Modal">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                 </button>
@@ -5690,33 +5545,33 @@
             <td data-col-index="7" class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly num bold font-mono col-val-qty" title="Net Invoiced Quantity (Gross - GR): ${Number(row.qty || 0).toFixed(2)} Kg">${Number(row.qty || 0).toFixed(2)}</div>`
-                : `<input type="number" step="0.01" data-field="qty" class="cell-input num-font bold" value="${row.qty || 0}" oninput="handleCellChange('${row.id}', 'qty', this.value, false)" onchange="handleCellChange('${row.id}', 'qty', this.value, true)" title="Net Quantity (Kg)">`
+                : `<input type="number" step="0.01" data-field="qty" class="cell-input num-font bold" value="${Number(row.qty || 0).toFixed(2)}" oninput="handleCellChange('${row.id}', 'qty', this.value, false)" onchange="handleCellChange('${row.id}', 'qty', this.value, true)" title="Net Quantity (Kg)">`
               }
             </td>
 
             <td data-col-index="8" class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly num font-mono" title="Rate (₹/Kg)">${Number(row.rate || 0).toFixed(2)}</div>`
-                : `<input type="number" step="0.01" data-field="rate" class="cell-input num-font" value="${row.rate || 0}" oninput="handleCellChange('${row.id}', 'rate', this.value, false)" onchange="handleCellChange('${row.id}', 'rate', this.value, true)">`
+                : `<input type="number" step="0.01" data-field="rate" class="cell-input num-font" value="${Number(row.rate || 0).toFixed(2)}" oninput="handleCellChange('${row.id}', 'rate', this.value, false)" onchange="handleCellChange('${row.id}', 'rate', this.value, true)">`
               }
             </td>
 
             <td data-col-index="9" class="num-col cell-locked-bg">
               <div class="cell-readonly num font-mono col-val-subtotal" style="flex-direction: column; align-items: flex-end; justify-content: center; gap: 1px;" title="Taxable Subtotal">
-                <div>${formatCurrency(row.subtotal)}</div>
+                <div>${formatCurrency(comp.subtotal)}</div>
                 ${Number(row.grQty) > 0 
-                  ? `<div style="font-size: 0.7rem; color: var(--accent3); font-weight: 700; letter-spacing: -0.01em;" title="Goods Return Deducted Amount">(-${formatCurrency(row.grAmount || (row.grQty * row.rate))} GR)</div>` 
+                  ? `<div style="font-size: 0.7rem; color: var(--accent3); font-weight: 700; letter-spacing: -0.01em;" title="Goods Return Deducted Amount">(-${formatCurrency(comp.grAmount || (row.grQty * (row.rate || 0)))} GR)</div>` 
                   : ''
                 }
               </div>
             </td>
 
             <td data-col-index="10" class="num-col">
-              <input type="number" step="0.1" data-field="gstPercent" class="cell-input num-font" style="width: 75px;" value="${row.gstPercent !== undefined ? row.gstPercent : 5.0}" oninput="handleCellChange('${row.id}', 'gstPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'gstPercent', this.value, true)" title="GST %">
+              <input type="number" step="0.01" data-field="gstPercent" class="cell-input num-font" style="width: 75px;" value="${row.gstPercent !== undefined ? row.gstPercent : 5.0}" oninput="handleCellChange('${row.id}', 'gstPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'gstPercent', this.value, true)" title="GST %">
             </td>
 
             <td data-col-index="11" class="num-col cell-locked-bg">
-              <div class="cell-readonly num bold font-mono col-val-grandtotal" title="Grand Total">${formatCurrency(row.grandTotal)}</div>
+              <div class="cell-readonly num bold font-mono col-val-grandtotal" title="Grand Total">${formatCurrency(comp.grandTotal)}</div>
             </td>
 
             <!-- 12: Editable Credit Days -->
@@ -5726,7 +5581,7 @@
 
             <!-- 13: Editable Monthly Interest / Discount Rate % -->
             <td data-col-index="13" class="num-col">
-              <input type="number" step="0.1" data-field="rateMonthly" class="cell-input num-font" style="width: 85px; color: var(--accent); font-weight: 700;" value="${row.rateMonthly !== undefined && row.rateMonthly !== null && row.rateMonthly !== '' ? row.rateMonthly : defaultRateMonthly}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'rateMonthly', this.value, false)" onchange="handleCellChange('${row.id}', 'rateMonthly', this.value, true)" title="Monthly Int/Disc Rate % (e.g. 1.5%/mo = 18% p.a.)">
+              <input type="number" step="0.01" data-field="rateMonthly" class="cell-input num-font" style="width: 85px; color: var(--accent); font-weight: 700;" value="${row.rateMonthly !== undefined && row.rateMonthly !== null && row.rateMonthly !== '' ? row.rateMonthly : defaultRateMonthly}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'rateMonthly', this.value, false)" onchange="handleCellChange('${row.id}', 'rateMonthly', this.value, true)" title="Monthly Int/Disc Rate % (e.g. 1.5%/mo = 18% p.a.)">
             </td>
 
             <!-- 14: Due Date -->
@@ -5762,7 +5617,7 @@
 
             <!-- 17: Actual Agreed Adjustment in ₹ (Manual override) -->
             <td data-col-index="17" class="num-col" style="background: rgba(124, 58, 237, 0.08);">
-              <input type="number" step="0.01" data-field="actualAdjustment" class="cell-input num-font" style="width: 100%; font-weight: 700; color: var(--fg); text-align: right; padding-right: 0.65rem;" value="${row.actualAdjustment !== undefined && row.actualAdjustment !== null ? row.actualAdjustment : (row.actualDiscount !== undefined && row.actualDiscount !== null ? -Math.abs(row.actualDiscount) : '')}" placeholder="${comp.calcAdjAmount !== 0 ? comp.calcAdjAmount.toFixed(2) : '0.00'}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'actualAdjustment', this.value, false)" onchange="handleCellChange('${row.id}', 'actualAdjustment', this.value, true)" title="Actual Agreed Adjustment in ₹ (- for discount, + for late interest)">
+              <input type="number" step="0.01" data-field="actualAdjustment" class="cell-input num-font" style="width: 100%; font-weight: 700; color: var(--fg); text-align: right; padding-right: 0.65rem;" value="${row.actualAdjustment !== undefined && row.actualAdjustment !== null && row.actualAdjustment !== '' ? Number(row.actualAdjustment).toFixed(2) : (row.actualDiscount !== undefined && row.actualDiscount !== null && row.actualDiscount !== '' ? (-Math.abs(Number(row.actualDiscount))).toFixed(2) : '')}" placeholder="${comp.calcAdjAmount !== 0 ? comp.calcAdjAmount.toFixed(2) : '0.00'}" onfocus="if(this.value==='0.00'||this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'actualAdjustment', this.value, false)" onchange="handleCellChange('${row.id}', 'actualAdjustment', this.value, true)" title="Actual Agreed Adjustment in ₹ (- for discount, + for late interest)">
             </td>
 
             <!-- 18: Final Adjusted Bill Amount (₹) -->
@@ -5772,7 +5627,7 @@
 
             <!-- 19: Round Off (₹) -->
             <td data-col-index="19" class="num-col" style="background: rgba(124, 58, 237, 0.04);">
-              <input type="number" step="0.01" data-field="roundOff" class="cell-input num-font" style="width: 100%; font-weight: 600; color: var(--fg); text-align: right; padding-right: 0.65rem;" value="${row.roundOff !== undefined && row.roundOff !== null ? row.roundOff : ''}" placeholder="0.00" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'roundOff', this.value, false)" onchange="handleCellChange('${row.id}', 'roundOff', this.value, true)" title="Round Off in ₹ (+/-)">
+              <input type="number" step="0.01" data-field="roundOff" class="cell-input num-font" style="width: 100%; font-weight: 600; color: var(--fg); text-align: right; padding-right: 0.65rem;" value="${row.roundOff !== undefined && row.roundOff !== null && row.roundOff !== '' ? Number(row.roundOff).toFixed(2) : ''}" placeholder="0.00" onfocus="if(this.value==='0.00'||this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'roundOff', this.value, false)" onchange="handleCellChange('${row.id}', 'roundOff', this.value, true)" title="Round Off in ₹ (+/-)">
             </td>
 
             <!-- 20: Editable Payment Date -->
@@ -5782,7 +5637,7 @@
 
             <!-- 21: Total Paid (₹) -->
             <td data-col-index="21" class="num-col" style="background: rgba(16, 185, 129, 0.08);">
-              <input type="number" step="0.01" data-field="paidAmount" class="cell-input num-font" style="color: var(--success); font-weight: 700; text-align: right; padding-right: 0.65rem;" value="${row.paidAmount || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Total payment made or received">
+              <input type="number" step="0.01" data-field="paidAmount" class="cell-input num-font" style="color: var(--success); font-weight: 700; text-align: right; padding-right: 0.65rem;" value="${row.paidAmount !== undefined && row.paidAmount !== null && row.paidAmount !== '' ? Number(row.paidAmount).toFixed(2) : '0.00'}" onfocus="if(this.value==='0.00'||this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Total payment made or received">
             </td>
 
             <!-- 22: Net Balance (₹) -->
@@ -5946,7 +5801,7 @@
               <div class="mobile-card-drawer-grid">
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">Grand Total (Pre-Adj)</span>
-                  <span class="mobile-kv-val font-mono">${formatCurrency(row.grandTotal)}</span>
+                  <span class="mobile-kv-val font-mono">${formatCurrency(comp.grandTotal)}</span>
                 </div>
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">Int/Disc %/mo</span>
@@ -6453,12 +6308,12 @@
 
       tbody.innerHTML = partyRows.map((row, idx) => {
         const comp = computeRowFinancials(row);
-        const billed = Number(row.grandTotal) || 0;
+        const billed = comp.grandTotal;
         const paid = Number(row.paidAmount) || 0;
-        const grossQty = Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))) || 0;
-        const qty = Number(row.qty) || 0;
+        const grossQty = comp.grossQty;
+        const qty = comp.qty;
         const grQty = Number(row.grQty) || 0;
-        const grAmount = Number(row.grAmount || (grQty * row.rate)) || 0;
+        const grAmount = comp.grAmount;
 
         totalInvoiced += billed;
         totalFinalBill += comp.finalBill;
@@ -7112,11 +6967,11 @@
           <div style="background: var(--surface-subtle); padding: 0.85rem 1.1rem; border-radius: 10px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
             <div>
               <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 700;">GR Deduction Impact on Bill</div>
-              <div style="font-family: var(--font-mono); font-weight: 800; font-size: 1.1rem; color: var(--accent3);" id="gr-impact-deduction">-₹${Number((currentGr * rate).toFixed(2)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</div>
+              <div style="font-family: var(--font-mono); font-weight: 800; font-size: 1.1rem; color: var(--accent3);" id="gr-impact-deduction">-${formatCurrency(Number((currentGr * rate).toFixed(2)))}</div>
             </div>
             <div style="text-align: right;">
               <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 700;">New Invoiced Grand Total</div>
-              <div style="font-family: var(--font-mono); font-weight: 800; font-size: 1.25rem; color: var(--accent);" id="gr-impact-new-grand-total">₹${Number((netQty * rate * 1.05).toFixed(2)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</div>
+              <div style="font-family: var(--font-mono); font-weight: 800; font-size: 1.25rem; color: var(--accent);" id="gr-impact-new-grand-total">${formatCurrency(Number((netQty * rate * 1.05).toFixed(2)))}</div>
             </div>
           </div>
         </div>
@@ -7223,10 +7078,10 @@
       if (elNetQty) elNetQty.textContent = `${net.toFixed(2)} Kg`;
 
       const elDeduct = document.getElementById('gr-impact-deduction');
-      if (elDeduct) elDeduct.textContent = `-₹${grAmt.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+      if (elDeduct) elDeduct.textContent = `-${formatCurrency(grAmt)}`;
 
       const elGrand = document.getElementById('gr-impact-new-grand-total');
-      if (elGrand) elGrand.textContent = `₹${grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+      if (elGrand) elGrand.textContent = formatCurrency(grandTotal);
     }
 
     async function syncGRToOrdersAndStock(row, newGrQty, grDate = '', grRemarks = '', boxAllocations = null) {
@@ -7662,25 +7517,46 @@
 
     // Export Current Table to CSV
     function exportToCSV() {
-      const rows = ledgerData[activeTab] || [];
-      if (rows.length === 0) {
-        showToast('No data to export', 'error');
+      const rows = getFilteredRows();
+      if (!rows || rows.length === 0) {
+        showToast('No ledger entries to export!', 'error');
         return;
       }
 
       const headers = [
-        'Date', 'Bill/Challan No', activeTab === 'sales' ? 'Customer' : 'Supplier', 'Quality',
-        'Gross Quantity (Kg)', 'GR Deducted (Kg)', 'Net Quantity (Kg)', 'Rate (₹/Kg)', 'GR Deducted Amount (₹)', 'Subtotal (₹)', 'GST %', 'Grand Total (₹)',
-        'Credit Days', 'Int/Disc %/mo', 'Due Date', 'Early/Late Days', 'Calc. Adjustment (₹)', 'Actual Adjustment (₹)',
-        'Final Bill (₹)', 'Round Off (₹)', 'Payment Date', 'Total Paid (₹)', 'Net Balance (₹)', 'Status', 'Remarks'
+        'Date',
+        'Bill / Challan No',
+        'Party Name',
+        'Quality',
+        'Gross Weight (Kg)',
+        'GR Weight (Kg)',
+        'Net Weight (Kg)',
+        'Rate (₹/Kg)',
+        'GR Deduction (₹)',
+        'Subtotal (₹)',
+        'GST %',
+        'Grand Total (₹)',
+        'Credit Days',
+        'Rate % Monthly',
+        'Due Date',
+        'Timing',
+        'Calculated Discount/Interest (₹)',
+        'Actual Adjustment (₹)',
+        'Final Bill (₹)',
+        'Round Off (₹)',
+        'Payment Date',
+        'Paid / Settled (₹)',
+        'Net Balance (₹)',
+        'Status',
+        'Remarks'
       ];
 
       const csvRows = [headers.join(',')];
 
       rows.forEach(r => {
         const comp = computeRowFinancials(r);
-        const gross = r.grossQty !== undefined ? Number(r.grossQty) : (Number(r.qty || 0) + Number(r.grQty || 0));
-        const gr = Number(r.grQty) || 0;
+        const gross = Number(r.grossQty || (Number(r.qty || 0) + Number(r.grQty || 0)));
+        const gr = Number(r.grQty || 0);
         const grAmt = Number(r.grAmount || (gr * (r.rate || 0)));
         const timingStr = comp.earlyDays > 0 ? `${comp.earlyDays}d early` : (comp.overdueDays > 0 ? `${comp.overdueDays}d late` : 'On time');
         const values = [
@@ -7688,25 +7564,25 @@
           `"${(r.challanNo || '').replace(/"/g, '""')}"`,
           `"${(r.partyName || '').replace(/"/g, '""')}"`,
           `"${(r.quality || '').replace(/"/g, '""')}"`,
-          gross,
-          gr,
-          r.qty || 0,
-          r.rate || 0,
-          grAmt,
-          r.subtotal || 0,
-          r.gstPercent || 0,
-          r.grandTotal || 0,
+          gross.toFixed(2),
+          gr.toFixed(2),
+          Number(r.qty || 0).toFixed(2),
+          Number(r.rate || 0).toFixed(2),
+          grAmt.toFixed(2),
+          comp.subtotal.toFixed(2),
+          Number(r.gstPercent || 0).toFixed(2),
+          comp.grandTotal.toFixed(2),
           r.creditDays || defaultCreditDays,
           r.rateMonthly !== undefined ? r.rateMonthly : defaultRateMonthly,
           `"${formatDateDisplay(comp.dueDate, '')}"`,
           `"${timingStr}"`,
-          comp.calcAdjAmount,
-          r.actualAdjustment !== undefined && r.actualAdjustment !== null ? r.actualAdjustment : '',
-          comp.finalBill,
-          r.roundOff !== undefined && r.roundOff !== null ? r.roundOff : '',
+          comp.calcAdjAmount.toFixed(2),
+          (r.actualAdjustment !== undefined && r.actualAdjustment !== null && r.actualAdjustment !== '') ? Number(r.actualAdjustment).toFixed(2) : '',
+          comp.finalBill.toFixed(2),
+          (r.roundOff !== undefined && r.roundOff !== null && r.roundOff !== '') ? Number(r.roundOff).toFixed(2) : '',
           `"${formatDateDisplay(r.paymentDate, '')}"`,
-          r.paidAmount || 0,
-          comp.netBalance,
+          Number(r.paidAmount || 0).toFixed(2),
+          comp.netBalance.toFixed(2),
           `"${comp.status}"`,
           `"${(r.remarks || '').replace(/"/g, '""')}"`
         ];
@@ -7717,11 +7593,12 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `yarn_${activeTab}_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `yarn_ledger_${activeTab}_${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      showToast('CSV Exported successfully', 'success');
+      URL.revokeObjectURL(url);
+      showToast('Ledger CSV exported successfully!', 'success');
     }
 
     // Reset Filters
