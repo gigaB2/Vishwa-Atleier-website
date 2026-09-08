@@ -5467,7 +5467,9 @@ Return ONLY a JSON object matching this schema:
           (r.id && r.id === deterministicId) ||
           (r.syncKey && r.syncKey === uniqueSyncKey) ||
           (newBatch.id && String(r.batchId) === String(newBatch.id)) ||
-          (challanNo && String(r.challanNo).trim() === challanNo && String(r.partyName).trim().toLowerCase() === supplier.toLowerCase())
+          (r.orderId && matchingOrder.id && String(r.orderId) === String(matchingOrder.id) && challanNo && String(r.challanNo).trim() === challanNo) ||
+          (r.orderNumber && matchingOrder.orderNumber && String(r.orderNumber) === String(matchingOrder.orderNumber) && challanNo && String(r.challanNo).trim() === challanNo) ||
+          (challanNo && String(r.challanNo).trim() === challanNo && (String(r.partyName).trim().toLowerCase() === supplier.toLowerCase() || r.source === 'yarn-rm-orders'))
         );
 
         const subtotal = Number((bNet * bRate).toFixed(2));

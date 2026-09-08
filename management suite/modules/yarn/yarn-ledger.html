@@ -3994,7 +3994,14 @@
                 const grossAmount = Number((totalGrossQty * effectiveRate).toFixed(2));
                 const grAmount = Number((totalGrQty * effectiveRate).toFixed(2));
                 const subtotal = Number((netQty * effectiveRate).toFixed(2));
-                const existingRow = ledgerData.purchase.find(r => r.id === deterministicId || r.syncKey === uniqueSyncKey || (r.challanNo === batchChallan && r.partyName === supplierName && batchChallan !== ''));
+                const existingRow = ledgerData.purchase.find(r => 
+                  r.id === deterministicId || 
+                  r.syncKey === uniqueSyncKey || 
+                  (batch.id && String(r.batchId) === String(batch.id)) ||
+                  (r.orderId && order.id && String(r.orderId) === String(order.id) && batchChallan && String(r.challanNo).trim() === batchChallan) ||
+                  (r.orderNumber && orderNumber && String(r.orderNumber) === String(orderNumber) && batchChallan && String(r.challanNo).trim() === batchChallan) ||
+                  (r.challanNo === batchChallan && batchChallan !== '' && (r.partyName === supplierName || r.source === 'yarn-rm-orders'))
+                );
 
                 if (!existingRow) {
                   const gstPercent = 5.0;
@@ -4039,6 +4046,8 @@
                   const oldRate = existingRow.rate;
                   const oldQty = existingRow.qty;
                   const oldGrQty = existingRow.grQty;
+                  const oldParty = existingRow.partyName;
+                  const oldQuality = existingRow.quality;
                   if (!existingRow.id || existingRow.id.startsWith('PUR-1') || existingRow.id.length > 30) {
                     existingRow.id = deterministicId;
                   }
@@ -4047,6 +4056,10 @@
                   existingRow.orderNumber = orderNumber || existingRow.orderNumber || '';
                   existingRow.batchId = batch.id || existingRow.batchId || '';
                   existingRow.lotNumber = batch.lotNumber || existingRow.lotNumber || '';
+                  if (supplierName && supplierName !== 'Unknown Supplier') {
+                    existingRow.partyName = supplierName;
+                  }
+                  existingRow.quality = qualityName + (batch.lotNumber ? ` (Lot: ${batch.lotNumber})` : '');
                   existingRow.grossQty = totalGrossQty;
                   existingRow.grQty = totalGrQty;
                   existingRow.qty = netQty;
@@ -4061,7 +4074,7 @@
                   existingRow.source = 'yarn-rm-orders';
                   existingRow.isManual = false;
                   if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
-                  if (oldRate !== effectiveRate || oldQty !== netQty || oldGrQty !== totalGrQty) syncUpdated++;
+                  if (oldRate !== effectiveRate || oldQty !== netQty || oldGrQty !== totalGrQty || oldParty !== existingRow.partyName || oldQuality !== existingRow.quality) syncUpdated++;
                 }
               });
             }

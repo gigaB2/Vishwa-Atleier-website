@@ -2052,6 +2052,75 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(gstAmt0, 0);
     assert.strictEqual(row.grandTotal, 20000);
   });
+
+  await t.test('Yarn Ledger: supplier name and quality change in RM order propagates to purchase ledger', () => {
+    let purchaseLedger = [
+      {
+        id: 'PUR-order_ORD-123_batch_B1_CH-99',
+        syncKey: 'order_ORD-123_batch_B1_CH-99',
+        orderId: 'ORD-123',
+        orderNumber: 'YRN-1001',
+        batchId: 'B1',
+        lotNumber: 'L-01',
+        partyName: 'Old Supplier Spinning Mills',
+        quality: 'Polyester 150/48 (Lot: L-01)',
+        qty: 500,
+        rate: 180,
+        subtotal: 90000,
+        gstPercent: 5.0,
+        grandTotal: 94500,
+        source: 'yarn-rm-orders'
+      }
+    ];
+
+    const updatedOrder = {
+      id: 'ORD-123',
+      orderNumber: 'YRN-1001',
+      supplier: 'New Premium Yarns Pvt Ltd',
+      quality: 'Polyester High Tenacity 150/48',
+      price: 185
+    };
+
+    // Simulate updateOrder propagation
+    const orderIdStr = String(updatedOrder.id || '').trim();
+    const orderNumStr = String(updatedOrder.orderNumber || '').trim();
+
+    purchaseLedger = purchaseLedger.map(r => {
+      const matchesOrder = (orderIdStr && String(r.orderId).trim() === orderIdStr) ||
+        (orderNumStr && String(r.orderNumber).trim() === orderNumStr) ||
+        (r.syncKey && orderIdStr && r.syncKey.includes(`order_${orderIdStr}_`));
+
+      if (matchesOrder) {
+        const newSupplier = (updatedOrder.supplier || '').trim() || r.partyName;
+        const newQualityBase = (updatedOrder.quality || '').trim();
+        const lotSuffix = r.lotNumber ? ` (Lot: ${r.lotNumber})` : '';
+        const newQuality = newQualityBase ? `${newQualityBase}${lotSuffix}` : r.quality;
+        const newRate = updatedOrder.price !== '' && updatedOrder.price !== undefined ? Number(updatedOrder.price) : r.rate;
+
+        const netQty = Number(r.qty) || 0;
+        const subtotal = Number((netQty * newRate).toFixed(2));
+        const gstPct = r.gstPercent !== undefined ? Number(r.gstPercent) : 5.0;
+        const gstAmt = Number(((subtotal * gstPct) / 100).toFixed(2));
+        const grandTotal = Number((subtotal + gstAmt).toFixed(2));
+
+        return {
+          ...r,
+          partyName: newSupplier,
+          quality: newQuality,
+          rate: newRate,
+          subtotal: subtotal,
+          grandTotal: grandTotal
+        };
+      }
+      return r;
+    });
+
+    assert.strictEqual(purchaseLedger[0].partyName, 'New Premium Yarns Pvt Ltd');
+    assert.strictEqual(purchaseLedger[0].quality, 'Polyester High Tenacity 150/48 (Lot: L-01)');
+    assert.strictEqual(purchaseLedger[0].rate, 185);
+    assert.strictEqual(purchaseLedger[0].subtotal, 92500);
+    assert.strictEqual(purchaseLedger[0].grandTotal, 97125);
+  });
 });
 
 

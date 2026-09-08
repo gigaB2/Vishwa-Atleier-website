@@ -2563,6 +2563,75 @@
         if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
           window.VishwaSupabase.saveToSupabase(YARN_ORDERS_STORAGE_KEY, updatedList, true);
         }
+
+        // Propagate order changes (supplier, quality, rate, creditDays) to Purchase Ledger
+        try {
+          const rawLedger = localStorage.getItem('yarn_purchase_ledger_data');
+          let purchaseLedger = rawLedger ? JSON.parse(rawLedger) : [];
+          if (Array.isArray(purchaseLedger)) {
+            const orderIdStr = String(processed.id || '').trim();
+            const orderNumStr = String(processed.orderNumber || '').trim();
+            let ledgerUpdated = false;
+
+            purchaseLedger = purchaseLedger.map(r => {
+              const matchesOrder = (orderIdStr && String(r.orderId).trim() === orderIdStr) ||
+                (orderNumStr && String(r.orderNumber).trim() === orderNumStr) ||
+                (r.syncKey && orderIdStr && r.syncKey.includes(`order_${orderIdStr}_`)) ||
+                (r.syncKey && orderNumStr && r.syncKey.includes(`order_${orderNumStr}_`));
+
+              if (matchesOrder) {
+                ledgerUpdated = true;
+                const newSupplier = (processed.supplier || '').trim() || r.partyName;
+                const newQualityBase = (processed.quality || '').trim();
+                const lotSuffix = r.lotNumber ? ` (Lot: ${r.lotNumber})` : '';
+                const newQuality = newQualityBase ? `${newQualityBase}${lotSuffix}` : r.quality;
+                const newRate = processed.price !== '' && processed.price !== undefined ? Number(processed.price) : r.rate;
+                const newCreditDays = processed.creditDays !== undefined && processed.creditDays !== '' ? (Number(processed.creditDays) || r.creditDays) : r.creditDays;
+                
+                // Recalculate amounts if rate changed
+                const netQty = Number(r.qty) || 0;
+                const grossQty = Number(r.grossQty) || netQty;
+                const grQty = Number(r.grQty) || 0;
+                const subtotal = Number((netQty * newRate).toFixed(2));
+                const grossAmount = Number((grossQty * newRate).toFixed(2));
+                const grAmount = Number((grQty * newRate).toFixed(2));
+                const gstPct = r.gstPercent !== undefined ? Number(r.gstPercent) : 5.0;
+                const gstAmt = Number(((subtotal * gstPct) / 100).toFixed(2));
+                const grandTotal = Number((subtotal + gstAmt).toFixed(2));
+
+                return {
+                  ...r,
+                  partyName: newSupplier,
+                  quality: newQuality,
+                  rate: newRate,
+                  subtotal: subtotal,
+                  grossAmount: grossAmount,
+                  grAmount: grAmount,
+                  grandTotal: grandTotal,
+                  creditDays: newCreditDays,
+                  updated_at: nowIso
+                };
+              }
+              return r;
+            });
+
+            if (ledgerUpdated) {
+              localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(purchaseLedger));
+              if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                window.VishwaSupabase.saveToSupabase('yarn_purchase_ledger_data', purchaseLedger, true);
+              }
+            }
+          }
+        } catch(err) {
+          console.error("Error updating purchase ledger from updateOrder:", err);
+        }
+
+        try {
+          window.dispatchEvent(new CustomEvent('yarn-order-updated', { detail: { orders: updatedList } }));
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: YARN_ORDERS_STORAGE_KEY } }));
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn_purchase_ledger_data' } }));
+          window.postMessage({ type: 'YARN_ORDER_UPDATED', orders: updatedList }, '*');
+        } catch(e) {}
       };
 
       const completeOrder = (idOrOrder) => {
@@ -4147,7 +4216,9 @@
             (r.id && r.id === deterministicId) ||
             (r.syncKey && r.syncKey === uniqueSyncKey) ||
             (bBatchId && String(r.batchId) === bBatchId) ||
-            (bChallan && String(r.challanNo).trim() === bChallan && String(r.partyName).trim().toLowerCase() === supplierName.toLowerCase()) ||
+            (r.orderId && order.id && String(r.orderId) === String(order.id) && bChallan && String(r.challanNo).trim() === bChallan) ||
+            (r.orderNumber && orderNum && String(r.orderNumber) === String(orderNum) && bChallan && String(r.challanNo).trim() === bChallan) ||
+            (bChallan && String(r.challanNo).trim() === bChallan && (String(r.partyName).trim().toLowerCase() === supplierName.toLowerCase() || r.source === 'yarn-rm-orders')) ||
             (bLot && String(r.lotNumber).trim() === bLot && bChallan && String(r.challanNo).trim() === bChallan)
           );
 
