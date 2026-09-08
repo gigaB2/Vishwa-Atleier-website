@@ -468,7 +468,26 @@
             max-height: calc(100dvh - 2.5rem);
             box-shadow: var(--shadow-xl);
             position: relative;
-            overflow: visible;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        .modal::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .modal::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .modal::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        .modal::-webkit-scrollbar-thumb:hover {
+            background: var(--muted);
         }
 
         @keyframes fadeIn {
@@ -1458,6 +1477,250 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Batches Mobile Card Containers (Matching Yarn RM Orders) */
+        .batches-mobile-cards {
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .yarn-mobile-card {
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+            position: relative;
+            width: 100%;
+            box-sizing: border-box;
+            contain: layout style;
+        }
+        .yarn-mobile-card:hover,
+        .yarn-mobile-card:focus-within {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            border-color: rgba(124, 58, 237, 0.45);
+        }
+        .yarn-mobile-card.status-active,
+        .yarn-mobile-card.status-pending {
+            border-left: 5px solid var(--accent);
+        }
+        .yarn-mobile-card.status-partial {
+            border-left: 5px solid var(--accent3);
+        }
+        .yarn-mobile-card.status-completed {
+            border-left: 5px solid var(--success);
+        }
+        .yarn-mobile-card.status-gr {
+            border-left: 5px solid #ef4444;
+        }
+
+        /* Hierarchical Mobile Card Header */
+        .mobile-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 0.95rem 1.15rem 0.75rem 1.15rem;
+            border-bottom: 1px solid var(--border-subtle, var(--border));
+            background: var(--surface-subtle, var(--bg));
+            gap: 0.75rem;
+            box-sizing: border-box;
+        }
+        .mobile-card-title-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 0;
+        }
+        .mobile-card-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .mobile-card-date {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+        .mobile-card-party-name {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--fg);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: -0.2px;
+        }
+        .mobile-card-badges {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        /* Key Metric Highlight Pill */
+        .mobile-card-highlight {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.15rem;
+            background: rgba(124, 58, 237, 0.05);
+            border-bottom: 1px solid var(--border-subtle, var(--border));
+        }
+        .mobile-highlight-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .mobile-highlight-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .mobile-highlight-value {
+            font-family: var(--font-mono);
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--fg);
+        }
+
+        /* 2-Column High-Density Grid */
+        .mobile-card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem 1rem;
+            padding: 0.9rem 1.15rem;
+            box-sizing: border-box;
+        }
+        .mobile-card-field {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+        .mobile-field-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .mobile-field-value {
+            font-family: var(--font-mono);
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--fg);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Card Actions & Touch Controls */
+        .mobile-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.15rem;
+            border-top: 1px solid var(--border-subtle, var(--border));
+            background: var(--surface);
+            gap: 0.5rem;
+        }
+        .mobile-card-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .mobile-btn-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 7px 14px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 40px;
+            border: 1.5px solid var(--border);
+            background: var(--surface);
+            color: var(--fg);
+        }
+        .mobile-btn-pill.primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #ffffff;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+        }
+        .mobile-btn-pill.primary:hover {
+            box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+        }
+        .mobile-btn-pill:active {
+            transform: scale(0.96);
+        }
+
+        /* Issued Box Highlighting in Batches Table (Matching Yarn RM Orders) */
+        .yarn-box-row-issued {
+            background: rgba(59, 130, 246, 0.07) !important;
+            border-left: 3px solid #3b82f6 !important;
+        }
+        .dark-mode .yarn-box-row-issued {
+            background: rgba(59, 130, 246, 0.12) !important;
+            border-left: 3px solid #60a5fa !important;
+        }
+        .gr-badge-issued {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            padding: 1px 6px;
+            border-radius: 4px;
+            background: rgba(59, 130, 246, 0.15);
+            color: #2563eb;
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            line-height: 1.2;
+        }
+        .dark-mode .gr-badge-issued {
+            color: #60a5fa;
+            background: rgba(59, 130, 246, 0.25);
+            border-color: rgba(96, 165, 250, 0.4);
+        }
+        .gr-issued-legend-pill {
+            font-size: 0.72rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+        .dark-mode .gr-issued-legend-pill {
+            color: #60a5fa;
+            background: rgba(59, 130, 246, 0.18);
+            border-color: rgba(96, 165, 250, 0.35);
+        }
+
+        @media (max-width: 1024px) {
+            .batches-mobile-cards {
+                display: flex !important;
+            }
+        }
     </style>
 
 
@@ -1575,48 +1838,125 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useRef } = React;
+        const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-        // Custom Hook for LocalStorage
-        function useLocalStorage(key, initialValue) {
+        const WEAVING_ORDERS_STORAGE_KEY = 'yarn-orders';
+        const YARN_QUALITIES_STORAGE_KEY = 'yarn-qualities';
+        const YARN_SUPPLIERS_STORAGE_KEY = 'yarn-suppliers';
+
+        // Synced storage hook (Safe multi-device cloud sync without empty-mount overwrites)
+        const useSyncedStorage = (key, initialValue) => {
             const [storedValue, setStoredValue] = useState(() => {
                 try {
                     const item = window.localStorage.getItem(key);
-                    return item ? JSON.parse(item) : initialValue;
-                } catch (error) {
-                    console.log(error);
+                    if (!item) return initialValue;
+                    let parsed = JSON.parse(item);
+                    if (Array.isArray(initialValue) && !Array.isArray(parsed)) return initialValue;
+                    if (Array.isArray(parsed) && window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+                        parsed = window.VishwaSupabase.filterDeletedEntities(parsed);
+                    }
+                    return parsed;
+                } catch (e) {
                     return initialValue;
                 }
             });
 
             useEffect(() => {
                 const handleStorageChange = (e) => {
-                    if (e.key === key) {
+                    if (!e || e.key === key || !e.key) {
                         try {
                             const item = window.localStorage.getItem(key);
-                            const newValue = item ? JSON.parse(item) : initialValue;
-                            setStoredValue(newValue);
+                            if (!item) {
+                                if (!window.VishwaSupabase || (typeof window.VishwaSupabase.isHydrated === 'function' && window.VishwaSupabase.isHydrated())) {
+                                    setStoredValue(initialValue);
+                                }
+                            } else {
+                                let parsed = JSON.parse(item);
+                                if (Array.isArray(initialValue) && !Array.isArray(parsed)) {
+                                    setStoredValue(initialValue);
+                                } else {
+                                    if (Array.isArray(parsed) && window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+                                        parsed = window.VishwaSupabase.filterDeletedEntities(parsed);
+                                    }
+                                    setStoredValue(parsed);
+                                }
+                            }
                         } catch (error) {
-                            console.error('Error parsing storage change:', error);
+                            console.error('Error parsing storage change in useSyncedStorage:', error);
                         }
                     }
                 };
+
+                const handleSupabaseSync = (e) => {
+                    if (!e || !e.detail || e.detail.key === key || !e.detail.key) {
+                        handleStorageChange({ key });
+                    }
+                };
+
+                const handleSupabaseReady = () => {
+                    handleStorageChange({ key });
+                };
+
+                const handleItemDeleted = (e) => {
+                    handleStorageChange({ key });
+                };
+
+                const handleOrderUpdated = () => {
+                    if (key === WEAVING_ORDERS_STORAGE_KEY) {
+                        handleStorageChange({ key });
+                    }
+                };
+
+                const handleMessage = (e) => {
+                    if (e && e.data && typeof e.data === 'object') {
+                        if ((e.data.type === 'YARN_ORDER_UPDATED' && key === WEAVING_ORDERS_STORAGE_KEY) ||
+                            (e.data.type === 'WEAVING_ORDER_UPDATED' && key === WEAVING_ORDERS_STORAGE_KEY) ||
+                            (e.data.type === 'STORAGE_SYNC' && e.data.key === key)) {
+                            handleStorageChange({ key });
+                        }
+                    }
+                };
+
                 window.addEventListener('storage', handleStorageChange);
-                return () => window.removeEventListener('storage', handleStorageChange);
+                window.addEventListener('supabase-sync', handleSupabaseSync);
+                window.addEventListener('supabase-ready', handleSupabaseReady);
+                window.addEventListener('supabase-item-deleted', handleItemDeleted);
+                window.addEventListener('yarn-order-updated', handleOrderUpdated);
+                window.addEventListener('weaving-order-updated', handleOrderUpdated);
+                window.addEventListener('message', handleMessage);
+
+                return () => {
+                    window.removeEventListener('storage', handleStorageChange);
+                    window.removeEventListener('supabase-sync', handleSupabaseSync);
+                    window.removeEventListener('supabase-ready', handleSupabaseReady);
+                    window.removeEventListener('supabase-item-deleted', handleItemDeleted);
+                    window.removeEventListener('yarn-order-updated', handleOrderUpdated);
+                    window.removeEventListener('weaving-order-updated', handleOrderUpdated);
+                    window.removeEventListener('message', handleMessage);
+                };
             }, [key, initialValue]);
 
-            const setValue = (value) => {
+            const setValue = useCallback((value) => {
                 try {
-                    const valueToStore = value instanceof Function ? value(storedValue) : value;
-                    setStoredValue(valueToStore);
-                    window.localStorage.setItem(key, JSON.stringify(valueToStore));
+                    setStoredValue(prevValue => {
+                        const valueToStore = value instanceof Function ? value(prevValue) : value;
+                        try {
+                            window.localStorage.setItem(key, JSON.stringify(valueToStore));
+                        } catch (err) {
+                            console.error('Storage set error:', err);
+                        }
+                        return valueToStore;
+                    });
                 } catch (error) {
-                    console.log(error);
+                    console.error('setValue error:', error);
                 }
-            };
+            }, [key]);
 
             return [storedValue, setValue];
-        }
+        };
+
+        // Maintain useLocalStorage alias for full compatibility
+        const useLocalStorage = useSyncedStorage;
 
         // --- Components ---
 
@@ -2081,9 +2421,9 @@
         };
 
         const App = () => {
-            const [orders, setOrders] = useLocalStorage('yarn-orders', []);
-            const [qualities, setQualities] = useLocalStorage('yarn-qualities', []);
-            const [suppliers, setSuppliers] = useLocalStorage('yarn-suppliers', []);
+            const [orders, setOrders] = useSyncedStorage(WEAVING_ORDERS_STORAGE_KEY, []);
+            const [qualities, setQualities] = useSyncedStorage(YARN_QUALITIES_STORAGE_KEY, []);
+            const [suppliers, setSuppliers] = useSyncedStorage(YARN_SUPPLIERS_STORAGE_KEY, []);
             const [geminiApiKey, setGeminiApiKey] = useLocalStorage('gemini-api-key', '');
             const [selectedGeminiModel, setSelectedGeminiModel] = useLocalStorage('selected-gemini-model', 'gemini-2.0-flash');
 
@@ -2117,6 +2457,16 @@
             const [highlightedOrderId, setHighlightedOrderId] = useState(null);
             const [isolatedOrderId, setIsolatedOrderId] = useState(null);
             const [timelineScrollPos, setTimelineScrollPos] = useState(0);
+
+            // Keep selected order modal in live sync when remote updates or batch receipts arrive
+            useEffect(() => {
+                if (selectedOrder && orders && orders.length > 0) {
+                    const latest = orders.find(o => o.id === selectedOrder.id || (o.orderNumber && o.orderNumber === selectedOrder.orderNumber));
+                    if (latest && JSON.stringify(latest) !== JSON.stringify(selectedOrder)) {
+                        setSelectedOrder(latest);
+                    }
+                }
+            }, [orders]);
 
             useEffect(() => {
                 const handleThemeChange = (e) => {
@@ -2447,7 +2797,24 @@
                 recordSnapshot(`Add Order ${o.quality || ''}`);
                 const q = qualities.find(x => x.quality === o.quality && x.code === o.code && x.color === o.color && x.supplier === o.supplier);
                 const orderDate = addTimestampToDate(o.orderDate);
-                setOrders([...orders, { ...o, orderDate, qualityId: q?.id, id: Date.now().toString(), createdAt: new Date().toISOString(), status: 'Active', batches: [] }]);
+                const newOrder = {
+                    ...o,
+                    orderDate,
+                    qualityId: q?.id,
+                    id: o.id || Date.now().toString(),
+                    createdAt: o.createdAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    status: o.status || 'Active',
+                    batches: o.batches || []
+                };
+                const updatedOrders = [...orders, newOrder];
+                setOrders(updatedOrders);
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                    window.VishwaSupabase.saveToSupabase(WEAVING_ORDERS_STORAGE_KEY, updatedOrders, true);
+                }
+                window.dispatchEvent(new CustomEvent('yarn-order-updated', { detail: { order: newOrder, orders: updatedOrders } }));
+                window.dispatchEvent(new CustomEvent('weaving-order-updated', { detail: { order: newOrder, orders: updatedOrders } }));
+                window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: WEAVING_ORDERS_STORAGE_KEY } }));
                 setShowOrderModal(false);
             };
 
@@ -2462,8 +2829,16 @@
                 }
                 if (editingQuality) {
                     recordSnapshot(`Edit Quality ${fd.quality}`);
-                    setQualities(qualities.map(q => q.id === editingQuality.id ? { ...q, ...fd } : q));
-                    setOrders(orders.map(o => (o.qualityId === editingQuality.id || (!o.qualityId && o.quality === editingQuality.quality && o.code === editingQuality.code && o.color === editingQuality.color && o.supplier === editingQuality.supplier)) ? { ...o, ...fd, qualityId: editingQuality.id } : o));
+                    const updatedQualities = qualities.map(q => q.id === editingQuality.id ? { ...q, ...fd } : q);
+                    setQualities(updatedQualities);
+                    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                        window.VishwaSupabase.saveToSupabase(YARN_QUALITIES_STORAGE_KEY, updatedQualities, true);
+                    }
+                    const updatedOrders = orders.map(o => (o.qualityId === editingQuality.id || (!o.qualityId && o.quality === editingQuality.quality && o.code === editingQuality.code && o.color === editingQuality.color && o.supplier === editingQuality.supplier)) ? { ...o, ...fd, qualityId: editingQuality.id } : o);
+                    setOrders(updatedOrders);
+                    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                        window.VishwaSupabase.saveToSupabase(WEAVING_ORDERS_STORAGE_KEY, updatedOrders, true);
+                    }
                     
                     // Propagate changes to other tables
                     try {
@@ -2473,17 +2848,32 @@
                         // Update Warp Beams
                         const beams = JSON.parse(localStorage.getItem('warp-beams') || '[]');
                         const updatedBeams = beams.map(b => (match(b.quality, old.quality) && match(b.code, old.code) && match(b.color, old.color)) ? { ...b, quality: fd.quality, code: fd.code, color: fd.color } : b);
-                        if (JSON.stringify(beams) !== JSON.stringify(updatedBeams)) localStorage.setItem('warp-beams', JSON.stringify(updatedBeams));
+                        if (JSON.stringify(beams) !== JSON.stringify(updatedBeams)) {
+                            localStorage.setItem('warp-beams', JSON.stringify(updatedBeams));
+                            if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                                window.VishwaSupabase.saveToSupabase('warp-beams', updatedBeams, true);
+                            }
+                        }
  
                         // Update Warp Issues
                         const wIssues = JSON.parse(localStorage.getItem('warp-issues') || '[]');
                         const updatedWIssues = wIssues.map(i => (match(i.quality, old.quality) && match(i.code, old.code) && match(i.color, old.color)) ? { ...i, quality: fd.quality, code: fd.code, color: fd.color } : i);
-                        if (JSON.stringify(wIssues) !== JSON.stringify(updatedWIssues)) localStorage.setItem('warp-issues', JSON.stringify(updatedWIssues));
+                        if (JSON.stringify(wIssues) !== JSON.stringify(updatedWIssues)) {
+                            localStorage.setItem('warp-issues', JSON.stringify(updatedWIssues));
+                            if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                                window.VishwaSupabase.saveToSupabase('warp-issues', updatedWIssues, true);
+                            }
+                        }
  
                         // Update Weft Issues (yarn-issues)
                         const yIssues = JSON.parse(localStorage.getItem('yarn-issues') || '[]');
                         const updatedYIssues = yIssues.map(i => (match(i.quality, old.quality) && match(i.code, old.code) && match(i.color, old.color) && match(i.supplier, old.supplier)) ? { ...i, quality: fd.quality, code: fd.code, color: fd.color, supplier: fd.supplier } : i);
-                        if (JSON.stringify(yIssues) !== JSON.stringify(updatedYIssues)) localStorage.setItem('yarn-issues', JSON.stringify(updatedYIssues));
+                        if (JSON.stringify(yIssues) !== JSON.stringify(updatedYIssues)) {
+                            localStorage.setItem('yarn-issues', JSON.stringify(updatedYIssues));
+                            if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                                window.VishwaSupabase.saveToSupabase('yarn-issues', updatedYIssues, true);
+                            }
+                        }
  
                         // Update Production Logs
                         const pLogs = JSON.parse(localStorage.getItem('productionLogs') || '[]');
@@ -2492,9 +2882,21 @@
                             const isMatch = (l.beamNumber && matchingBeams.includes(l.beamNumber)) || match(l.product, old.quality);
                             return isMatch ? { ...l, product: fd.quality } : l;
                         });
-                        if (JSON.stringify(pLogs) !== JSON.stringify(updatedPLogs)) localStorage.setItem('productionLogs', JSON.stringify(updatedPLogs));
+                        if (JSON.stringify(pLogs) !== JSON.stringify(updatedPLogs)) {
+                            localStorage.setItem('productionLogs', JSON.stringify(updatedPLogs));
+                            if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                                window.VishwaSupabase.saveToSupabase('productionLogs', updatedPLogs, true);
+                            }
+                        }
                     } catch (e) { console.error("Sync error:", e); }
-                } else setQualities([...qualities, { ...fd, id: Date.now().toString(), createdAt: new Date().toISOString() }]);
+                } else {
+                    const newQuality = { ...fd, id: Date.now().toString(), createdAt: new Date().toISOString() };
+                    const updatedQualities = [...qualities, newQuality];
+                    setQualities(updatedQualities);
+                    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                        window.VishwaSupabase.saveToSupabase(YARN_QUALITIES_STORAGE_KEY, updatedQualities, true);
+                    }
+                }
                 setShowQualityModal(false); setEditingQuality(null);
             };
 
@@ -2505,49 +2907,118 @@
                     alert('Supplier already exists.'); return;
                 }
                 if (editingSupplier) {
-                    setSuppliers(suppliers.map(s => s.id === editingSupplier.id ? { ...s, ...fd } : s));
+                    const updatedSuppliers = suppliers.map(s => s.id === editingSupplier.id ? { ...s, ...fd } : s);
+                    setSuppliers(updatedSuppliers);
+                    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                        window.VishwaSupabase.saveToSupabase(YARN_SUPPLIERS_STORAGE_KEY, updatedSuppliers, true);
+                    }
                     // Also update supplier name in qualities and orders if name changed
                     if (editingSupplier.name !== fd.name) {
-                        setQualities(qualities.map(q => q.supplier === editingSupplier.name ? { ...q, supplier: fd.name } : q));
-                        setOrders(orders.map(o => o.supplier === editingSupplier.name ? { ...o, supplier: fd.name } : o));
+                        const updatedQualities = qualities.map(q => q.supplier === editingSupplier.name ? { ...q, supplier: fd.name } : q);
+                        setQualities(updatedQualities);
+                        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                            window.VishwaSupabase.saveToSupabase(YARN_QUALITIES_STORAGE_KEY, updatedQualities, true);
+                        }
+                        const updatedOrders = orders.map(o => o.supplier === editingSupplier.name ? { ...o, supplier: fd.name } : o);
+                        setOrders(updatedOrders);
+                        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                            window.VishwaSupabase.saveToSupabase(WEAVING_ORDERS_STORAGE_KEY, updatedOrders, true);
+                        }
 
                         // Update Weft Issues (yarn-issues)
                         try {
                             const yIssues = JSON.parse(localStorage.getItem('yarn-issues') || '[]');
                             const updatedYIssues = yIssues.map(i => i.supplier === editingSupplier.name ? { ...i, supplier: fd.name } : i);
-                            if (JSON.stringify(yIssues) !== JSON.stringify(updatedYIssues)) localStorage.setItem('yarn-issues', JSON.stringify(updatedYIssues));
+                            if (JSON.stringify(yIssues) !== JSON.stringify(updatedYIssues)) {
+                                localStorage.setItem('yarn-issues', JSON.stringify(updatedYIssues));
+                                if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                                    window.VishwaSupabase.saveToSupabase('yarn-issues', updatedYIssues, true);
+                                }
+                            }
                         } catch (e) { console.error("Sync error:", e); }
                     }
-                } else setSuppliers([...suppliers, { ...fd, id: Date.now().toString(), createdAt: new Date().toISOString() }]);
+                } else {
+                    const newSupplier = { ...fd, id: Date.now().toString(), createdAt: new Date().toISOString() };
+                    const updatedSuppliers = [...suppliers, newSupplier];
+                    setSuppliers(updatedSuppliers);
+                    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                        window.VishwaSupabase.saveToSupabase(YARN_SUPPLIERS_STORAGE_KEY, updatedSuppliers, true);
+                    }
+                }
                 setShowSupplierModal(false); setEditingSupplier(null);
             };
 
             const deleteQuality = (id) => {
                 if (confirm('Delete quality?')) {
                     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-                        window.VishwaSupabase.recordDeletion('yarn-qualities', id);
+                        window.VishwaSupabase.recordDeletion(YARN_QUALITIES_STORAGE_KEY, id);
                     }
-                    setQualities(qualities.filter(q => q.id !== id));
+                    const updatedQualities = qualities.filter(q => q.id !== id);
+                    setQualities(updatedQualities);
+                    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                        window.VishwaSupabase.saveToSupabase(YARN_QUALITIES_STORAGE_KEY, updatedQualities, true);
+                    }
                 }
             };
             const deleteSupplier = (id) => {
                 if (confirm('Delete supplier?')) {
                     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-                        window.VishwaSupabase.recordDeletion('yarn-suppliers', id);
+                        window.VishwaSupabase.recordDeletion(YARN_SUPPLIERS_STORAGE_KEY, id);
                     }
-                    setSuppliers(suppliers.filter(s => s.id !== id));
+                    const updatedSuppliers = suppliers.filter(s => s.id !== id);
+                    setSuppliers(updatedSuppliers);
+                    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                        window.VishwaSupabase.saveToSupabase(YARN_SUPPLIERS_STORAGE_KEY, updatedSuppliers, true);
+                    }
                 }
             };
             const updateOrder = (o) => {
                 recordSnapshot(`Update Order ${o.quality || ''}`);
-                const processed = { ...o, orderDate: addTimestampToDate(o.orderDate) };
-                setOrders(orders.map(x => x.id === o.id ? processed : x));
+                const processed = { 
+                    ...o, 
+                    orderDate: addTimestampToDate(o.orderDate),
+                    updatedAt: new Date().toISOString()
+                };
+                const updatedOrders = orders.map(x => x.id === o.id ? processed : x);
+                setOrders(updatedOrders);
                 if (selectedOrder?.id === o.id) setSelectedOrder(processed);
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                    window.VishwaSupabase.saveToSupabase(WEAVING_ORDERS_STORAGE_KEY, updatedOrders, true);
+                }
+                window.dispatchEvent(new CustomEvent('yarn-order-updated', { detail: { order: processed, orders: updatedOrders } }));
+                window.dispatchEvent(new CustomEvent('weaving-order-updated', { detail: { order: processed, orders: updatedOrders } }));
+                window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: WEAVING_ORDERS_STORAGE_KEY } }));
             };
             const completeOrder = (id) => {
                 const target = (orders || []).find(o => o.id === id);
                 recordSnapshot(`Complete Order ${target?.quality || ''}`);
-                setOrders(orders.map(o => o.id === id ? { ...o, status: 'Completed' } : o));
+                const updatedOrders = orders.map(o => o.id === id ? { ...o, status: 'Completed', updatedAt: new Date().toISOString() } : o);
+                setOrders(updatedOrders);
+                if (selectedOrder?.id === id) {
+                    setSelectedOrder(prev => prev ? { ...prev, status: 'Completed', updatedAt: new Date().toISOString() } : null);
+                }
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                    window.VishwaSupabase.saveToSupabase(WEAVING_ORDERS_STORAGE_KEY, updatedOrders, true);
+                }
+                window.dispatchEvent(new CustomEvent('yarn-order-updated', { detail: { id, status: 'Completed', orders: updatedOrders } }));
+                window.dispatchEvent(new CustomEvent('weaving-order-updated', { detail: { id, status: 'Completed', orders: updatedOrders } }));
+                window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: WEAVING_ORDERS_STORAGE_KEY } }));
+            };
+
+            const reactivateOrder = (id) => {
+                const target = (orders || []).find(o => o.id === id);
+                recordSnapshot(`Reactivate Order ${target?.quality || ''}`);
+                const updatedOrders = orders.map(o => o.id === id ? { ...o, status: 'Active', updatedAt: new Date().toISOString() } : o);
+                setOrders(updatedOrders);
+                if (selectedOrder?.id === id) {
+                    setSelectedOrder(prev => prev ? { ...prev, status: 'Active', updatedAt: new Date().toISOString() } : null);
+                }
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                    window.VishwaSupabase.saveToSupabase(WEAVING_ORDERS_STORAGE_KEY, updatedOrders, true);
+                }
+                window.dispatchEvent(new CustomEvent('yarn-order-updated', { detail: { id, status: 'Active', orders: updatedOrders } }));
+                window.dispatchEvent(new CustomEvent('weaving-order-updated', { detail: { id, status: 'Active', orders: updatedOrders } }));
+                window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: WEAVING_ORDERS_STORAGE_KEY } }));
             };
             const showDeletionToast = (msg) => {
                 const toast = document.createElement('div');
@@ -2586,11 +3057,18 @@
                 
                 if (confirm(warningMsg)) {
                     recordSnapshot(`Delete Order ${targetOrder.quality || ''}`);
+                    const orderAliases = [id, targetOrder.orderNumber, targetOrder.id].filter(Boolean);
                     if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-                        const orderAliases = [id, targetOrder.orderNumber, targetOrder.id].filter(Boolean);
+                        window.VishwaSupabase.recordDeletion(WEAVING_ORDERS_STORAGE_KEY, orderAliases.length ? orderAliases : id);
                         window.VishwaSupabase.recordDeletion('yarn-rm-orders', orderAliases.length ? orderAliases : id);
                     }
-                    setOrders(orders.filter(o => o.id !== id));
+                    const updatedOrders = orders.filter(o => o.id !== id);
+                    setOrders(updatedOrders);
+                    if (selectedOrder?.id === id) setSelectedOrder(null);
+                    
+                    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                        window.VishwaSupabase.saveToSupabase(WEAVING_ORDERS_STORAGE_KEY, updatedOrders, true);
+                    }
                     
                     try {
                         const match = (val, target) => (val || '').toString().trim().toLowerCase() === (target || '').toString().trim().toLowerCase();
@@ -2610,10 +3088,21 @@
                         const updatedYIssues = yIssues.filter(i => !(match(i.quality, targetOrder.quality) && match(i.code, targetOrder.code) && match(i.color, targetOrder.color) && match(i.supplier, targetOrder.supplier)));
                         localStorage.setItem('yarn-issues', JSON.stringify(updatedYIssues));
 
+                        // Sync cascades to Supabase
+                        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+                            window.VishwaSupabase.saveToSupabase('warp-beams', updatedBeams, true);
+                            window.VishwaSupabase.saveToSupabase('warp-issues', updatedWIssues, true);
+                            window.VishwaSupabase.saveToSupabase('yarn-issues', updatedYIssues, true);
+                        }
+
                         showDeletionToast(`Order for ${targetOrder.quality} deleted. Associated stock, beams, and issues removed across the app.`);
                     } catch (e) {
                         console.error("Propagation error during deletion:", e);
                     }
+
+                    window.dispatchEvent(new CustomEvent('yarn-order-updated', { detail: { id, deleted: true, orders: updatedOrders } }));
+                    window.dispatchEvent(new CustomEvent('weaving-order-updated', { detail: { id, deleted: true, orders: updatedOrders } }));
+                    window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: WEAVING_ORDERS_STORAGE_KEY } }));
                 }
             };
 
@@ -3104,6 +3593,9 @@
                             onClose={() => setSelectedOrder(null)} 
                             onUpdate={updateOrder} 
                             onComplete={completeOrder} 
+                            onRevertActive={reactivateOrder}
+                            qualities={qualities}
+                            suppliers={suppliers}
                             geminiApiKey={geminiApiKey}
                             selectedGeminiModel={selectedGeminiModel}
                             onOpenSettings={() => window.location.href = '../settings.html#gemini-settings'}
@@ -3198,6 +3690,7 @@
                             </div>
 
                             <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}}>
+                                <button type="button" className="btn btn-outline" style={{flex: 1}} onClick={onClose}>Cancel</button>
                                 <button 
                                     className="btn btn-primary" 
                                     style={{flex: 1, opacity: isFormIncomplete ? 0.5 : 1}} 
@@ -3206,7 +3699,6 @@
                                 >
                                     {initialData ? 'Update Supplier' : 'Add Supplier'}
                                 </button>
-                                <button className="btn btn-outline" onClick={onClose}>Cancel</button>
                             </div>
                         </div>
                     </div>
@@ -3214,144 +3706,837 @@
             );
         };
 
-        const OrderDetailsModal = ({ order, onClose, onUpdate, onComplete, geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
+            const WEAVING_YARN_CATEGORIES = ['Polyester', 'Cotton', 'Linen', 'Viscose', 'Nylon', 'Silk', 'Wool', 'Blended'];
+            const WEAVING_ORDER_TYPES = ['Warp', 'Weft'];
+
+        const getStockBoxLookupMap = () => {
+            try {
+                const rawStock = localStorage.getItem('vishwa_yarn_rm_stock_data') || localStorage.getItem('yarn_stock_data');
+                const stockList = rawStock ? JSON.parse(rawStock) : [];
+                const map = new Map();
+                if (Array.isArray(stockList)) {
+                    stockList.forEach(lot => {
+                        if (!lot || !Array.isArray(lot.boxes)) return;
+                        const lId = String(lot.id || '').trim();
+                        const lNum = String(lot.lotNumber || '').trim();
+                        const lChallan = String(lot.challanNo || lot.challanNumber || '').trim();
+                        const bId = String(lot.batchId || '').trim();
+
+                        lot.boxes.forEach(b => {
+                            if (!b) return;
+                            const bNum = String(b.id || b.boxNumber || '').trim();
+                            if (!bNum) return;
+                            if (lId) map.set(`${lId}__${bNum}`, b);
+                            if (bId) map.set(`${bId}__${bNum}`, b);
+                            if (lNum && lChallan) map.set(`${lNum}__${lChallan}__${bNum}`, b);
+                            if (lNum) map.set(`${lNum}__${bNum}`, b);
+                            if (lChallan) map.set(`${lChallan}__${bNum}`, b);
+                        });
+                    });
+                }
+                return map;
+            } catch(e) {
+                return new Map();
+            }
+        };
+
+        const resolveBoxIssueDetails = (batch, box, stockBoxMap) => {
+            if (!box) return { isIssued: false, issueDate: null, issuedTo: null };
+            const bNum = String(box.boxNumber || box.id || '').trim();
+            const bLot = String(batch?.lotNumber || '').trim();
+            const bChallan = String(batch?.challanNumber || '').trim();
+            const bId = String(batch?.id || '').trim();
+
+            let stockBox = null;
+            if (stockBoxMap) {
+                if (bId) stockBox = stockBoxMap.get(`${bId}__${bNum}`);
+                if (!stockBox && bLot && bChallan) stockBox = stockBoxMap.get(`${bLot}__${bChallan}__${bNum}`);
+                if (!stockBox && bLot) stockBox = stockBoxMap.get(`${bLot}__${bNum}`);
+                if (!stockBox && bChallan) stockBox = stockBoxMap.get(`${bChallan}__${bNum}`);
+            }
+
+            const directIssued = (box.status === 'issued') || Boolean((box.issueDate || box.issuedTo || box.previousIssueDate || box.previousIssuedTo) && !box.unissued_at && box.status !== 'gr');
+            const stockIssued = stockBox && ((stockBox.status === 'issued') || Boolean((stockBox.issueDate || stockBox.issuedTo || stockBox.previousIssueDate || stockBox.previousIssuedTo) && !stockBox.unissued_at && stockBox.status !== 'gr'));
+
+            const isIssued = Boolean(directIssued || stockIssued);
+            const issueDate = box.issueDate || stockBox?.issueDate || box.previousIssueDate || stockBox?.previousIssueDate || null;
+            const issuedTo = box.issuedTo || stockBox?.issuedTo || box.previousIssuedTo || stockBox?.previousIssuedTo || null;
+
+            return { isIssued, issueDate, issuedTo };
+        };
+
+        const getBatchGross = (b) => {
+            const boxGross = (b.boxes || []).reduce((acc, box) => acc + (Number(box.weight) || 0), 0);
+            return boxGross > 0 ? boxGross : (Number(b.grossWeight) || Number(b.totalWeight) || 0);
+        };
+
+        const getBatchGR = (b) => {
+            const boxGR = (b.boxes || []).reduce((acc, box) => acc + (Number(box.returnedWeight) || 0), 0);
+            return boxGR > 0 ? boxGR : (Number(b.returnedWeight) || 0);
+        };
+
+        const getBatchNet = (b) => {
+            if (b.totalWeight !== undefined && b.totalWeight !== null && b.totalWeight !== '') {
+                return Number(b.totalWeight);
+            }
+            return Math.max(0, getBatchGross(b) - getBatchGR(b));
+        };
+
+        const calcGRCones = (box) => {
+            if (!box.returnedWeight || !box.weight || !box.cones) return 0;
+            return Math.round(Number(box.returnedWeight) / (Number(box.weight) / Number(box.cones)));
+        };
+
+        const OrderDetailsModal = ({ order, onClose, onUpdate, onComplete, onRevertActive, qualities = [], suppliers = [], geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
             const [showBatchForm, setShowBatchForm] = useState(false);
             const [editingBatch, setEditingBatch] = useState(null);
-            const received = (order.batches || []).reduce((acc, b) => acc + b.totalWeight, 0);
-            const gr = (order.batches || []).reduce((acc, batch) => acc + (batch.boxes || []).reduce((boxAcc, box) => boxAcc + (box.returnedWeight || 0), 0), 0);
-            const grossReceived = received + gr;
-            
+            const [orderSavedToast, setOrderSavedToast] = useState(false);
+            const stockBoxMap = useMemo(() => getStockBoxLookupMap(), [order.id, order.batches]);
+
+            const [orderForm, setOrderForm] = useState({
+                orderDate: (order.orderDate || order.createdAt || new Date().toISOString().split('T')[0]).split('T')[0],
+                supplier: order.supplier || '',
+                category: order.itemType || order.category || 'Polyester',
+                type: order.type || 'Warp',
+                quality: order.quality || '',
+                code: order.code || '',
+                color: order.color || '',
+                orderedWeight: order.orderedWeight !== undefined ? order.orderedWeight : '',
+                price: order.price !== undefined && order.price !== null ? order.price : ''
+            });
+
+            useEffect(() => {
+                setOrderForm({
+                    orderDate: (order.orderDate || order.createdAt || new Date().toISOString().split('T')[0]).split('T')[0],
+                    supplier: order.supplier || '',
+                    category: order.itemType || order.category || 'Polyester',
+                    type: order.type || 'Warp',
+                    quality: order.quality || '',
+                    code: order.code || '',
+                    color: order.color || '',
+                    orderedWeight: order.orderedWeight !== undefined ? order.orderedWeight : '',
+                    price: order.price !== undefined && order.price !== null ? order.price : ''
+                });
+            }, [order.id, order.orderedWeight, order.price, order.quality, order.supplier, order.code, order.color, order.category, order.itemType, order.type, order.orderDate]);
+
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                const batchIdParam = params.get('batchId');
+                const challanParam = params.get('challan');
+                const lotParam = params.get('lot');
+                const openBatchParam = params.get('openBatch') === '1' || params.get('newBatch') === '1';
+
+                if (batchIdParam || challanParam || lotParam) {
+                    const targetBatch = (order.batches || []).find(b => 
+                        (batchIdParam && String(b.id) === String(batchIdParam)) ||
+                        (challanParam && lotParam && String(b.challanNumber).trim() === String(challanParam).trim() && String(b.lotNumber).trim() === String(lotParam).trim()) ||
+                        (challanParam && String(b.challanNumber).trim() === String(challanParam).trim()) ||
+                        (lotParam && String(b.lotNumber).trim() === String(lotParam).trim())
+                    );
+                    if (targetBatch) {
+                        setEditingBatch(targetBatch);
+                        setShowBatchForm(true);
+                    } else if (openBatchParam) {
+                        setShowBatchForm(true);
+                    }
+                } else if (openBatchParam) {
+                    setShowBatchForm(true);
+                }
+            }, [order.id]);
+
+            const batchFormRef = useRef(null);
+
+            useEffect(() => {
+                if (showBatchForm && batchFormRef.current) {
+                    batchFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, [showBatchForm, editingBatch]);
+
+            const modalFilteredQualities = useMemo(() => {
+                return (qualities || []).filter(q => {
+                    const qType = q.type || q.itemType || 'Polyester';
+                    if (orderForm.category && qType !== orderForm.category) return false;
+                    return true;
+                });
+            }, [qualities, orderForm.category]);
+
+            const modalAvailableCodes = useMemo(() => {
+                const codes = (qualities || []).filter(q => {
+                    const qType = q.type || q.itemType || 'Polyester';
+                    const qQual = q.quality || q.name || '';
+                    if (orderForm.category && qType !== orderForm.category) return false;
+                    if (orderForm.quality && qQual !== orderForm.quality) return false;
+                    return true;
+                }).map(q => q.code).filter(Boolean);
+                return [...new Set(codes)];
+            }, [qualities, orderForm.category, orderForm.quality]);
+
+            const modalAvailableColors = useMemo(() => {
+                const colors = (qualities || []).filter(q => {
+                    const qType = q.type || q.itemType || 'Polyester';
+                    const qQual = q.quality || q.name || '';
+                    if (orderForm.category && qType !== orderForm.category) return false;
+                    if (orderForm.quality && qQual !== orderForm.quality) return false;
+                    return true;
+                }).map(q => q.color).filter(Boolean);
+                return [...new Set(colors)];
+            }, [qualities, orderForm.category, orderForm.quality]);
+
+            const handleModalQualityChange = (selectedQualName) => {
+                const match = modalFilteredQualities.find(q => (q.quality || q.name) === selectedQualName);
+                setOrderForm(prev => ({
+                    ...prev,
+                    quality: selectedQualName,
+                    code: match?.code || prev.code,
+                    color: match?.color || prev.color,
+                    supplier: prev.supplier || match?.supplier || ''
+                }));
+            };
+
+            const handleSaveOrderDetails = (e) => {
+                if (e && e.preventDefault) e.preventDefault();
+                if (!orderForm.orderDate || !orderForm.supplier || !orderForm.quality || !orderForm.orderedWeight) {
+                    alert('Please fill in all required order fields (Date, Supplier, Quality, Order Qty)');
+                    return;
+                }
+
+                const updatedOrder = {
+                    ...order,
+                    orderDate: orderForm.orderDate,
+                    supplier: orderForm.supplier,
+                    category: orderForm.category,
+                    itemType: orderForm.category,
+                    type: orderForm.type || order.type || 'Warp',
+                    quality: orderForm.quality,
+                    code: orderForm.code,
+                    color: orderForm.color,
+                    orderedWeight: Number(orderForm.orderedWeight) || 0,
+                    price: orderForm.price !== '' ? Number(orderForm.price) : '',
+                    updatedAt: new Date().toISOString()
+                };
+
+                onUpdate(updatedOrder);
+                setOrderSavedToast(true);
+                setTimeout(() => setOrderSavedToast(false), 3000);
+            };
+
+            const handleRevertToActive = (e) => {
+                if (e && e.preventDefault) e.preventDefault();
+                if (e && e.stopPropagation) e.stopPropagation();
+                if (typeof onRevertActive === 'function') {
+                    onRevertActive(order.id);
+                } else {
+                    onUpdate({ ...order, status: 'Active', updatedAt: new Date().toISOString() });
+                }
+            };
+
+            const handleMarkCompleted = (e) => {
+                if (e && e.preventDefault) e.preventDefault();
+                if (e && e.stopPropagation) e.stopPropagation();
+                if (typeof onComplete === 'function') {
+                    onComplete(order.id);
+                } else {
+                    onUpdate({ ...order, status: 'Completed', updatedAt: new Date().toISOString() });
+                }
+            };
+
+            const handleDeleteBatch = (batchId) => {
+                if (window.confirm('Delete this batch?')) {
+                    const remaining = (order.batches || []).filter(x => x.id !== batchId);
+                    onUpdate({ ...order, batches: remaining, updatedAt: new Date().toISOString() });
+                }
+            };
+
+            const received = (order.batches || []).reduce((acc, b) => acc + getBatchNet(b), 0);
+            const gr = (order.batches || []).reduce((acc, b) => acc + getBatchGR(b), 0);
+            const grossReceived = (order.batches || []).reduce((acc, b) => acc + getBatchGross(b), 0);
             const isCompleted = order.status === 'Completed';
-            const netDiff = received - order.orderedWeight;
+            const netDiff = received - Number(order.orderedWeight || 0);
 
             const handleBatchSubmit = (batchData) => {
+                const existingBatchBoxesMap = (editingBatch && Array.isArray(editingBatch.boxes))
+                    ? new Map(editingBatch.boxes.map(bx => [String(bx.boxNumber || bx.id).trim(), bx]))
+                    : new Map();
+
+                const processedBoxes = (batchData.boxes || []).map(box => {
+                    const bNum = String(box.boxNumber || box.id).trim();
+                    const oldBx = existingBatchBoxesMap.get(bNum);
+                    const retWt = Number(box.returnedWeight || box.grWeight || oldBx?.returnedWeight || oldBx?.grWeight || 0);
+
+                    const grossCandidates = [
+                        Number(box.grossWeight || 0),
+                        Number(oldBx?.grossWeight || 0),
+                        Number(box.weight || 0),
+                        Number(oldBx?.weight || 0),
+                        box.remainingWeight !== undefined ? (Number(box.remainingWeight) + retWt) : 0,
+                        oldBx?.remainingWeight !== undefined ? (Number(oldBx.remainingWeight) + retWt) : 0
+                    ];
+                    if (retWt > 0) {
+                        if (Number(box.weight || 0) > 0 && Number(box.weight || 0) !== retWt) grossCandidates.push(Number(box.weight) + retWt);
+                        if (Number(oldBx?.weight || 0) > 0 && Number(oldBx?.weight || 0) !== retWt) grossCandidates.push(Number(oldBx.weight) + retWt);
+                    }
+                    const grossWt = Math.max(...grossCandidates, retWt, 0);
+
+                    const remWt = (box.remainingWeight !== undefined && Number(box.remainingWeight) >= 0 && (Number(box.remainingWeight) > 0 || retWt >= grossWt))
+                        ? Number(box.remainingWeight)
+                        : (oldBx?.remainingWeight !== undefined && Number(oldBx.remainingWeight) >= 0 && (Number(oldBx.remainingWeight) > 0 || retWt >= grossWt))
+                            ? Number(oldBx.remainingWeight)
+                            : Math.max(0, Number((grossWt - retWt).toFixed(2)));
+
+                    const isFullyGr = (retWt > 0 && retWt >= grossWt - 0.001 && grossWt > 0) || 
+                        ((box.status === 'gr' || oldBx?.status === 'gr') && (retWt === 0 || retWt >= grossWt - 0.001) && remWt <= 0);
+
+                    const prevIssueDate = box.previousIssueDate || oldBx?.previousIssueDate || (oldBx?.status === 'issued' ? oldBx.issueDate : null);
+                    const prevIssuedTo = box.previousIssuedTo || oldBx?.previousIssuedTo || (oldBx?.status === 'issued' ? oldBx.issuedTo : null);
+                    const wasIssued = Boolean((oldBx?.status === 'issued' || prevIssueDate) && !oldBx?.unissued_at);
+
+                    let status = 'available';
+                    let issueDate = null;
+                    let issuedTo = null;
+
+                    if (isFullyGr) {
+                        status = 'gr';
+                    } else if (wasIssued) {
+                        status = 'issued';
+                        issueDate = oldBx?.issueDate || prevIssueDate;
+                        issuedTo = oldBx?.issuedTo || prevIssuedTo || 'Department';
+                    }
+
+                    return {
+                        ...box,
+                        grossWeight: grossWt,
+                        remainingWeight: remWt,
+                        weight: isFullyGr ? grossWt : remWt,
+                        status: status,
+                        issueDate: issueDate,
+                        issuedTo: issuedTo,
+                        previousIssueDate: prevIssueDate,
+                        previousIssuedTo: prevIssuedTo,
+                        returnedDate: box.returnedDate ? addTimestampToDate(box.returnedDate) : ''
+                    };
+                });
+
+                const grossTotal = (processedBoxes || []).reduce((acc, bx) => acc + (Number(bx.grossWeight) || Number(bx.weight) || 0), 0);
+                const totalGr = (processedBoxes || []).reduce((acc, bx) => acc + (Number(bx.returnedWeight) || 0), 0);
+                const tw = Math.max(0, Number((grossTotal - totalGr).toFixed(2)));
+
                 const processed = {
                     ...batchData,
                     receiveDate: addTimestampToDate(batchData.receiveDate),
-                    boxes: batchData.boxes ? batchData.boxes.map(box => ({
-                        ...box,
-                        returnedDate: box.returnedDate ? addTimestampToDate(box.returnedDate) : ''
-                    })) : []
+                    boxes: processedBoxes,
+                    grossWeight: grossTotal,
+                    returnedWeight: totalGr,
+                    totalWeight: tw,
+                    receivedQty: tw
                 };
-                let b = editingBatch ? order.batches.map(x => x.id === editingBatch.id ? { ...x, ...processed } : x) : [...order.batches, { ...processed, id: Date.now().toString(), receivedAt: new Date().toISOString() }];
-                onUpdate({ ...order, batches: b }); setShowBatchForm(false); setEditingBatch(null);
+                
+                let updatedBatches = editingBatch 
+                    ? order.batches.map(x => x.id === editingBatch.id ? { ...x, ...processed } : x) 
+                    : [...(order.batches || []), { ...processed, id: Date.now().toString(), receivedAt: new Date().toISOString() }];
+
+                onUpdate({ ...order, batches: updatedBatches, updatedAt: new Date().toISOString() });
+                setShowBatchForm(false);
+                setEditingBatch(null);
             };
+
             return (
-                <div className="modal-overlay"><div className="modal" style={{maxWidth: '1200px'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><div><h2>{order.quality} — {order.supplier}</h2><p style={{color: 'var(--muted)'}}>{order.code} | {order.color} | {order.type}</p></div><button className="btn btn-outline" onClick={onClose}>Close</button></div>
-                    <div className="dashboard-grid" style={{marginTop: '2rem', gridTemplateColumns: isCompleted ? 'repeat(6, 1fr)' : 'repeat(5, 1fr)'}}>
-                        <div className="card"><h3>Ordered</h3><div className="value" style={{fontSize: '1.5rem'}}>{order.orderedWeight} kg</div></div>
-                        <div className="card"><h3>Gross Received</h3><div className="value" style={{fontSize: '1.5rem'}}>{grossReceived.toFixed(1)}</div></div>
-                        <div className="card"><h3>GR</h3><div className="value" style={{fontSize: '1.5rem', color: 'var(--accent3)'}}>{gr.toFixed(1)}</div></div>
-                        <div className="card"><h3>Net Received</h3><div className="value" style={{fontSize: '1.5rem', color: 'var(--success)'}}>{received.toFixed(1)}</div></div>
-                        {isCompleted && (
-                            <div className="card" style={{ borderColor: netDiff >= 0 ? '#3b82f6' : 'var(--error)', background: netDiff >= 0 ? 'rgba(59, 130, 246, 0.05)' : 'rgba(239, 68, 68, 0.02)' }}>
-                                <h3 style={{ color: netDiff >= 0 ? '#3b82f6' : 'var(--error)' }}>{netDiff >= 0 ? 'Surplus' : 'Shortfall'}</h3>
-                                <div className="value" style={{ fontSize: '1.5rem', color: netDiff >= 0 ? '#3b82f6' : 'var(--error)' }}>
-                                    {Math.abs(netDiff).toFixed(1)} kg
+                <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '2rem', paddingBottom: '2rem' }}>
+                    <div className="modal" style={{ maxWidth: '1200px', maxHeight: 'calc(100dvh - 4rem)', overflowY: 'auto' }}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                            <div>
+                                <h2>{order.quality} — {order.supplier}</h2>
+                                <p style={{color: 'var(--muted)'}}>
+                                    {order.code || '-'} | {order.color || '-'} | {order.type || 'Warp'} • {order.category || order.itemType || 'Polyester'} {order.price ? `| ₹${Number(order.price).toFixed(2)}/kg` : ''}
+                                </p>
+                            </div>
+                            <button className="btn btn-outline" onClick={onClose}>Close</button>
+                        </div>
+
+                        <div className="dashboard-grid" style={{marginTop: '1.5rem', gridTemplateColumns: isCompleted ? 'repeat(6, 1fr)' : 'repeat(5, 1fr)', gap: '1rem', marginBottom: '1.5rem'}}>
+                            <div className="card" style={{padding: '1.25rem'}}>
+                                <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Ordered</h3>
+                                <div className="value" style={{fontSize: '1.5rem', fontWeight: '700'}}>{order.orderedWeight} kg</div>
+                            </div>
+                            <div className="card" style={{padding: '1.25rem'}}>
+                                <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Gross Received</h3>
+                                <div className="value" style={{fontSize: '1.5rem', fontWeight: '700'}}>{grossReceived.toFixed(2)}</div>
+                            </div>
+                            <div className="card" style={{padding: '1.25rem'}}>
+                                <h3 style={{fontSize: '0.8rem', color: 'var(--accent3)', textTransform: 'uppercase'}}>GR</h3>
+                                <div className="value" style={{fontSize: '1.5rem', color: 'var(--accent3)', fontWeight: '700'}}>{gr.toFixed(2)}</div>
+                            </div>
+                            <div className="card" style={{padding: '1.25rem'}}>
+                                <h3 style={{fontSize: '0.8rem', color: 'var(--success)', textTransform: 'uppercase'}}>Net Received</h3>
+                                <div className="value" style={{fontSize: '1.5rem', color: 'var(--success)', fontWeight: '700'}}>{received.toFixed(2)}</div>
+                            </div>
+                            {isCompleted && (
+                                <div className="card" style={{ padding: '1.25rem', borderColor: netDiff >= 0 ? '#3b82f6' : 'var(--error)', background: netDiff >= 0 ? 'rgba(59, 130, 246, 0.05)' : 'rgba(239, 68, 68, 0.02)' }}>
+                                    <h3 style={{ color: netDiff >= 0 ? '#3b82f6' : 'var(--error)', fontSize: '0.8rem', textTransform: 'uppercase' }}>{netDiff >= 0 ? 'Surplus' : 'Shortfall'}</h3>
+                                    <div className="value" style={{ fontSize: '1.5rem', color: netDiff >= 0 ? '#3b82f6' : 'var(--error)', fontWeight: '700' }}>
+                                        {Math.abs(netDiff).toFixed(2)} kg
+                                    </div>
+                                </div>
+                            )}
+                            <div className="card" style={{padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between'}}>
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                                        <h3 style={{fontSize: '0.8rem', color: 'var(--muted)', textTransform: 'uppercase'}}>Status</h3>
+                                        <span className={`badge badge-${(order.status || 'Active').toLowerCase()}`} style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>
+                                            {order.status || 'Active'}
+                                        </span>
+                                    </div>
+                                    <div className="value" style={{fontSize: '1.4rem', color: isCompleted ? 'var(--muted)' : 'var(--success)', fontWeight: '700'}}>
+                                        {order.status || 'Active'}
+                                    </div>
+                                </div>
+                                {isCompleted && (
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-outline" 
+                                        style={{
+                                            marginTop: '0.6rem', 
+                                            padding: '0.35rem 0.6rem', 
+                                            fontSize: '0.75rem', 
+                                            borderColor: 'var(--success)', 
+                                            color: 'var(--success)', 
+                                            borderRadius: '8px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.35rem',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            background: 'rgba(16, 185, 129, 0.05)',
+                                            transition: 'all var(--transition-fast)'
+                                        }}
+                                        onClick={handleRevertToActive}
+                                        title="Revert order back to Active status"
+                                    >
+                                        <span>↩</span> Revert to Active
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="card" style={{ padding: '1.25rem', marginBottom: '2rem', border: '1px solid var(--border)', background: 'var(--surface)', position: 'relative', zIndex: 25, overflow: 'visible' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ fontSize: '1.1rem' }}>✏️</span>
+                                    <h3 style={{ fontSize: '0.95rem', fontWeight: '600' }}>Edit Order Specifications & Rate</h3>
+                                    {orderSavedToast && <span className="badge badge-success" style={{ marginLeft: '0.5rem' }}>✓ Saved</span>}
+                                </div>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-primary" 
+                                    style={{ padding: '0.45rem 1.1rem', fontSize: '0.85rem' }} 
+                                    onClick={handleSaveOrderDetails}
+                                >
+                                    Save Order Details
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', alignItems: 'end' }}>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label style={{ fontSize: '0.75rem' }}>Order Date *</label>
+                                    <input type="date" value={orderForm.orderDate} onChange={e => setOrderForm({ ...orderForm, orderDate: e.target.value })} style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem', borderRadius: '10px' }} />
+                                </div>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label style={{ fontSize: '0.75rem' }}>Supplier *</label>
+                                    <select value={orderForm.supplier} onChange={e => setOrderForm({ ...orderForm, supplier: e.target.value })} style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem', borderRadius: '10px' }}>
+                                        <option value="">-- Supplier --</option>
+                                        {(suppliers || []).map((s, idx) => {
+                                            const sName = s.name || s.supplier;
+                                            return <option key={idx} value={sName}>{sName}</option>;
+                                        })}
+                                    </select>
+                                </div>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label style={{ fontSize: '0.75rem' }}>Category *</label>
+                                    <select value={orderForm.category} onChange={e => setOrderForm({ ...orderForm, category: e.target.value, quality: '', code: '', color: '' })} style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem', borderRadius: '10px' }}>
+                                        {WEAVING_YARN_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                    </select>
+                                </div>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label style={{ fontSize: '0.75rem' }}>Type *</label>
+                                    <select value={orderForm.type} onChange={e => setOrderForm({ ...orderForm, type: e.target.value })} style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem', borderRadius: '10px' }}>
+                                        {WEAVING_ORDER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </div>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label style={{ fontSize: '0.75rem' }}>Quality *</label>
+                                    <select value={orderForm.quality} onChange={e => handleModalQualityChange(e.target.value)} style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem', borderRadius: '10px' }}>
+                                        <option value="">-- Quality --</option>
+                                        {modalFilteredQualities.map((q, idx) => {
+                                            const qName = q.quality || q.name;
+                                            return <option key={idx} value={qName}>{qName}{q.color ? ` (${q.color})` : ''}</option>;
+                                        })}
+                                    </select>
+                                </div>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label style={{ fontSize: '0.75rem' }}>Code</label>
+                                    {modalAvailableCodes.length > 0 ? (
+                                        <select value={orderForm.code} onChange={e => setOrderForm({ ...orderForm, code: e.target.value })} style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem', borderRadius: '10px' }}>
+                                            <option value="">-- Code --</option>
+                                            {modalAvailableCodes.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    ) : (
+                                        <input type="text" placeholder="Code" value={orderForm.code} onChange={e => setOrderForm({ ...orderForm, code: e.target.value })} style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem', borderRadius: '10px' }} />
+                                    )}
+                                </div>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label style={{ fontSize: '0.75rem' }}>Color</label>
+                                    {modalAvailableColors.length > 0 ? (
+                                        <select value={orderForm.color} onChange={e => setOrderForm({ ...orderForm, color: e.target.value })} style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem', borderRadius: '10px' }}>
+                                            <option value="">-- Color --</option>
+                                            {modalAvailableColors.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    ) : (
+                                        <input type="text" placeholder="Color" value={orderForm.color} onChange={e => setOrderForm({ ...orderForm, color: e.target.value })} style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem', borderRadius: '10px' }} />
+                                    )}
+                                </div>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label style={{ fontSize: '0.75rem' }}>Ordered (Kg) *</label>
+                                    <input type="number" step="0.01" min="0" value={orderForm.orderedWeight} onChange={e => setOrderForm({ ...orderForm, orderedWeight: e.target.value })} style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem', borderRadius: '10px' }} />
+                                </div>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: '600' }}>Rate (₹/Kg)</label>
+                                    <input type="number" step="0.01" min="0" placeholder="e.g. 150.00" value={orderForm.price} onChange={e => setOrderForm({ ...orderForm, price: e.target.value })} style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem', borderRadius: '10px', borderColor: 'var(--accent)', fontWeight: '600' }} />
                                 </div>
                             </div>
-                        )}
-                        <div className="card"><h3>Status</h3><div className="value" style={{fontSize: '1.5rem', color: 'var(--success)'}}>{order.status}</div></div>
-                    </div>
-                    <div style={{marginTop: '2rem'}}>
-                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}><h3>Received Batches</h3>{order.status === 'Active' && <button className="btn btn-primary" onClick={() => { setEditingBatch(null); setShowBatchForm(true); }}>+ Add Batch</button>}</div>
-                        {showBatchForm && (
-                            <BatchForm 
-                                order={order} 
-                                onCancel={() => setShowBatchForm(false)} 
-                                onSubmit={handleBatchSubmit} 
-                                initialData={editingBatch} 
-                                geminiApiKey={geminiApiKey}
-                                selectedGeminiModel={selectedGeminiModel}
-                                onOpenSettings={onOpenSettings}
-                            />
-                        )}
-                        <div className="table-responsive">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Received Date</th>
-                                        <th>Challan #</th>
-                                        <th>Lot #</th>
-                                        <th style={{color: 'var(--accent)'}}>Box Number</th>
-                                        <th style={{color: 'var(--accent)'}}>In cones</th>
-                                        <th style={{color: 'var(--accent)'}}>In weight(Kg)</th>
-                                        <th style={{color: 'var(--error)'}}>GR Cones<br/><span style={{fontSize: '0.7rem', fontWeight: 400, opacity: 0.8}}>(Calculated)</span></th>
-                                        <th style={{color: 'var(--error)'}}>GR (kg)</th>
-                                        <th style={{color: 'var(--error)'}}>GR Date</th>
-                                        <th>Net Weight</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>{[...(order.batches || [])].sort((a, b) => new Date(b.receiveDate) - new Date(a.receiveDate)).map((b, bIdx, bArr) => {
-                                    const grossTotal = b.boxes.reduce((acc, box) => acc + box.weight, 0);
-                                    const grTotal = b.boxes.reduce((acc, box) => acc + (box.returnedWeight || 0), 0);
-                                    const conesTotal = b.boxes.reduce((acc, box) => acc + (Number(box.cones) || 0), 0);
-                                    
-                                    const calcGRCones = (box) => {
-                                        if (!box.returnedWeight || !box.weight || !box.cones) return 0;
-                                        return Math.round(box.returnedWeight / (box.weight / box.cones));
-                                    };
-                                    
-                                    const grConesTotal = b.boxes.reduce((acc, box) => acc + calcGRCones(box), 0);
+                        </div>
 
-                                    return (
-                                        <React.Fragment key={b.id}>{b.boxes.map((box, idx) => (
-                                            <tr key={`${b.id}-${idx}`}>
-                                                {idx === 0 && <React.Fragment><td rowSpan={b.boxes.length + 1}>{new Date(b.receiveDate).toLocaleDateString('en-GB')}</td><td rowSpan={b.boxes.length + 1}>{b.challanNumber}</td><td rowSpan={b.boxes.length + 1}>{b.lotNumber}</td></React.Fragment>}
-                                                <td style={{fontWeight: '600'}}>{box.boxNumber}</td>
-                                                <td>{box.cones || '-'}</td>
-                                                <td>{box.weight.toFixed(1)}</td>
-                                                <td style={{color: 'var(--error)', fontWeight: '600'}}>{calcGRCones(box) || '-'}</td>
-                                                <td style={{color: box.returnedWeight > 0 ? 'var(--error)' : 'inherit'}}>{box.returnedWeight || '0.0'}</td>
-                                                <td style={{color: 'var(--error)'}}>{box.returnedDate ? new Date(box.returnedDate).toLocaleDateString('en-GB') : '-'}</td>
-                                                <td>{(box.weight - (box.returnedWeight || 0)).toFixed(1)}</td>
-                                                {idx === 0 && <td rowSpan={b.boxes.length + 1}>
-                                                    <div style={{display: 'flex', gap: '0.4rem', justifyContent: 'center'}}>
-                                                        <button className="btn btn-outline" style={{padding: '0.3rem 0.6rem'}} onClick={() => { setEditingBatch(b); setShowBatchForm(true); }}>✏️</button>
-                                                        <button className="btn btn-outline" style={{padding: '0.3rem 0.6rem', color: 'var(--error)', borderColor: 'transparent'}} onClick={() => { if(confirm('Delete this batch?')) onUpdate({ ...order, batches: order.batches.filter(x => x.id !== b.id) }); }}>🗑️</button>
+                        <div style={{marginTop: '2rem', position: 'relative', zIndex: 1}}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem'}}>
+                                <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap'}}>
+                                    <h3 style={{margin: 0}}>Received Batches</h3>
+                                    <span className="gr-issued-legend-pill" title="Boxes highlighted in blue have already been issued to production floor">
+                                        <span style={{width: '7px', height: '7px', borderRadius: '50%', background: '#3b82f6', display: 'inline-block'}}></span>
+                                        Blue = Already Issued
+                                    </span>
+                                </div>
+                                {order.status === 'Active' && (
+                                    <button className="btn btn-primary" onClick={() => { setEditingBatch(null); setShowBatchForm(true); }}>
+                                        + Add Batch
+                                    </button>
+                                )}
+                            </div>
+
+                            {showBatchForm && (
+                                <div ref={batchFormRef}>
+                                    <BatchForm 
+                                        order={order} 
+                                        onCancel={() => setShowBatchForm(false)} 
+                                        onSubmit={handleBatchSubmit} 
+                                        initialData={editingBatch} 
+                                        geminiApiKey={geminiApiKey}
+                                        selectedGeminiModel={selectedGeminiModel}
+                                        onOpenSettings={onOpenSettings}
+                                        stockBoxMap={stockBoxMap}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="batches-mobile-cards">
+                                {(order.batches || []).length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                                        No batches recorded yet. Click "+ Add Batch" to add incoming delivery boxes.
+                                    </div>
+                                ) : (
+                                    [...(order.batches || [])].sort((a, b) => new Date(b.receiveDate) - new Date(a.receiveDate)).map((b, bIdx) => {
+                                        const grossTotal = getBatchGross(b);
+                                        const grTotal = getBatchGR(b);
+                                        const conesTotal = (b.boxes || []).reduce((acc, box) => acc + (Number(box.cones) || 0), 0);
+                                        const netTotal = getBatchNet(b);
+                                        const boxCount = b.boxes?.length || 0;
+                                        const issuedBoxes = (b.boxes || []).filter(bx => resolveBoxIssueDetails(b, bx, stockBoxMap).isIssued);
+                                        const issuedCount = issuedBoxes.length;
+                                        const issuedWeight = issuedBoxes.reduce((acc, bx) => acc + (Number(bx.weight) || 0), 0);
+
+                                        return (
+                                            <div key={`batch-mob-${b.id || bIdx}`} className="yarn-mobile-card" style={{ borderLeft: grTotal > 0 ? '5px solid var(--accent3)' : '5px solid var(--success)' }}>
+                                                <div className="mobile-card-header">
+                                                    <div className="mobile-card-title-group">
+                                                        <div className="mobile-card-meta">
+                                                            <span className="mobile-card-date">
+                                                                📅 {new Date(b.receiveDate).toLocaleDateString('en-GB')}
+                                                            </span>
+                                                            {b.lotNumber && (
+                                                                <span className="badge" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.74rem', background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent)', fontWeight: 700 }}>
+                                                                    Lot: {b.lotNumber}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="mobile-card-party-name">
+                                                            Challan #{b.challanNumber || '-'}
+                                                        </div>
                                                     </div>
-                                                </td>}
-                                            </tr>
-                                        ))}
-                                        <tr key={`${b.id}-total`} style={{background: 'var(--bg)', fontWeight: '700', fontSize: '0.85rem', borderTop: '2px solid var(--border)'}}>
-                                            <td style={{color: 'var(--muted)', textAlign: 'right', paddingRight: '1rem'}}>BATCH TOTAL</td>
-                                            <td>{conesTotal || '-'}</td>
-                                            <td style={{color: 'var(--accent)'}}>{grossTotal.toFixed(1)}</td>
-                                            <td style={{color: 'var(--error)'}}>{grConesTotal || '-'}</td>
-                                            <td style={{color: 'var(--error)'}}>{grTotal.toFixed(1)}</td>
-                                            <td style={{color: 'var(--muted)'}}>-</td>
-                                            <td style={{color: 'var(--success)', fontSize: '0.95rem'}}>{b.totalWeight.toFixed(1)} kg</td>
+                                                    <div className="mobile-card-badges">
+                                                        {issuedCount > 0 && (
+                                                            <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#2563eb', border: '1px solid rgba(59, 130, 246, 0.35)', fontWeight: 700 }}>
+                                                                {issuedCount} Issued
+                                                            </span>
+                                                        )}
+                                                        {grTotal > 0 ? (
+                                                            <span className="badge badge-gr">GR Active</span>
+                                                        ) : (
+                                                            <span className="badge badge-success">Received</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mobile-card-highlight">
+                                                    <div className="mobile-highlight-item">
+                                                        <span className="mobile-highlight-label">Net Inward</span>
+                                                        <span className="mobile-highlight-value" style={{ color: 'var(--success)' }}>
+                                                            {netTotal.toFixed(2)} <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>kg</span>
+                                                        </span>
+                                                    </div>
+                                                    <div className="mobile-highlight-item" style={{ alignItems: 'flex-end' }}>
+                                                        <span className="mobile-highlight-label">Gross / Boxes</span>
+                                                        <span className="mobile-highlight-value" style={{ color: 'var(--fg)', fontSize: '0.95rem' }}>
+                                                            {grossTotal.toFixed(2)} kg ({boxCount} bx)
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mobile-card-grid" style={{ padding: '0.75rem 1.15rem' }}>
+                                                    <div className="mobile-card-field">
+                                                        <span className="mobile-field-label">Cones</span>
+                                                        <span className="mobile-field-value">{conesTotal || '-'}</span>
+                                                    </div>
+                                                    <div className="mobile-card-field">
+                                                        <span className="mobile-field-label">GR Returned</span>
+                                                        <span className="mobile-field-value" style={{ color: grTotal > 0 ? 'var(--accent3)' : 'var(--muted)' }}>
+                                                            {grTotal > 0 ? `${grTotal.toFixed(2)} kg` : '0.00 kg'}
+                                                        </span>
+                                                    </div>
+                                                    {issuedCount > 0 && (
+                                                        <div className="mobile-card-field" style={{ gridColumn: 'span 2' }}>
+                                                            <span className="mobile-field-label" style={{ color: '#2563eb' }}>Floor Issued</span>
+                                                            <span className="mobile-field-value" style={{ color: '#2563eb', fontWeight: 700 }}>
+                                                                {issuedCount} box{issuedCount !== 1 ? 'es' : ''} ({issuedWeight.toFixed(2)} kg)
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="mobile-card-footer">
+                                                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
+                                                        {boxCount} item{boxCount !== 1 ? 's' : ''} recorded
+                                                    </span>
+                                                    <div className="mobile-card-actions">
+                                                        <button 
+                                                            type="button" 
+                                                            className="mobile-btn-pill" 
+                                                            onClick={() => { setEditingBatch(b); setShowBatchForm(true); }}
+                                                        >
+                                                            ✏️ Edit
+                                                        </button>
+                                                        <button 
+                                                            type="button" 
+                                                            className="mobile-btn-pill" 
+                                                            style={{ color: 'var(--error)', borderColor: 'rgba(239, 68, 68, 0.25)' }}
+                                                            onClick={() => handleDeleteBatch(b.id)}
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            <div className="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Received Date</th>
+                                            <th>Challan #</th>
+                                            <th>Lot #</th>
+                                            <th style={{color: 'var(--accent)'}}>Box Number</th>
+                                            <th style={{color: 'var(--accent)'}}>In cones</th>
+                                            <th style={{color: 'var(--accent)'}}>In weight(Kg)</th>
+                                            <th style={{color: 'var(--error)'}}>GR Cones<br/><span style={{fontSize: '0.7rem', fontWeight: 400, opacity: 0.8}}>(Calculated)</span></th>
+                                            <th style={{color: 'var(--error)'}}>GR (kg)</th>
+                                            <th style={{color: 'var(--error)'}}>GR Date</th>
+                                            <th>Net Weight</th>
+                                            <th>Actions</th>
                                         </tr>
-                                        {bIdx < bArr.length - 1 && (
-                                            <tr key={`${b.id}-sep`}><td colSpan="11" style={{padding: 0, border: 'none', height: '5px', background: '#000000', lineHeight: '0'}}></td></tr>
+                                    </thead>
+                                    <tbody>
+                                        {(order.batches || []).length === 0 ? (
+                                            <tr>
+                                                <td colSpan="11" style={{textAlign: 'center', padding: '2rem', color: 'var(--muted)'}}>
+                                                    No batches recorded yet. Click "+ Add Batch" to add incoming delivery boxes.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            [...(order.batches || [])].sort((a, b) => new Date(b.receiveDate) - new Date(a.receiveDate)).map((b, bIdx, bArr) => {
+                                                const grossTotal = getBatchGross(b);
+                                                const grTotal = getBatchGR(b);
+                                                const conesTotal = (b.boxes || []).reduce((acc, box) => acc + (Number(box.cones) || 0), 0);
+                                                const grConesTotal = (b.boxes || []).reduce((acc, box) => acc + calcGRCones(box), 0);
+                                                const boxList = (b.boxes && b.boxes.length > 0) ? b.boxes : [{ boxNumber: 'All / Batch', cones: conesTotal || '-', weight: grossTotal, returnedWeight: grTotal, returnedDate: b.returnedDate || '' }];
+                                                const rowCount = boxList.length;
+
+                                                return (
+                                                    <React.Fragment key={b.id}>
+                                                        {boxList.map((box, idx) => {
+                                                            const issueInfo = resolveBoxIssueDetails(b, box, stockBoxMap);
+                                                            const isIssued = issueInfo.isIssued;
+                                                            const issueTooltip = issueInfo.issuedTo 
+                                                                ? (issueInfo.issueDate ? `Issued to ${issueInfo.issuedTo} on ${new Date(issueInfo.issueDate).toLocaleDateString('en-GB')}` : `Issued to ${issueInfo.issuedTo}`)
+                                                                : (issueInfo.issueDate ? `Issued on ${new Date(issueInfo.issueDate).toLocaleDateString('en-GB')}` : 'Already Issued to Production');
+
+                                                            return (
+                                                                <tr key={`${b.id}-${idx}`} className={isIssued ? 'yarn-box-row-issued' : ''} style={isIssued ? { background: 'rgba(59, 130, 246, 0.07)' } : undefined}>
+                                                                    {idx === 0 && (
+                                                                        <React.Fragment>
+                                                                            <td rowSpan={rowCount + 1}>{new Date(b.receiveDate).toLocaleDateString('en-GB')}</td>
+                                                                            <td rowSpan={rowCount + 1}>
+                                                                                <strong>{b.challanNumber}</strong>
+                                                                                {grTotal > 0 && (
+                                                                                    <div style={{ marginTop: '2px' }}>
+                                                                                        <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(249, 115, 22, 0.15)', color: 'var(--accent3)', fontWeight: '700', display: 'inline-block' }}>
+                                                                                            GR (-{grTotal.toFixed(2)} kg)
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </td>
+                                                                            <td rowSpan={rowCount + 1}><span style={{fontFamily: 'var(--font-mono)'}}>{b.lotNumber || '-'}</span></td>
+                                                                        </React.Fragment>
+                                                                    )}
+                                                                    <td style={{fontWeight: '600'}}>
+                                                                        <div style={{display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap'}}>
+                                                                            <span style={{fontFamily: 'var(--font-mono)', color: isIssued ? '#2563eb' : 'inherit', fontWeight: '700'}}>
+                                                                                {box.boxNumber}
+                                                                            </span>
+                                                                            {isIssued && (
+                                                                                <span className="gr-badge-issued" title={issueTooltip}>
+                                                                                    Issued
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        {isIssued && (issueInfo.issuedTo || issueInfo.issueDate) && (
+                                                                            <div style={{fontSize: '0.68rem', color: '#2563eb', opacity: 0.9, marginTop: '2px', fontWeight: '600', lineHeight: 1.1}}>
+                                                                                {issueInfo.issuedTo || 'Floor'}{issueInfo.issueDate ? ` • ${new Date(issueInfo.issueDate).toLocaleDateString('en-GB')}` : ''}
+                                                                            </div>
+                                                                        )}
+                                                                    </td>
+                                                                    <td style={{color: isIssued ? '#2563eb' : 'inherit', fontWeight: isIssued ? '600' : 'normal'}}>{box.cones || '-'}</td>
+                                                                    <td style={{color: isIssued ? '#2563eb' : 'inherit', fontWeight: isIssued ? '700' : 'normal'}}>{Number(box.weight || 0).toFixed(2)}</td>
+                                                                    <td style={{color: 'var(--error)', fontWeight: '600'}}>{calcGRCones(box) || '-'}</td>
+                                                                    <td style={{color: Number(box.returnedWeight) > 0 ? 'var(--error)' : 'inherit', fontWeight: Number(box.returnedWeight) > 0 ? '700' : 'normal'}}>
+                                                                        {Number(box.returnedWeight) > 0 ? Number(box.returnedWeight).toFixed(2) : '0.00'}
+                                                                    </td>
+                                                                    <td style={{color: 'var(--error)'}}>{box.returnedDate ? new Date(box.returnedDate).toLocaleDateString('en-GB') : '-'}</td>
+                                                                    <td style={{fontWeight: '600'}}>{(Number(box.weight || 0) - (Number(box.returnedWeight) || 0)).toFixed(2)}</td>
+                                                                    {idx === 0 && (
+                                                                        <td rowSpan={rowCount + 1}>
+                                                                            <div style={{display: 'flex', gap: '0.4rem', justifyContent: 'center'}}>
+                                                                                <button className="btn btn-outline" style={{padding: '0.3rem 0.6rem'}} onClick={() => { setEditingBatch(b); setShowBatchForm(true); }}>✏️</button>
+                                                                                <button className="btn btn-outline" style={{padding: '0.3rem 0.6rem', color: 'var(--error)', borderColor: 'transparent'}} onClick={() => handleDeleteBatch(b.id)}>🗑️</button>
+                                                                            </div>
+                                                                        </td>
+                                                                    )}
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                        <tr key={`${b.id}-total`} style={{background: 'var(--bg)', fontWeight: '700', fontSize: '0.85rem', borderTop: '2px solid var(--border)'}}>
+                                                            <td style={{color: 'var(--muted)', textAlign: 'right', paddingRight: '1rem'}}>BATCH TOTAL</td>
+                                                            <td>{conesTotal || '-'}</td>
+                                                            <td style={{color: 'var(--accent)'}}>{grossTotal.toFixed(2)}</td>
+                                                            <td style={{color: 'var(--error)'}}>{grConesTotal || '-'}</td>
+                                                            <td style={{color: 'var(--error)'}}>{grTotal.toFixed(2)}</td>
+                                                            <td style={{color: 'var(--muted)'}}>-</td>
+                                                            <td style={{color: 'var(--success)', fontSize: '0.95rem'}}>{getBatchNet(b).toFixed(2)} kg</td>
+                                                        </tr>
+                                                        {bIdx < bArr.length - 1 && (
+                                                            <tr key={`${b.id}-sep`}><td colSpan="11" style={{padding: 0, border: 'none', height: '5px', background: '#000000', lineHeight: '0'}}></td></tr>
+                                                        )}
+                                                    </React.Fragment>
+                                                );
+                                            })
                                         )}
-                                        </React.Fragment>
-                                    );
-                                })}</tbody>
-                            </table>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div style={{marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem'}}>
+                            {order.status === 'Active' ? (
+                                <button 
+                                    type="button" 
+                                    className="btn btn-primary" 
+                                    style={{background: 'var(--success)', borderColor: 'var(--success)'}} 
+                                    onClick={handleMarkCompleted}
+                                >
+                                    Mark as Completed
+                                </button>
+                            ) : (
+                                <button 
+                                    type="button" 
+                                    className="btn btn-outline" 
+                                    style={{
+                                        borderColor: 'var(--success)', 
+                                        color: 'var(--success)', 
+                                        display: 'inline-flex', 
+                                        alignItems: 'center', 
+                                        gap: '0.4rem', 
+                                        fontWeight: '600',
+                                        background: 'rgba(16, 185, 129, 0.05)'
+                                    }} 
+                                    onClick={handleRevertToActive}
+                                >
+                                    <span>↩</span> Revert to Active
+                                </button>
+                            )}
                         </div>
                     </div>
-                    {order.status === 'Active' && <div style={{marginTop: '2rem', textAlign: 'right'}}><button className="btn btn-primary" style={{background: 'var(--success)'}} onClick={() => { if(confirm('Mark as Completed?')) { onComplete(order.id); onClose(); } }}>Mark as Completed</button></div>}
-                </div></div>
+                </div>
             );
         };
 
-        // Component: Batch Form with AI Scan & Mobile QR Upload
-        const BatchForm = ({ order, onCancel, onSubmit, initialData, geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
+        const BatchForm = ({ order, onCancel, onSubmit, initialData, geminiApiKey, selectedGeminiModel, onOpenSettings, stockBoxMap }) => {
+            const activeStockBoxMap = useMemo(() => stockBoxMap || getStockBoxLookupMap(), [stockBoxMap]);
+
+            const getInitialBoxes = (data) => {
+                if (data?.boxes && data.boxes.length > 0) {
+                    return data.boxes.map(b => ({
+                        ...b,
+                        returnedWeight: (b.returnedWeight !== undefined && b.returnedWeight !== null && b.returnedWeight !== '') ? b.returnedWeight : '',
+                        returnedDate: b.returnedDate ? b.returnedDate.split('T')[0] : ''
+                    }));
+                }
+                return [{ boxNumber: 'B1', cones: '', weight: '', returnedWeight: data?.returnedWeight || '', returnedDate: data?.returnedDate ? data.returnedDate.split('T')[0] : '' }];
+            };
+
             const [challan, setChallan] = useState(initialData?.challanNumber || '');
-            const [receiveDate, setReceiveDate] = useState(initialData?.receiveDate || new Date().toISOString().split('T')[0]);
+            const [receiveDate, setReceiveDate] = useState(initialData?.receiveDate?.split('T')[0] || new Date().toISOString().split('T')[0]);
             const [lotNumber, setLotNumber] = useState(initialData?.lotNumber || '');
-            const [boxInputs, setBoxInputs] = useState(initialData?.boxes ? initialData.boxes.map(b => ({...b})) : [{ boxNumber: 'B1', cones: '', weight: '', returnedWeight: '', returnedDate: '' }]);
+            const [boxInputs, setBoxInputs] = useState(() => getInitialBoxes(initialData));
             const [error, setError] = useState(null);
             const [invalidFields, setInvalidFields] = useState({});
+
+            const hasIssuedBoxes = useMemo(() => {
+                return (boxInputs || []).some(b => resolveBoxIssueDetails(initialData, b, activeStockBoxMap).isIssued);
+            }, [boxInputs, initialData, activeStockBoxMap]);
             const [isScanning, setIsScanning] = useState(false);
             const [scanProgress, setScanProgress] = useState(0);
             const [scanStage, setScanStage] = useState('');
             const scanIntervalRef = useRef(null);
 
-            // Mobile QR Upload State
+            useEffect(() => {
+                if (initialData) {
+                    setChallan(initialData.challanNumber || '');
+                    setReceiveDate(initialData.receiveDate?.split('T')[0] || new Date().toISOString().split('T')[0]);
+                    setLotNumber(initialData.lotNumber || '');
+                    setBoxInputs(getInitialBoxes(initialData));
+                }
+            }, [initialData]);
+
             const [showQrModal, setShowQrModal] = useState(false);
             const [qrSessionId, setQrSessionId] = useState('');
             const [qrStatus, setQrStatus] = useState('waiting');
@@ -3457,7 +4642,6 @@
                 setScanProgress(8);
                 setScanStage('Initializing Gemini AI engine...');
 
-                // Smooth progress animation while in flight
                 const startTime = Date.now();
                 if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
                 scanIntervalRef.current = setInterval(() => {
@@ -3513,7 +4697,6 @@
                             "boxes": [{"boxNumber": "B1", "cones": 24, "weight": 60.5}, ...]
                         }`;
 
-                    // Prioritize user selected model, then fallback to common 2026 models
                     const modelConfigs = [
                         { id: selectedGeminiModel || 'gemini-2.0-flash', ver: 'v1beta' },
                         { id: 'gemini-2.0-flash', ver: 'v1beta' },
@@ -3521,7 +4704,6 @@
                         { id: 'gemini-flash-latest', ver: 'v1' }
                     ];
                     
-                    // Filter out duplicates if selectedGeminiModel matches one of the defaults
                     const uniqueConfigs = [];
                     const seenIds = new Set();
                     for (const config of modelConfigs) {
@@ -3553,7 +4735,7 @@
                             const result = await response.json();
                             if (result.error) {
                                 lastError = `${config.id} (${config.ver}): ${result.error.message}`;
-                                continue; // Try next model
+                                continue;
                             }
 
                             if (!result.candidates || !result.candidates[0]) {
@@ -3567,7 +4749,6 @@
                             
                             const data = JSON.parse(jsonMatch[0]);
 
-                            // Validation check
                             if (order && (order.supplier || order.quality)) {
                                 const supplierMismatch = data.supplier && order.supplier && !data.supplier.toLowerCase().includes(order.supplier.toLowerCase()) && !order.supplier.toLowerCase().includes(data.supplier.toLowerCase());
                                 const qualityMismatch = data.quality && order.quality && !data.quality.toLowerCase().includes(order.quality.toLowerCase()) && !order.quality.toLowerCase().includes(data.quality.toLowerCase());
@@ -3582,7 +4763,6 @@
                                 }
                             }
 
-                            // Populate fields
                             setChallan(data.challanNumber || '');
                             setLotNumber(data.lotNumber || '');
                             
@@ -3674,11 +4854,26 @@
                     return;
                 }
 
-                setError(null);
-                setInvalidFields({});
-                const boxes = validBoxes.map(b => ({ ...b, cones: Number(b.cones), weight: Number(b.weight), returnedWeight: Number(b.returnedWeight) || 0 }));
-                const tw = boxes.reduce((acc, b) => acc + (b.weight - b.returnedWeight), 0);
-                onSubmit({ challanNumber: challan, receiveDate, lotNumber, boxes, totalWeight: tw });
+                const boxes = validBoxes.map(b => ({ 
+                    ...b, 
+                    cones: Number(b.cones), 
+                    weight: Number(b.weight), 
+                    returnedWeight: Number(b.returnedWeight) || 0,
+                    returnedDate: Number(b.returnedWeight) > 0 ? (b.returnedDate || receiveDate) : ''
+                }));
+                const totalGr = boxes.reduce((acc, b) => acc + (b.returnedWeight || 0), 0);
+                const grossTotal = boxes.reduce((acc, b) => acc + (b.weight || 0), 0);
+                const tw = Math.max(0, Number((grossTotal - totalGr).toFixed(2)));
+                onSubmit({ 
+                    challanNumber: challan, 
+                    receiveDate, 
+                    lotNumber, 
+                    boxes,
+                    grossWeight: grossTotal,
+                    returnedWeight: totalGr,
+                    totalWeight: tw,
+                    receivedQty: tw
+                });
             };
 
             const inputStyle = (isInvalid) => ({
@@ -3688,9 +4883,17 @@
 
             return (
                 <div className="card" style={{border: '1.5px solid var(--accent)', marginBottom: '1.5rem', position: 'relative'}}>
-                    {/* Enhanced Gemini AI Progress Bar Overlay */}
                     {isScanning && (
-                        <div className="loading-overlay">
+                        <div className="loading-overlay" style={{
+                            background: 'rgba(15, 23, 42, 0.92)',
+                            backdropFilter: 'blur(8px)',
+                            WebkitBackdropFilter: 'blur(8px)',
+                            padding: '2.25rem 1.5rem',
+                            color: '#ffffff',
+                            borderRadius: 'var(--radius)',
+                            zIndex: 30,
+                            textAlign: 'center'
+                        }}>
                             <div className="ai-scan-glow-ring">
                                 <span style={{ fontSize: '28px', animation: 'spinSlow 6s linear infinite' }}>✨</span>
                             </div>
@@ -3760,17 +4963,16 @@
                         </div>
                     )}
 
-                    {/* Mobile QR Upload Modal */}
-                    {showQrModal && (
-                        <div className="modal-overlay" style={{ zIndex: 10000 }}>
-                            <div className="modal" style={{ maxWidth: '460px', textAlign: 'center', padding: '2rem 1.75rem' }}>
+                    {showQrModal && ReactDOM.createPortal(
+                        <div className="modal-overlay" style={{ zIndex: 200000, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+                            <div className="modal" style={{ maxWidth: '460px', textAlign: 'center', padding: '2rem 1.75rem', zIndex: 200001, margin: 'auto' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <span style={{ fontSize: '1.4rem' }}>📱</span>
                                         <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Scan with Mobile</h3>
                                     </div>
                                     <button 
-                                        type="button"
+                                        type="button" 
                                         className="btn btn-outline" 
                                         style={{ border: 'none', padding: '0.3rem 0.6rem', fontSize: '1.1rem', lineHeight: 1 }}
                                         onClick={closeQrScanModal}
@@ -3842,14 +5044,15 @@
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        </div>,
+                        document.body
                     )}
                     
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
                         <h3 style={{ margin: 0 }}>{initialData ? 'Edit Batch' : 'Add New Batch'}</h3>
                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                             <button 
-                                type="button"
+                                type="button" 
                                 className="btn btn-outline" 
                                 style={{ color: 'var(--error)', borderColor: 'var(--error)', padding: '0.4rem 0.8rem' }}
                                 onClick={() => {
@@ -3862,8 +5065,8 @@
                                 🔄 Reset
                             </button>
                             <button 
-                                type="button"
-                                className="btn btn-outline"
+                                type="button" 
+                                className="btn btn-outline" 
                                 style={{ padding: '0.4rem 0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                                 onClick={openQrScanModal}
                                 title="Scan QR with phone camera to upload photo"
@@ -3879,10 +5082,7 @@
                                     onChange={(e) => {
                                         if (e.target.files?.[0]) {
                                             const file = e.target.files[0];
-                                            // Reset the input value so the same file can be picked again
                                             e.target.value = '';
-                                            
-                                            // Clear existing data before scanning
                                             setChallan('');
                                             setLotNumber('');
                                             setBoxInputs([]);
@@ -3895,61 +5095,143 @@
                         </div>
                     </div>
 
-                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem'}}>
-                        <div className="input-group"><label>Received Date</label><input type="date" style={inputStyle(invalidFields.receiveDate)} value={receiveDate} onChange={e => setReceiveDate(e.target.value)} /></div>
-                        <div className="input-group"><label>Challan Number</label><input type="text" style={inputStyle(invalidFields.challan)} value={challan} onChange={e => setChallan(e.target.value)} /></div>
-                        <div className="input-group"><label>Lot Number</label><input type="text" value={lotNumber} onChange={e => setLotNumber(e.target.value)} /></div>
+                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.25rem'}}>
+                        <div className="input-group" style={{marginBottom: 0}}>
+                            <label>Received Date</label>
+                            <input type="date" style={inputStyle(invalidFields.receiveDate)} value={receiveDate} onChange={e => setReceiveDate(e.target.value)} />
+                        </div>
+                        <div className="input-group" style={{marginBottom: 0}}>
+                            <label>Challan Number</label>
+                            <input type="text" style={inputStyle(invalidFields.challan)} value={challan} onChange={e => setChallan(e.target.value)} placeholder="e.g. CH-9901" />
+                        </div>
+                        <div className="input-group" style={{marginBottom: 0}}>
+                            <label>Lot Number</label>
+                            <input type="text" value={lotNumber} onChange={e => setLotNumber(e.target.value)} placeholder="e.g. LOT-24A" />
+                        </div>
                     </div>
                     
-                    <div style={{display: 'grid', gridTemplateColumns: '1fr 0.8fr 1fr 1fr 1.5fr auto', gap: '0.5rem', marginBottom: '0.5rem', padding: '0 0.5rem'}}>
-                       <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--muted)'}}>BOX NUMBER</div>
-                       <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--muted)'}}>IN CONES</div>
-                       <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--muted)'}}>IN WEIGHT (KG)</div>
-                       <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--error)'}}>GR (KG)</div>
-                       <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--error)'}}>GR DATE</div>
-                       <div style={{width: '32px'}}></div>
-                    </div>
-
-                    {boxInputs.map((box, i) => (
-                        <div key={i} style={{display: 'grid', gridTemplateColumns: '1fr 0.8fr 1fr 1fr 1.5fr auto', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center'}}>
-                            <input type="text" value={box.boxNumber} onChange={e => { let n = [...boxInputs]; n[i] = { ...n[i], boxNumber: e.target.value }; setBoxInputs(n); }} />
-                            <input type="number" step="1" min="0" style={inputStyle(invalidFields[`cones-${i}`])} placeholder="Cones" value={box.cones} onChange={e => { 
-                                let val = e.target.value;
-                                if (val !== '' && Number(val) < 0) return;
-                                let n = [...boxInputs]; 
-                                n[i] = { ...n[i], cones: val }; 
-                                setBoxInputs(n); 
-                            }} />
-                            <input type="number" min="0" style={inputStyle(invalidFields[`weight-${i}`])} placeholder="Weight" value={box.weight} onChange={e => { 
-                                let val = e.target.value;
-                                if (val !== '' && Number(val) < 0) return;
-                                let n = [...boxInputs]; 
-                                n[i] = { ...n[i], weight: val }; 
-                                setBoxInputs(n); 
-                            }} />
-                            <input type="number" min="0" style={inputStyle(invalidFields[`gr-${i}`])} placeholder="GR" value={box.returnedWeight} onChange={e => { 
-                                let val = e.target.value;
-                                if (val !== '' && Number(val) < 0) return;
-                                let n = [...boxInputs]; 
-                                n[i] = { ...n[i], returnedWeight: val }; 
-                                if (!val || Number(val) === 0) n[i].returnedDate = '';
-                                setBoxInputs(n); 
-                            }} />
-                            <input type="date" style={inputStyle(invalidFields[`grDate-${i}`])} value={box.returnedDate || ''} disabled={!box.returnedWeight} min={receiveDate} onChange={e => { let n = [...boxInputs]; n[i] = { ...n[i], returnedDate: e.target.value }; setBoxInputs(n); }} />
-                            <button 
-                                className="btn btn-outline" 
-                                style={{ padding: '0.4rem', color: 'var(--error)', borderColor: 'transparent', width: '32px', height: '32px', justifyContent: 'center' }}
-                                onClick={() => {
-                                    const newInputs = boxInputs.filter((_, idx) => idx !== i);
-                                    setBoxInputs(newInputs.length > 0 ? newInputs : [{ boxNumber: 'B1', cones: '', weight: '', returnedWeight: '', returnedDate: '' }]);
-                                }}
-                                title="Remove row"
-                            >
-                                ✖
-                            </button>
+                    {hasIssuedBoxes && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 12px',
+                            marginBottom: '1rem',
+                            borderRadius: '8px',
+                            background: 'rgba(59, 130, 246, 0.08)',
+                            border: '1px solid rgba(59, 130, 246, 0.25)',
+                            fontSize: '0.8rem',
+                            color: '#2563eb',
+                            fontWeight: '600'
+                        }}>
+                            <span className="gr-badge-issued">Issued</span>
+                            <span>Boxes highlighted in blue have already been issued to the production floor.</span>
                         </div>
-                    ))}
-                    <button className="btn btn-outline" style={{width: '100%'}} onClick={() => setBoxInputs([...boxInputs, { boxNumber: `B${boxInputs.length + 1}`, cones: '', weight: '', returnedWeight: '', returnedDate: '' }])}>+ Add Box</button>
+                    )}
+
+                    <div style={{
+                        overflowX: 'auto',
+                        WebkitOverflowScrolling: 'touch',
+                        maxHeight: '380px',
+                        overflowY: 'auto',
+                        padding: '0.75rem',
+                        marginBottom: '0.75rem',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        background: 'rgba(0, 0, 0, 0.015)'
+                    }}>
+                        <div style={{ minWidth: '600px' }}>
+                            <div style={{display: 'grid', gridTemplateColumns: '1fr 0.8fr 1fr 1fr 1.5fr auto', gap: '0.5rem', marginBottom: '0.5rem', padding: '0 0.5rem'}}>
+                                <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--muted)'}}>BOX NUMBER</div>
+                                <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--muted)'}}>IN CONES</div>
+                                <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--muted)'}}>IN WEIGHT (KG)</div>
+                                <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--error)'}}>GR (KG)</div>
+                                <div style={{fontSize: '0.75rem', fontWeight: '700', color: 'var(--error)'}}>GR DATE</div>
+                                <div style={{width: '32px'}}></div>
+                            </div>
+
+                            {boxInputs.map((box, i) => {
+                                const issueInfo = resolveBoxIssueDetails(initialData, box, activeStockBoxMap);
+                                const isIssued = issueInfo.isIssued;
+
+                                return (
+                                    <div key={i} style={{
+                                        display: 'grid', 
+                                        gridTemplateColumns: '1fr 0.8fr 1fr 1fr 1.5fr auto', 
+                                        gap: '0.5rem', 
+                                        marginBottom: '0.5rem', 
+                                        alignItems: 'center',
+                                        background: isIssued ? 'rgba(59, 130, 246, 0.07)' : 'transparent',
+                                        padding: isIssued ? '0.35rem 0.5rem' : '0 0.5rem',
+                                        borderRadius: '8px',
+                                        borderLeft: isIssued ? '3px solid #3b82f6' : '3px solid transparent'
+                                    }}>
+                                        <div>
+                                            <input 
+                                                type="text" 
+                                                value={box.boxNumber} 
+                                                style={{
+                                                    ...(isIssued ? { borderColor: 'rgba(59, 130, 246, 0.45)', color: '#2563eb', fontWeight: '700' } : {})
+                                                }}
+                                                onChange={e => { let n = [...boxInputs]; n[i] = { ...n[i], boxNumber: e.target.value }; setBoxInputs(n); }} 
+                                            />
+                                            {isIssued && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', flexWrap: 'wrap' }}>
+                                                    <span className="gr-badge-issued" title={issueInfo.issuedTo ? `Issued to ${issueInfo.issuedTo}` : 'Already Issued to Floor'}>
+                                                        Issued
+                                                    </span>
+                                                    {(issueInfo.issuedTo || issueInfo.issueDate) && (
+                                                        <span style={{ fontSize: '0.68rem', color: '#2563eb', fontWeight: '600' }}>
+                                                            {issueInfo.issuedTo || 'Floor'}{issueInfo.issueDate ? ` (${issueInfo.issueDate.split('T')[0]})` : ''}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <input type="number" step="1" min="0" style={{ ...inputStyle(invalidFields[`cones-${i}`]), ...(isIssued ? { borderColor: 'rgba(59, 130, 246, 0.3)', color: '#2563eb' } : {}) }} placeholder="Cones" value={box.cones} onChange={e => { 
+                                            let val = e.target.value;
+                                            if (val !== '' && Number(val) < 0) return;
+                                            let n = [...boxInputs]; 
+                                            n[i] = { ...n[i], cones: val }; 
+                                            setBoxInputs(n); 
+                                        }} />
+                                        <input type="number" min="0" style={{ ...inputStyle(invalidFields[`weight-${i}`]), ...(isIssued ? { borderColor: 'rgba(59, 130, 246, 0.3)', color: '#2563eb', fontWeight: '700' } : {}) }} placeholder="Weight" value={box.weight} onChange={e => { 
+                                            let val = e.target.value;
+                                            if (val !== '' && Number(val) < 0) return;
+                                            let n = [...boxInputs]; 
+                                            n[i] = { ...n[i], weight: val }; 
+                                            setBoxInputs(n); 
+                                        }} />
+                                        <input type="number" min="0" style={inputStyle(invalidFields[`gr-${i}`])} placeholder="GR" value={box.returnedWeight} onChange={e => { 
+                                            let val = e.target.value;
+                                            if (val !== '' && Number(val) < 0) return;
+                                            let n = [...boxInputs]; 
+                                            n[i] = { ...n[i], returnedWeight: val }; 
+                                            if (!val || Number(val) === 0) n[i].returnedDate = '';
+                                            setBoxInputs(n); 
+                                        }} />
+                                        <input type="date" style={inputStyle(invalidFields[`grDate-${i}`])} value={box.returnedDate || ''} disabled={!box.returnedWeight} min={receiveDate} onChange={e => { let n = [...boxInputs]; n[i] = { ...n[i], returnedDate: e.target.value }; setBoxInputs(n); }} />
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-outline" 
+                                            style={{ padding: '0.4rem', color: 'var(--error)', borderColor: 'transparent', width: '32px', height: '32px', justifyContent: 'center' }}
+                                            onClick={() => {
+                                                const newInputs = boxInputs.filter((_, idx) => idx !== i);
+                                                setBoxInputs(newInputs.length > 0 ? newInputs : [{ boxNumber: 'B1', cones: '', weight: '', returnedWeight: '', returnedDate: '' }]);
+                                            }}
+                                            title="Remove row"
+                                        >
+                                            ✖
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    
+                    <button type="button" className="btn btn-outline" style={{width: '100%', marginTop: '0.5rem'}} onClick={() => setBoxInputs([...boxInputs, { boxNumber: `B${boxInputs.length + 1}`, cones: '', weight: '', returnedWeight: '', returnedDate: '' }])}>
+                        + Add Box
+                    </button>
                     
                     {error && (
                         <div style={{ 
@@ -3972,7 +5254,10 @@
                         </div>
                     )}
 
-                    <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}><button className="btn btn-primary" style={{flex: 1}} onClick={handleSubmit}>Save</button><button className="btn btn-outline" onClick={onCancel}>Cancel</button></div>
+                    <div style={{display: 'flex', gap: '1rem', marginTop: '2rem'}}>
+                        <button type="button" className="btn btn-outline" style={{flex: 1}} onClick={onCancel}>Cancel</button>
+                        <button type="button" className="btn btn-primary" style={{flex: 1}} onClick={handleSubmit}>{initialData ? 'Save Changes' : 'Receive Batch'}</button>
+                    </div>
                 </div>
             );
         };

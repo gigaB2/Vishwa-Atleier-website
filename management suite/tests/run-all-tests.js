@@ -3,7 +3,7 @@
  * Uses Node.js native test runner (zero external dependencies).
  */
 
-const { spawn } = require('node:child_process');
+const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 
 console.log('====================================================');
@@ -16,21 +16,28 @@ const testFiles = [
   path.join(__dirname, 'costing-math.test.js'),
   path.join(__dirname, 'presence-engine.test.js'),
   path.join(__dirname, 'yarn-ledger-gr.test.js'),
-  path.join(__dirname, 'yarn-concurrency.test.js')
+  path.join(__dirname, 'yarn-concurrency.test.js'),
+  path.join(__dirname, 'weaving-orders-sync.test.js')
 ];
 
-const runner = spawn(process.execPath, ['--test', ...testFiles], {
-  stdio: 'inherit',
-  cwd: path.join(__dirname, '..')
-});
-
-runner.on('close', (code) => {
-  console.log('\n====================================================');
-  if (code === 0) {
-    console.log('✅ ALL TEST SUITES PASSED (100% SUCCESS)');
-  } else {
-    console.log(`❌ TEST SUITE FAILED with exit code ${code}`);
+let failed = 0;
+for (const file of testFiles) {
+  const rel = path.relative(path.join(__dirname, '..'), file);
+  const res = spawnSync(process.execPath, ['--test', file], {
+    stdio: 'inherit',
+    cwd: path.join(__dirname, '..')
+  });
+  if (res.status !== 0) {
+    console.error(`\n❌ Failed: ${rel}\n`);
+    failed++;
   }
-  console.log('====================================================');
-  process.exit(code);
-});
+}
+
+console.log('\n====================================================');
+if (failed === 0) {
+  console.log('✅ ALL TEST SUITES PASSED (100% SUCCESS)');
+  process.exit(0);
+} else {
+  console.log(`❌ ${failed} TEST SUITE(S) FAILED`);
+  process.exit(1);
+}

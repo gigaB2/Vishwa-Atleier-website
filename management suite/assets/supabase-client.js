@@ -192,7 +192,8 @@
   }
 
   // BroadcastChannel for instant real-time sync across open windows in the SAME browser
-  const syncChannel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('vf_supabase_sync') : null;
+  const syncChannel = (typeof window !== 'undefined' && typeof window.BroadcastChannel !== 'undefined') ? new window.BroadcastChannel('vf_supabase_sync') : null;
+  if (typeof syncChannel?.unref === 'function') syncChannel.unref();
 
   // --- Universal Intelligent Merge Engine (Eliminates Concurrent Multi-User Overwrites) ---
   function getItemIdentifier(item) {
@@ -804,8 +805,8 @@
 
     const cleanLocal = filterDeletedEntities(localArr);
     const cleanRemote = filterDeletedEntities(remoteArr);
-    const lastWrite = lastLocalWrites['yarn-rm-orders'] || 0;
-    const isLocallyActive = (Date.now() - lastWrite < 1500);
+    const lastWrite = Math.max(lastLocalWrites['yarn-rm-orders'] || 0, lastLocalWrites['yarn-orders'] || 0);
+    const isLocallyActive = (Date.now() - lastWrite < 3000);
 
     if (cleanRemote.length > 0 && cleanLocal.length === 0) {
       return cleanRemote;
@@ -865,7 +866,7 @@
           const bk = getBatchKey(locB);
           if (!bk) return;
           if (!batchMap.has(bk)) {
-            if (isLocallyActive) batchMap.set(bk, { ...locB });
+            if (isLocallyActive || locTime >= remTime) batchMap.set(bk, { ...locB });
           } else {
             const remB = batchMap.get(bk);
             const bBoxMap = new Map();
@@ -878,7 +879,7 @@
               const bxId = String(locBx.boxNumber || locBx.id || '').trim();
               if (!bxId) return;
               if (!bBoxMap.has(bxId)) {
-                if (isLocallyActive) bBoxMap.set(bxId, { ...locBx });
+                if (isLocallyActive || locTime >= remTime) bBoxMap.set(bxId, { ...locBx });
               } else {
                 const remBx = bBoxMap.get(bxId);
                 const locUpdated = locBx.updated_at ? new Date(locBx.updated_at).getTime() : 0;
@@ -1064,8 +1065,8 @@
       return mergeYarnStockDatasets(parsedLocal, parsedRemote);
     }
 
-    // Special Case: Yarn RM Orders Array Merge (Sync Box Statuses inside batches)
-    if (key === 'yarn-rm-orders' && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
+    // Special Case: Yarn RM Orders & Weaving RM Orders Array Merge (Sync Box Statuses inside batches)
+    if ((key === 'yarn-rm-orders' || key === 'yarn-orders') && Array.isArray(parsedLocal) && Array.isArray(parsedRemote)) {
       return mergeYarnOrdersDatasets(parsedLocal, parsedRemote);
     }
 
@@ -1791,7 +1792,7 @@
   }
 
   // Purge disconnected users who haven't pinged in > 22 seconds (2 missed 10s heartbeats)
-  setInterval(() => {
+  const presencePurgeTimer = setInterval(() => {
     const now = Date.now();
     let changed = false;
     Object.keys(presenceStore).forEach(cid => {
@@ -1804,11 +1805,13 @@
       notifyPresenceListeners();
     }
   }, 4000);
+  if (typeof presencePurgeTimer?.unref === 'function') presencePurgeTimer.unref();
 
   // Send periodic presence ping every 10 seconds to keep presence fresh
-  setInterval(() => {
+  const presencePingTimer = setInterval(() => {
     sendPresencePing();
   }, 10000);
+  if (typeof presencePingTimer?.unref === 'function') presencePingTimer.unref();
 
   // Hook tab visibility & page unload
   // Note: Tab visibility change sets 'away' state instead of abruptly dropping user offline
@@ -2504,6 +2507,7 @@
             ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb_' + Date.now() }));
           }
         }, 25000);
+        if (typeof wsHeartbeatTimer?.unref === 'function') wsHeartbeatTimer.unref();
 
         // Immediate presence announcement on socket connect with peer discovery
         sendPresenceHello();
@@ -4165,7 +4169,7 @@
           'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards', 'manage-jalas', 'manage-fanis', 'machines',
           'yarn_covering_production_logs', 'yarn_tfo_production_logs', 'yarn_doubler_production_logs',
           'yarn_covering_sales_logs', 'yarn_tfo_sales_logs', 'yarn_doubler_sales_logs',
-          'warp-beams', 'warp-issues', 'yarn-issues', 'yarn-rm-orders', 'warp-beam-loadings'
+          'warp-beams', 'warp-issues', 'yarn-issues', 'yarn-rm-orders', 'yarn-orders', 'warp-beam-loadings'
         ];
         if (key && !entityKeys.includes(key)) entityKeys.push(key);
 
@@ -6807,6 +6811,7 @@
         clearInterval(configCheckTimer);
       }
     }, 250);
+    if (typeof configCheckTimer?.unref === 'function') configCheckTimer.unref();
   }
 
   // Smart polling interval & Visibility Throttling (2s fast polling for instant cross-PC updates without refresh)
@@ -6820,6 +6825,7 @@
           supabaseApi.loadAll(false);
         }
       }, POLL_INTERVAL_MS);
+      if (typeof syncIntervalId?.unref === 'function') syncIntervalId.unref();
     }
   }
 

@@ -36,17 +36,18 @@ test('Multi-User Concurrency & Merge Validation', async (t) => {
         setItem(k, v) { this._data[k] = String(v); },
         removeItem(k) { delete this._data[k]; }
       },
-      navigator: { onLine: true },
+      navigator: { onLine: true }, fetch: () => Promise.resolve({ ok: true, json: async () => [] }),
       console: console,
       setTimeout: (fn) => {},
       clearTimeout: () => {},
       setInterval: () => ({ unref: () => {} }),
       clearInterval: () => {},
-      Date: Date
+      Date: Date,
+      fetch: () => Promise.resolve({ ok: true, json: async () => [] })
     };
 
-    const fn = new Function('window', 'document', 'localStorage', 'navigator', 'console', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date', clientCode);
-    fn(sandbox.window, sandbox.document, sandbox.localStorage, sandbox.navigator, sandbox.console, sandbox.setTimeout, sandbox.clearTimeout, sandbox.setInterval, sandbox.clearInterval, sandbox.Date);
+    const fn = new Function('window', 'document', 'localStorage', 'navigator', 'console', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date', 'fetch', clientCode);
+    fn(sandbox.window, sandbox.document, sandbox.localStorage, sandbox.navigator, sandbox.console, sandbox.setTimeout, sandbox.clearTimeout, sandbox.setInterval, sandbox.clearInterval, sandbox.Date, sandbox.fetch);
     return sandbox;
   }
 

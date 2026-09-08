@@ -3115,7 +3115,7 @@
 
             useEffect(() => {
                 const handleStorageChange = (e) => {
-                    if (e.key === key) {
+                    if (!e || e.key === key || !e.key) {
                         try {
                             const item = window.localStorage.getItem(key);
                             if (!item) {
@@ -3141,8 +3141,33 @@
                         }
                     }
                 };
+
+                const handleSupabaseSync = (e) => {
+                    if (!e || !e.detail || e.detail.key === key || !e.detail.key) {
+                        handleStorageChange({ key });
+                    }
+                };
+                const handleOrderUpdated = () => {
+                    if (key === 'yarn-orders') {
+                        handleStorageChange({ key });
+                    }
+                };
+
                 window.addEventListener('storage', handleStorageChange);
-                return () => window.removeEventListener('storage', handleStorageChange);
+                window.addEventListener('supabase-sync', handleSupabaseSync);
+                window.addEventListener('supabase-ready', handleStorageChange);
+                window.addEventListener('supabase-item-deleted', handleStorageChange);
+                window.addEventListener('yarn-order-updated', handleOrderUpdated);
+                window.addEventListener('weaving-order-updated', handleOrderUpdated);
+
+                return () => {
+                    window.removeEventListener('storage', handleStorageChange);
+                    window.removeEventListener('supabase-sync', handleSupabaseSync);
+                    window.removeEventListener('supabase-ready', handleStorageChange);
+                    window.removeEventListener('supabase-item-deleted', handleStorageChange);
+                    window.removeEventListener('yarn-order-updated', handleOrderUpdated);
+                    window.removeEventListener('weaving-order-updated', handleOrderUpdated);
+                };
             }, [key, initialValue]);
 
             const setValue = (value) => {
