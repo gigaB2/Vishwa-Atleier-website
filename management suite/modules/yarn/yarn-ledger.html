@@ -596,13 +596,32 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: var(--surface-subtle);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.25rem 0.65rem;
-      min-height: 36px;
-      box-sizing: border-box;
       flex-shrink: 0;
+    }
+
+    .toolbar-date-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      box-sizing: border-box;
+      cursor: pointer;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    .toolbar-date-item:hover {
+      border-color: var(--accent);
+      background: var(--surface);
+    }
+
+    .toolbar-date-item:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-subtle);
+      background: var(--surface);
     }
 
     .toolbar-date-icon {
@@ -611,12 +630,13 @@
     }
 
     .toolbar-date-label {
-      font-size: 0.75rem;
+      font-size: 0.76rem;
       font-weight: 700;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
       user-select: none;
+      flex-shrink: 0;
     }
 
     .toolbar-date-sep {
@@ -627,46 +647,37 @@
       padding: 0 1px;
     }
 
-    .toolbar-date-range .date-input {
-      width: 145px;
-      min-width: 140px;
-      height: 30px;
-      padding: 0.2rem 0.55rem;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--surface);
+    .toolbar-date-item .date-input {
+      width: 150px;
+      min-width: 145px;
+      height: 34px;
+      border: none !important;
+      background: transparent !important;
       color: var(--fg);
-      font-size: 0.84rem;
+      font-size: 0.92rem;
       font-family: var(--font-mono);
-      font-weight: 500;
+      font-weight: 600;
       letter-spacing: 0.02em;
-      outline: none;
+      padding: 0 0.2rem;
+      outline: none !important;
+      box-shadow: none !important;
       box-sizing: border-box;
       cursor: pointer;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
-    .toolbar-date-range .date-input:hover {
-      border-color: var(--accent);
-    }
-
-    .toolbar-date-range .date-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--accent-subtle);
-      background: var(--surface);
-    }
-
-    .toolbar-date-range .date-input::-webkit-calendar-picker-indicator {
+    .toolbar-date-item .date-input::-webkit-calendar-picker-indicator {
       cursor: pointer;
       opacity: 0.8;
-      padding: 2px;
+      padding: 3px;
       margin-left: 6px;
-      transition: opacity 0.15s ease, transform 0.15s ease;
+      border-radius: 4px;
+      transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
     }
 
-    .toolbar-date-range .date-input::-webkit-calendar-picker-indicator:hover {
+    .toolbar-date-item .date-input::-webkit-calendar-picker-indicator:hover {
       opacity: 1;
-      transform: scale(1.15);
+      transform: scale(1.18);
+      background: rgba(124, 58, 237, 0.12);
     }
 
     /* Interest Switch toggle */
@@ -2809,13 +2820,14 @@
       }
       .toolbar-date-range {
         flex-wrap: wrap !important;
-        min-height: 36px !important;
-        height: auto !important;
         gap: 6px !important;
       }
-      .toolbar-date-range .date-input {
-        min-width: 132px !important;
-        width: 138px !important;
+      .toolbar-date-item {
+        height: 36px !important;
+      }
+      .toolbar-date-item .date-input {
+        min-width: 140px !important;
+        width: 145px !important;
       }
     }
 
@@ -2823,12 +2835,18 @@
       .toolbar-date-range {
         width: 100% !important;
         justify-content: space-between !important;
-        padding: 0.35rem 0.6rem !important;
+        gap: 6px !important;
       }
-      .toolbar-date-range .date-input {
-        flex: 1 1 calc(50% - 22px) !important;
-        min-width: 120px !important;
-        width: auto !important;
+      .toolbar-date-item {
+        flex: 1 1 calc(50% - 14px) !important;
+        min-width: 0 !important;
+        padding: 0 0.5rem !important;
+      }
+      .toolbar-date-item .date-input {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        font-size: 0.85rem !important;
       }
     }
   </style>
@@ -2980,11 +2998,17 @@
           </select>
 
           <div class="toolbar-date-range">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="toolbar-date-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span class="toolbar-date-label">Date:</span>
-            <input type="date" class="date-input filter-date-field" id="filter-from-date" onchange="renderTable()" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" title="From Date">
+            <label class="toolbar-date-item" for="filter-from-date" title="Filter From Date">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="toolbar-date-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span class="toolbar-date-label">From</span>
+              <input type="date" class="date-input filter-date-field" id="filter-from-date" onchange="renderTable()" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}">
+            </label>
             <span class="toolbar-date-sep">to</span>
-            <input type="date" class="date-input filter-date-field" id="filter-to-date" onchange="renderTable()" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" title="To Date">
+            <label class="toolbar-date-item" for="filter-to-date" title="Filter To Date">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="toolbar-date-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span class="toolbar-date-label">To</span>
+              <input type="date" class="date-input filter-date-field" id="filter-to-date" onchange="renderTable()" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}">
+            </label>
           </div>
 
           <div class="freeze-select-wrap" title="Freeze columns up to selected column">
