@@ -5397,7 +5397,7 @@
       if (isNaN(val) || Math.abs(val) <= 0.005) {
         val = 0;
       }
-      return '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return '₹ ' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     // Format Date to DD/MM/YYYY
