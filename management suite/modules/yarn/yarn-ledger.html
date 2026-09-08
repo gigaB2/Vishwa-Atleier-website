@@ -2477,7 +2477,47 @@
 
     .th-freeze-pinned {
       background: var(--surface) !important;
+      background-color: var(--surface) !important;
       border-bottom: 2px solid var(--accent) !important;
+      opacity: 1 !important;
+    }
+
+    .td-freeze-pinned {
+      background: var(--surface) !important;
+      background-color: var(--surface) !important;
+      opacity: 1 !important;
+    }
+
+    .excel-table tr.is-locked td.td-freeze-pinned {
+      background: var(--surface) !important;
+      background-color: var(--surface) !important;
+    }
+
+    .excel-table tr.is-overdue td.td-freeze-pinned {
+      background: #fff8f8 !important;
+    }
+
+    body.dark-mode .excel-table tr.is-overdue td.td-freeze-pinned,
+    .dark-mode .excel-table tr.is-overdue td.td-freeze-pinned {
+      background: #180d0e !important;
+    }
+
+    .excel-table tr.is-paid td.td-freeze-pinned {
+      background: #f6fdf9 !important;
+    }
+
+    body.dark-mode .excel-table tr.is-paid td.td-freeze-pinned,
+    .dark-mode .excel-table tr.is-paid td.td-freeze-pinned {
+      background: #091a13 !important;
+    }
+
+    .excel-table tbody tr:hover td.td-freeze-pinned {
+      background: var(--surface-subtle) !important;
+    }
+
+    body.dark-mode .excel-table tbody tr:hover td.td-freeze-pinned,
+    .dark-mode .excel-table tbody tr:hover td.td-freeze-pinned {
+      background: #1c1b24 !important;
     }
 
     .col-freeze-context-menu {
@@ -6110,11 +6150,12 @@
         rows.forEach(tr => {
           const tds = Array.from(tr.children);
           tds.forEach((td, i) => {
-            td.classList.remove('col-freeze-boundary');
+            td.classList.remove('col-freeze-boundary', 'td-freeze-pinned');
             if (i < freezeCount) {
               td.style.position = 'sticky';
               td.style.left = `${leftPositions[i]}px`;
               td.style.zIndex = '20';
+              td.classList.add('td-freeze-pinned');
               if (i === lastVisibleFrozenIndex) {
                 td.classList.add('col-freeze-boundary');
               }
