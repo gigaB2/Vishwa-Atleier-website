@@ -2932,51 +2932,67 @@
               <th style="width: 160px; min-width: 155px;" class="num-col sortable" data-sort-key="grandTotal" data-col-index="11" data-col-name="Grand Total (₹)" onclick="requestTableSort('grandTotal', event)" title="Click to sort by Grand Total | Right-click to freeze">
                 <div class="th-content-wrap"><span>Grand Total (₹)</span><span class="th-sort-indicator" id="sort-ind-grandTotal">↕</span></div>
               </th>
-              <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="discountPercent" data-col-index="12" data-col-name="Disc. %" onclick="requestTableSort('discountPercent', event)" title="Click to sort by Early Payment Discount % | Right-click to freeze">
-                <div class="th-content-wrap"><span style="color: var(--success);">Disc. %</span><span class="th-sort-indicator" id="sort-ind-discountPercent">↕</span></div>
-              </th>
-              <th style="width: 145px; min-width: 140px; background: rgba(16, 185, 129, 0.05);" class="num-col sortable" data-sort-key="calcDiscountAmount" data-col-index="13" data-col-name="Calc. Disc. (₹)" onclick="requestTableSort('calcDiscountAmount', event)" title="Click to sort by Calculated Pro-Rata Discount (₹) | Right-click to freeze">
-                <div class="th-content-wrap"><span style="color: var(--success);">Calc. Disc. (₹)</span><span class="th-sort-indicator" id="sort-ind-calcDiscountAmount">↕</span></div>
-              </th>
-              <th style="width: 145px; min-width: 140px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="actualDiscount" data-col-index="14" data-col-name="Actual Disc. (₹)" onclick="requestTableSort('actualDiscount', event)" title="Click to sort by Actual Discount (₹) | Right-click to freeze">
-                <div class="th-content-wrap"><span style="color: var(--success); font-weight: 700;">Actual Disc. (₹)</span><span class="th-sort-indicator" id="sort-ind-actualDiscount">↕</span></div>
-              </th>
-              <th style="width: 160px; min-width: 155px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="paidAmount" data-col-index="15" data-col-name="Paid Principal (₹)" onclick="requestTableSort('paidAmount', event)" title="Click to sort by Paid Principal | Right-click to freeze">
-                <div class="th-content-wrap"><span>Paid Principal (₹)</span><span class="th-sort-indicator" id="sort-ind-paidAmount">↕</span></div>
-              </th>
-              <th style="width: 190px; min-width: 185px;" class="sortable" data-sort-key="paymentDate" data-col-index="16" data-col-name="Payment Date" onclick="requestTableSort('paymentDate', event)" title="Click to sort by Payment Date | Right-click to freeze">
-                <div class="th-content-wrap"><span>Payment Date</span><span class="th-sort-indicator" id="sort-ind-paymentDate">↕</span></div>
-              </th>
-              <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="creditDays" data-col-index="17" data-col-name="Credit Days" onclick="requestTableSort('creditDays', event)" title="Click to sort by Credit Days | Right-click to freeze">
+              <!-- 12: Credit Days -->
+              <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="creditDays" data-col-index="12" data-col-name="Credit Days" onclick="requestTableSort('creditDays', event)" title="Click to sort by Credit Days | Right-click to freeze">
                 <div class="th-content-wrap"><span>Cr. Days</span><span class="th-sort-indicator" id="sort-ind-creditDays">↕</span></div>
               </th>
-              <th style="width: 130px; min-width: 125px;" class="sortable" data-sort-key="dueDate" data-col-index="18" data-col-name="Due Date" onclick="requestTableSort('dueDate', event)" title="Click to sort by Due Date | Right-click to freeze">
+              <!-- 13: Disc % -->
+              <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="discountPercent" data-col-index="13" data-col-name="Disc. %" onclick="requestTableSort('discountPercent', event)" title="Click to sort by Early Payment Discount % | Right-click to freeze">
+                <div class="th-content-wrap"><span style="color: var(--success);">Disc. %</span><span class="th-sort-indicator" id="sort-ind-discountPercent">↕</span></div>
+              </th>
+              <!-- 14: Due Date -->
+              <th style="width: 130px; min-width: 125px;" class="sortable" data-sort-key="dueDate" data-col-index="14" data-col-name="Due Date" onclick="requestTableSort('dueDate', event)" title="Click to sort by Due Date | Right-click to freeze">
                 <div class="th-content-wrap"><span>Due Date</span><span class="th-sort-indicator" id="sort-ind-dueDate">↕</span></div>
               </th>
-              <th style="width: 160px; min-width: 155px; background: rgba(239, 68, 68, 0.08);" class="num-col sortable" data-sort-key="principalOutstanding" data-col-index="19" data-col-name="Principal Bal (₹)" onclick="requestTableSort('principalOutstanding', event)" title="Click to sort by Principal Balance | Right-click to freeze">
-                <div class="th-content-wrap"><span>Principal Bal (₹)</span><span class="th-sort-indicator" id="sort-ind-principalOutstanding">↕</span></div>
-              </th>
-              <th style="width: 120px; min-width: 115px;" class="center-col sortable" data-sort-key="status" data-col-index="20" data-col-name="Status" onclick="requestTableSort('status', event)" title="Click to sort by Payment Status | Right-click to freeze">
-                <div class="th-content-wrap"><span>Status</span><span class="th-sort-indicator" id="sort-ind-status">↕</span></div>
-              </th>
-              <th style="width: 105px; min-width: 100px;" class="num-col interest-col sortable" data-sort-key="interestRate" data-col-index="21" data-col-name="Int. % p.a." onclick="requestTableSort('interestRate', event)" title="Click to sort by Interest Rate | Right-click to freeze">
-                <div class="th-content-wrap"><span>Int. % p.a.</span><span class="th-sort-indicator" id="sort-ind-interestRate">↕</span></div>
-              </th>
-              <th style="width: 100px; min-width: 95px;" class="num-col interest-col sortable" data-sort-key="overdueDays" data-col-index="22" data-col-name="Late Days" onclick="requestTableSort('overdueDays', event)" title="Click to sort by Overdue Days | Right-click to freeze">
+              <!-- 15: Late Days (Interest col) -->
+              <th style="width: 100px; min-width: 95px;" class="num-col interest-col sortable" data-sort-key="overdueDays" data-col-index="15" data-col-name="Late Days" onclick="requestTableSort('overdueDays', event)" title="Click to sort by Overdue Days | Right-click to freeze">
                 <div class="th-content-wrap"><span>Late Days</span><span class="th-sort-indicator" id="sort-ind-overdueDays">↕</span></div>
               </th>
-              <th style="width: 145px; min-width: 140px;" class="num-col interest-col sortable" data-sort-key="interestAmount" data-col-index="23" data-col-name="Accrued Int. (₹)" onclick="requestTableSort('interestAmount', event)" title="Click to sort by Accrued Interest | Right-click to freeze">
+              <!-- 16: Acquired / Accrued Interest (Interest col) -->
+              <th style="width: 145px; min-width: 140px;" class="num-col interest-col sortable" data-sort-key="interestAmount" data-col-index="16" data-col-name="Accrued Int. (₹)" onclick="requestTableSort('interestAmount', event)" title="Click to sort by Accrued Interest | Right-click to freeze">
                 <div class="th-content-wrap"><span>Accrued Int. (₹)</span><span class="th-sort-indicator" id="sort-ind-interestAmount">↕</span></div>
               </th>
+              <!-- 17: Payment Date -->
+              <th style="width: 190px; min-width: 185px;" class="sortable" data-sort-key="paymentDate" data-col-index="17" data-col-name="Payment Date" onclick="requestTableSort('paymentDate', event)" title="Click to sort by Payment Date | Right-click to freeze">
+                <div class="th-content-wrap"><span>Payment Date</span><span class="th-sort-indicator" id="sort-ind-paymentDate">↕</span></div>
+              </th>
+              <!-- 18: Principle Paid -->
+              <th style="width: 160px; min-width: 155px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="paidAmount" data-col-index="18" data-col-name="Paid Principal (₹)" onclick="requestTableSort('paidAmount', event)" title="Click to sort by Paid Principal | Right-click to freeze">
+                <div class="th-content-wrap"><span>Paid Principal (₹)</span><span class="th-sort-indicator" id="sort-ind-paidAmount">↕</span></div>
+              </th>
+              <!-- 19: Calc Discount -->
+              <th style="width: 145px; min-width: 140px; background: rgba(16, 185, 129, 0.05);" class="num-col sortable" data-sort-key="calcDiscountAmount" data-col-index="19" data-col-name="Calc. Disc. (₹)" onclick="requestTableSort('calcDiscountAmount', event)" title="Click to sort by Calculated Pro-Rata Discount (₹) | Right-click to freeze">
+                <div class="th-content-wrap"><span style="color: var(--success);">Calc. Disc. (₹)</span><span class="th-sort-indicator" id="sort-ind-calcDiscountAmount">↕</span></div>
+              </th>
+              <!-- 20: Actual Discount -->
+              <th style="width: 145px; min-width: 140px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="actualDiscount" data-col-index="20" data-col-name="Actual Disc. (₹)" onclick="requestTableSort('actualDiscount', event)" title="Click to sort by Actual Discount (₹) | Right-click to freeze">
+                <div class="th-content-wrap"><span style="color: var(--success); font-weight: 700;">Actual Disc. (₹)</span><span class="th-sort-indicator" id="sort-ind-actualDiscount">↕</span></div>
+              </th>
+              <!-- 21: Principal Bal -->
+              <th style="width: 160px; min-width: 155px; background: rgba(239, 68, 68, 0.08);" class="num-col sortable" data-sort-key="principalOutstanding" data-col-index="21" data-col-name="Principal Bal (₹)" onclick="requestTableSort('principalOutstanding', event)" title="Click to sort by Principal Balance | Right-click to freeze">
+                <div class="th-content-wrap"><span>Principal Bal (₹)</span><span class="th-sort-indicator" id="sort-ind-principalOutstanding">↕</span></div>
+              </th>
+              <!-- 22: Status -->
+              <th style="width: 120px; min-width: 115px;" class="center-col sortable" data-sort-key="status" data-col-index="22" data-col-name="Status" onclick="requestTableSort('status', event)" title="Click to sort by Payment Status | Right-click to freeze">
+                <div class="th-content-wrap"><span>Status</span><span class="th-sort-indicator" id="sort-ind-status">↕</span></div>
+              </th>
+              <!-- 23: Int. % p.a. (Interest col) -->
+              <th style="width: 105px; min-width: 100px;" class="num-col interest-col sortable" data-sort-key="interestRate" data-col-index="23" data-col-name="Int. % p.a." onclick="requestTableSort('interestRate', event)" title="Click to sort by Interest Rate | Right-click to freeze">
+                <div class="th-content-wrap"><span>Int. % p.a.</span><span class="th-sort-indicator" id="sort-ind-interestRate">↕</span></div>
+              </th>
+              <!-- 24: Paid Int. (Interest col) -->
               <th style="width: 145px; min-width: 140px; background: rgba(245, 158, 11, 0.08);" class="num-col interest-col sortable" data-sort-key="interestPaid" data-col-index="24" data-col-name="Paid Int. (₹)" onclick="requestTableSort('interestPaid', event)" title="Click to sort by Paid Interest | Right-click to freeze">
                 <div class="th-content-wrap"><span>Paid Int. (₹)</span><span class="th-sort-indicator" id="sort-ind-interestPaid">↕</span></div>
               </th>
+              <!-- 25: Net Bal -->
               <th style="width: 165px; min-width: 160px;" class="num-col sortable" data-sort-key="netOutstanding" data-col-index="25" data-col-name="Net Bal (₹)" onclick="requestTableSort('netOutstanding', event)" title="Click to sort by Net Balance | Right-click to freeze">
                 <div class="th-content-wrap"><span>Net Bal (₹)</span><span class="th-sort-indicator" id="sort-ind-netOutstanding">↕</span></div>
               </th>
+              <!-- 26: Remarks -->
               <th style="width: 280px; min-width: 260px;" class="sortable" data-sort-key="remarks" data-col-index="26" data-col-name="Remarks" onclick="requestTableSort('remarks', event)" title="Click to sort by Remarks | Right-click to freeze">
                 <div class="th-content-wrap"><span>Remarks / Cheque No</span><span class="th-sort-indicator" id="sort-ind-remarks">↕</span></div>
               </th>
+              <!-- 27: Actions -->
               <th style="width: 100px; min-width: 100px;" class="center-col actions-col" data-col-index="27" data-col-name="Actions">Actions</th>
             </tr>
           </thead>
@@ -5617,13 +5633,43 @@
               <div class="cell-readonly num bold font-mono col-val-grandtotal" title="Grand Total">${formatCurrency(row.grandTotal)}</div>
             </td>
 
-            <!-- Editable Early Payment Discount % -->
+            <!-- 12: Editable Credit Days -->
             <td data-col-index="12" class="num-col">
+              <input type="number" step="1" data-field="creditDays" class="cell-input num-font" style="width: 80px;" value="${row.creditDays || defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
+            </td>
+
+            <!-- 13: Editable Early Payment Discount % -->
+            <td data-col-index="13" class="num-col">
               <input type="number" step="0.1" data-field="discountPercent" class="cell-input num-font" style="width: 75px; color: var(--success); font-weight: 600;" value="${row.discountPercent !== undefined ? row.discountPercent : defaultDiscountPercent}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'discountPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'discountPercent', this.value, true)" title="Max Early Payment Discount %">
             </td>
 
-            <!-- Computed Pro-Rata Discount Amount -->
-            <td data-col-index="13" class="num-col cell-locked-bg" style="background: rgba(16, 185, 129, 0.05);">
+            <!-- 14: Due Date -->
+            <td data-col-index="14" class="cell-locked-bg">
+              <div class="cell-readonly font-mono col-val-due-date" style="font-size: 0.85rem; color: var(--muted);">${formatDateDisplay(comp.dueDate)}</div>
+            </td>
+
+            <!-- 15: Late / Overdue Days (Interest col) -->
+            <td data-col-index="15" class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
+              <div class="cell-readonly num font-mono col-val-overdue-days" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</div>
+            </td>
+
+            <!-- 16: Acquired / Accrued Interest (Interest col) -->
+            <td data-col-index="16" class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
+              <div class="cell-readonly num bold font-mono col-val-interest-amount" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</div>
+            </td>
+
+            <!-- 17: Editable Payment Date (Expanded & Click anywhere to open calendar) -->
+            <td data-col-index="17" style="min-width: 185px;">
+              <input type="date" data-field="paymentDate" class="cell-input date-picker-input" style="width: 100%; min-width: 170px; cursor: pointer;" value="${row.paymentDate || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'paymentDate', this.value, false)" onchange="handleCellChange('${row.id}', 'paymentDate', this.value, true)" title="Click to pick payment date">
+            </td>
+
+            <!-- 18: Editable Paid / Received Principal Amount -->
+            <td data-col-index="18" class="num-col" style="background: rgba(16, 185, 129, 0.05);">
+              <input type="number" step="0.01" data-field="paidAmount" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Enter paid/received principal amount">
+            </td>
+
+            <!-- 19: Computed Pro-Rata Discount Amount -->
+            <td data-col-index="19" class="num-col cell-locked-bg" style="background: rgba(16, 185, 129, 0.05);">
               <div class="cell-readonly num bold font-mono col-val-calc-discount" title="Calculated Pro-Rata Discount: ${comp.effectiveDiscountPct.toFixed(2)}% on ₹${Number(row.grandTotal).toFixed(2)}">
                 ${comp.calcDiscountAmount > 0 
                   ? `<div style="color: var(--success); font-weight: 700;">-${formatCurrency(comp.calcDiscountAmount)}</div><div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">(${comp.effectiveDiscountPct.toFixed(2)}% eff.)</div>`
@@ -5632,65 +5678,42 @@
               </div>
             </td>
 
-            <!-- Editable Actual Discount in ₹ (Overrides calculated discount) -->
-            <td data-col-index="14" class="num-col" style="background: rgba(16, 185, 129, 0.08);">
+            <!-- 20: Editable Actual Discount in ₹ (Overrides calculated discount) -->
+            <td data-col-index="20" class="num-col" style="background: rgba(16, 185, 129, 0.08);">
               <input type="number" step="0.01" data-field="actualDiscount" class="cell-input num-font" style="width: 100px; color: var(--success); font-weight: 700;" value="${row.actualDiscount !== undefined && row.actualDiscount !== null ? row.actualDiscount : ''}" placeholder="${comp.calcDiscountAmount > 0 ? comp.calcDiscountAmount.toFixed(2) : '0.00'}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'actualDiscount', this.value, false)" onchange="handleCellChange('${row.id}', 'actualDiscount', this.value, true)" title="Actual Discount in ₹ (Manual override for final calculation)">
             </td>
 
-            <!-- Editable Paid / Received Principal Amount -->
-            <td data-col-index="15" class="num-col" style="background: rgba(16, 185, 129, 0.05);">
-              <input type="number" step="0.01" data-field="paidAmount" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Enter paid/received principal amount">
-            </td>
-
-            <!-- Editable Payment Date (Expanded & Click anywhere to open calendar) -->
-            <td data-col-index="16" style="min-width: 185px;">
-              <input type="date" data-field="paymentDate" class="cell-input date-picker-input" style="width: 100%; min-width: 170px; cursor: pointer;" value="${row.paymentDate || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'paymentDate', this.value, false)" onchange="handleCellChange('${row.id}', 'paymentDate', this.value, true)" title="Click to pick payment date">
-            </td>
-
-            <!-- Editable Credit Days -->
-            <td data-col-index="17" class="num-col">
-              <input type="number" step="1" data-field="creditDays" class="cell-input num-font" style="width: 80px;" value="${row.creditDays || defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
-            </td>
-
-            <td data-col-index="18" class="cell-locked-bg">
-              <div class="cell-readonly font-mono col-val-due-date" style="font-size: 0.85rem; color: var(--muted);">${formatDateDisplay(comp.dueDate)}</div>
-            </td>
-
-            <td data-col-index="19" class="num-col cell-locked-bg" style="background: rgba(239, 68, 68, 0.05);">
+            <!-- 21: Principal Balance -->
+            <td data-col-index="21" class="num-col cell-locked-bg" style="background: rgba(239, 68, 68, 0.05);">
               <div class="cell-readonly num bold font-mono col-val-outstanding" style="color: ${comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.principalOutstanding)}</div>
             </td>
 
-            <td data-col-index="20" class="center-col cell-locked-bg col-val-status">
+            <!-- 22: Status -->
+            <td data-col-index="22" class="center-col cell-locked-bg col-val-status">
               <div class="cell-readonly" style="justify-content: center;">${renderStatusBadge(comp.status)}</div>
             </td>
 
-            <!-- Editable Interest Rate -->
-            <td data-col-index="21" class="num-col interest-col" style="${calculateInterest ? '' : 'display:none;'}">
+            <!-- 23: Editable Interest Rate -->
+            <td data-col-index="23" class="num-col interest-col" style="${calculateInterest ? '' : 'display:none;'}">
               <input type="number" step="0.1" data-field="interestRate" class="cell-input num-font" style="width: 85px;" value="${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestRate', this.value, false)" onchange="handleCellChange('${row.id}', 'interestRate', this.value, true)" title="Annual late interest %">
             </td>
 
-            <td data-col-index="22" class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
-              <div class="cell-readonly num font-mono col-val-overdue-days" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</div>
-            </td>
-
-            <td data-col-index="23" class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
-              <div class="cell-readonly num bold font-mono col-val-interest-amount" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</div>
-            </td>
-
-            <!-- Editable Paid Interest (Settlement of Late Interest!) -->
+            <!-- 24: Editable Paid Interest (Settlement of Late Interest!) -->
             <td data-col-index="24" class="num-col interest-col" style="background: rgba(245, 158, 11, 0.05); ${calculateInterest ? '' : 'display:none;'}">
               <input type="number" step="0.01" data-field="interestPaid" class="cell-input num-font col-input-interest-paid" style="color: var(--warning); font-weight: 700; width: 110px;" value="${row.interestPaid || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestPaid', this.value, false)" onchange="handleCellChange('${row.id}', 'interestPaid', this.value, true)" title="Enter paid/settled late interest amount">
             </td>
 
+            <!-- 25: Net Balance -->
             <td data-col-index="25" class="num-col cell-locked-bg">
               <div class="cell-readonly num bold font-mono col-val-net-total" style="color: ${comp.netOutstanding > 0 ? 'var(--accent)' : 'var(--success)'};">${formatCurrency(comp.netOutstanding)}</div>
             </td>
 
-            <!-- Editable Remarks -->
+            <!-- 26: Editable Remarks -->
             <td data-col-index="26">
               <input type="text" data-field="remarks" class="cell-input" value="${escapeHtml(row.remarks || '')}" placeholder="Payment notes / Cheque #" oninput="handleCellChange('${row.id}', 'remarks', this.value, false)" onchange="handleCellChange('${row.id}', 'remarks', this.value, true)">
             </td>
 
+            <!-- 27: Actions -->
             <td data-col-index="27" class="center-col actions-col cell-locked-bg">
               <div class="actions-cell-wrap">
                 <button class="btn-action-icon btn-view-row" onclick="openChallanModal('${row.id}')" title="View Bill / Challan Details">
