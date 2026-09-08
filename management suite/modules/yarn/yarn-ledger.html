@@ -1035,6 +1035,119 @@
       border-color: rgba(239, 68, 68, 0.35);
     }
 
+    .btn-action-icon.btn-whatsapp-row {
+      color: #25D366;
+      border-color: rgba(37, 211, 102, 0.3);
+      background: rgba(37, 211, 102, 0.05);
+    }
+
+    .btn-action-icon.btn-whatsapp-row:hover {
+      background: #25D366;
+      color: #ffffff;
+      border-color: #25D366;
+      box-shadow: 0 3px 10px rgba(37, 211, 102, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .mobile-btn-pill.wa-btn {
+      background: rgba(37, 211, 102, 0.08);
+      color: #25D366;
+      border-color: rgba(37, 211, 102, 0.35);
+    }
+
+    .mobile-btn-pill.wa-btn:hover, .mobile-btn-pill.wa-btn:active {
+      background: #25D366;
+      color: #ffffff;
+      border-color: #25D366;
+      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+    }
+
+    .wa-preset-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .wa-preset-pill:hover {
+      border-color: #25D366;
+      color: var(--fg);
+      background: rgba(37, 211, 102, 0.05);
+    }
+
+    .wa-preset-pill.active {
+      background: rgba(37, 211, 102, 0.12);
+      border-color: #25D366;
+      color: #25D366;
+      font-weight: 700;
+    }
+
+    .wa-chat-bubble-container {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      position: relative;
+    }
+
+    body.dark-mode .wa-chat-bubble-container,
+    .dark-mode .wa-chat-bubble-container {
+      background: #0d1a14;
+      border-color: #1b382b;
+    }
+
+    .wa-chat-textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: vertical;
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      line-height: 1.55;
+      color: #111827;
+      box-sizing: border-box;
+      min-height: 160px;
+    }
+
+    body.dark-mode .wa-chat-textarea,
+    .dark-mode .wa-chat-textarea {
+      color: #e5e7eb;
+    }
+
+    .btn-whatsapp {
+      background: #25D366;
+      border: 1px solid #22c55e;
+      color: #ffffff;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.65rem 1.25rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+      transition: all 0.15s ease;
+    }
+
+    .btn-whatsapp:hover {
+      background: #20bd5a;
+      box-shadow: 0 6px 18px rgba(37, 211, 102, 0.45);
+      transform: translateY(-1px);
+    }
+
+    .btn-whatsapp:active {
+      transform: translateY(0);
+    }
+
     /* Semantic Status Pill Badges with SVG Icons */
     .status-badge {
       display: inline-flex;
@@ -1315,10 +1428,10 @@
       50% { opacity: 0.8; }
     }
 
-    /* Footer Stats & Totals Bar */
+    /* Top Stats & Totals Bar */
     .sheet-footer-bar {
       background: var(--surface-subtle);
-      border-top: 2px solid var(--border);
+      border-bottom: 2px solid var(--border);
       padding: 0.95rem 1.45rem;
       display: flex;
       justify-content: space-between;
@@ -2761,6 +2874,24 @@
 
     <!-- Excel Spreadsheet Table Grid -->
     <div class="sheet-wrapper">
+      <!-- Summary Totals Bar (Top of Table) -->
+      <div class="sheet-footer-bar">
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;">
+          <div class="footer-stat">Rows: <span class="val" id="stat-row-count">0</span></div>
+          <div class="footer-stat">Gross: <span class="val" id="stat-total-gross">0.00 Kg</span></div>
+          <div class="footer-stat" id="stat-gr-wrapper" style="display: none; align-items: center; gap: 5px;">GR Deducted: <span class="val" id="stat-total-gr" style="color: var(--accent3); font-weight: 700;">-0.00 Kg</span></div>
+          <div class="footer-stat">Net Wt: <span class="val" id="stat-total-weight">0.00 Kg</span></div>
+          <div class="footer-stat">Invoiced (Net): <span class="val" id="stat-total-invoiced">₹0.00</span></div>
+        </div>
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+          <div class="footer-stat" id="stat-discount-wrapper" style="display: none; align-items: center; gap: 5px;">Total Disc: <span class="val" id="stat-total-discount" style="color: var(--success); font-weight: 700;">₹0.00</span></div>
+          <div class="footer-stat">Settled: <span class="val" id="stat-total-paid" style="color: var(--success);">₹0.00</span></div>
+          <div class="footer-stat">Principal Bal: <span class="val" id="stat-total-outstanding" style="color: var(--error);">₹0.00</span></div>
+          <div class="footer-stat interest-col">Accrued Interest: <span class="val" id="stat-total-interest" style="color: var(--warning);">₹0.00</span></div>
+          <div class="footer-stat">Net Outstanding: <span class="val" id="stat-net-total" style="color: var(--accent);">₹0.00</span></div>
+        </div>
+      </div>
+
       <div class="sheet-scroll-container">
         <table class="excel-table" id="excel-grid">
           <thead>
@@ -2852,7 +2983,7 @@
                 <div class="th-content-wrap"><span>Remarks / Cheque No</span><span class="th-sort-indicator" id="sort-ind-remarks">↕</span></div>
               </th>
               <!-- 25: Actions -->
-              <th style="width: 100px; min-width: 100px;" class="center-col actions-col" data-col-index="25" data-col-name="Actions">Actions</th>
+              <th style="width: 110px; min-width: 110px;" class="center-col actions-col" data-col-index="25" data-col-name="Actions">Actions</th>
             </tr>
           </thead>
           <tbody id="excel-table-body">
@@ -2892,24 +3023,6 @@
       <!-- Restructured Mobile Cards Container (Moves 1-4, 6) -->
       <div class="ledger-mobile-cards" id="ledger-mobile-cards">
         <!-- Dynamic mobile cards rendered here by JS -->
-      </div>
-
-      <!-- Footer Totals Bar -->
-      <div class="sheet-footer-bar">
-        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;">
-          <div class="footer-stat">Rows: <span class="val" id="stat-row-count">0</span></div>
-          <div class="footer-stat">Gross: <span class="val" id="stat-total-gross">0.00 Kg</span></div>
-          <div class="footer-stat" id="stat-gr-wrapper" style="display: none; align-items: center; gap: 5px;">GR Deducted: <span class="val" id="stat-total-gr" style="color: var(--accent3); font-weight: 700;">-0.00 Kg</span></div>
-          <div class="footer-stat">Net Wt: <span class="val" id="stat-total-weight">0.00 Kg</span></div>
-          <div class="footer-stat">Invoiced (Net): <span class="val" id="stat-total-invoiced">₹0.00</span></div>
-        </div>
-        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-          <div class="footer-stat" id="stat-discount-wrapper" style="display: none; align-items: center; gap: 5px;">Total Disc: <span class="val" id="stat-total-discount" style="color: var(--success); font-weight: 700;">₹0.00</span></div>
-          <div class="footer-stat">Settled: <span class="val" id="stat-total-paid" style="color: var(--success);">₹0.00</span></div>
-          <div class="footer-stat">Principal Bal: <span class="val" id="stat-total-outstanding" style="color: var(--error);">₹0.00</span></div>
-          <div class="footer-stat interest-col">Accrued Interest: <span class="val" id="stat-total-interest" style="color: var(--warning);">₹0.00</span></div>
-          <div class="footer-stat">Net Outstanding: <span class="val" id="stat-net-total" style="color: var(--accent);">₹0.00</span></div>
-        </div>
       </div>
     </div>
   </div>
@@ -3084,6 +3197,133 @@
         <button class="btn btn-primary" id="btn-submit-gr" onclick="submitIssueGrForm()" style="background: var(--accent3); border-color: var(--accent3); color: #ffffff;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           Apply GR &amp; Sync RM Orders / Stock
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WhatsApp Payment Reminder Modal -->
+  <div class="modal-overlay" id="modal-whatsapp-reminder" style="display: none; z-index: 2700;" onclick="if(event.target === this) closeWhatsAppReminderModal();">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border); padding: 1.15rem 1.5rem;">
+        <div class="modal-title" style="color: #25D366; font-size: 1.2rem; display: flex; align-items: center; gap: 10px;">
+          <div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(37, 211, 102, 0.12); display: flex; align-items: center; justify-content: center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366">
+              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.44.54.61.19 1.16.17 1.6.1 1.06-.16 1.47-.86 1.47-1.43 0-.57-.41-.7-.66-.83z"/>
+            </svg>
+          </div>
+          <span>Send WhatsApp Payment Reminder</span>
+        </div>
+        <button class="modal-close-btn" onclick="closeWhatsAppReminderModal()">&times;</button>
+      </div>
+      
+      <div class="modal-body" style="padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto;">
+        
+        <!-- Summary Card -->
+        <div style="background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+            <div>
+              <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--muted); letter-spacing: 0.04em;">Customer Account</div>
+              <div id="wa-summary-party" style="font-size: 1.15rem; font-weight: 800; color: var(--fg); margin-top: 2px;">-</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--muted); letter-spacing: 0.04em;">Challan / Bill No</div>
+              <div id="wa-summary-challan" style="font-family: var(--font-mono); font-size: 1.05rem; font-weight: 800; color: var(--accent); margin-top: 2px;">-</div>
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.75rem; border-top: 1px dashed var(--border); padding-top: 0.75rem;">
+            <div>
+              <span style="font-size: 0.72rem; color: var(--muted); display: block;">Invoice Date</span>
+              <span id="wa-summary-date" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600;">-</span>
+            </div>
+            <div>
+              <span style="font-size: 0.72rem; color: var(--muted); display: block;">Quality &amp; Qty</span>
+              <span id="wa-summary-quality" style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">-</span>
+            </div>
+            <div>
+              <span style="font-size: 0.72rem; color: var(--muted); display: block;">Principal Bill</span>
+              <span id="wa-summary-bill" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; color: var(--fg);">-</span>
+            </div>
+            <div>
+              <span style="font-size: 0.72rem; color: var(--warning); font-weight: 700; display: block;">Late Interest</span>
+              <span id="wa-summary-interest" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; color: var(--warning);">₹ 0.00</span>
+            </div>
+            <div>
+              <span style="font-size: 0.72rem; color: var(--error); font-weight: 700; display: block;">Pending Balance</span>
+              <span id="wa-summary-balance" style="font-family: var(--font-mono); font-size: 1rem; font-weight: 800; color: var(--error);">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phone Number Input -->
+        <div>
+          <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--fg); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;">
+            Recipient WhatsApp / Phone Number <span style="font-weight: 400; color: var(--muted); text-transform: none; font-size: 0.74rem;">(Optional - leave blank to pick contact in WhatsApp)</span>
+          </label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div style="position: relative; flex: 1;">
+              <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700; pointer-events: none;">+91</span>
+              <input type="tel" id="wa-phone-input" placeholder="10-digit number (or leave blank to choose in WhatsApp)" style="width: 100%; box-sizing: border-box; padding: 0.65rem 0.85rem 0.65rem 45px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--fg); font-family: var(--font-mono); font-size: 0.95rem; font-weight: 600; outline: none; transition: border-color 0.15s;" onfocus="this.style.borderColor='var(--accent)';" onblur="this.style.borderColor='var(--border)';" oninput="onWhatsAppPhoneInputChange()">
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="resetWhatsAppPhone()" style="padding: 0.65rem 0.85rem; font-size: 0.8rem;" title="Reset to customer auto-detected phone">Reset</button>
+          </div>
+          <div id="wa-phone-hint" style="font-size: 0.72rem; color: var(--muted); margin-top: 4px;">Leave empty to open WhatsApp and select any recipient or chat.</div>
+        </div>
+
+        <!-- Tone / Template Selectors -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--fg); text-transform: uppercase; letter-spacing: 0.04em;">
+              Message Tone Preset
+            </label>
+            <span style="font-size: 0.72rem; color: var(--muted);">Click to switch preset</span>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="wa-preset-pill active" id="wa-preset-standard" onclick="switchWhatsAppPreset('standard')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>Standard Invoice</span>
+            </button>
+            <button type="button" class="wa-preset-pill" id="wa-preset-gentle" onclick="switchWhatsAppPreset('gentle')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+              <span>Polite / Friendly</span>
+            </button>
+            <button type="button" class="wa-preset-pill" id="wa-preset-urgent" onclick="switchWhatsAppPreset('urgent')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Overdue Notice</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Editable Message Bubble -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 0.78rem; font-weight: 700; color: var(--fg); text-transform: uppercase; letter-spacing: 0.04em;">
+              Message Preview &amp; Editor
+            </label>
+            <button type="button" onclick="copyWhatsAppMessage()" class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 4px;" title="Copy to clipboard">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span id="wa-copy-btn-text">Copy Text</span>
+            </button>
+          </div>
+          <div class="wa-chat-bubble-container">
+            <textarea id="wa-message-textarea" class="wa-chat-textarea" rows="9" spellcheck="false" placeholder="Enter reminder message..." oninput="updateWhatsAppCharCount()"></textarea>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--muted); margin-top: 4px; display: flex; justify-content: space-between;">
+            <span>WhatsApp supports *bold*, _italics_, and line breaks.</span>
+            <span id="wa-char-count">0 chars</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeWhatsAppReminderModal()">Cancel</button>
+        <button type="button" class="btn btn-whatsapp" onclick="sendWhatsAppReminder()" id="btn-send-whatsapp-action">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.44.54.61.19 1.16.17 1.6.1 1.06-.16 1.47-.86 1.47-1.43 0-.57-.41-.7-.66-.83z"/>
+          </svg>
+          <span>Open in WhatsApp</span>
         </button>
       </div>
     </div>
@@ -4173,7 +4413,7 @@
                     grandTotal: grandTotal,
                     paidAmount: 0,
                     paymentDate: '',
-                    creditDays: Number(order.creditDays) || defaultCreditDays,
+                    creditDays: (order.creditDays !== undefined && order.creditDays !== null && order.creditDays !== '') ? Number(order.creditDays) : defaultCreditDays,
                     discountPercent: defaultDiscountPercent,
                     interestRate: defaultInterestRate,
                     interestPaid: 0,
@@ -4290,6 +4530,7 @@
                   date: saleDate,
                   challanNo: challanNo,
                   partyName: customerName,
+                  buyerPhone: sale.buyerPhone || sale.phone || sale.mobile || '',
                   quality: qualityStr,
                   qty: qty,
                   rate: rate,
@@ -4319,6 +4560,9 @@
                 existingRow.source = `yarn_${div}_sales`;
                 existingRow.isManual = false;
                 if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
+                if (!existingRow.buyerPhone && (sale.buyerPhone || sale.phone || sale.mobile)) {
+                  existingRow.buyerPhone = sale.buyerPhone || sale.phone || sale.mobile;
+                }
 
                 // Update quality if existing was generic or blank
                 const isGenericQuality = !existingRow.quality || 
@@ -4775,7 +5019,13 @@
         return;
       }
 
-      if (field === 'qty' || field === 'grossQty' || field === 'grQty' || field === 'rate' || field === 'gstPercent' || field === 'rateMonthly' || field === 'discountPercent' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate' || field === 'interestPaid') {
+      if (field === 'creditDays') {
+        if (value === '' || value === null || value === undefined) {
+          row.creditDays = defaultCreditDays;
+        } else {
+          row.creditDays = Math.max(0, parseInt(value, 10) || 0);
+        }
+      } else if (field === 'qty' || field === 'grossQty' || field === 'grQty' || field === 'rate' || field === 'gstPercent' || field === 'rateMonthly' || field === 'discountPercent' || field === 'paidAmount' || field === 'interestRate' || field === 'interestPaid') {
         row[field] = Number(value) || 0;
       } else if (field === 'roundOff') {
         if (value === '' || value === null || value === undefined) {
@@ -4834,7 +5084,7 @@
       }
 
       // Live update DOM and KPI summaries immediately
-      updateRowDOM(rowId);
+      updateRowDOM(rowId, field);
       updateFooterAndKPISummaries();
 
       // Real-time debounced or immediate broadcast to Supabase
@@ -4890,7 +5140,7 @@
       updateFieldInput('qty', row.qty !== undefined && row.qty !== null ? Number(row.qty).toFixed(2) : '0.00');
       updateFieldInput('rate', row.rate !== undefined && row.rate !== null ? Number(row.rate).toFixed(2) : '0.00');
       updateFieldInput('gstPercent', row.gstPercent !== undefined ? row.gstPercent : 5.0);
-      updateFieldInput('creditDays', row.creditDays || defaultCreditDays);
+      updateFieldInput('creditDays', (row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '') ? row.creditDays : defaultCreditDays);
       updateFieldInput('rateMonthly', row.rateMonthly !== undefined ? row.rateMonthly : defaultRateMonthly);
       updateFieldInput('actualAdjustment', (row.actualAdjustment !== undefined && row.actualAdjustment !== null) ? Number(row.actualAdjustment).toFixed(2) : (row.actualDiscount !== undefined && row.actualDiscount !== null ? (-Math.abs(row.actualDiscount)).toFixed(2) : ''), comp.calcAdjAmount !== 0 ? comp.calcAdjAmount.toFixed(2) : '0.00');
       updateFieldInput('roundOff', (row.roundOff !== undefined && row.roundOff !== null && row.roundOff !== '') ? Number(row.roundOff).toFixed(2) : '', '0.00');
@@ -4980,6 +5230,35 @@
       const elStatus = tr.querySelector('.col-val-status');
       if (elStatus) {
         elStatus.innerHTML = `<div class="cell-readonly" style="justify-content: center;">${renderStatusBadge(comp.status)}</div>`;
+      }
+
+      // Dynamically update Actions cell for sales ledger pending status
+      if (activeTab === 'sales') {
+        const actWrap = tr.querySelector('.actions-cell-wrap');
+        if (actWrap) {
+          const existingWaBtn = actWrap.querySelector('.btn-whatsapp-row');
+          if (comp.netBalance > 0) {
+            if (!existingWaBtn) {
+              const waBtnHtml = `
+                <button class="btn-action-icon btn-whatsapp-row" onclick="openWhatsAppReminderModal('${row.id}')" title="Send WhatsApp Payment Reminder (Pending: ${formatCurrency(comp.netBalance)})">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.44.54.61.19 1.16.17 1.6.1 1.06-.16 1.47-.86 1.47-1.43 0-.57-.41-.7-.66-.83z"/>
+                  </svg>
+                </button>
+              `;
+              const viewBtn = actWrap.querySelector('.btn-view-row');
+              if (viewBtn) {
+                viewBtn.insertAdjacentHTML('afterend', waBtnHtml);
+              } else {
+                actWrap.insertAdjacentHTML('afterbegin', waBtnHtml);
+              }
+            } else {
+              existingWaBtn.title = `Send WhatsApp Payment Reminder (Pending: ${formatCurrency(comp.netBalance)})`;
+            }
+          } else if (existingWaBtn) {
+            existingWaBtn.remove();
+          }
+        }
       }
     }
 
@@ -5142,7 +5421,7 @@
         : Number((subtotal + gstAmount).toFixed(2));
 
       const paid = Number(row.paidAmount) || 0;
-      const creditDays = Number(row.creditDays) || defaultCreditDays;
+      const creditDays = (row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '') ? Number(row.creditDays) : defaultCreditDays;
       const dueDate = addDays(row.date, creditDays);
       const today = new Date().toISOString().split('T')[0];
       const isFullyReturned = (Number(row.qty) === 0 && Number(row.grQty) > 0);
@@ -5356,6 +5635,11 @@
       }
 
       // Filter and Sort Current Active Ledger
+      const search = (document.getElementById('sheet-search')?.value || '').toLowerCase().trim();
+      const partyFilter = document.getElementById('filter-party')?.value || 'all';
+      const statusFilter = document.getElementById('filter-status')?.value || 'all';
+      const fromDate = document.getElementById('filter-from-date')?.value || '';
+      const toDate = document.getElementById('filter-to-date')?.value || '';
       const rows = getFilteredRows();
 
       // Update Sort Indicators & Visual Highlighting in Header
@@ -5627,7 +5911,7 @@
 
             <!-- 12: Editable Credit Days -->
             <td data-col-index="12" class="num-col">
-              <input type="number" step="1" data-field="creditDays" class="cell-input num-font" style="width: 80px;" value="${row.creditDays || defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
+              <input type="number" step="1" min="0" data-field="creditDays" class="cell-input num-font" style="width: 80px;" value="${(row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '') ? row.creditDays : defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
             </td>
 
             <!-- 13: Editable Monthly Interest / Discount Rate % -->
@@ -5712,6 +5996,13 @@
                 <button class="btn-action-icon btn-view-row" onclick="openChallanModal('${row.id}')" title="View Bill / Challan Details">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
+                ${(activeTab === 'sales' && comp.netBalance > 0) ? `
+                  <button class="btn-action-icon btn-whatsapp-row" onclick="openWhatsAppReminderModal('${row.id}')" title="Send WhatsApp Payment Reminder (Pending: ${formatCurrency(comp.netBalance)})">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.44.54.61.19 1.16.17 1.6.1 1.06-.16 1.47-.86 1.47-1.43 0-.57-.41-.7-.66-.83z"/>
+                    </svg>
+                  </button>
+                ` : ''}
                 ${!isLocked ? `
                   <button class="btn-action-icon btn-delete-row" onclick="deleteRow('${row.id}')" title="Delete custom row">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
@@ -5884,7 +6175,7 @@
                 </div>
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">Credit Terms</span>
-                  <span class="mobile-kv-val font-mono">${row.creditDays || defaultCreditDays} Days</span>
+                  <span class="mobile-kv-val font-mono">${(row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '') ? row.creditDays : defaultCreditDays} Days</span>
                 </div>
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">Net Balance</span>
@@ -5925,6 +6216,14 @@
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                   <span>GR</span>
                 </button>
+                ${(activeTab === 'sales' && comp.netBalance > 0) ? `
+                  <button class="mobile-btn-pill wa-btn" onclick="openWhatsAppReminderModal('${row.id}')" title="Send WhatsApp Payment Reminder">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.44.54.61.19 1.16.17 1.6.1 1.06-.16 1.47-.86 1.47-1.43 0-.57-.41-.7-.66-.83z"/>
+                    </svg>
+                    <span>WA</span>
+                  </button>
+                ` : ''}
                 <button class="mobile-btn-pill primary" onclick="openMobileActionSheet('${row.id}')" title="More Actions">
                   <span>•••</span>
                 </button>
@@ -6039,6 +6338,16 @@
               <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">Inspect complete item lines, tax calculations &amp; print voucher</span>
             </div>
           </button>
+
+          ${(activeTab === 'sales' && comp.netBalance > 0) ? `
+            <button class="mobile-sheet-action-item" onclick="closeMobileActionSheet(); openWhatsAppReminderModal('${row.id}');">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.44.54.61.19 1.16.17 1.6.1 1.06-.16 1.47-.86 1.47-1.43 0-.57-.41-.7-.66-.83z"/></svg>
+              <div style="display:flex; flex-direction:column; gap:2px;">
+                <div style="color: #25D366; font-weight: 700;">Send WhatsApp Payment Reminder</div>
+                <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">Send pending balance reminder (${formatCurrency(comp.netBalance)}) directly to customer</span>
+              </div>
+            </button>
+          ` : ''}
 
           <button class="mobile-sheet-action-item" onclick="closeMobileActionSheet(); openIssueGrModal('${row.id}');">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent3)" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -6517,6 +6826,14 @@
             <span>Issue GR</span>
           </button>
         `;
+        const waReminderBtn = (isSales && comp.netBalance > 0) ? `
+          <button class="btn btn-secondary" onclick="closeChallanDetailsModal(); openWhatsAppReminderModal('${row.id}');" style="color: #25D366; border-color: rgba(37, 211, 102, 0.4); display: inline-flex; align-items: center; gap: 6px;" title="Send WhatsApp Payment Reminder">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.44.54.61.19 1.16.17 1.6.1 1.06-.16 1.47-.86 1.47-1.43 0-.57-.41-.7-.66-.83z"/>
+            </svg>
+            <span>WhatsApp Reminder</span>
+          </button>
+        ` : '';
         if (row.source === 'yarn-rm-orders') {
           sourceWrap.innerHTML = `
             ${grBtn}
@@ -6528,13 +6845,14 @@
         } else if (row.source && row.source.includes('sales')) {
           sourceWrap.innerHTML = `
             ${grBtn}
+            ${waReminderBtn}
             <a href="yarn-sales.html" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;" title="View in Yarn Sales Book">
               <span>Open Sales Book</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </a>
           `;
         } else {
-          sourceWrap.innerHTML = grBtn;
+          sourceWrap.innerHTML = `${grBtn}${waReminderBtn}`;
         }
       }
 
@@ -6670,7 +6988,7 @@
               <div style="background: rgba(124, 58, 237, 0.08); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(124, 58, 237, 0.2);">
                 <div style="font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase;">Status</div>
                 <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 800; color: var(--accent);">${comp.status.toUpperCase()}</div>
-                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Terms: ${row.creditDays || defaultCreditDays}d</div>
+                <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Terms: ${(row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '') ? row.creditDays : defaultCreditDays}d</div>
               </div>
             </div>
           </div>
@@ -6698,6 +7016,349 @@
       setTimeout(() => {
         document.body.classList.remove('printing-challan');
       }, 500);
+    }
+
+    // WhatsApp Payment Reminder Modal State & Handlers
+    let activeWhatsAppRowId = null;
+    let activeWhatsAppPreset = 'standard';
+
+    function cleanWhatsAppPhone(phoneStr) {
+      if (!phoneStr) return '';
+      let digits = String(phoneStr).replace(/[^\d]/g, '');
+      if (digits.startsWith('0') && digits.length === 11) {
+        digits = '91' + digits.substring(1);
+      }
+      if (digits.length === 10) {
+        digits = '91' + digits;
+      }
+      return digits;
+    }
+
+    function getCustomerPhone(partyName, row) {
+      if (row && (row.buyerPhone || row.phone || row.mobile)) {
+        return String(row.buyerPhone || row.phone || row.mobile).trim();
+      }
+      const cleanParty = (partyName || (row && row.partyName) || '').trim().toLowerCase();
+      if (!cleanParty) return '';
+
+      // 1. Search cachedCloudDataMap sales logs across all yarn divisions
+      if (typeof cachedCloudDataMap === 'object' && cachedCloudDataMap) {
+        const divs = ['doubler', 'tfo', 'covering'];
+        for (const div of divs) {
+          const logs = cachedCloudDataMap[`yarn_${div}_sales_logs`] || [];
+          if (Array.isArray(logs)) {
+            const found = logs.find(s => {
+              if (!s) return false;
+              const sName = (s.customerName || s.customer || '').trim().toLowerCase();
+              return sName === cleanParty && (s.buyerPhone || s.phone || s.mobile);
+            });
+            if (found) {
+              return String(found.buyerPhone || found.phone || found.mobile).trim();
+            }
+          }
+        }
+      }
+
+      // 2. Search current ledgerData.sales for any entry with this party name having a phone
+      if (ledgerData && Array.isArray(ledgerData.sales)) {
+        const foundRow = ledgerData.sales.find(r => 
+          r && (r.partyName || '').trim().toLowerCase() === cleanParty && (r.buyerPhone || r.phone || r.mobile)
+        );
+        if (foundRow) {
+          return String(foundRow.buyerPhone || foundRow.phone || foundRow.mobile).trim();
+        }
+      }
+
+      // 3. Search localStorage backup logs
+      try {
+        const divs = ['doubler', 'tfo', 'covering'];
+        for (const div of divs) {
+          const stored = localStorage.getItem(`yarn_${div}_sales_logs`);
+          if (stored) {
+            const logs = JSON.parse(stored);
+            if (Array.isArray(logs)) {
+              const found = logs.find(s => {
+                if (!s) return false;
+                const sName = (s.customerName || s.customer || '').trim().toLowerCase();
+                return sName === cleanParty && (s.buyerPhone || s.phone || s.mobile);
+              });
+              if (found) return String(found.buyerPhone || found.phone || found.mobile).trim();
+            }
+          }
+        }
+      } catch (e) {}
+
+      return '';
+    }
+
+    function generateWhatsAppMessage(row, comp, preset = 'standard') {
+      const party = row.partyName || 'Valued Customer';
+      const challan = row.challanNo ? `#${row.challanNo}` : '-';
+      const date = formatDateDisplay(row.date);
+      const quality = row.quality || '-';
+      const qty = Number(row.qty || 0).toFixed(2);
+      const rate = Number(row.rate || 0).toFixed(2);
+      const principal = formatCurrency(comp.grandTotal);
+      const finalBill = formatCurrency(comp.finalBill || row.grandTotal);
+      const paid = formatCurrency(row.paidAmount || 0);
+      const balance = formatCurrency(comp.netBalance);
+      const dueDate = formatDateDisplay(comp.dueDate);
+      const overdueNote = comp.overdueDays > 0 ? ` (${comp.overdueDays} days overdue)` : (comp.earlyDays > 0 ? ` (${comp.earlyDays} days early)` : '');
+      const interestAmt = (comp.effectiveAdjAmount > 0) ? comp.effectiveAdjAmount : (comp.calcAdjAmount > 0 ? comp.calcAdjAmount : 0);
+      const interestFormatted = formatCurrency(interestAmt);
+      const rateMonthly = (comp.rateMonthly !== undefined && comp.rateMonthly !== null && comp.rateMonthly !== '') ? comp.rateMonthly : 1.5;
+
+      const interestLineStandard = `📈 *Interest (Late Charges):* ${interestFormatted}${comp.overdueDays > 0 ? ` (${comp.overdueDays} days @ ${rateMonthly}%/mo)` : ''}\n`;
+      const interestLineGentle = `• Interest Charges: ${interestFormatted}${comp.overdueDays > 0 ? ` (${comp.overdueDays} days @ ${rateMonthly}%/mo)` : ''}\n`;
+      const interestLineUrgent = `• Accrued Late Interest: *${interestFormatted}* (${comp.overdueDays} days @ ${rateMonthly}%/mo)\n`;
+
+      if (preset === 'gentle') {
+        return `*Greetings from Vishwa Fashions* 🙏\n\n` +
+          `Dear *${party}*,\n\n` +
+          `Hope you are doing well!\n\n` +
+          `This is a gentle follow-up regarding invoice *${challan}* dated *${date}* for *${quality}* (${qty} Kg @ ₹${rate}/Kg).\n\n` +
+          `*Account Summary:*\n` +
+          `• Principal Bill: ${principal}\n` +
+          interestLineGentle +
+          `• Total Bill: ${finalBill}\n` +
+          `• Paid to Date: ${paid}\n` +
+          `• *Balance Due: ${balance}*\n` +
+          `• Due Date: ${dueDate}${overdueNote}\n\n` +
+          `Kindly review and schedule the clearance of the pending amount of *${balance}* at your earliest convenience.\n\n` +
+          `Thank you for your continued support and partnership!\n\n` +
+          `Warm regards,\n*Vishwa Fashions*`;
+      }
+
+      if (preset === 'urgent') {
+        return `*URGENT: PAYMENT OVERDUE NOTICE*\n*Vishwa Fashions*\n\n` +
+          `Attention: *${party}*\n\n` +
+          `This is an important reminder that payment for invoice *${challan}* is currently *OVERDUE*.\n\n` +
+          `*Invoice Details:*\n` +
+          `• Invoice / Challan: *${challan}*\n` +
+          `• Invoice Date: ${date}\n` +
+          `• Quality: ${quality} (${qty} Kg)\n` +
+          `• Principal Invoice Amount: ${principal}\n` +
+          interestLineUrgent +
+          `• Total Payable: ${finalBill}\n` +
+          `• Amount Received: ${paid}\n` +
+          `• *Overdue Balance: ${balance}*\n` +
+          `• Payment Due Date: *${dueDate}*${overdueNote}\n\n` +
+          `We kindly request you to prioritize and clear the overdue balance of *${balance}* immediately to maintain regular supply and credit limits.\n\n` +
+          `Please share the payment UTR / transaction confirmation once processed.\n\n` +
+          `Regards,\n*Vishwa Fashions*`;
+      }
+
+      // Default 'standard'
+      return `*PAYMENT REMINDER*\n*Vishwa Fashions*\n\n` +
+        `Dear *${party}*,\n\n` +
+        `This is a polite reminder regarding pending payment for the following invoice:\n\n` +
+        `📄 *Invoice / Challan:* ${challan}\n` +
+        `📅 *Date:* ${date}\n` +
+        `🧵 *Quality:* ${quality}\n` +
+        `⚖️ *Quantity:* ${qty} Kg\n` +
+        `💰 *Principal Amount:* ${principal}\n` +
+        interestLineStandard +
+        `🧾 *Total Amount:* ${finalBill}\n` +
+        `✅ *Paid Amount:* ${paid}\n` +
+        `⚠️ *Pending Balance:* *${balance}*\n` +
+        `📆 *Due Date:* ${dueDate}${overdueNote}\n\n` +
+        `Kindly arrange the payment of *${balance}* at your earliest convenience.\n\n` +
+        `If payment has already been initiated, kindly disregard this message or share the payment reference.\n\n` +
+        `Thank you,\n*Vishwa Fashions*`;
+    }
+
+    function openWhatsAppReminderModal(rowId) {
+      activeWhatsAppRowId = rowId;
+      const row = (ledgerData[activeTab] || ledgerData.sales || []).find(r => r.id === rowId);
+      if (!row) return;
+
+      const comp = computeRowFinancials(row);
+      const modal = document.getElementById('modal-whatsapp-reminder');
+      if (!modal) return;
+
+      // Auto-select urgent preset if account is overdue
+      activeWhatsAppPreset = comp.overdueDays > 0 ? 'urgent' : 'standard';
+
+      // Populate summary fields
+      const partyEl = document.getElementById('wa-summary-party');
+      if (partyEl) partyEl.textContent = row.partyName || 'Customer';
+
+      const challanEl = document.getElementById('wa-summary-challan');
+      if (challanEl) challanEl.textContent = row.challanNo ? `#${row.challanNo}` : '-';
+
+      const dateEl = document.getElementById('wa-summary-date');
+      if (dateEl) dateEl.textContent = formatDateDisplay(row.date);
+
+      const qualityEl = document.getElementById('wa-summary-quality');
+      if (qualityEl) qualityEl.textContent = `${row.quality || '-'} (${Number(row.qty || 0).toFixed(2)} Kg)`;
+
+      const billEl = document.getElementById('wa-summary-bill');
+      if (billEl) billEl.textContent = formatCurrency(comp.grandTotal);
+
+      const interestEl = document.getElementById('wa-summary-interest');
+      const interestAmt = (comp.effectiveAdjAmount > 0) ? comp.effectiveAdjAmount : (comp.calcAdjAmount > 0 ? comp.calcAdjAmount : 0);
+      if (interestEl) interestEl.textContent = formatCurrency(interestAmt);
+
+      const balanceEl = document.getElementById('wa-summary-balance');
+      if (balanceEl) balanceEl.textContent = formatCurrency(comp.netBalance);
+
+      // Populate phone
+      const phoneInput = document.getElementById('wa-phone-input');
+      const detectedPhone = getCustomerPhone(row.partyName, row);
+      if (phoneInput) {
+        let displayPhone = detectedPhone;
+        if (displayPhone.startsWith('+91')) displayPhone = displayPhone.substring(3).trim();
+        else if (displayPhone.startsWith('91') && displayPhone.length === 12) displayPhone = displayPhone.substring(2).trim();
+        phoneInput.value = displayPhone;
+        phoneInput.dataset.detected = detectedPhone;
+      }
+
+      const hintEl = document.getElementById('wa-phone-hint');
+      if (hintEl) {
+        hintEl.textContent = detectedPhone 
+          ? `Auto-detected from ${row.partyName} sales records. (Or leave blank to pick contact in WhatsApp)`
+          : `No phone number on file. Enter 10-digit number or leave blank to choose in WhatsApp.`;
+      }
+
+      // Update preset buttons
+      updateWhatsAppPresetButtons();
+
+      // Generate message preview
+      updateWhatsAppMessageContent();
+
+      modal.style.display = 'flex';
+    }
+
+    function closeWhatsAppReminderModal() {
+      const modal = document.getElementById('modal-whatsapp-reminder');
+      if (modal) modal.style.display = 'none';
+      activeWhatsAppRowId = null;
+    }
+
+    function switchWhatsAppPreset(preset) {
+      activeWhatsAppPreset = preset;
+      updateWhatsAppPresetButtons();
+      updateWhatsAppMessageContent();
+    }
+
+    function updateWhatsAppPresetButtons() {
+      ['standard', 'gentle', 'urgent'].forEach(p => {
+        const btn = document.getElementById(`wa-preset-${p}`);
+        if (btn) {
+          if (p === activeWhatsAppPreset) btn.classList.add('active');
+          else btn.classList.remove('active');
+        }
+      });
+    }
+
+    function updateWhatsAppMessageContent() {
+      if (!activeWhatsAppRowId) return;
+      const row = (ledgerData[activeTab] || ledgerData.sales || []).find(r => r.id === activeWhatsAppRowId);
+      if (!row) return;
+      const comp = computeRowFinancials(row);
+      const text = generateWhatsAppMessage(row, comp, activeWhatsAppPreset);
+      const textarea = document.getElementById('wa-message-textarea');
+      if (textarea) {
+        textarea.value = text;
+        updateWhatsAppCharCount();
+      }
+    }
+
+    function updateWhatsAppCharCount() {
+      const textarea = document.getElementById('wa-message-textarea');
+      const countEl = document.getElementById('wa-char-count');
+      if (textarea && countEl) {
+        countEl.textContent = `${textarea.value.length} chars`;
+      }
+    }
+
+    function onWhatsAppPhoneInputChange() {
+      // Input event handler
+    }
+
+    function resetWhatsAppPhone() {
+      const phoneInput = document.getElementById('wa-phone-input');
+      if (phoneInput && phoneInput.dataset.detected) {
+        let displayPhone = phoneInput.dataset.detected;
+        if (displayPhone.startsWith('+91')) displayPhone = displayPhone.substring(3).trim();
+        else if (displayPhone.startsWith('91') && displayPhone.length === 12) displayPhone = displayPhone.substring(2).trim();
+        phoneInput.value = displayPhone;
+        showToast('Reset to original auto-detected phone', 'info');
+      }
+    }
+
+    function copyWhatsAppMessage() {
+      const textarea = document.getElementById('wa-message-textarea');
+      if (!textarea || !textarea.value) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textarea.value).then(() => {
+          showToast('Message copied to clipboard!', 'success');
+          const btnText = document.getElementById('wa-copy-btn-text');
+          if (btnText) {
+            btnText.textContent = 'Copied!';
+            setTimeout(() => { btnText.textContent = 'Copy Text'; }, 2000);
+          }
+        }).catch(() => {
+          fallbackCopyText(textarea);
+        });
+      } else {
+        fallbackCopyText(textarea);
+      }
+    }
+
+    function fallbackCopyText(textarea) {
+      try {
+        textarea.select();
+        document.execCommand('copy');
+        showToast('Message copied to clipboard!', 'success');
+      } catch (e) {
+        showToast('Unable to copy message automatically', 'warning');
+      }
+    }
+
+    function sendWhatsAppReminder() {
+      const phoneInput = document.getElementById('wa-phone-input');
+      const textarea = document.getElementById('wa-message-textarea');
+      if (!textarea) return;
+
+      const message = textarea.value.trim();
+      if (!message) {
+        showToast('Message content cannot be empty', 'error');
+        textarea.focus();
+        return;
+      }
+
+      const encodedText = encodeURIComponent(message);
+      const rawPhone = phoneInput ? phoneInput.value.trim() : '';
+      let waUrl = '';
+
+      if (rawPhone) {
+        const cleanPhone = cleanWhatsAppPhone(rawPhone);
+        if (cleanPhone.length < 10) {
+          showToast('Please enter a valid 10-digit mobile number, or leave blank to choose contact in WhatsApp', 'error');
+          phoneInput.focus();
+          return;
+        }
+
+        // Persist the phone number back to row if changed
+        if (activeWhatsAppRowId) {
+          const row = (ledgerData[activeTab] || ledgerData.sales || []).find(r => r.id === activeWhatsAppRowId);
+          if (row) {
+            row.buyerPhone = rawPhone;
+            saveLedgers(false, false);
+          }
+        }
+
+        waUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
+        showToast('Opening WhatsApp chat with recipient...', 'success');
+      } else {
+        // No phone number specified: open WhatsApp with prefilled message to let user choose any contact/chat
+        waUrl = `https://wa.me/?text=${encodedText}`;
+        showToast('Opening WhatsApp to select recipient...', 'info');
+      }
+
+      window.open(waUrl, '_blank');
+      closeWhatsAppReminderModal();
     }
 
     // Goods Return (GR) Modal State & Handlers
@@ -7636,7 +8297,7 @@
           comp.subtotal.toFixed(2),
           Number(r.gstPercent || 0).toFixed(2),
           comp.grandTotal.toFixed(2),
-          r.creditDays || defaultCreditDays,
+          (r.creditDays !== undefined && r.creditDays !== null && r.creditDays !== '') ? r.creditDays : defaultCreditDays,
           r.rateMonthly !== undefined ? r.rateMonthly : defaultRateMonthly,
           `"${formatDateDisplay(comp.dueDate, '')}"`,
           `"${timingStr}"`,
