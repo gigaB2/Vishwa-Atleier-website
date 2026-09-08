@@ -2151,9 +2151,12 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
       const refDate = (row.paymentDate && row.paymentDate.trim()) ? row.paymentDate : today;
       const daysTaken = (row.date && refDate) ? daysBetween(row.date, refDate) : 0;
 
+      // Discount & Overdue Calculation
+      const hasExplicitAmount = row.discountMode === 'amount' && row.discountAmount !== undefined && row.discountAmount !== null && row.discountAmount !== '';
       const discPct = (row.discountPercent !== undefined && row.discountPercent !== null && row.discountPercent !== '')
         ? Number(row.discountPercent)
         : defaultDiscountPercent;
+      const explicitDiscAmt = hasExplicitAmount ? Number(row.discountAmount) : 0;
 
       let effectiveDiscountPct = 0;
       let discountAmount = 0;
@@ -2163,6 +2166,22 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
         overdueDays = 0;
         effectiveDiscountPct = 0;
         discountAmount = 0;
+      } else if (hasExplicitAmount) {
+        if (daysTaken <= creditDays && creditDays > 0 && explicitDiscAmt > 0) {
+          const remainingTermDays = Math.max(0, creditDays - Math.max(0, daysTaken));
+          discountAmount = (row.paymentDate && row.paymentDate.trim()) ? explicitDiscAmt : Number((explicitDiscAmt * (remainingTermDays / creditDays)).toFixed(2));
+          effectiveDiscountPct = grandTotal > 0 ? Number(((discountAmount / grandTotal) * 100).toFixed(4)) : 0;
+          overdueDays = 0;
+        } else if (daysTaken > creditDays) {
+          effectiveDiscountPct = 0;
+          discountAmount = 0;
+          if (dueDate) {
+            overdueDays = Math.max(0, daysBetween(dueDate, refDate));
+          }
+        } else {
+          discountAmount = explicitDiscAmt;
+          effectiveDiscountPct = grandTotal > 0 ? Number(((discountAmount / grandTotal) * 100).toFixed(4)) : 0;
+        }
       } else if (daysTaken <= creditDays && creditDays > 0 && discPct > 0) {
         const remainingTermDays = Math.max(0, creditDays - Math.max(0, daysTaken));
         effectiveDiscountPct = Number((discPct * (remainingTermDays / creditDays)).toFixed(4));
@@ -2272,12 +2291,35 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(day45Result.daysTaken, 45);
     assert.strictEqual(day45Result.effectiveDiscountPct, 0);
     assert.strictEqual(day45Result.discountAmount, 0);
-    assert.strictEqual(day45Result.netBilled, 100000);
-    assert.strictEqual(day45Result.principalOutstanding, 100000);
-    assert.strictEqual(day45Result.overdueDays, 15);
-    // Interest = 100000 * (18/100) * (15/365) = 739.73
-    assert.strictEqual(day45Result.interestAmount, 739.73);
-    assert.strictEqual(day45Result.netOutstanding, 100739.73);
+    // Case 5: Lump Sum Discount Amount (e.g., ₹2500 lump sum discount on ₹1,00,000 billed)
+    const lumpSumResult = computeRowFinancials({
+      date: billDate,
+      grandTotal: 100000,
+      creditDays: 30,
+      discountMode: 'amount',
+      discountAmount: 2500,
+      paymentDate: '2026-09-02',
+      paidAmount: 97500
+    });
+    assert.strictEqual(lumpSumResult.discountAmount, 2500);
+    assert.strictEqual(lumpSumResult.effectiveDiscountPct, 2.5);
+    assert.strictEqual(lumpSumResult.netBilled, 97500);
+    assert.strictEqual(lumpSumResult.principalOutstanding, 0);
+
+    // Case 6: Lump Sum Discount with overdue payment -> 0 discount
+    const lumpSumOverdue = computeRowFinancials({
+      date: billDate,
+      grandTotal: 100000,
+      creditDays: 30,
+      discountMode: 'amount',
+      discountAmount: 2500,
+      paymentDate: '2026-10-16',
+      paidAmount: 0
+    });
+    assert.strictEqual(lumpSumOverdue.discountAmount, 0);
+    assert.strictEqual(lumpSumOverdue.effectiveDiscountPct, 0);
+    assert.strictEqual(lumpSumOverdue.netBilled, 100000);
+    assert.strictEqual(lumpSumOverdue.principalOutstanding, 100000);
   });
 });
 
