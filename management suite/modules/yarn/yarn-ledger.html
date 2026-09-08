@@ -536,7 +536,8 @@
 
     .search-input-wrap input {
       width: 100%;
-      padding: 0.55rem 0.85rem 0.55rem 2.35rem;
+      height: 35px;
+      padding: 0.4rem 0.85rem 0.4rem 2.35rem;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--surface-subtle);
@@ -544,6 +545,7 @@
       font-size: 0.85rem;
       font-family: var(--font-body);
       outline: none;
+      box-sizing: border-box;
       transition: border-color 0.2s;
     }
 
@@ -553,16 +555,25 @@
     }
 
     .filter-select {
-      padding: 0.55rem 0.85rem;
+      height: 35px;
+      padding: 0.35rem 0.75rem;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--surface-subtle);
       color: var(--fg);
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-family: var(--font-body);
       font-weight: 500;
       outline: none;
       cursor: pointer;
+      box-sizing: border-box;
+      transition: border-color 0.15s;
+    }
+
+    .toolbar-row-1 .filter-select {
+      flex: 0 1 auto;
+      min-width: 160px;
+      max-width: 240px;
     }
 
     .filter-select:focus {
@@ -2689,21 +2700,35 @@
         overflow-wrap: break-word !important;
       }
       .sheet-toolbar {
-        gap: 0.75rem !important;
+        gap: 0.65rem !important;
+        padding: 0.75rem 0.85rem !important;
       }
       .toolbar-row {
-        flex-direction: column !important;
-        align-items: stretch !important;
+        gap: 0.5rem !important;
       }
-      .toolbar-left, .toolbar-right {
-        width: 100% !important;
+      .toolbar-row-1 {
+        display: flex !important;
         flex-wrap: wrap !important;
+        gap: 0.5rem !important;
       }
       .search-input-wrap {
         min-width: 100% !important;
+        flex: 1 1 100% !important;
       }
-      .filter-select {
-        width: 100% !important;
+      .toolbar-row-1 .filter-select {
+        flex: 1 1 calc(50% - 0.25rem) !important;
+        min-width: 120px !important;
+        max-width: calc(50% - 0.25rem) !important;
+        width: auto !important;
+      }
+      .toolbar-row-2 {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+      }
+      .toolbar-left, .toolbar-right {
+        width: auto !important;
+        flex-wrap: wrap !important;
       }
     }
   </style>
@@ -2833,11 +2858,11 @@
           <input type="text" id="sheet-search" placeholder="Search Bill No, Party, Quality, Remarks..." oninput="renderTable()">
         </div>
 
-        <select class="filter-select" id="filter-party" onchange="renderTable()" style="flex: 0 1 240px; min-width: 180px;">
+        <select class="filter-select" id="filter-party" onchange="renderTable()">
           <option value="all">-- All Parties --</option>
         </select>
 
-        <select class="filter-select" id="filter-quality" onchange="renderTable()" style="flex: 0 1 220px; min-width: 170px;">
+        <select class="filter-select" id="filter-quality" onchange="renderTable()">
           <option value="all">-- All Qualities --</option>
         </select>
       </div>
@@ -2845,7 +2870,7 @@
       <!-- Row 2: Status, Date Range, Column Freeze & Reset Filters -->
       <div class="toolbar-row toolbar-row-2">
         <div class="toolbar-left">
-          <select class="filter-select" id="filter-status" onchange="renderTable()" style="min-width: 155px;">
+          <select class="filter-select" id="filter-status" onchange="renderTable()">
             <option value="all">All Statuses</option>
             <option value="overdue">🔴 Overdue</option>
             <option value="pending">🔵 Pending</option>
