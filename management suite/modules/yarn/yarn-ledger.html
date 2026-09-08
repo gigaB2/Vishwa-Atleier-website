@@ -2476,34 +2476,66 @@
     }
 
     .th-freeze-pinned {
-      background: var(--surface) !important;
-      background-color: var(--surface) !important;
+      background: #ffffff !important;
+      background-color: #ffffff !important;
       border-bottom: 2px solid var(--accent) !important;
+      border-right: 1px solid var(--grid-line) !important;
       opacity: 1 !important;
-      background-clip: padding-box !important;
+      box-sizing: border-box !important;
+      will-change: transform;
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+      transition: none !important;
+    }
+
+    body.dark-mode .th-freeze-pinned,
+    .dark-mode .th-freeze-pinned {
+      background: #0a0a0a !important;
+      background-color: #0a0a0a !important;
+      border-right: 1px solid #27272a !important;
     }
 
     .td-freeze-pinned {
-      background: var(--surface) !important;
-      background-color: var(--surface) !important;
+      background: #ffffff !important;
+      background-color: #ffffff !important;
+      border-right: 1px solid var(--grid-line) !important;
+      border-bottom: 1px solid var(--grid-line) !important;
       opacity: 1 !important;
-      background-clip: padding-box !important;
+      box-sizing: border-box !important;
+      will-change: transform;
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+      transition: none !important;
+    }
+
+    body.dark-mode .td-freeze-pinned,
+    .dark-mode .td-freeze-pinned {
+      background: #0a0a0a !important;
+      background-color: #0a0a0a !important;
+      border-right: 1px solid #27272a !important;
+      border-bottom: 1px solid #27272a !important;
     }
 
     .excel-table tr.is-locked td.td-freeze-pinned {
-      background: var(--surface) !important;
-      background-color: var(--surface) !important;
+      background: #fafafa !important;
+      background-color: #fafafa !important;
+    }
+
+    body.dark-mode .excel-table tr.is-locked td.td-freeze-pinned,
+    .dark-mode .excel-table tr.is-locked td.td-freeze-pinned {
+      background: #111113 !important;
+      background-color: #111113 !important;
     }
 
     .excel-table tr.is-overdue td.td-freeze-pinned {
-      background: #fff5f5 !important;
-      background-color: #fff5f5 !important;
+      background: #fef2f2 !important;
+      background-color: #fef2f2 !important;
     }
 
     body.dark-mode .excel-table tr.is-overdue td.td-freeze-pinned,
     .dark-mode .excel-table tr.is-overdue td.td-freeze-pinned {
-      background: #1e0f11 !important;
-      background-color: #1e0f11 !important;
+      background: #1c0a0c !important;
+      background-color: #1c0a0c !important;
     }
 
     .excel-table tr.is-paid td.td-freeze-pinned {
@@ -2513,13 +2545,13 @@
 
     body.dark-mode .excel-table tr.is-paid td.td-freeze-pinned,
     .dark-mode .excel-table tr.is-paid td.td-freeze-pinned {
-      background: #062315 !important;
-      background-color: #062315 !important;
+      background: #051e12 !important;
+      background-color: #051e12 !important;
     }
 
     .excel-table tbody tr:hover td.td-freeze-pinned {
-      background: var(--surface-subtle) !important;
-      background-color: var(--surface-subtle) !important;
+      background: #f3f2f8 !important;
+      background-color: #f3f2f8 !important;
     }
 
     body.dark-mode .excel-table tbody tr:hover td.td-freeze-pinned,
@@ -6188,7 +6220,7 @@
 
         if (i < freezeCount) {
           const rect = th.getBoundingClientRect();
-          const measuredWidth = rect && rect.width > 0 ? rect.width : (th.offsetWidth || parseFloat(th.style.width) || parseFloat(th.style.minWidth) || 120);
+          const measuredWidth = (rect && rect.width > 0) ? rect.width : (th.offsetWidth || parseFloat(th.style.width) || parseFloat(th.style.minWidth) || 120);
           runningLeft += Math.round(measuredWidth);
         }
       }
