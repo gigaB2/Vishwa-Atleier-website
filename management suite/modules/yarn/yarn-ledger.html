@@ -3302,7 +3302,7 @@
     let isHistoryAction = false;
 
     // Allowed editable fields for auto-synced rows
-    const SYNCED_EDITABLE_FIELDS = ['grQty', 'grossQty', 'gstPercent', 'discountPercent', 'discountAmount', 'discountMode', 'paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
+    const SYNCED_EDITABLE_FIELDS = ['grQty', 'grossQty', 'gstPercent', 'discountPercent', 'paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
 
     // Semantic Status Badge Renderer with SVG Icons
     function renderStatusBadge(status) {
@@ -4822,23 +4822,10 @@
         return;
       }
 
-      if (field === 'qty' || field === 'grossQty' || field === 'grQty' || field === 'rate' || field === 'gstPercent' || field === 'discountPercent' || field === 'discountAmount' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate' || field === 'interestPaid') {
+      if (field === 'qty' || field === 'grossQty' || field === 'grQty' || field === 'rate' || field === 'gstPercent' || field === 'discountPercent' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate' || field === 'interestPaid') {
         row[field] = Number(value) || 0;
       } else {
         row[field] = value;
-      }
-
-      // Two-way discount synchronization
-      if (field === 'discountPercent') {
-        row.discountMode = 'percent';
-        const grandTotal = Number(row.grandTotal) || 0;
-        const discPct = Number(row.discountPercent) || 0;
-        row.discountAmount = grandTotal > 0 ? Number(((grandTotal * discPct) / 100).toFixed(2)) : 0;
-      } else if (field === 'discountAmount') {
-        row.discountMode = 'amount';
-        const grandTotal = Number(row.grandTotal) || 0;
-        const discAmt = Number(row.discountAmount) || 0;
-        row.discountPercent = grandTotal > 0 ? Number(((discAmt / grandTotal) * 100).toFixed(4)) : 0;
       }
 
       row.updated_at = new Date().toISOString();
@@ -4871,15 +4858,6 @@
         const gstAmt = Number(((subtotal * gstPct) / 100).toFixed(2));
         row.subtotal = subtotal;
         row.grandTotal = Number((subtotal + gstAmt).toFixed(2));
-
-        // Maintain discount sync when grand total changes
-        if (row.discountMode === 'amount') {
-          const discAmt = Number(row.discountAmount) || 0;
-          row.discountPercent = row.grandTotal > 0 ? Number(((discAmt / row.grandTotal) * 100).toFixed(4)) : 0;
-        } else if (row.discountPercent !== undefined && row.discountPercent !== null) {
-          const discPct = Number(row.discountPercent) || 0;
-          row.discountAmount = Number(((row.grandTotal * discPct) / 100).toFixed(2));
-        }
       }
 
       // Live update DOM and KPI summaries immediately
@@ -4934,8 +4912,7 @@
       updateFieldInput('qty', row.qty || 0);
       updateFieldInput('rate', row.rate || 0);
       updateFieldInput('gstPercent', row.gstPercent !== undefined ? row.gstPercent : 5.0);
-      updateFieldInput('discountPercent', row.discountPercent !== undefined ? (Number(row.discountPercent) % 1 === 0 ? Number(row.discountPercent) : Number(row.discountPercent).toFixed(2)) : defaultDiscountPercent);
-      updateFieldInput('discountAmount', row.discountAmount !== undefined ? row.discountAmount : (comp.discountAmount || 0));
+      updateFieldInput('discountPercent', row.discountPercent !== undefined ? row.discountPercent : defaultDiscountPercent);
       updateFieldInput('paidAmount', row.paidAmount || 0);
       updateFieldInput('paymentDate', row.paymentDate || '');
       updateFieldInput('creditDays', row.creditDays || defaultCreditDays);
@@ -5196,11 +5173,9 @@
       const daysTaken = (row.date && refDate) ? daysBetween(row.date, refDate) : 0;
 
       // Discount & Overdue Calculation
-      const hasExplicitAmount = row.discountMode === 'amount' && row.discountAmount !== undefined && row.discountAmount !== null && row.discountAmount !== '';
       const discPct = (row.discountPercent !== undefined && row.discountPercent !== null && row.discountPercent !== '')
         ? Number(row.discountPercent)
         : defaultDiscountPercent;
-      const explicitDiscAmt = hasExplicitAmount ? Number(row.discountAmount) : 0;
 
       let effectiveDiscountPct = 0;
       let discountAmount = 0;
@@ -5210,25 +5185,6 @@
         overdueDays = 0;
         effectiveDiscountPct = 0;
         discountAmount = 0;
-      } else if (hasExplicitAmount) {
-        // User entered a lump sum discount amount in ₹
-        if (daysTaken <= creditDays && creditDays > 0 && explicitDiscAmt > 0) {
-          const remainingTermDays = Math.max(0, creditDays - Math.max(0, daysTaken));
-          // If payment was made within credit terms, pro-rate the discount amount or apply full if paid
-          discountAmount = (row.paymentDate && row.paymentDate.trim()) ? explicitDiscAmt : Number((explicitDiscAmt * (remainingTermDays / creditDays)).toFixed(2));
-          effectiveDiscountPct = grandTotal > 0 ? Number(((discountAmount / grandTotal) * 100).toFixed(4)) : 0;
-          overdueDays = 0;
-        } else if (daysTaken > creditDays) {
-          // Overdue: 0 discount
-          effectiveDiscountPct = 0;
-          discountAmount = 0;
-          if (dueDate) {
-            overdueDays = Math.max(0, daysBetween(dueDate, refDate));
-          }
-        } else {
-          discountAmount = explicitDiscAmt;
-          effectiveDiscountPct = grandTotal > 0 ? Number(((discountAmount / grandTotal) * 100).toFixed(4)) : 0;
-        }
       } else if (daysTaken <= creditDays && creditDays > 0 && discPct > 0) {
         // Payment made on or before credit days: Pro-rata Early Payment Discount applies
         // e.g. 1.5% max discount on 30 credit days: day 1 gets full ~1.5%, day 15 gets (30-15)/30 * 1.5% = 0.75%
@@ -5624,14 +5580,16 @@
 
             <!-- Editable Early Payment Discount % -->
             <td data-col-index="12" class="num-col">
-              <input type="number" step="0.01" data-field="discountPercent" class="cell-input num-font" style="width: 75px; color: var(--success); font-weight: 600;" value="${row.discountPercent !== undefined ? (Number(row.discountPercent) % 1 === 0 ? Number(row.discountPercent) : Number(row.discountPercent).toFixed(2)) : defaultDiscountPercent}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'discountPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'discountPercent', this.value, true)" title="Early Payment Discount % (Two-way linked with Discount ₹)">
+              <input type="number" step="0.1" data-field="discountPercent" class="cell-input num-font" style="width: 75px; color: var(--success); font-weight: 600;" value="${row.discountPercent !== undefined ? row.discountPercent : defaultDiscountPercent}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'discountPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'discountPercent', this.value, true)" title="Max Early Payment Discount %">
             </td>
 
-            <!-- Editable Lump Sum Discount (₹) -->
-            <td data-col-index="13" class="num-col" style="background: rgba(16, 185, 129, 0.05);">
-              <div style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 2px;">
-                <input type="number" step="0.01" data-field="discountAmount" class="cell-input num-font" style="width: 95px; color: var(--success); font-weight: 700; text-align: right;" value="${row.discountAmount !== undefined ? row.discountAmount : (comp.discountAmount || 0)}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'discountAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'discountAmount', this.value, true)" title="Lump Sum Discount Amount in ₹ (Two-way linked with Disc %)">
-                ${comp.discountAmount > 0 && comp.effectiveDiscountPct > 0 ? `<span style="font-size: 0.68rem; color: var(--muted); font-weight: 600; padding-right: 4px;">(${comp.effectiveDiscountPct.toFixed(2)}% eff.)</span>` : ''}
+            <!-- Computed Pro-Rata Discount Amount -->
+            <td data-col-index="13" class="num-col cell-locked-bg" style="background: rgba(16, 185, 129, 0.05);">
+              <div class="cell-readonly num bold font-mono col-val-discount-amount" title="Pro-Rata Early Payment Discount: ${comp.effectiveDiscountPct.toFixed(2)}% on ₹${Number(row.grandTotal).toFixed(2)}">
+                ${comp.discountAmount > 0 
+                  ? `<div style="color: var(--success); font-weight: 700;">-${formatCurrency(comp.discountAmount)}</div><div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">(${comp.effectiveDiscountPct.toFixed(2)}% eff.)</div>`
+                  : `<span style="color: var(--muted); font-weight: normal;">-</span>`
+                }
               </div>
             </td>
 
