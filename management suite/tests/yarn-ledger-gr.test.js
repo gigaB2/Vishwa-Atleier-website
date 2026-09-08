@@ -2121,6 +2121,164 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(purchaseLedger[0].subtotal, 92500);
     assert.strictEqual(purchaseLedger[0].grandTotal, 97125);
   });
+
+  await t.test('Yarn Ledger: Pro-rata early payment discount and late interest transition engine', () => {
+    function daysBetween(fromStr, toStr) {
+      if (!fromStr || !toStr) return 0;
+      const d1 = new Date(fromStr);
+      const d2 = new Date(toStr);
+      if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
+      const diffTime = d2.getTime() - d1.getTime();
+      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    function addDays(dateStr, days) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() + Number(days || 0));
+      return d.toISOString().split('T')[0];
+    }
+
+    function computeRowFinancials(row, defaultInterestRate = 18.0, defaultCreditDays = 30, defaultDiscountPercent = 1.5, calculateInterest = true) {
+      const grandTotal = Number(row.grandTotal) || 0;
+      const paid = Number(row.paidAmount) || 0;
+      const creditDays = Number(row.creditDays) || defaultCreditDays;
+      const dueDate = addDays(row.date, creditDays);
+      const today = '2026-09-08';
+      const isFullyReturned = (Number(row.qty) === 0 && Number(row.grQty) > 0);
+
+      const refDate = (row.paymentDate && row.paymentDate.trim()) ? row.paymentDate : today;
+      const daysTaken = (row.date && refDate) ? daysBetween(row.date, refDate) : 0;
+
+      const discPct = (row.discountPercent !== undefined && row.discountPercent !== null && row.discountPercent !== '')
+        ? Number(row.discountPercent)
+        : defaultDiscountPercent;
+
+      let effectiveDiscountPct = 0;
+      let discountAmount = 0;
+      let overdueDays = 0;
+
+      if (isFullyReturned) {
+        overdueDays = 0;
+        effectiveDiscountPct = 0;
+        discountAmount = 0;
+      } else if (daysTaken <= creditDays && creditDays > 0 && discPct > 0) {
+        const remainingTermDays = Math.max(0, creditDays - Math.max(0, daysTaken));
+        effectiveDiscountPct = Number((discPct * (remainingTermDays / creditDays)).toFixed(4));
+        discountAmount = Number(((grandTotal * effectiveDiscountPct) / 100).toFixed(2));
+        overdueDays = 0;
+      } else if (daysTaken > creditDays) {
+        effectiveDiscountPct = 0;
+        discountAmount = 0;
+        if (dueDate) {
+          overdueDays = Math.max(0, daysBetween(dueDate, refDate));
+        }
+      }
+
+      const netBilled = Math.max(0, Number((grandTotal - discountAmount).toFixed(2)));
+      const principalOutstanding = Math.max(0, Number((netBilled - paid).toFixed(2)));
+
+      const ratePct = row.interestRate !== undefined ? Number(row.interestRate) : defaultInterestRate;
+      let interestAmount = 0;
+      if (!isFullyReturned && calculateInterest && overdueDays > 0 && ratePct > 0) {
+        const baseAmount = principalOutstanding > 0 ? principalOutstanding : netBilled;
+        interestAmount = Number(((baseAmount * (ratePct / 100) * overdueDays) / 365).toFixed(2));
+      }
+
+      const interestPaid = Number(row.interestPaid) || 0;
+      const interestOutstanding = Math.max(0, Number((interestAmount - interestPaid).toFixed(2)));
+      const netOutstanding = Number((principalOutstanding + interestOutstanding).toFixed(2));
+
+      return {
+        dueDate,
+        daysTaken,
+        overdueDays,
+        effectiveDiscountPct,
+        discountAmount,
+        netBilled,
+        principalOutstanding,
+        interestAmount,
+        netOutstanding
+      };
+    }
+
+    const billDate = '2026-09-01';
+    const grandTotal = 100000; // ₹1,00,000
+
+    // Case 1: Payment on Day 1 (Next day payment -> (30-1)/30 * 1.5% = 1.45% discount)
+    const day1Result = computeRowFinancials({
+      date: billDate,
+      grandTotal,
+      creditDays: 30,
+      discountPercent: 1.5,
+      paymentDate: '2026-09-02',
+      paidAmount: 98550 // 100000 - 1450 discount = 98550
+    });
+    assert.strictEqual(day1Result.daysTaken, 1);
+    assert.strictEqual(day1Result.effectiveDiscountPct, 1.45);
+    assert.strictEqual(day1Result.discountAmount, 1450);
+    assert.strictEqual(day1Result.netBilled, 98550);
+    assert.strictEqual(day1Result.principalOutstanding, 0);
+    assert.strictEqual(day1Result.overdueDays, 0);
+    assert.strictEqual(day1Result.interestAmount, 0);
+    assert.strictEqual(day1Result.netOutstanding, 0);
+
+    // Case 2: Payment on Day 15 (Halfway through credit term -> (30-15)/30 * 1.5% = 0.75% discount)
+    const day15Result = computeRowFinancials({
+      date: billDate,
+      grandTotal,
+      creditDays: 30,
+      discountPercent: 1.5,
+      paymentDate: '2026-09-16',
+      paidAmount: 99250 // 100000 - 750 discount = 99250
+    });
+    assert.strictEqual(day15Result.daysTaken, 15);
+    assert.strictEqual(day15Result.effectiveDiscountPct, 0.75);
+    assert.strictEqual(day15Result.discountAmount, 750);
+    assert.strictEqual(day15Result.netBilled, 99250);
+    assert.strictEqual(day15Result.principalOutstanding, 0);
+    assert.strictEqual(day15Result.overdueDays, 0);
+    assert.strictEqual(day15Result.interestAmount, 0);
+    assert.strictEqual(day15Result.netOutstanding, 0);
+
+    // Case 3: Payment on Day 30 (On Due Date -> (30-30)/30 * 1.5% = 0% discount, 0 late interest)
+    const day30Result = computeRowFinancials({
+      date: billDate,
+      grandTotal,
+      creditDays: 30,
+      discountPercent: 1.5,
+      paymentDate: '2026-10-01',
+      paidAmount: 100000
+    });
+    assert.strictEqual(day30Result.daysTaken, 30);
+    assert.strictEqual(day30Result.effectiveDiscountPct, 0);
+    assert.strictEqual(day30Result.discountAmount, 0);
+    assert.strictEqual(day30Result.netBilled, 100000);
+    assert.strictEqual(day30Result.principalOutstanding, 0);
+    assert.strictEqual(day30Result.overdueDays, 0);
+    assert.strictEqual(day30Result.interestAmount, 0);
+
+    // Case 4: Payment on Day 45 (15 Days Past Due Date -> 0% discount, 15 days late interest at 18% p.a.)
+    const day45Result = computeRowFinancials({
+      date: billDate,
+      grandTotal,
+      creditDays: 30,
+      discountPercent: 1.5,
+      interestRate: 18.0,
+      paymentDate: '2026-10-16',
+      paidAmount: 0
+    });
+    assert.strictEqual(day45Result.daysTaken, 45);
+    assert.strictEqual(day45Result.effectiveDiscountPct, 0);
+    assert.strictEqual(day45Result.discountAmount, 0);
+    assert.strictEqual(day45Result.netBilled, 100000);
+    assert.strictEqual(day45Result.principalOutstanding, 100000);
+    assert.strictEqual(day45Result.overdueDays, 15);
+    // Interest = 100000 * (18/100) * (15/365) = 739.73
+    assert.strictEqual(day45Result.interestAmount, 739.73);
+    assert.strictEqual(day45Result.netOutstanding, 100739.73);
+  });
 });
 
 

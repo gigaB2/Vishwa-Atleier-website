@@ -2771,6 +2771,12 @@
               <th style="width: 160px; min-width: 155px;" class="num-col sortable" data-sort-key="grandTotal" onclick="requestTableSort('grandTotal', event)" title="Click to sort by Grand Total">
                 <div class="th-content-wrap"><span>Grand Total (₹)</span><span class="th-sort-indicator" id="sort-ind-grandTotal">↕</span></div>
               </th>
+              <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="discountPercent" onclick="requestTableSort('discountPercent', event)" title="Click to sort by Early Payment Discount %">
+                <div class="th-content-wrap"><span style="color: var(--success);">Disc. %</span><span class="th-sort-indicator" id="sort-ind-discountPercent">↕</span></div>
+              </th>
+              <th style="width: 145px; min-width: 140px; background: rgba(16, 185, 129, 0.05);" class="num-col sortable" data-sort-key="discountAmount" onclick="requestTableSort('discountAmount', event)" title="Click to sort by Early Payment Discount (₹)">
+                <div class="th-content-wrap"><span style="color: var(--success);">Discount (₹)</span><span class="th-sort-indicator" id="sort-ind-discountAmount">↕</span></div>
+              </th>
               <th style="width: 160px; min-width: 155px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="paidAmount" onclick="requestTableSort('paidAmount', event)" title="Click to sort by Paid Principal">
                 <div class="th-content-wrap"><span>Paid Principal (₹)</span><span class="th-sort-indicator" id="sort-ind-paidAmount">↕</span></div>
               </th>
@@ -2859,6 +2865,7 @@
           <div class="footer-stat">Invoiced (Net): <span class="val" id="stat-total-invoiced">₹0.00</span></div>
         </div>
         <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+          <div class="footer-stat" id="stat-discount-wrapper" style="display: none; align-items: center; gap: 5px;">Total Disc: <span class="val" id="stat-total-discount" style="color: var(--success); font-weight: 700;">₹0.00</span></div>
           <div class="footer-stat">Settled: <span class="val" id="stat-total-paid" style="color: var(--success);">₹0.00</span></div>
           <div class="footer-stat">Principal Bal: <span class="val" id="stat-total-outstanding" style="color: var(--error);">₹0.00</span></div>
           <div class="footer-stat interest-col">Accrued Interest: <span class="val" id="stat-total-interest" style="color: var(--warning);">₹0.00</span></div>
@@ -2892,9 +2899,18 @@
             <div style="font-size: 0.75rem; color: var(--muted); margin-top: 4px;">Number of days from bill date before late interest calculation begins.</div>
           </div>
 
+          <div>
+            <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 6px;">Default Early Payment Discount (%)</label>
+            <input type="number" step="0.1" id="settings-default-discount-percent" value="1.5" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-subtle); color: var(--fg); font-family: var(--font-mono); font-size: 1rem; font-weight: 600;">
+            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 4px;">Maximum discount earned for immediate payment; prorated down to 0% at credit due date.</div>
+          </div>
+
           <div style="background: rgba(124, 58, 237, 0.06); padding: 0.85rem; border-radius: 8px; border: 1px dashed var(--accent);">
-            <div style="font-size: 0.78rem; font-weight: 700; color: var(--accent); margin-bottom: 4px;">Calculation Formula:</div>
-            <div style="font-size: 0.75rem; color: var(--fg); font-family: var(--font-mono);">Interest = Outstanding &times; (Annual % / 100) &times; (Overdue Days / 365)</div>
+            <div style="font-size: 0.78rem; font-weight: 700; color: var(--accent); margin-bottom: 4px;">Calculation Rules:</div>
+            <div style="font-size: 0.75rem; color: var(--fg); font-family: var(--font-mono); line-height: 1.5;">
+              • <strong>Early Payment (≤ Credit Days):</strong> Disc% × (Credit Days - Days Taken) / Credit Days (Interest = ₹0)<br>
+              • <strong>Late Settlement (&gt; Credit Days):</strong> Interest = Outstanding × (Annual % / 100) × (Overdue Days / 365) (Disc = ₹0)
+            </div>
           </div>
         </div>
       </div>
@@ -2975,6 +2991,7 @@
                 <th class="num-col" style="width: 75px;">Net (Kg)</th>
                 <th class="num-col" style="width: 65px;">Rate (₹)</th>
                 <th class="num-col" style="width: 115px;">Debit (Billed ₹)</th>
+                <th class="num-col" style="width: 95px; color: var(--success);">Disc. (₹)</th>
                 <th class="num-col" style="width: 105px;">Credit (Paid ₹)</th>
                 <th class="num-col" style="width: 105px;">Balance (₹)</th>
                 <th style="width: 85px;">Due Date</th>
@@ -3107,6 +3124,7 @@
     let calculateInterest = true;
     let defaultInterestRate = 18.0; // 18% per annum
     let defaultCreditDays = 30; // 30 days
+    let defaultDiscountPercent = 1.5; // 1.5% max discount for early payment
     let liveSaveTimer = null;
     let isLocalSaving = false;
     let lastLocalSaveTime = 0;
@@ -3142,7 +3160,7 @@
     let isHistoryAction = false;
 
     // Allowed editable fields for auto-synced rows
-    const SYNCED_EDITABLE_FIELDS = ['grQty', 'grossQty', 'gstPercent', 'paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
+    const SYNCED_EDITABLE_FIELDS = ['grQty', 'grossQty', 'gstPercent', 'discountPercent', 'paidAmount', 'paymentDate', 'creditDays', 'interestRate', 'interestPaid', 'remarks'];
 
     // Semantic Status Badge Renderer with SVG Icons
     function renderStatusBadge(status) {
@@ -3865,6 +3883,7 @@
         if (settings && typeof settings === 'object') {
           if (settings.defaultInterestRate !== undefined) defaultInterestRate = Number(settings.defaultInterestRate) || 18.0;
           if (settings.defaultCreditDays !== undefined) defaultCreditDays = Number(settings.defaultCreditDays) || 30;
+          if (settings.defaultDiscountPercent !== undefined) defaultDiscountPercent = Number(settings.defaultDiscountPercent) || 1.5;
           if (settings.calculateInterest !== undefined) calculateInterest = !!settings.calculateInterest;
           
           const toggleEl = document.getElementById('toggle-interest');
@@ -3873,6 +3892,8 @@
           if (rateEl) rateEl.value = defaultInterestRate;
           const daysEl = document.getElementById('settings-default-credit-days');
           if (daysEl) daysEl.value = defaultCreditDays;
+          const discEl = document.getElementById('settings-default-discount-percent');
+          if (discEl) discEl.value = defaultDiscountPercent;
         }
 
         // 2. Saved Ledgers (strictly from cloud)
@@ -4034,6 +4055,7 @@
                     paidAmount: 0,
                     paymentDate: '',
                     creditDays: Number(order.creditDays) || defaultCreditDays,
+                    discountPercent: defaultDiscountPercent,
                     interestRate: defaultInterestRate,
                     interestPaid: 0,
                     remarks: totalGrQty > 0 ? `Auto-synced from RM Order #${orderNumber} (-${totalGrQty.toFixed(2)} Kg GR deducted)` : `Auto-synced from Yarn RM Order #${orderNumber}`,
@@ -4155,6 +4177,7 @@
                   paidAmount: Number(sale.receivedAmount) || 0,
                   paymentDate: sale.paymentDate || '',
                   creditDays: defaultCreditDays,
+                  discountPercent: defaultDiscountPercent,
                   interestRate: defaultInterestRate,
                   interestPaid: 0,
                   remarks: `Auto-synced from ${div.toUpperCase()} Sales`,
@@ -4557,6 +4580,7 @@
         paidAmount: 0,
         paymentDate: '',
         creditDays: defaultCreditDays,
+        discountPercent: defaultDiscountPercent,
         interestRate: defaultInterestRate,
         interestPaid: 0,
         remarks: '',
@@ -4626,7 +4650,7 @@
         return;
       }
 
-      if (field === 'qty' || field === 'grossQty' || field === 'grQty' || field === 'rate' || field === 'gstPercent' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate' || field === 'interestPaid') {
+      if (field === 'qty' || field === 'grossQty' || field === 'grQty' || field === 'rate' || field === 'gstPercent' || field === 'discountPercent' || field === 'paidAmount' || field === 'creditDays' || field === 'interestRate' || field === 'interestPaid') {
         row[field] = Number(value) || 0;
       } else {
         row[field] = value;
@@ -4716,6 +4740,7 @@
       updateFieldInput('qty', row.qty || 0);
       updateFieldInput('rate', row.rate || 0);
       updateFieldInput('gstPercent', row.gstPercent !== undefined ? row.gstPercent : 5.0);
+      updateFieldInput('discountPercent', row.discountPercent !== undefined ? row.discountPercent : defaultDiscountPercent);
       updateFieldInput('paidAmount', row.paidAmount || 0);
       updateFieldInput('paymentDate', row.paymentDate || '');
       updateFieldInput('creditDays', row.creditDays || defaultCreditDays);
@@ -4759,6 +4784,20 @@
 
       const elGrandTotal = tr.querySelector('.col-val-grandtotal');
       if (elGrandTotal) elGrandTotal.textContent = formatCurrency(row.grandTotal);
+
+      const elDiscountAmt = tr.querySelector('.col-val-discount-amount');
+      if (elDiscountAmt) {
+        if (comp.discountAmount > 0) {
+          elDiscountAmt.innerHTML = `
+            <div style="color: var(--success); font-weight: 700;">-${formatCurrency(comp.discountAmount)}</div>
+            <div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">(${comp.effectiveDiscountPct.toFixed(2)}% eff.)</div>
+          `;
+        } else {
+          elDiscountAmt.textContent = '-';
+          elDiscountAmt.style.color = 'var(--muted)';
+          elDiscountAmt.style.fontWeight = 'normal';
+        }
+      }
 
       const elDueDate = tr.querySelector('.col-val-due-date');
       if (elDueDate) elDueDate.textContent = formatDateDisplay(comp.dueDate);
@@ -4829,6 +4868,7 @@
 
       let totalBilled = 0;
       let totalSettled = 0;
+      let totalDiscount = 0;
       let totalPrincipalOutstanding = 0;
       let totalInterest = 0;
       let totalInterestPaid = 0;
@@ -4843,6 +4883,7 @@
         const computed = computeRowFinancials(row);
         totalBilled += Number(row.grandTotal) || 0;
         totalSettled += (Number(row.paidAmount) || 0) + (Number(row.interestPaid) || 0);
+        totalDiscount += computed.discountAmount;
         totalPrincipalOutstanding += computed.principalOutstanding;
         totalInterest += computed.interestAmount;
         totalInterestPaid += computed.interestPaid;
@@ -4901,6 +4942,17 @@
         }
       }
 
+      const statDiscWrap = document.getElementById('stat-discount-wrapper');
+      const statDiscVal = document.getElementById('stat-total-discount');
+      if (statDiscWrap && statDiscVal) {
+        if (totalDiscount > 0) {
+          statDiscWrap.style.display = 'flex';
+          statDiscVal.textContent = `-${formatCurrency(totalDiscount)}`;
+        } else {
+          statDiscWrap.style.display = 'none';
+        }
+      }
+
       const statInvoiced = document.getElementById('stat-total-invoiced');
       if (statInvoiced) statInvoiced.textContent = formatCurrency(totalBilled);
       const statPaid = document.getElementById('stat-total-paid');
@@ -4935,34 +4987,58 @@
       return Math.floor(diffTime / (1000 * 60 * 60 * 24));
     }
 
-    // Compute Calculated Metrics for a Row with Interest Settlement Support & GR
+    // Compute Calculated Metrics for a Row with Pro-Rata Early Payment Discount, Interest Settlement & GR
     function computeRowFinancials(row) {
       const grandTotal = Number(row.grandTotal) || 0;
       const paid = Number(row.paidAmount) || 0;
-      const principalOutstanding = Math.max(0, Number((grandTotal - paid).toFixed(2)));
       const creditDays = Number(row.creditDays) || defaultCreditDays;
       const dueDate = addDays(row.date, creditDays);
       const today = new Date().toISOString().split('T')[0];
       const isFullyReturned = (Number(row.qty) === 0 && Number(row.grQty) > 0);
 
-      // Overdue Days calculation:
+      // Effective reference date for settlement (paymentDate if recorded, else current date if outstanding)
+      const refDate = (row.paymentDate && row.paymentDate.trim()) ? row.paymentDate : today;
+      const daysTaken = (row.date && refDate) ? daysBetween(row.date, refDate) : 0;
+
+      // Discount & Overdue Calculation
+      const discPct = (row.discountPercent !== undefined && row.discountPercent !== null && row.discountPercent !== '')
+        ? Number(row.discountPercent)
+        : defaultDiscountPercent;
+
+      let effectiveDiscountPct = 0;
+      let discountAmount = 0;
       let overdueDays = 0;
+
       if (isFullyReturned) {
         overdueDays = 0;
-      } else if (principalOutstanding <= 0 && row.paymentDate && dueDate) {
-        // Paid in full - check if settled late
-        overdueDays = Math.max(0, daysBetween(dueDate, row.paymentDate));
-      } else if (principalOutstanding > 0 && dueDate) {
-        // Still outstanding - compare with today
-        overdueDays = Math.max(0, daysBetween(dueDate, today));
+        effectiveDiscountPct = 0;
+        discountAmount = 0;
+      } else if (daysTaken <= creditDays && creditDays > 0 && discPct > 0) {
+        // Payment made on or before credit days: Pro-rata Early Payment Discount applies
+        // e.g. 1.5% max discount on 30 credit days: day 1 gets full ~1.5%, day 15 gets (30-15)/30 * 1.5% = 0.75%
+        const remainingTermDays = Math.max(0, creditDays - Math.max(0, daysTaken));
+        effectiveDiscountPct = Number((discPct * (remainingTermDays / creditDays)).toFixed(4));
+        discountAmount = Number(((grandTotal * effectiveDiscountPct) / 100).toFixed(2));
+        overdueDays = 0;
+      } else if (daysTaken > creditDays) {
+        // Payment made after credit days: 0% discount and late interest applies
+        effectiveDiscountPct = 0;
+        discountAmount = 0;
+        if (dueDate) {
+          overdueDays = Math.max(0, daysBetween(dueDate, refDate));
+        }
       }
+
+      // Net Invoiced Amount after discount deduction
+      const netBilled = Math.max(0, Number((grandTotal - discountAmount).toFixed(2)));
+      const principalOutstanding = Math.max(0, Number((netBilled - paid).toFixed(2)));
 
       // Interest Calculation
       const ratePct = row.interestRate !== undefined ? Number(row.interestRate) : defaultInterestRate;
       let interestAmount = 0;
       if (!isFullyReturned && calculateInterest && overdueDays > 0 && ratePct > 0) {
         // Formula: Outstanding * (rate / 100) * (overdueDays / 365)
-        const baseAmount = principalOutstanding > 0 ? principalOutstanding : grandTotal;
+        const baseAmount = principalOutstanding > 0 ? principalOutstanding : netBilled;
         interestAmount = Number(((baseAmount * (ratePct / 100) * overdueDays) / 365).toFixed(2));
       }
 
@@ -4970,7 +5046,7 @@
       const interestPaid = Number(row.interestPaid) || 0;
       const interestOutstanding = Math.max(0, Number((interestAmount - interestPaid).toFixed(2)));
       const netOutstanding = Number((principalOutstanding + interestOutstanding).toFixed(2));
-      const netTotal = Number((grandTotal + interestAmount).toFixed(2));
+      const netTotal = Number((netBilled + interestAmount).toFixed(2));
 
       // Payment Status
       let status = 'pending';
@@ -4990,6 +5066,11 @@
         dueDate,
         outstanding: principalOutstanding,
         principalOutstanding,
+        discountPercent: discPct,
+        effectiveDiscountPct,
+        discountAmount,
+        netBilled,
+        daysTaken,
         overdueDays,
         status,
         interestAmount,
@@ -5325,6 +5406,21 @@
               <div class="cell-readonly num bold font-mono col-val-grandtotal" title="Grand Total">${formatCurrency(row.grandTotal)}</div>
             </td>
 
+            <!-- Editable Early Payment Discount % -->
+            <td class="num-col">
+              <input type="number" step="0.1" data-field="discountPercent" class="cell-input num-font" style="width: 75px; color: var(--success); font-weight: 600;" value="${row.discountPercent !== undefined ? row.discountPercent : defaultDiscountPercent}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'discountPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'discountPercent', this.value, true)" title="Max Early Payment Discount %">
+            </td>
+
+            <!-- Computed Pro-Rata Discount Amount -->
+            <td class="num-col cell-locked-bg" style="background: rgba(16, 185, 129, 0.05);">
+              <div class="cell-readonly num bold font-mono col-val-discount-amount" title="Pro-Rata Early Payment Discount: ${comp.effectiveDiscountPct.toFixed(2)}% on ₹${Number(row.grandTotal).toFixed(2)}">
+                ${comp.discountAmount > 0 
+                  ? `<div style="color: var(--success); font-weight: 700;">-${formatCurrency(comp.discountAmount)}</div><div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">(${comp.effectiveDiscountPct.toFixed(2)}% eff.)</div>`
+                  : `<span style="color: var(--muted); font-weight: normal;">-</span>`
+                }
+              </div>
+            </td>
+
             <!-- Editable Paid / Received Principal Amount -->
             <td class="num-col" style="background: rgba(16, 185, 129, 0.05);">
               <input type="number" step="0.01" data-field="paidAmount" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Enter paid/received principal amount">
@@ -5525,6 +5621,14 @@
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">GST Rate / Amount</span>
                   <span class="mobile-kv-val font-mono">${row.gstPercent !== undefined ? row.gstPercent : 5.0}% (${formatCurrency((row.subtotal * (row.gstPercent !== undefined ? row.gstPercent : 5.0))/100)})</span>
+                </div>
+                <div class="mobile-kv-item">
+                  <span class="mobile-kv-label">Early Discount</span>
+                  <span class="mobile-kv-val font-mono" style="color: var(--success); font-weight: 700;">
+                    ${comp.discountAmount > 0 
+                      ? `-${formatCurrency(comp.discountAmount)} (${comp.effectiveDiscountPct.toFixed(2)}%)` 
+                      : `${row.discountPercent !== undefined ? row.discountPercent : defaultDiscountPercent}% terms (₹0.00)`}
+                  </span>
                 </div>
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">Paid Principal</span>
@@ -5814,14 +5918,17 @@
     async function saveInterestSettings() {
       const rateVal = Number(document.getElementById('settings-default-interest-rate').value) || 18.0;
       const daysVal = Number(document.getElementById('settings-default-credit-days').value) || 30;
+      const discVal = Number(document.getElementById('settings-default-discount-percent').value) || 1.5;
 
       defaultInterestRate = rateVal;
       defaultCreditDays = daysVal;
+      defaultDiscountPercent = discVal;
 
       try {
         const settings = {
           defaultInterestRate,
           defaultCreditDays,
+          defaultDiscountPercent,
           calculateInterest
         };
         if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
@@ -5831,7 +5938,7 @@
 
       closeInterestSettingsModal();
       renderTable();
-      showToast('Interest & credit terms updated successfully', 'success');
+      showToast('Interest, credit & discount terms updated successfully', 'success');
     }
 
     // Party Statement Modal Handlers
@@ -5888,6 +5995,7 @@
       partyRows.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
 
       let totalInvoiced = 0;
+      let totalDiscount = 0;
       let totalPaidPrincipal = 0;
       let totalPrincipalBal = 0;
       let totalInterest = 0;
@@ -5908,6 +6016,7 @@
         const grAmount = Number(row.grAmount || (grQty * row.rate)) || 0;
 
         totalInvoiced += billed;
+        totalDiscount += comp.discountAmount;
         totalPaidPrincipal += paid;
         totalPrincipalBal += comp.principalOutstanding;
         totalInterest += comp.interestAmount;
@@ -5931,6 +6040,7 @@
               <div>${formatCurrency(billed)}</div>
               ${grQty > 0 ? `<div style="font-size: 0.68rem; color: var(--accent3); font-weight: 700;">(-${formatCurrency(grAmount)} GR)</div>` : ''}
             </td>
+            <td class="num-col font-mono" style="color: var(--success); font-weight: 700;">${comp.discountAmount > 0 ? `-${formatCurrency(comp.discountAmount)}` : '-'}</td>
             <td class="num-col font-mono" style="color: var(--success); font-weight: 700;">${paid > 0 ? formatCurrency(paid) : '-'}</td>
             <td class="num-col font-mono bold" style="color: ${comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.principalOutstanding)}</td>
             <td style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); white-space: nowrap;">${formatDateDisplay(comp.dueDate)}</td>
@@ -5953,6 +6063,7 @@
             <div>${formatCurrency(totalInvoiced)}</div>
             ${totalGrAmount > 0 ? `<div style="font-size: 0.68rem; color: var(--accent3); font-weight: 700;">(-${formatCurrency(totalGrAmount)} GR)</div>` : ''}
           </td>
+          <td class="num-col font-mono bold" style="color: var(--success);">${totalDiscount > 0 ? `-${formatCurrency(totalDiscount)}` : '-'}</td>
           <td class="num-col font-mono bold" style="color: var(--success);">${formatCurrency(totalPaidPrincipal)}</td>
           <td class="num-col font-mono bold" style="color: var(--error);">${formatCurrency(totalPrincipalBal)}</td>
           <td colspan="2"></td>
@@ -6179,9 +6290,15 @@
               <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">GST (${row.gstPercent !== undefined ? row.gstPercent : 5.0}%)</div>
               <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700;">${formatCurrency((row.grandTotal || 0) - (row.subtotal || 0))}</div>
             </div>
+            <div style="padding: 1rem; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);">
+              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Early Payment Discount</div>
+              <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700; color: var(--success);">${comp.discountAmount > 0 ? `-${formatCurrency(comp.discountAmount)}` : '₹0.00'}</div>
+              <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">Terms: ${row.discountPercent !== undefined ? row.discountPercent : defaultDiscountPercent}% (${comp.effectiveDiscountPct.toFixed(2)}% eff.)</div>
+            </div>
             <div style="padding: 1rem; border-radius: 10px; border: 1px solid var(--accent); background: rgba(124, 58, 237, 0.05);">
-              <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: 700;">Grand Invoiced Total</div>
-              <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 800; color: var(--accent);">${formatCurrency(row.grandTotal)}</div>
+              <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: 700;">Net Invoiced Total</div>
+              <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 800; color: var(--accent);">${formatCurrency(comp.netBilled)}</div>
+              ${comp.discountAmount > 0 ? `<div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px;">(Gross Total: ${formatCurrency(row.grandTotal)})</div>` : ''}
             </div>
           </div>
 
@@ -7106,7 +7223,8 @@
 
       const headers = [
         'Date', 'Bill/Challan No', activeTab === 'sales' ? 'Customer' : 'Supplier', 'Quality',
-        'Gross Quantity (Kg)', 'GR Deducted (Kg)', 'Net Quantity (Kg)', 'Rate (₹/Kg)', 'GR Deducted Amount (₹)', 'Subtotal (₹)', 'GST %', 'Grand Total (₹)', 'Paid Principal Amount (₹)',
+        'Gross Quantity (Kg)', 'GR Deducted (Kg)', 'Net Quantity (Kg)', 'Rate (₹/Kg)', 'GR Deducted Amount (₹)', 'Subtotal (₹)', 'GST %', 'Grand Total (₹)',
+        'Early Discount %', 'Discount Amount (₹)', 'Net Billed (₹)', 'Paid Principal Amount (₹)',
         'Payment Date', 'Credit Days', 'Due Date', 'Principal Outstanding (₹)', 'Status',
         'Interest Rate %', 'Overdue Days', 'Accrued Interest (₹)', 'Paid Interest (₹)', 'Interest Outstanding (₹)', 'Net Outstanding (₹)', 'Remarks'
       ];
@@ -7131,6 +7249,9 @@
           r.subtotal || 0,
           r.gstPercent || 0,
           r.grandTotal || 0,
+          comp.discountPercent,
+          comp.discountAmount,
+          comp.netBilled,
           r.paidAmount || 0,
           `"${formatDateDisplay(r.paymentDate, '')}"`,
           r.creditDays || defaultCreditDays,
