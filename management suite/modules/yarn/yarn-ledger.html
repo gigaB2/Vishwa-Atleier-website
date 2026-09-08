@@ -2958,17 +2958,17 @@
               <th style="width: 160px; min-width: 155px; background: rgba(124, 58, 237, 0.05);" class="num-col sortable" data-sort-key="finalBill" data-col-index="18" data-col-name="Final Bill (₹)" onclick="requestTableSort('finalBill', event)" title="Click to sort by Total Final Bill Amount after Discount / Interest | Right-click to freeze">
                 <div class="th-content-wrap"><span>Final Bill (₹)</span><span class="th-sort-indicator" id="sort-ind-finalBill">↕</span></div>
               </th>
-              <!-- 19: Round Off (₹) -->
-              <th style="width: 120px; min-width: 110px; background: rgba(124, 58, 237, 0.04);" class="num-col sortable" data-sort-key="roundOff" data-col-index="19" data-col-name="Round Off (₹)" onclick="requestTableSort('roundOff', event)" title="Click to sort by Round Off value | Right-click to freeze">
-                <div class="th-content-wrap"><span>Round Off (₹)</span><span class="th-sort-indicator" id="sort-ind-roundOff">↕</span></div>
-              </th>
-              <!-- 20: Payment Date -->
-              <th style="width: 190px; min-width: 185px;" class="sortable" data-sort-key="paymentDate" data-col-index="20" data-col-name="Payment Date" onclick="requestTableSort('paymentDate', event)" title="Click to sort by Payment Date | Right-click to freeze">
+              <!-- 19: Payment Date -->
+              <th style="width: 190px; min-width: 185px;" class="sortable" data-sort-key="paymentDate" data-col-index="19" data-col-name="Payment Date" onclick="requestTableSort('paymentDate', event)" title="Click to sort by Payment Date | Right-click to freeze">
                 <div class="th-content-wrap"><span>Payment Date</span><span class="th-sort-indicator" id="sort-ind-paymentDate">↕</span></div>
               </th>
-              <!-- 21: Total Payment (Paid ₹) -->
-              <th style="width: 160px; min-width: 155px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="paidAmount" data-col-index="21" data-col-name="Total Paid (₹)" onclick="requestTableSort('paidAmount', event)" title="Click to sort by Total Payment Paid / Received | Right-click to freeze">
+              <!-- 20: Total Payment (Paid ₹) -->
+              <th style="width: 160px; min-width: 155px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="paidAmount" data-col-index="20" data-col-name="Total Paid (₹)" onclick="requestTableSort('paidAmount', event)" title="Click to sort by Total Payment Paid / Received | Right-click to freeze">
                 <div class="th-content-wrap"><span style="color: var(--success); font-weight: 700;">Total Paid (₹)</span><span class="th-sort-indicator" id="sort-ind-paidAmount">↕</span></div>
+              </th>
+              <!-- 21: Round Off (₹) -->
+              <th style="width: 120px; min-width: 110px; background: rgba(124, 58, 237, 0.04);" class="num-col sortable" data-sort-key="roundOff" data-col-index="21" data-col-name="Round Off (₹)" onclick="requestTableSort('roundOff', event)" title="Click to sort by Round Off value | Right-click to freeze">
+                <div class="th-content-wrap"><span>Round Off (₹)</span><span class="th-sort-indicator" id="sort-ind-roundOff">↕</span></div>
               </th>
               <!-- 22: Net Balance (₹) -->
               <th style="width: 160px; min-width: 155px; background: rgba(239, 68, 68, 0.08);" class="num-col sortable" data-sort-key="netBalance" data-col-index="22" data-col-name="Net Balance (₹)" onclick="requestTableSort('netBalance', event)" title="Click to sort by Net Remaining Balance | Right-click to freeze">
@@ -5985,19 +5985,19 @@
               <div class="cell-readonly num bold font-mono col-val-final-bill" style="color: var(--accent); font-weight: 800;" title="Final Bill Amount after Discount or Interest">${formatCurrency(comp.finalBill)}</div>
             </td>
 
-            <!-- 19: Round Off (₹) -->
-            <td data-col-index="19" class="num-col" style="background: rgba(124, 58, 237, 0.04);">
-              <input type="number" step="0.01" data-field="roundOff" class="cell-input num-font" style="width: 100%; font-weight: 600; color: var(--fg); text-align: right; padding-right: 0.65rem;" value="${row.roundOff !== undefined && row.roundOff !== null && row.roundOff !== '' ? Number(row.roundOff).toFixed(2) : ''}" placeholder="0.00" onfocus="if(this.value==='0.00'||this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'roundOff', this.value, false)" onchange="handleCellChange('${row.id}', 'roundOff', this.value, true)" title="Round Off in ₹ (+/-)">
-            </td>
-
-            <!-- 20: Editable Payment Date -->
-            <td data-col-index="20" style="min-width: 185px;">
+            <!-- 19: Editable Payment Date -->
+            <td data-col-index="19" style="min-width: 185px;">
               <input type="date" data-field="paymentDate" class="cell-input date-picker-input" style="width: 100%; min-width: 170px; cursor: pointer;" value="${row.paymentDate || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'paymentDate', this.value, false)" onchange="handleCellChange('${row.id}', 'paymentDate', this.value, true)" title="Click to pick payment date">
             </td>
 
-            <!-- 21: Total Paid (₹) -->
-            <td data-col-index="21" class="num-col" style="background: rgba(16, 185, 129, 0.08);">
+            <!-- 20: Total Paid (₹) -->
+            <td data-col-index="20" class="num-col" style="background: rgba(16, 185, 129, 0.08);">
               <input type="number" step="0.01" data-field="paidAmount" class="cell-input num-font" style="color: var(--success); font-weight: 700; text-align: right; padding-right: 0.65rem;" value="${row.paidAmount !== undefined && row.paidAmount !== null && row.paidAmount !== '' ? Number(row.paidAmount).toFixed(2) : '0.00'}" onfocus="if(this.value==='0.00'||this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Total payment made or received">
+            </td>
+
+            <!-- 21: Round Off (₹) -->
+            <td data-col-index="21" class="num-col" style="background: rgba(124, 58, 237, 0.04);">
+              <input type="number" step="0.01" data-field="roundOff" class="cell-input num-font" style="width: 100%; font-weight: 600; color: var(--fg); text-align: right; padding-right: 0.65rem;" value="${row.roundOff !== undefined && row.roundOff !== null && row.roundOff !== '' ? Number(row.roundOff).toFixed(2) : ''}" placeholder="0.00" onfocus="if(this.value==='0.00'||this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'roundOff', this.value, false)" onchange="handleCellChange('${row.id}', 'roundOff', this.value, true)" title="Round Off in ₹ (+/-)">
             </td>
 
             <!-- 22: Net Balance (₹) -->
@@ -6191,13 +6191,19 @@
                   </span>
                 </div>
                 <div class="mobile-kv-item">
-                  <span class="mobile-kv-label">Total Paid (₹)</span>
-                  <span class="mobile-kv-val font-mono" style="color: var(--success); font-weight: 700;">${formatCurrency(row.paidAmount || 0)}</span>
-                </div>
-                <div class="mobile-kv-item">
                   <span class="mobile-kv-label">Payment Date</span>
                   <span class="mobile-kv-val font-mono">${row.paymentDate ? formatDateDisplay(row.paymentDate) : 'Not paid'}</span>
                 </div>
+                <div class="mobile-kv-item">
+                  <span class="mobile-kv-label">Total Paid (₹)</span>
+                  <span class="mobile-kv-val font-mono" style="color: var(--success); font-weight: 700;">${formatCurrency(row.paidAmount || 0)}</span>
+                </div>
+                ${row.roundOff !== undefined && row.roundOff !== null && row.roundOff !== '' && Number(row.roundOff) !== 0 ? `
+                <div class="mobile-kv-item">
+                  <span class="mobile-kv-label">Round Off (₹)</span>
+                  <span class="mobile-kv-val font-mono">${Number(row.roundOff) > 0 ? '+' : ''}${formatCurrency(row.roundOff)}</span>
+                </div>
+                ` : ''}
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">Credit Terms</span>
                   <span class="mobile-kv-val font-mono">${(row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '') ? row.creditDays : defaultCreditDays} Days</span>
@@ -8438,9 +8444,9 @@
         'Calculated Discount/Interest (₹)',
         'Actual Adjustment (₹)',
         'Final Bill (₹)',
-        'Round Off (₹)',
         'Payment Date',
         'Paid / Settled (₹)',
+        'Round Off (₹)',
         'Net Balance (₹)',
         'Status',
         'Remarks'
@@ -8474,9 +8480,9 @@
           comp.calcAdjAmount.toFixed(2),
           (r.actualAdjustment !== undefined && r.actualAdjustment !== null && r.actualAdjustment !== '') ? Number(r.actualAdjustment).toFixed(2) : '',
           comp.finalBill.toFixed(2),
-          (r.roundOff !== undefined && r.roundOff !== null && r.roundOff !== '') ? Number(r.roundOff).toFixed(2) : '',
           `"${formatDateDisplay(r.paymentDate, '')}"`,
           Number(r.paidAmount || 0).toFixed(2),
+          (r.roundOff !== undefined && r.roundOff !== null && r.roundOff !== '') ? Number(r.roundOff).toFixed(2) : '',
           comp.netBalance.toFixed(2),
           `"${comp.status}"`,
           `"${(r.remarks || '').replace(/"/g, '""')}"`
