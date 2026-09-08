@@ -582,14 +582,91 @@
     }
 
     .date-input {
-      padding: 0.5rem 0.7rem;
+      padding: 0.45rem 0.65rem;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--surface-subtle);
       color: var(--fg);
-      font-size: 0.82rem;
+      font-size: 0.85rem;
       font-family: var(--font-mono);
       outline: none;
+    }
+
+    .toolbar-date-range {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.25rem 0.65rem;
+      min-height: 36px;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+
+    .toolbar-date-icon {
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .toolbar-date-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      user-select: none;
+    }
+
+    .toolbar-date-sep {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      user-select: none;
+      padding: 0 1px;
+    }
+
+    .toolbar-date-range .date-input {
+      width: 145px;
+      min-width: 140px;
+      height: 30px;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--fg);
+      font-size: 0.84rem;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      outline: none;
+      box-sizing: border-box;
+      cursor: pointer;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .toolbar-date-range .date-input:hover {
+      border-color: var(--accent);
+    }
+
+    .toolbar-date-range .date-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-subtle);
+      background: var(--surface);
+    }
+
+    .toolbar-date-range .date-input::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.8;
+      padding: 2px;
+      margin-left: 6px;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .toolbar-date-range .date-input::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+      transform: scale(1.15);
     }
 
     /* Interest Switch toggle */
@@ -2730,6 +2807,29 @@
         width: auto !important;
         flex-wrap: wrap !important;
       }
+      .toolbar-date-range {
+        flex-wrap: wrap !important;
+        min-height: 36px !important;
+        height: auto !important;
+        gap: 6px !important;
+      }
+      .toolbar-date-range .date-input {
+        min-width: 132px !important;
+        width: 138px !important;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .toolbar-date-range {
+        width: 100% !important;
+        justify-content: space-between !important;
+        padding: 0.35rem 0.6rem !important;
+      }
+      .toolbar-date-range .date-input {
+        flex: 1 1 calc(50% - 22px) !important;
+        min-width: 120px !important;
+        width: auto !important;
+      }
     }
   </style>
 </head>
@@ -2858,7 +2958,7 @@
           <input type="text" id="sheet-search" placeholder="Search Bill No, Party, Quality, Remarks..." oninput="renderTable()">
         </div>
 
-        <select class="filter-select" id="filter-party" onchange="renderTable()">
+        <select class="filter-select" id="filter-party" onchange="onPartyFilterChange()">
           <option value="all">-- All Parties --</option>
         </select>
 
@@ -2879,12 +2979,12 @@
             <option value="paid">🟢 Paid</option>
           </select>
 
-          <div class="toolbar-date-range" style="display: inline-flex; align-items: center; gap: 6px; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 0.25rem 0.65rem;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--muted); flex-shrink: 0;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span style="font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Date:</span>
-            <input type="date" class="date-input" id="filter-from-date" onchange="renderTable()" title="From Date" style="border: none; background: transparent; padding: 0.2rem 0.3rem; outline: none;">
-            <span style="color: var(--muted); font-size: 0.75rem; font-weight: 600;">to</span>
-            <input type="date" class="date-input" id="filter-to-date" onchange="renderTable()" title="To Date" style="border: none; background: transparent; padding: 0.2rem 0.3rem; outline: none;">
+          <div class="toolbar-date-range">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="toolbar-date-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span class="toolbar-date-label">Date:</span>
+            <input type="date" class="date-input filter-date-field" id="filter-from-date" onchange="renderTable()" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" title="From Date">
+            <span class="toolbar-date-sep">to</span>
+            <input type="date" class="date-input filter-date-field" id="filter-to-date" onchange="renderTable()" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" title="To Date">
           </div>
 
           <div class="freeze-select-wrap" title="Freeze columns up to selected column">
@@ -3510,6 +3610,17 @@
       return dStr || fallback;
     }
 
+    // Helper: Extract clean quality name without lot/batch numbers
+    function extractCleanQualityName(q) {
+      if (!q) return '';
+      return String(q)
+        .replace(/\s*\((?:lot|batch)[\s:#-]*[^)]*\)/gi, '')
+        .replace(/\s*\[(?:lot|batch)[\s:#-]*[^\]]*\]/gi, '')
+        .replace(/\s*[-–—]\s*(?:lot|batch)[\s:#-]*[^\s,;]+/gi, '')
+        .replace(/\s+(?:lot|batch)[\s:#-]+\S+/gi, '')
+        .trim();
+    }
+
     // Date math: add days to a date string YYYY-MM-DD
     function addDays(dateStr, days) {
       if (!dateStr) return '';
@@ -3714,7 +3825,7 @@
           id: 'party',
           label: activeTab === 'sales' ? 'Customer' : 'Supplier',
           val: party,
-          onRemove: "document.getElementById('filter-party').value='all'; renderTable();"
+          onRemove: "document.getElementById('filter-party').value='all'; onPartyFilterChange();"
         });
       }
 
@@ -3722,7 +3833,7 @@
         chips.push({
           id: 'quality',
           label: 'Quality',
-          val: quality,
+          val: extractCleanQualityName(quality),
           onRemove: "document.getElementById('filter-quality').value='all'; renderTable();"
         });
       }
@@ -3817,6 +3928,7 @@
       if (searchEl) searchEl.value = '';
       const partyEl = document.getElementById('filter-party');
       if (partyEl) partyEl.value = 'all';
+      populateQualityFilter();
       const qualEl = document.getElementById('filter-quality');
       if (qualEl) qualEl.value = 'all';
       const statusEl = document.getElementById('filter-status');
@@ -3829,6 +3941,7 @@
       tableSort = [{ key: 'date', direction: 'desc' }];
       updateKpiCardStyles();
       renderTable();
+      showToast('Filters and sorting reset', 'info');
     }
 
     // Toast Notification helper
@@ -4825,14 +4938,29 @@
       }
     }
 
-    // Populate quality filter dropdown from active ledger rows
-    function populateQualityFilter() {
+    // Populate quality filter dropdown from active ledger rows (cascading with party filter & without lot numbers)
+    function populateQualityFilter(preferredParty = null) {
       const select = document.getElementById('filter-quality');
       if (!select) return;
-      const currentVal = select.value;
-      const currentList = ledgerData[activeTab] || [];
+      const currentVal = (select.value || '').trim();
+      let currentList = ledgerData[activeTab] || [];
 
-      const qualities = Array.from(new Set(currentList.map(r => (r.quality || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+      const partyVal = preferredParty !== null ? preferredParty : (document.getElementById('filter-party')?.value || 'all');
+      if (partyVal !== 'all') {
+        currentList = currentList.filter(r => (r.partyName || '').trim().toLowerCase() === partyVal.trim().toLowerCase());
+      }
+
+      const qualityMap = new Map();
+      currentList.forEach(r => {
+        const raw = (r.quality || '').trim();
+        if (!raw) return;
+        const clean = extractCleanQualityName(raw);
+        if (clean && !qualityMap.has(clean.toLowerCase())) {
+          qualityMap.set(clean.toLowerCase(), clean);
+        }
+      });
+
+      const qualities = Array.from(qualityMap.values()).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
       select.innerHTML = '<option value="all">-- All Qualities --</option>';
       qualities.forEach(q => {
@@ -4842,9 +4970,23 @@
         select.appendChild(opt);
       });
 
-      if (qualities.includes(currentVal)) {
-        select.value = currentVal;
+      if (currentVal && currentVal !== 'all') {
+        const cleanCurrent = extractCleanQualityName(currentVal).toLowerCase();
+        const matched = qualities.find(q => q.toLowerCase() === cleanCurrent);
+        if (matched) {
+          select.value = matched;
+        } else {
+          select.value = 'all';
+        }
+      } else {
+        select.value = 'all';
       }
+    }
+
+    // Cascading filter handler when selected party changes
+    function onPartyFilterChange() {
+      populateQualityFilter();
+      renderTable();
     }
 
     // Populate dynamic quality autocomplete datalist across Covering, TFO, and Doubler
@@ -5032,6 +5174,7 @@
       ledgerData[activeTab].unshift(newRow);
       saveLedgers(false, true);
       populatePartyFilter();
+      populateQualityFilter();
       renderTable();
       showToast('New manual row added. Fill in cells.', 'info');
 
@@ -5071,6 +5214,7 @@
 
       saveLedgers(false, true);
       populatePartyFilter();
+      populateQualityFilter();
       renderTable();
       showToast('Entry deleted and tombstone recorded across cloud', 'info');
     }
@@ -5348,8 +5492,12 @@
           const matchString = `${row.challanNo || ''} ${row.partyName || ''} ${row.quality || ''} ${row.remarks || ''}`.toLowerCase();
           if (!matchString.includes(search)) return false;
         }
-        if (partyFilter !== 'all' && (row.partyName || '').trim() !== partyFilter) return false;
-        if (qualityFilter !== 'all' && (row.quality || '').trim() !== qualityFilter) return false;
+        if (partyFilter !== 'all' && (row.partyName || '').trim().toLowerCase() !== partyFilter.trim().toLowerCase()) return false;
+        if (qualityFilter !== 'all') {
+          const cleanRowQual = extractCleanQualityName(row.quality).toLowerCase();
+          const cleanFilterQual = extractCleanQualityName(qualityFilter).toLowerCase();
+          if (cleanRowQual !== cleanFilterQual && (row.quality || '').trim().toLowerCase() !== qualityFilter.trim().toLowerCase()) return false;
+        }
         if (fromDate && row.date && row.date < fromDate) return false;
         if (toDate && row.date && row.date > toDate) return false;
         
@@ -5645,13 +5793,17 @@
         }
 
         // Party filter
-        if (partyFilter !== 'all' && (row.partyName || '').trim() !== partyFilter) {
+        if (partyFilter !== 'all' && (row.partyName || '').trim().toLowerCase() !== partyFilter.trim().toLowerCase()) {
           return false;
         }
 
-        // Quality filter
-        if (qualityFilter !== 'all' && (row.quality || '').trim() !== qualityFilter) {
-          return false;
+        // Quality filter (matches clean quality or raw quality)
+        if (qualityFilter !== 'all') {
+          const cleanRowQual = extractCleanQualityName(row.quality).toLowerCase();
+          const cleanFilterQual = extractCleanQualityName(qualityFilter).toLowerCase();
+          if (cleanRowQual !== cleanFilterQual && (row.quality || '').trim().toLowerCase() !== qualityFilter.trim().toLowerCase()) {
+            return false;
+          }
         }
 
         // Date range
@@ -5708,6 +5860,7 @@
       // Filter and Sort Current Active Ledger
       const search = (document.getElementById('sheet-search')?.value || '').toLowerCase().trim();
       const partyFilter = document.getElementById('filter-party')?.value || 'all';
+      const qualityFilter = document.getElementById('filter-quality')?.value || 'all';
       const statusFilter = document.getElementById('filter-status')?.value || 'all';
       const fromDate = document.getElementById('filter-from-date')?.value || '';
       const toDate = document.getElementById('filter-to-date')?.value || '';
@@ -5848,7 +6001,7 @@
 
       // Render Empty State
       if (rows.length === 0) {
-        const hasAnyFilters = !!(search || partyFilter !== 'all' || statusFilter !== 'all' || fromDate || toDate || activeKpiFilter);
+        const hasAnyFilters = !!(search || partyFilter !== 'all' || qualityFilter !== 'all' || statusFilter !== 'all' || fromDate || toDate || activeKpiFilter);
         tbody.innerHTML = `
           <tr>
             <td colspan="26" style="padding: 0;">
@@ -8546,25 +8699,6 @@
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       showToast('Ledger CSV exported successfully!', 'success');
-    }
-
-    // Reset Filters
-    function clearFilters() {
-      const s = document.getElementById('sheet-search');
-      if (s) s.value = '';
-      const p = document.getElementById('filter-party');
-      if (p) p.value = 'all';
-      const st = document.getElementById('filter-status');
-      if (st) st.value = 'all';
-      const fd = document.getElementById('filter-from-date');
-      if (fd) fd.value = '';
-      const td = document.getElementById('filter-to-date');
-      if (td) td.value = '';
-      activeKpiFilter = null;
-      tableSort = [{ key: 'date', direction: 'desc' }];
-      updateKpiCardStyles();
-      renderTable();
-      showToast('Filters and sorting reset', 'info');
     }
 
     // Utility: HTML Escape
