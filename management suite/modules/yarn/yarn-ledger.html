@@ -2480,10 +2480,6 @@
       background-color: var(--surface) !important;
       border-bottom: 2px solid var(--accent) !important;
       opacity: 1 !important;
-      -webkit-backface-visibility: hidden;
-      backface-visibility: hidden;
-      transform: translateZ(0);
-      will-change: transform;
       background-clip: padding-box !important;
     }
 
@@ -2491,10 +2487,6 @@
       background: var(--surface) !important;
       background-color: var(--surface) !important;
       opacity: 1 !important;
-      -webkit-backface-visibility: hidden;
-      backface-visibility: hidden;
-      transform: translateZ(0);
-      will-change: transform;
       background-clip: padding-box !important;
     }
 
@@ -6158,9 +6150,9 @@
         freezeSelect.value = String(freezeCount);
       }
 
-      // Compute left pixel offsets directly from TH offsetLeft
-      const leftPositions = [];
+      // Compute exact cumulative left pixel offsets for frozen columns
       let runningLeft = 0;
+      const leftPositions = [];
 
       for (let i = 0; i < ths.length; i++) {
         const th = ths[i];
@@ -6168,16 +6160,13 @@
           leftPositions.push(runningLeft);
           continue;
         }
-        
-        // Exact offsetLeft within the table
-        const actualLeft = th.offsetLeft;
-        const leftVal = (actualLeft !== undefined && actualLeft !== null && actualLeft >= 0) ? actualLeft : runningLeft;
-        leftPositions.push(leftVal);
+
+        leftPositions.push(runningLeft);
 
         if (i < freezeCount) {
           const rect = th.getBoundingClientRect();
-          const colWidth = rect.width > 0 ? rect.width : (parseFloat(th.style.width) || parseFloat(th.style.minWidth) || 120);
-          runningLeft += Math.round(colWidth);
+          const measuredWidth = rect && rect.width > 0 ? rect.width : (th.offsetWidth || parseFloat(th.style.width) || parseFloat(th.style.minWidth) || 120);
+          runningLeft += Math.round(measuredWidth);
         }
       }
 
@@ -6196,7 +6185,7 @@
         if (i < freezeCount) {
           th.style.position = 'sticky';
           th.style.left = `${leftPositions[i]}px`;
-          th.style.zIndex = '30';
+          th.style.zIndex = '35';
           th.classList.add('th-freeze-pinned');
           if (i === lastVisibleFrozenIndex) {
             th.classList.add('col-freeze-boundary');
