@@ -602,15 +602,16 @@
     .toolbar-date-item {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       height: 36px;
-      padding: 0 0.75rem;
+      padding: 0 0.5rem 0 0.75rem;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--surface-subtle);
       box-sizing: border-box;
       cursor: pointer;
       transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      min-width: 180px;
     }
 
     .toolbar-date-item:hover {
@@ -647,6 +648,40 @@
       padding: 0 1px;
     }
 
+    /* VF Custom Date Picker in Toolbar */
+    .toolbar-date-item .vf-date-picker {
+      flex: 1 1 auto;
+      min-width: 135px;
+      position: relative;
+    }
+
+    .toolbar-date-item .vf-date-btn {
+      height: 32px !important;
+      min-height: 32px !important;
+      border: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0 0.35rem !important;
+      font-size: 0.88rem !important;
+      font-family: var(--font-mono) !important;
+      font-weight: 600 !important;
+      color: var(--fg) !important;
+      cursor: pointer !important;
+    }
+
+    .toolbar-date-item .vf-date-btn-label {
+      font-family: var(--font-mono) !important;
+      font-size: 0.88rem !important;
+      font-weight: 600 !important;
+      color: var(--fg) !important;
+      letter-spacing: 0.02em;
+    }
+
+    .toolbar-date-item .vf-date-btn::after {
+      display: none !important;
+    }
+
+    /* Fallback native date-input if not replaced */
     .toolbar-date-item .date-input {
       width: 150px;
       min-width: 145px;
@@ -674,10 +709,66 @@
       transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
     }
 
-    .toolbar-date-item .date-input::-webkit-calendar-picker-indicator:hover {
-      opacity: 1;
-      transform: scale(1.18);
-      background: rgba(124, 58, 237, 0.12);
+    /* VF Date Panel Popup — Spacious, big calendar with zero overlap */
+    .vf-date-panel {
+      width: 290px !important;
+      min-width: 285px !important;
+      max-width: 320px !important;
+      padding: 0.85rem !important;
+      border-radius: 12px !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22) !important;
+      box-sizing: border-box !important;
+    }
+
+    .vf-date-weekdays {
+      display: grid !important;
+      grid-template-columns: repeat(7, 1fr) !important;
+      gap: 3px !important;
+      margin-bottom: 6px !important;
+    }
+
+    .vf-date-weekdays span {
+      font-size: 0.72rem !important;
+      font-weight: 700 !important;
+      color: var(--muted) !important;
+      text-align: center !important;
+      padding: 4px 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    .vf-date-grid {
+      display: grid !important;
+      grid-template-columns: repeat(7, 1fr) !important;
+      gap: 3px !important;
+    }
+
+    .vf-date-grid button {
+      min-width: 32px !important;
+      height: 34px !important;
+      font-size: 0.85rem !important;
+      font-weight: 600 !important;
+      border-radius: 8px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    .vf-date-actions {
+      display: flex !important;
+      justify-content: space-between !important;
+      gap: 0.75rem !important;
+      margin-top: 0.65rem !important;
+      padding-top: 0.55rem !important;
+      border-top: 1px solid var(--border-subtle) !important;
+    }
+
+    .vf-date-actions button {
+      padding: 0.35rem 0.75rem !important;
+      font-size: 0.8rem !important;
+      font-weight: 600 !important;
+      border-radius: 6px !important;
     }
 
     /* Interest Switch toggle */
