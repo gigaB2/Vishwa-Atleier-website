@@ -1792,9 +1792,9 @@
     }
 
     #modal-party-statement .modal-card {
-      max-width: 98vw !important;
-      width: 98vw !important;
-      max-height: 95vh !important;
+      width: min(1320px, 95vw) !important;
+      max-width: 1320px !important;
+      max-height: 94vh !important;
     }
 
     .statement-table {
@@ -3320,7 +3320,7 @@
 
   <!-- Party Statement / Ledger Modal -->
   <div class="modal-overlay" id="modal-party-statement" style="display: none; z-index: 999999;">
-    <div class="modal-card" style="max-width: 98vw; width: 98vw; max-height: 95vh;">
+    <div class="modal-card" style="max-width: 1320px; width: min(1320px, 95vw); max-height: 94vh;">
       <div class="modal-header">
         <div class="modal-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -3380,21 +3380,21 @@
           <table class="statement-table">
             <thead>
               <tr>
-                <th class="center-col" style="width: 35px;">#</th>
-                <th style="width: 85px;">Date</th>
-                <th style="width: 110px;">Bill / Challan No</th>
-                <th class="num-col" style="width: 75px;">Gross (Kg)</th>
-                <th class="num-col" style="width: 70px; color: var(--accent3);">GR (Kg)</th>
-                <th class="num-col" style="width: 75px;">Net (Kg)</th>
-                <th class="num-col" style="width: 65px;">Rate (₹)</th>
-                <th class="num-col" style="width: 115px;">Debit (Billed ₹)</th>
-                <th class="num-col" style="width: 110px;" title="Discount (-) / Late Payment (+)">Disc / Late</th>
-                <th class="num-col" style="width: 105px;">Credit (Paid ₹)</th>
-                <th class="num-col" style="width: 105px;">Balance (₹)</th>
-                <th style="width: 85px;">Due Date</th>
-                <th class="num-col" style="width: 60px;">Late</th>
+                <th class="center-col" style="width: 32px;">#</th>
+                <th style="width: 80px;">Date</th>
+                <th style="width: 120px;">Bill / Challan No</th>
+                <th class="num-col" style="width: 72px;">Gross (Kg)</th>
+                <th class="num-col" style="width: 68px; color: var(--accent3);">GR (Kg)</th>
+                <th class="num-col" style="width: 72px;">Net (Kg)</th>
+                <th class="num-col" style="width: 60px;">Rate (₹)</th>
+                <th class="num-col" style="width: 105px;">Debit (Billed ₹)</th>
+                <th class="num-col" style="width: 105px;" title="Discount (-) / Late Payment (+)">Disc / Late</th>
+                <th class="num-col" style="width: 95px;">Credit (Paid ₹)</th>
+                <th class="num-col" style="width: 98px;">Balance (₹)</th>
+                <th style="width: 80px;">Due Date</th>
+                <th class="num-col" style="width: 58px;">Late</th>
                 <th class="num-col" style="width: 105px;">Final Bill (₹)</th>
-                <th class="center-col" style="width: 75px;">Status</th>
+                <th class="center-col" style="width: 68px;">Status</th>
               </tr>
             </thead>
             <tbody id="modal-statement-table-body">
