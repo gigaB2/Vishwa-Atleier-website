@@ -2671,14 +2671,6 @@
       </div>
 
       <div class="toolbar-right">
-        <label class="interest-toggle-wrap" title="Toggle calculation of late payment interest">
-          <span>Calculate Late Interest</span>
-          <label class="switch">
-            <input type="checkbox" id="toggle-interest" checked onchange="toggleInterestCalc()">
-            <span class="slider"></span>
-          </label>
-        </label>
-        
         <div class="freeze-select-wrap" title="Freeze columns up to selected column">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/></svg>
           <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted);">Freeze:</span>
@@ -3940,11 +3932,9 @@
           if (settings.defaultInterestRate !== undefined) defaultInterestRate = Number(settings.defaultInterestRate) || 18.0;
           if (settings.defaultCreditDays !== undefined) defaultCreditDays = Number(settings.defaultCreditDays) || 30;
           if (settings.defaultDiscountPercent !== undefined) defaultDiscountPercent = Number(settings.defaultDiscountPercent) || 1.5;
-          if (settings.calculateInterest !== undefined) calculateInterest = !!settings.calculateInterest;
+          calculateInterest = true;
           if (settings.frozenColumnsCount !== undefined) frozenColumnsCount = Math.max(0, parseInt(settings.frozenColumnsCount, 10));
           
-          const toggleEl = document.getElementById('toggle-interest');
-          if (toggleEl) toggleEl.checked = calculateInterest;
           const freezeSelect = document.getElementById('select-freeze-cols');
           if (freezeSelect) freezeSelect.value = String(frozenColumnsCount);
           const rateEl = document.getElementById('settings-default-interest-rate');
@@ -6072,21 +6062,10 @@
       showToast('Remarks updated', 'success');
     }
 
-    // Toggle Late Payment Interest Calculation
+    // Late Payment Interest Calculation (Permanent ON)
     async function toggleInterestCalc() {
-      calculateInterest = document.getElementById('toggle-interest').checked;
-      try {
-        let settings = {};
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
-          settings = (await window.VishwaSupabase.get('yarn_ledger_settings')) || {};
-        }
-        settings.calculateInterest = calculateInterest;
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
-          window.VishwaSupabase.set('yarn_ledger_settings', settings, true);
-        }
-      } catch (e) {}
+      calculateInterest = true;
       renderTable();
-      showToast(calculateInterest ? 'Late interest calculation enabled' : 'Late interest calculation disabled', 'info');
     }
 
     // Google Sheets-Style Column Freeze Implementation
