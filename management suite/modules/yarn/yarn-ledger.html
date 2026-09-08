@@ -3246,7 +3246,7 @@
               <span id="wa-summary-bill" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; color: var(--fg);">-</span>
             </div>
             <div>
-              <span style="font-size: 0.72rem; color: var(--warning); font-weight: 700; display: block;">Late Interest</span>
+              <span id="wa-summary-interest-label" style="font-size: 0.72rem; color: var(--warning); font-weight: 700; display: block;">Late Interest</span>
               <span id="wa-summary-interest" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; color: var(--warning);">₹ 0.00</span>
             </div>
             <div>
@@ -7215,13 +7215,35 @@
       const balance = formatCurrency(comp.netBalance);
       const dueDate = formatDateDisplay(comp.dueDate);
       const overdueNote = comp.overdueDays > 0 ? ` (${comp.overdueDays} days overdue)` : (comp.earlyDays > 0 ? ` (${comp.earlyDays} days early)` : '');
-      const interestAmt = (comp.effectiveAdjAmount > 0) ? comp.effectiveAdjAmount : (comp.calcAdjAmount > 0 ? comp.calcAdjAmount : 0);
-      const interestFormatted = formatCurrency(interestAmt);
+      
+      // Determine Adjustment: either Early Payment Discount or Interest (Late Charges)
+      const hasDiscount = (comp.effectiveAdjAmount < 0) || (comp.calcAdjAmount < 0) || (comp.adjType === 'discount' && comp.earlyDays > 0);
+      const discAmt = comp.discountAmount > 0 
+        ? comp.discountAmount 
+        : (comp.calcDiscountAmount > 0 ? comp.calcDiscountAmount : Math.abs(comp.effectiveAdjAmount || comp.calcAdjAmount || 0));
+
+      const interestAmt = comp.interestAmount > 0 
+        ? comp.interestAmount 
+        : ((comp.effectiveAdjAmount > 0) ? comp.effectiveAdjAmount : (comp.calcAdjAmount > 0 ? comp.calcAdjAmount : 0));
       const rateMonthly = (comp.rateMonthly !== undefined && comp.rateMonthly !== null && comp.rateMonthly !== '') ? comp.rateMonthly : 1.5;
 
-      const interestLineStandard = `📈 *Interest (Late Charges):* ${interestFormatted}${comp.overdueDays > 0 ? ` (${comp.overdueDays} days @ ${rateMonthly}%/mo)` : ''}\n`;
-      const interestLineGentle = `• Interest Charges: ${interestFormatted}${comp.overdueDays > 0 ? ` (${comp.overdueDays} days @ ${rateMonthly}%/mo)` : ''}\n`;
-      const interestLineUrgent = `• Accrued Late Interest: *${interestFormatted}* (${comp.overdueDays} days @ ${rateMonthly}%/mo)\n`;
+      let adjLineStandard = '';
+      let adjLineGentle = '';
+      let adjLineUrgent = '';
+
+      if (hasDiscount && discAmt > 0) {
+        const discFormatted = formatCurrency(discAmt);
+        const earlyDetail = comp.earlyDays > 0 ? ` (${comp.earlyDays} days early @ ${rateMonthly}%/mo)` : '';
+        adjLineStandard = `📉 *Early Payment Discount:* -${discFormatted}${earlyDetail}\n`;
+        adjLineGentle = `• Early Payment Discount: -${discFormatted}${earlyDetail}\n`;
+        adjLineUrgent = `• Early Payment Discount: -${discFormatted}\n`;
+      } else {
+        const interestFormatted = formatCurrency(interestAmt);
+        const overdueDetail = comp.overdueDays > 0 ? ` (${comp.overdueDays} days @ ${rateMonthly}%/mo)` : '';
+        adjLineStandard = `📈 *Interest (Late Charges):* ${interestFormatted}${overdueDetail}\n`;
+        adjLineGentle = `• Interest (Late Charges): ${interestFormatted}${overdueDetail}\n`;
+        adjLineUrgent = `• Accrued Late Interest: *${interestFormatted}*${overdueDetail}\n`;
+      }
 
       if (preset === 'gentle') {
         return `*Greetings from ${companyName}* 🙏\n\n` +
@@ -7230,7 +7252,7 @@
           `This is a gentle follow-up regarding invoice *${challan}* dated *${date}* for *${quality}* (${qty} Kg @ ₹${rate}/Kg).\n\n` +
           `*Account Summary:*\n` +
           `• Principal Bill: ${principal}\n` +
-          interestLineGentle +
+          adjLineGentle +
           `• Total Bill: ${finalBill}\n` +
           `• Paid to Date: ${paid}\n` +
           `• *Balance Due: ${balance}*\n` +
@@ -7249,7 +7271,7 @@
           `• Invoice Date: ${date}\n` +
           `• Quality: ${quality} (${qty} Kg)\n` +
           `• Principal Invoice Amount: ${principal}\n` +
-          interestLineUrgent +
+          adjLineUrgent +
           `• Total Payable: ${finalBill}\n` +
           `• Amount Received: ${paid}\n` +
           `• *Overdue Balance: ${balance}*\n` +
@@ -7268,7 +7290,7 @@
         `🧵 *Quality:* ${quality}\n` +
         `⚖️ *Quantity:* ${qty} Kg\n` +
         `💰 *Principal Amount:* ${principal}\n` +
-        interestLineStandard +
+        adjLineStandard +
         `🧾 *Total Amount:* ${finalBill}\n` +
         `✅ *Paid Amount:* ${paid}\n` +
         `⚠️ *Pending Balance:* *${balance}*\n` +
@@ -7309,9 +7331,36 @@
       const billEl = document.getElementById('wa-summary-bill');
       if (billEl) billEl.textContent = formatCurrency(comp.grandTotal);
 
+      // Financial adjustment in summary card: Discount or Interest
       const interestEl = document.getElementById('wa-summary-interest');
-      const interestAmt = (comp.effectiveAdjAmount > 0) ? comp.effectiveAdjAmount : (comp.calcAdjAmount > 0 ? comp.calcAdjAmount : 0);
-      if (interestEl) interestEl.textContent = formatCurrency(interestAmt);
+      const interestLabel = document.getElementById('wa-summary-interest-label');
+      const hasDiscount = (comp.effectiveAdjAmount < 0) || (comp.calcAdjAmount < 0) || (comp.adjType === 'discount' && comp.earlyDays > 0);
+      const discAmt = comp.discountAmount > 0 
+        ? comp.discountAmount 
+        : (comp.calcDiscountAmount > 0 ? comp.calcDiscountAmount : Math.abs(comp.effectiveAdjAmount || comp.calcAdjAmount || 0));
+      const interestAmt = comp.interestAmount > 0 
+        ? comp.interestAmount 
+        : ((comp.effectiveAdjAmount > 0) ? comp.effectiveAdjAmount : (comp.calcAdjAmount > 0 ? comp.calcAdjAmount : 0));
+
+      if (hasDiscount && discAmt > 0) {
+        if (interestLabel) {
+          interestLabel.textContent = 'Early Discount';
+          interestLabel.style.color = 'var(--success, #10b981)';
+        }
+        if (interestEl) {
+          interestEl.textContent = `-${formatCurrency(discAmt)}`;
+          interestEl.style.color = 'var(--success, #10b981)';
+        }
+      } else {
+        if (interestLabel) {
+          interestLabel.textContent = 'Late Interest';
+          interestLabel.style.color = 'var(--warning, #f59e0b)';
+        }
+        if (interestEl) {
+          interestEl.textContent = formatCurrency(interestAmt);
+          interestEl.style.color = 'var(--warning, #f59e0b)';
+        }
+      }
 
       const balanceEl = document.getElementById('wa-summary-balance');
       if (balanceEl) balanceEl.textContent = formatCurrency(comp.netBalance);
