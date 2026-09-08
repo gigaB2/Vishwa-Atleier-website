@@ -2469,6 +2469,109 @@
       border-color: var(--error);
     }
 
+    /* Google Sheets-Style Column Freeze & Context Menu */
+    .col-freeze-boundary {
+      border-right: 3px solid var(--accent) !important;
+      box-shadow: 4px 0 12px -2px rgba(124, 58, 237, 0.25);
+    }
+
+    .th-freeze-pinned {
+      background: var(--surface) !important;
+      border-bottom: 2px solid var(--accent) !important;
+    }
+
+    .col-freeze-context-menu {
+      position: fixed;
+      z-index: 3500;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.1);
+      min-width: 240px;
+      padding: 6px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      font-family: var(--font-body);
+      user-select: none;
+      animation: contextMenuFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes contextMenuFadeIn {
+      from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .context-menu-header {
+      padding: 8px 12px 6px 12px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .context-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--fg);
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .context-menu-item:hover {
+      background: rgba(124, 58, 237, 0.1);
+      color: var(--accent);
+    }
+
+    .context-menu-item.active-item {
+      background: rgba(124, 58, 237, 0.15);
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .context-menu-item.danger-item {
+      color: var(--error);
+    }
+
+    .context-menu-item.danger-item:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+    }
+
+    .context-menu-divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 4px 6px;
+    }
+
+    .freeze-select-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--fg);
+    }
+
     /* Media queries to switch table to mobile cards without container clipping (<= 1024px) */
     @media (max-width: 1024px) {
       .ledger-container {
@@ -2575,11 +2678,6 @@
       </div>
 
       <div class="header-actions">
-        <button class="btn btn-secondary" onclick="openInterestSettingsModal()" title="Configure Interest Rates & Credit Terms">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Interest Settings
-        </button>
-
         <button class="btn btn-secondary" onclick="openPartyStatementModal()" title="View Customer/Supplier Ledger Statement">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
           Party Statement
@@ -2719,6 +2817,21 @@
           </label>
         </label>
         
+        <div class="freeze-select-wrap" title="Freeze columns up to selected column">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/></svg>
+          <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted);">Freeze:</span>
+          <select id="select-freeze-cols" class="filter-select" style="padding: 0.25rem 0.5rem; font-size: 0.78rem; font-weight: 700;" onchange="setFrozenColumns(Number(this.value))">
+            <option value="0">No freeze</option>
+            <option value="1">1 col (#)</option>
+            <option value="2">2 cols (Date)</option>
+            <option value="3">3 cols (Bill / Challan)</option>
+            <option value="4" selected>4 cols (Party Name)</option>
+            <option value="5">5 cols (Quality / Item)</option>
+            <option value="8">8 cols (Net Qty)</option>
+            <option value="12">12 cols (Grand Total)</option>
+          </select>
+        </div>
+
         <button class="btn btn-secondary" onclick="clearFilters()" style="padding: 0.5rem 0.85rem; font-size: 0.8rem;">
           Reset Filters
         </button>
@@ -2737,83 +2850,83 @@
         <table class="excel-table" id="excel-grid">
           <thead>
             <tr>
-              <th style="width: 48px; min-width: 48px;" class="center-col">#</th>
-              <th style="width: 135px; min-width: 135px;" class="sortable" data-sort-key="date" onclick="requestTableSort('date', event)" title="Click to sort by Date (Shift+Click for multi-column)">
+              <th style="width: 48px; min-width: 48px;" class="center-col" data-col-index="0" data-col-name="Index">#</th>
+              <th style="width: 135px; min-width: 135px;" class="sortable" data-sort-key="date" data-col-index="1" data-col-name="Date" onclick="requestTableSort('date', event)" title="Click to sort by Date (Shift+Click for multi-column | Right-click to freeze)">
                 <div class="th-content-wrap"><span>Date</span><span class="th-sort-indicator" id="sort-ind-date">↕</span></div>
               </th>
-              <th style="width: 180px; min-width: 180px;" class="sortable" data-sort-key="challanNo" onclick="requestTableSort('challanNo', event)" title="Click to sort by Bill / Challan No">
+              <th style="width: 180px; min-width: 180px;" class="sortable" data-sort-key="challanNo" data-col-index="2" data-col-name="Bill / Challan No" onclick="requestTableSort('challanNo', event)" title="Click to sort by Bill / Challan No | Right-click to freeze">
                 <div class="th-content-wrap"><span>Bill / Challan No</span><span class="th-sort-indicator" id="sort-ind-challanNo">↕</span></div>
               </th>
-              <th style="width: 280px; min-width: 260px;" id="th-party-header" class="sortable" data-sort-key="partyName" onclick="requestTableSort('partyName', event)" title="Click to sort by Party Name">
+              <th style="width: 280px; min-width: 260px;" id="th-party-header" class="sortable" data-sort-key="partyName" data-col-index="3" data-col-name="Party Name" onclick="requestTableSort('partyName', event)" title="Click to sort by Party Name | Right-click to freeze">
                 <div class="th-content-wrap"><span id="th-party-title">Customer Name</span><span class="th-sort-indicator" id="sort-ind-partyName">↕</span></div>
               </th>
-              <th style="width: 260px; min-width: 240px;" class="sortable" data-sort-key="quality" onclick="requestTableSort('quality', event)" title="Click to sort by Quality / Item">
+              <th style="width: 260px; min-width: 240px;" class="sortable" data-sort-key="quality" data-col-index="4" data-col-name="Quality / Item" onclick="requestTableSort('quality', event)" title="Click to sort by Quality / Item | Right-click to freeze">
                 <div class="th-content-wrap"><span>Quality / Item</span><span class="th-sort-indicator" id="sort-ind-quality">↕</span></div>
               </th>
-              <th style="width: 105px; min-width: 100px;" class="num-col sortable" data-sort-key="grossQty" onclick="requestTableSort('grossQty', event)" title="Click to sort by Gross Weight">
+              <th style="width: 105px; min-width: 100px;" class="num-col sortable" data-sort-key="grossQty" data-col-index="5" data-col-name="Gross (Kg)" onclick="requestTableSort('grossQty', event)" title="Click to sort by Gross Weight | Right-click to freeze">
                 <div class="th-content-wrap"><span>Gross (Kg)</span><span class="th-sort-indicator" id="sort-ind-grossQty">↕</span></div>
               </th>
-              <th style="width: 105px; min-width: 100px; background: rgba(249, 115, 22, 0.08);" class="num-col sortable" data-sort-key="grQty" onclick="requestTableSort('grQty', event)" title="Click to sort by Goods Return (GR) Deduction">
+              <th style="width: 105px; min-width: 100px; background: rgba(249, 115, 22, 0.08);" class="num-col sortable" data-sort-key="grQty" data-col-index="6" data-col-name="GR (Kg)" onclick="requestTableSort('grQty', event)" title="Click to sort by Goods Return (GR) Deduction | Right-click to freeze">
                 <div class="th-content-wrap"><span style="color: var(--accent3);">GR (Kg)</span><span class="th-sort-indicator" id="sort-ind-grQty">↕</span></div>
               </th>
-              <th style="width: 110px; min-width: 105px;" class="num-col sortable" data-sort-key="qty" onclick="requestTableSort('qty', event)" title="Click to sort by Net Invoiced Quantity">
+              <th style="width: 110px; min-width: 105px;" class="num-col sortable" data-sort-key="qty" data-col-index="7" data-col-name="Net (Kg)" onclick="requestTableSort('qty', event)" title="Click to sort by Net Invoiced Quantity | Right-click to freeze">
                 <div class="th-content-wrap"><span>Net (Kg)</span><span class="th-sort-indicator" id="sort-ind-qty">↕</span></div>
               </th>
-              <th style="width: 115px; min-width: 110px;" class="num-col sortable" data-sort-key="rate" onclick="requestTableSort('rate', event)" title="Click to sort by Unit Rate">
+              <th style="width: 115px; min-width: 110px;" class="num-col sortable" data-sort-key="rate" data-col-index="8" data-col-name="Rate (₹/Kg)" onclick="requestTableSort('rate', event)" title="Click to sort by Unit Rate | Right-click to freeze">
                 <div class="th-content-wrap"><span>Rate (₹/Kg)</span><span class="th-sort-indicator" id="sort-ind-rate">↕</span></div>
               </th>
-              <th style="width: 145px; min-width: 140px;" class="num-col sortable" data-sort-key="subtotal" onclick="requestTableSort('subtotal', event)" title="Click to sort by Subtotal">
+              <th style="width: 145px; min-width: 140px;" class="num-col sortable" data-sort-key="subtotal" data-col-index="9" data-col-name="Subtotal (₹)" onclick="requestTableSort('subtotal', event)" title="Click to sort by Subtotal | Right-click to freeze">
                 <div class="th-content-wrap"><span>Subtotal (₹)</span><span class="th-sort-indicator" id="sort-ind-subtotal">↕</span></div>
               </th>
-              <th style="width: 90px; min-width: 85px;" class="num-col sortable" data-sort-key="gstPercent" onclick="requestTableSort('gstPercent', event)" title="Click to sort by GST %">
+              <th style="width: 90px; min-width: 85px;" class="num-col sortable" data-sort-key="gstPercent" data-col-index="10" data-col-name="GST %" onclick="requestTableSort('gstPercent', event)" title="Click to sort by GST % | Right-click to freeze">
                 <div class="th-content-wrap"><span>GST %</span><span class="th-sort-indicator" id="sort-ind-gstPercent">↕</span></div>
               </th>
-              <th style="width: 160px; min-width: 155px;" class="num-col sortable" data-sort-key="grandTotal" onclick="requestTableSort('grandTotal', event)" title="Click to sort by Grand Total">
+              <th style="width: 160px; min-width: 155px;" class="num-col sortable" data-sort-key="grandTotal" data-col-index="11" data-col-name="Grand Total (₹)" onclick="requestTableSort('grandTotal', event)" title="Click to sort by Grand Total | Right-click to freeze">
                 <div class="th-content-wrap"><span>Grand Total (₹)</span><span class="th-sort-indicator" id="sort-ind-grandTotal">↕</span></div>
               </th>
-              <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="discountPercent" onclick="requestTableSort('discountPercent', event)" title="Click to sort by Early Payment Discount %">
+              <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="discountPercent" data-col-index="12" data-col-name="Disc. %" onclick="requestTableSort('discountPercent', event)" title="Click to sort by Early Payment Discount % | Right-click to freeze">
                 <div class="th-content-wrap"><span style="color: var(--success);">Disc. %</span><span class="th-sort-indicator" id="sort-ind-discountPercent">↕</span></div>
               </th>
-              <th style="width: 145px; min-width: 140px; background: rgba(16, 185, 129, 0.05);" class="num-col sortable" data-sort-key="discountAmount" onclick="requestTableSort('discountAmount', event)" title="Click to sort by Early Payment Discount (₹)">
+              <th style="width: 145px; min-width: 140px; background: rgba(16, 185, 129, 0.05);" class="num-col sortable" data-sort-key="discountAmount" data-col-index="13" data-col-name="Discount (₹)" onclick="requestTableSort('discountAmount', event)" title="Click to sort by Early Payment Discount (₹) | Right-click to freeze">
                 <div class="th-content-wrap"><span style="color: var(--success);">Discount (₹)</span><span class="th-sort-indicator" id="sort-ind-discountAmount">↕</span></div>
               </th>
-              <th style="width: 160px; min-width: 155px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="paidAmount" onclick="requestTableSort('paidAmount', event)" title="Click to sort by Paid Principal">
+              <th style="width: 160px; min-width: 155px; background: rgba(16, 185, 129, 0.08);" class="num-col sortable" data-sort-key="paidAmount" data-col-index="14" data-col-name="Paid Principal (₹)" onclick="requestTableSort('paidAmount', event)" title="Click to sort by Paid Principal | Right-click to freeze">
                 <div class="th-content-wrap"><span>Paid Principal (₹)</span><span class="th-sort-indicator" id="sort-ind-paidAmount">↕</span></div>
               </th>
-              <th style="width: 190px; min-width: 185px;" class="sortable" data-sort-key="paymentDate" onclick="requestTableSort('paymentDate', event)" title="Click to sort by Payment Date">
+              <th style="width: 190px; min-width: 185px;" class="sortable" data-sort-key="paymentDate" data-col-index="15" data-col-name="Payment Date" onclick="requestTableSort('paymentDate', event)" title="Click to sort by Payment Date | Right-click to freeze">
                 <div class="th-content-wrap"><span>Payment Date</span><span class="th-sort-indicator" id="sort-ind-paymentDate">↕</span></div>
               </th>
-              <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="creditDays" onclick="requestTableSort('creditDays', event)" title="Click to sort by Credit Days">
+              <th style="width: 95px; min-width: 90px;" class="num-col sortable" data-sort-key="creditDays" data-col-index="16" data-col-name="Credit Days" onclick="requestTableSort('creditDays', event)" title="Click to sort by Credit Days | Right-click to freeze">
                 <div class="th-content-wrap"><span>Cr. Days</span><span class="th-sort-indicator" id="sort-ind-creditDays">↕</span></div>
               </th>
-              <th style="width: 130px; min-width: 125px;" class="sortable" data-sort-key="dueDate" onclick="requestTableSort('dueDate', event)" title="Click to sort by Due Date">
+              <th style="width: 130px; min-width: 125px;" class="sortable" data-sort-key="dueDate" data-col-index="17" data-col-name="Due Date" onclick="requestTableSort('dueDate', event)" title="Click to sort by Due Date | Right-click to freeze">
                 <div class="th-content-wrap"><span>Due Date</span><span class="th-sort-indicator" id="sort-ind-dueDate">↕</span></div>
               </th>
-              <th style="width: 160px; min-width: 155px; background: rgba(239, 68, 68, 0.08);" class="num-col sortable" data-sort-key="principalOutstanding" onclick="requestTableSort('principalOutstanding', event)" title="Click to sort by Principal Balance">
+              <th style="width: 160px; min-width: 155px; background: rgba(239, 68, 68, 0.08);" class="num-col sortable" data-sort-key="principalOutstanding" data-col-index="18" data-col-name="Principal Bal (₹)" onclick="requestTableSort('principalOutstanding', event)" title="Click to sort by Principal Balance | Right-click to freeze">
                 <div class="th-content-wrap"><span>Principal Bal (₹)</span><span class="th-sort-indicator" id="sort-ind-principalOutstanding">↕</span></div>
               </th>
-              <th style="width: 120px; min-width: 115px;" class="center-col sortable" data-sort-key="status" onclick="requestTableSort('status', event)" title="Click to sort by Payment Status">
+              <th style="width: 120px; min-width: 115px;" class="center-col sortable" data-sort-key="status" data-col-index="19" data-col-name="Status" onclick="requestTableSort('status', event)" title="Click to sort by Payment Status | Right-click to freeze">
                 <div class="th-content-wrap"><span>Status</span><span class="th-sort-indicator" id="sort-ind-status">↕</span></div>
               </th>
-              <th style="width: 105px; min-width: 100px;" class="num-col interest-col sortable" data-sort-key="interestRate" onclick="requestTableSort('interestRate', event)" title="Click to sort by Interest Rate">
+              <th style="width: 105px; min-width: 100px;" class="num-col interest-col sortable" data-sort-key="interestRate" data-col-index="20" data-col-name="Int. % p.a." onclick="requestTableSort('interestRate', event)" title="Click to sort by Interest Rate | Right-click to freeze">
                 <div class="th-content-wrap"><span>Int. % p.a.</span><span class="th-sort-indicator" id="sort-ind-interestRate">↕</span></div>
               </th>
-              <th style="width: 100px; min-width: 95px;" class="num-col interest-col sortable" data-sort-key="overdueDays" onclick="requestTableSort('overdueDays', event)" title="Click to sort by Overdue Days">
+              <th style="width: 100px; min-width: 95px;" class="num-col interest-col sortable" data-sort-key="overdueDays" data-col-index="21" data-col-name="Late Days" onclick="requestTableSort('overdueDays', event)" title="Click to sort by Overdue Days | Right-click to freeze">
                 <div class="th-content-wrap"><span>Late Days</span><span class="th-sort-indicator" id="sort-ind-overdueDays">↕</span></div>
               </th>
-              <th style="width: 145px; min-width: 140px;" class="num-col interest-col sortable" data-sort-key="interestAmount" onclick="requestTableSort('interestAmount', event)" title="Click to sort by Accrued Interest">
+              <th style="width: 145px; min-width: 140px;" class="num-col interest-col sortable" data-sort-key="interestAmount" data-col-index="22" data-col-name="Accrued Int. (₹)" onclick="requestTableSort('interestAmount', event)" title="Click to sort by Accrued Interest | Right-click to freeze">
                 <div class="th-content-wrap"><span>Accrued Int. (₹)</span><span class="th-sort-indicator" id="sort-ind-interestAmount">↕</span></div>
               </th>
-              <th style="width: 145px; min-width: 140px; background: rgba(245, 158, 11, 0.08);" class="num-col interest-col sortable" data-sort-key="interestPaid" onclick="requestTableSort('interestPaid', event)" title="Click to sort by Paid Interest">
+              <th style="width: 145px; min-width: 140px; background: rgba(245, 158, 11, 0.08);" class="num-col interest-col sortable" data-sort-key="interestPaid" data-col-index="23" data-col-name="Paid Int. (₹)" onclick="requestTableSort('interestPaid', event)" title="Click to sort by Paid Interest | Right-click to freeze">
                 <div class="th-content-wrap"><span>Paid Int. (₹)</span><span class="th-sort-indicator" id="sort-ind-interestPaid">↕</span></div>
               </th>
-              <th style="width: 165px; min-width: 160px;" class="num-col sortable" data-sort-key="netOutstanding" onclick="requestTableSort('netOutstanding', event)" title="Click to sort by Net Balance">
+              <th style="width: 165px; min-width: 160px;" class="num-col sortable" data-sort-key="netOutstanding" data-col-index="24" data-col-name="Net Bal (₹)" onclick="requestTableSort('netOutstanding', event)" title="Click to sort by Net Balance | Right-click to freeze">
                 <div class="th-content-wrap"><span>Net Bal (₹)</span><span class="th-sort-indicator" id="sort-ind-netOutstanding">↕</span></div>
               </th>
-              <th style="width: 280px; min-width: 260px;" class="sortable" data-sort-key="remarks" onclick="requestTableSort('remarks', event)" title="Click to sort by Remarks">
+              <th style="width: 280px; min-width: 260px;" class="sortable" data-sort-key="remarks" data-col-index="25" data-col-name="Remarks" onclick="requestTableSort('remarks', event)" title="Click to sort by Remarks | Right-click to freeze">
                 <div class="th-content-wrap"><span>Remarks / Cheque No</span><span class="th-sort-indicator" id="sort-ind-remarks">↕</span></div>
               </th>
-              <th style="width: 100px; min-width: 100px;" class="center-col actions-col">Actions</th>
+              <th style="width: 100px; min-width: 100px;" class="center-col actions-col" data-col-index="26" data-col-name="Actions">Actions</th>
             </tr>
           </thead>
           <tbody id="excel-table-body">
@@ -2871,52 +2984,6 @@
           <div class="footer-stat interest-col">Accrued Interest: <span class="val" id="stat-total-interest" style="color: var(--warning);">₹0.00</span></div>
           <div class="footer-stat">Net Outstanding: <span class="val" id="stat-net-total" style="color: var(--accent);">₹0.00</span></div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Interest Settings Modal -->
-  <div class="modal-overlay" id="modal-interest-settings" style="display: none;">
-    <div class="modal-card" style="max-width: 480px;">
-      <div class="modal-header">
-        <div class="modal-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Interest &amp; Credit Terms
-        </div>
-        <button class="modal-close-btn" onclick="closeInterestSettingsModal()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-          <div>
-            <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 6px;">Default Annual Interest Rate (% p.a.)</label>
-            <input type="number" step="0.1" id="settings-default-interest-rate" value="18.0" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-subtle); color: var(--fg); font-family: var(--font-mono); font-size: 1rem; font-weight: 600;">
-            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 4px;">Standard market rate for delayed yarn settlements (e.g. 18.0% or 24.0% p.a.).</div>
-          </div>
-
-          <div>
-            <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 6px;">Default Credit Terms (Days)</label>
-            <input type="number" step="1" id="settings-default-credit-days" value="30" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-subtle); color: var(--fg); font-family: var(--font-mono); font-size: 1rem; font-weight: 600;">
-            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 4px;">Number of days from bill date before late interest calculation begins.</div>
-          </div>
-
-          <div>
-            <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 6px;">Default Early Payment Discount (%)</label>
-            <input type="number" step="0.1" id="settings-default-discount-percent" value="1.5" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-subtle); color: var(--fg); font-family: var(--font-mono); font-size: 1rem; font-weight: 600;">
-            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 4px;">Maximum discount earned for immediate payment; prorated down to 0% at credit due date.</div>
-          </div>
-
-          <div style="background: rgba(124, 58, 237, 0.06); padding: 0.85rem; border-radius: 8px; border: 1px dashed var(--accent);">
-            <div style="font-size: 0.78rem; font-weight: 700; color: var(--accent); margin-bottom: 4px;">Calculation Rules:</div>
-            <div style="font-size: 0.75rem; color: var(--fg); font-family: var(--font-mono); line-height: 1.5;">
-              • <strong>Early Payment (≤ Credit Days):</strong> Disc% × (Credit Days - Days Taken) / Credit Days (Interest = ₹0)<br>
-              • <strong>Late Settlement (&gt; Credit Days):</strong> Interest = Outstanding × (Annual % / 100) × (Overdue Days / 365) (Disc = ₹0)
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeInterestSettingsModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveInterestSettings()">Apply Settings</button>
       </div>
     </div>
   </div>
@@ -3115,6 +3182,39 @@
     </div>
   </div>
 
+  <!-- Column Freeze Right-Click Context Menu (Google Sheets Style) -->
+  <div id="col-freeze-context-menu" class="col-freeze-context-menu">
+    <div class="context-menu-header">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/></svg>
+      <span id="menu-target-col-name">Column Options</span>
+    </div>
+    <button class="context-menu-item" onclick="handleFreezeContextAction('freeze_this')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2z"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      <span>Freeze up to this column</span>
+    </button>
+    <button class="context-menu-item" onclick="handleFreezeContextAction('freeze_1')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="3"/><line x1="9" y1="21" x2="9" y2="3"/><line x1="14" y1="21" x2="14" y2="3"/></svg>
+      <span>Freeze 1 column (#)</span>
+    </button>
+    <button class="context-menu-item" onclick="handleFreezeContextAction('freeze_2')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="3"/><line x1="9" y1="21" x2="9" y2="3"/></svg>
+      <span>Freeze 2 columns (Date)</span>
+    </button>
+    <button class="context-menu-item" onclick="handleFreezeContextAction('freeze_3')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="3"/><line x1="9" y1="21" x2="9" y2="3"/></svg>
+      <span>Freeze 3 columns (Challan)</span>
+    </button>
+    <button class="context-menu-item" onclick="handleFreezeContextAction('freeze_4')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="3"/><line x1="9" y1="21" x2="9" y2="3"/></svg>
+      <span>Freeze 4 columns (Party Name)</span>
+    </button>
+    <div class="context-menu-divider"></div>
+    <button class="context-menu-item danger-item" onclick="handleFreezeContextAction('unfreeze')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <span>Unfreeze all columns</span>
+    </button>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
 
@@ -3125,6 +3225,8 @@
     let defaultInterestRate = 18.0; // 18% per annum
     let defaultCreditDays = 30; // 30 days
     let defaultDiscountPercent = 1.5; // 1.5% max discount for early payment
+    let frozenColumnsCount = 4; // Default freeze up to Party Name (Cols 0, 1, 2, 3)
+    let contextMenuTargetColIndex = -1;
     let liveSaveTimer = null;
     let isLocalSaving = false;
     let lastLocalSaveTime = 0;
@@ -3658,6 +3760,33 @@
           triggerRedo();
         }
       });
+
+      // Google Sheets-Style Header Right-Click Context Menu Listener
+      const thead = document.querySelector('#excel-grid thead');
+      if (thead) {
+        thead.addEventListener('contextmenu', (e) => {
+          const th = e.target.closest('th');
+          if (!th || th.dataset.colIndex === undefined) return;
+          e.preventDefault();
+          const colIdx = parseInt(th.dataset.colIndex, 10);
+          const colName = th.dataset.colName || th.textContent.trim() || 'Column';
+          openFreezeContextMenu(e.clientX, e.clientY, colIdx, colName);
+        });
+      }
+
+      // Close Column Freeze Context Menu on any outside click or ESC key
+      document.addEventListener('click', (e) => {
+        const menu = document.getElementById('col-freeze-context-menu');
+        if (menu && menu.style.display !== 'none' && !menu.contains(e.target)) {
+          closeFreezeContextMenu();
+        }
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeFreezeContextMenu();
+        }
+      });
     }
 
       // Update Supabase Sync Status Indicator
@@ -3885,9 +4014,12 @@
           if (settings.defaultCreditDays !== undefined) defaultCreditDays = Number(settings.defaultCreditDays) || 30;
           if (settings.defaultDiscountPercent !== undefined) defaultDiscountPercent = Number(settings.defaultDiscountPercent) || 1.5;
           if (settings.calculateInterest !== undefined) calculateInterest = !!settings.calculateInterest;
+          if (settings.frozenColumnsCount !== undefined) frozenColumnsCount = Math.max(0, parseInt(settings.frozenColumnsCount, 10));
           
           const toggleEl = document.getElementById('toggle-interest');
           if (toggleEl) toggleEl.checked = calculateInterest;
+          const freezeSelect = document.getElementById('select-freeze-cols');
+          if (freezeSelect) freezeSelect.value = String(frozenColumnsCount);
           const rateEl = document.getElementById('settings-default-interest-rate');
           if (rateEl) rateEl.value = defaultInterestRate;
           const daysEl = document.getElementById('settings-default-credit-days');
@@ -5323,16 +5455,16 @@
 
         return `
           <tr id="ledger-row-${row.id}" class="${comp.status === 'overdue' ? 'is-overdue' : (comp.status === 'paid' ? 'is-paid' : '')} ${isLocked ? 'is-locked' : ''}">
-            <td class="center-col cell-locked-bg" style="font-family: var(--font-mono); color: var(--muted); font-size: 0.8rem;">${idx + 1}</td>
+            <td class="center-col cell-locked-bg" data-col-index="0" style="font-family: var(--font-mono); color: var(--muted); font-size: 0.8rem;">${idx + 1}</td>
             
-            <td class="${isLocked ? 'cell-locked-bg' : ''}">
+            <td data-col-index="1" class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked 
                 ? `<div class="cell-readonly font-mono" title="Date">${formatDateDisplay(row.date)}</div>`
                 : `<input type="date" data-field="date" class="cell-input date-picker-input" value="${row.date || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'date', this.value, false)" onchange="handleCellChange('${row.id}', 'date', this.value, true)">`
               }
             </td>
 
-            <td class="${isLocked ? 'cell-locked-bg' : ''}">
+            <td data-col-index="2" class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly font-mono bold challan-clickable" onclick="openChallanModal('${row.id}')" title="Click to view details">
                     <span class="challan-link-text">${escapeHtml(row.challanNo || '-')}</span>
@@ -5341,14 +5473,14 @@
               }
             </td>
 
-            <td class="${isLocked ? 'cell-locked-bg' : ''}">
+            <td data-col-index="3" class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly bold" style="color: var(--fg);" title="Party Name">${escapeHtml(row.partyName || '-')}</div>`
                 : `<input type="text" data-field="partyName" class="cell-input" value="${escapeHtml(row.partyName || '')}" placeholder="${activeTab === 'sales' ? 'Customer Name' : 'Supplier Name'}" oninput="handleCellChange('${row.id}', 'partyName', this.value, false)" onchange="handleCellChange('${row.id}', 'partyName', this.value, true)">`
               }
             </td>
 
-            <td class="${isLocked ? 'cell-locked-bg' : ''}">
+            <td data-col-index="4" class="${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly" style="color: var(--muted);" title="Quality / Specs">${escapeHtml(row.quality || '-')}</div>`
                 : `<input type="text" list="ledger-qualities-datalist" data-field="quality" class="cell-input" value="${escapeHtml(row.quality || '')}" placeholder="Quality / Specs" oninput="handleCellChange('${row.id}', 'quality', this.value, false)" onchange="handleCellChange('${row.id}', 'quality', this.value, true)">`
@@ -5356,7 +5488,7 @@
             </td>
 
             <!-- Gross Weight (Kg) -->
-            <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
+            <td data-col-index="5" class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly num font-mono" title="Gross Received Weight: ${Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))).toFixed(2)} Kg">${Number(row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))).toFixed(2)}</div>`
                 : `<input type="number" step="0.01" data-field="grossQty" class="cell-input num-font" value="${row.grossQty !== undefined ? row.grossQty : (Number(row.qty || 0) + Number(row.grQty || 0))}" oninput="handleCellChange('${row.id}', 'grossQty', this.value, false)" onchange="handleCellChange('${row.id}', 'grossQty', this.value, true)" title="Gross Weight (Kg)">`
@@ -5364,7 +5496,7 @@
             </td>
 
             <!-- Goods Return GR (Kg) -->
-            <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}" style="${Number(row.grQty) > 0 ? 'background: rgba(249, 115, 22, 0.08);' : ''}">
+            <td data-col-index="6" class="num-col ${isLocked ? 'cell-locked-bg' : ''}" style="${Number(row.grQty) > 0 ? 'background: rgba(249, 115, 22, 0.08);' : ''}">
               <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
                 <input type="number" step="0.01" data-field="grQty" class="cell-input num-font" style="width: 70px; text-align: right; ${Number(row.grQty) > 0 ? 'color: var(--accent3); font-weight: 700;' : ''}" value="${row.grQty || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'grQty', this.value, false)" onchange="handleCellChange('${row.id}', 'grQty', this.value, true)" title="Goods Return (GR) Deduction in Kg">
                 <button type="button" class="btn-issue-gr-inline" onclick="openIssueGrModal('${row.id}')" title="Issue / Edit Goods Return (GR) Breakdown Modal">
@@ -5374,21 +5506,21 @@
             </td>
 
             <!-- Net Invoiced Quantity (Kg) -->
-            <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
+            <td data-col-index="7" class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly num bold font-mono col-val-qty" title="Net Invoiced Quantity (Gross - GR): ${Number(row.qty || 0).toFixed(2)} Kg">${Number(row.qty || 0).toFixed(2)}</div>`
                 : `<input type="number" step="0.01" data-field="qty" class="cell-input num-font bold" value="${row.qty || 0}" oninput="handleCellChange('${row.id}', 'qty', this.value, false)" onchange="handleCellChange('${row.id}', 'qty', this.value, true)" title="Net Quantity (Kg)">`
               }
             </td>
 
-            <td class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
+            <td data-col-index="8" class="num-col ${isLocked ? 'cell-locked-bg' : ''}">
               ${isLocked
                 ? `<div class="cell-readonly num font-mono" title="Rate (₹/Kg)">${Number(row.rate || 0).toFixed(2)}</div>`
                 : `<input type="number" step="0.01" data-field="rate" class="cell-input num-font" value="${row.rate || 0}" oninput="handleCellChange('${row.id}', 'rate', this.value, false)" onchange="handleCellChange('${row.id}', 'rate', this.value, true)">`
               }
             </td>
 
-            <td class="num-col cell-locked-bg">
+            <td data-col-index="9" class="num-col cell-locked-bg">
               <div class="cell-readonly num font-mono col-val-subtotal" style="flex-direction: column; align-items: flex-end; justify-content: center; gap: 1px;" title="Taxable Subtotal">
                 <div>${formatCurrency(row.subtotal)}</div>
                 ${Number(row.grQty) > 0 
@@ -5398,21 +5530,21 @@
               </div>
             </td>
 
-            <td class="num-col">
+            <td data-col-index="10" class="num-col">
               <input type="number" step="0.1" data-field="gstPercent" class="cell-input num-font" style="width: 75px;" value="${row.gstPercent !== undefined ? row.gstPercent : 5.0}" oninput="handleCellChange('${row.id}', 'gstPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'gstPercent', this.value, true)" title="GST %">
             </td>
 
-            <td class="num-col cell-locked-bg">
+            <td data-col-index="11" class="num-col cell-locked-bg">
               <div class="cell-readonly num bold font-mono col-val-grandtotal" title="Grand Total">${formatCurrency(row.grandTotal)}</div>
             </td>
 
             <!-- Editable Early Payment Discount % -->
-            <td class="num-col">
+            <td data-col-index="12" class="num-col">
               <input type="number" step="0.1" data-field="discountPercent" class="cell-input num-font" style="width: 75px; color: var(--success); font-weight: 600;" value="${row.discountPercent !== undefined ? row.discountPercent : defaultDiscountPercent}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'discountPercent', this.value, false)" onchange="handleCellChange('${row.id}', 'discountPercent', this.value, true)" title="Max Early Payment Discount %">
             </td>
 
             <!-- Computed Pro-Rata Discount Amount -->
-            <td class="num-col cell-locked-bg" style="background: rgba(16, 185, 129, 0.05);">
+            <td data-col-index="13" class="num-col cell-locked-bg" style="background: rgba(16, 185, 129, 0.05);">
               <div class="cell-readonly num bold font-mono col-val-discount-amount" title="Pro-Rata Early Payment Discount: ${comp.effectiveDiscountPct.toFixed(2)}% on ₹${Number(row.grandTotal).toFixed(2)}">
                 ${comp.discountAmount > 0 
                   ? `<div style="color: var(--success); font-weight: 700;">-${formatCurrency(comp.discountAmount)}</div><div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">(${comp.effectiveDiscountPct.toFixed(2)}% eff.)</div>`
@@ -5422,60 +5554,60 @@
             </td>
 
             <!-- Editable Paid / Received Principal Amount -->
-            <td class="num-col" style="background: rgba(16, 185, 129, 0.05);">
+            <td data-col-index="14" class="num-col" style="background: rgba(16, 185, 129, 0.05);">
               <input type="number" step="0.01" data-field="paidAmount" class="cell-input num-font" style="color: var(--success); font-weight: 700;" value="${row.paidAmount || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'paidAmount', this.value, false)" onchange="handleCellChange('${row.id}', 'paidAmount', this.value, true)" title="Enter paid/received principal amount">
             </td>
 
             <!-- Editable Payment Date (Expanded & Click anywhere to open calendar) -->
-            <td style="min-width: 185px;">
+            <td data-col-index="15" style="min-width: 185px;">
               <input type="date" data-field="paymentDate" class="cell-input date-picker-input" style="width: 100%; min-width: 170px; cursor: pointer;" value="${row.paymentDate || ''}" onclick="if(typeof this.showPicker==='function'){try{this.showPicker();}catch(e){}}" oninput="handleCellChange('${row.id}', 'paymentDate', this.value, false)" onchange="handleCellChange('${row.id}', 'paymentDate', this.value, true)" title="Click to pick payment date">
             </td>
 
             <!-- Editable Credit Days -->
-            <td class="num-col">
+            <td data-col-index="16" class="num-col">
               <input type="number" step="1" data-field="creditDays" class="cell-input num-font" style="width: 80px;" value="${row.creditDays || defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
             </td>
 
-            <td class="cell-locked-bg">
+            <td data-col-index="17" class="cell-locked-bg">
               <div class="cell-readonly font-mono col-val-due-date" style="font-size: 0.85rem; color: var(--muted);">${formatDateDisplay(comp.dueDate)}</div>
             </td>
 
-            <td class="num-col cell-locked-bg" style="background: rgba(239, 68, 68, 0.05);">
+            <td data-col-index="18" class="num-col cell-locked-bg" style="background: rgba(239, 68, 68, 0.05);">
               <div class="cell-readonly num bold font-mono col-val-outstanding" style="color: ${comp.principalOutstanding > 0 ? 'var(--error)' : 'var(--success)'};">${formatCurrency(comp.principalOutstanding)}</div>
             </td>
 
-            <td class="center-col cell-locked-bg col-val-status">
+            <td data-col-index="19" class="center-col cell-locked-bg col-val-status">
               <div class="cell-readonly" style="justify-content: center;">${renderStatusBadge(comp.status)}</div>
             </td>
 
             <!-- Editable Interest Rate -->
-            <td class="num-col interest-col" style="${calculateInterest ? '' : 'display:none;'}">
+            <td data-col-index="20" class="num-col interest-col" style="${calculateInterest ? '' : 'display:none;'}">
               <input type="number" step="0.1" data-field="interestRate" class="cell-input num-font" style="width: 85px;" value="${row.interestRate !== undefined ? row.interestRate : defaultInterestRate}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestRate', this.value, false)" onchange="handleCellChange('${row.id}', 'interestRate', this.value, true)" title="Annual late interest %">
             </td>
 
-            <td class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
+            <td data-col-index="21" class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
               <div class="cell-readonly num font-mono col-val-overdue-days" style="color: ${comp.overdueDays > 0 ? 'var(--error)' : 'var(--muted)'}; font-weight: ${comp.overdueDays > 0 ? '700' : 'normal'};">${comp.overdueDays > 0 ? comp.overdueDays + ' d' : '-'}</div>
             </td>
 
-            <td class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
+            <td data-col-index="22" class="num-col interest-col cell-locked-bg" style="${calculateInterest ? '' : 'display:none;'}">
               <div class="cell-readonly num bold font-mono col-val-interest-amount" style="color: var(--warning);">${comp.interestAmount > 0 ? formatCurrency(comp.interestAmount) : '-'}</div>
             </td>
 
             <!-- Editable Paid Interest (Settlement of Late Interest!) -->
-            <td class="num-col interest-col" style="background: rgba(245, 158, 11, 0.05); ${calculateInterest ? '' : 'display:none;'}">
+            <td data-col-index="23" class="num-col interest-col" style="background: rgba(245, 158, 11, 0.05); ${calculateInterest ? '' : 'display:none;'}">
               <input type="number" step="0.01" data-field="interestPaid" class="cell-input num-font col-input-interest-paid" style="color: var(--warning); font-weight: 700; width: 110px;" value="${row.interestPaid || 0}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'interestPaid', this.value, false)" onchange="handleCellChange('${row.id}', 'interestPaid', this.value, true)" title="Enter paid/settled late interest amount">
             </td>
 
-            <td class="num-col cell-locked-bg">
+            <td data-col-index="24" class="num-col cell-locked-bg">
               <div class="cell-readonly num bold font-mono col-val-net-total" style="color: ${comp.netOutstanding > 0 ? 'var(--accent)' : 'var(--success)'};">${formatCurrency(comp.netOutstanding)}</div>
             </td>
 
             <!-- Editable Remarks -->
-            <td>
+            <td data-col-index="25">
               <input type="text" data-field="remarks" class="cell-input" value="${escapeHtml(row.remarks || '')}" placeholder="Payment notes / Cheque #" oninput="handleCellChange('${row.id}', 'remarks', this.value, false)" onchange="handleCellChange('${row.id}', 'remarks', this.value, true)">
             </td>
 
-            <td class="center-col actions-col cell-locked-bg">
+            <td data-col-index="26" class="center-col actions-col cell-locked-bg">
               <div class="actions-cell-wrap">
                 <button class="btn-action-icon btn-view-row" onclick="openChallanModal('${row.id}')" title="View Bill / Challan Details">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -5506,6 +5638,9 @@
           }
         }
       }
+
+      // Apply Google Sheets-Style Dynamic Column Freeze Positioning
+      applyColumnFreeze();
 
       // Render 6-Move Mobile Restructured Cards (Moves 1-4, 6)
       renderMobileCards(rows);
@@ -5906,39 +6041,154 @@
       showToast(calculateInterest ? 'Late interest calculation enabled' : 'Late interest calculation disabled', 'info');
     }
 
-    // Interest Settings Modal Handlers
-    function openInterestSettingsModal() {
-      document.getElementById('modal-interest-settings').style.display = 'flex';
+    // Google Sheets-Style Column Freeze Implementation
+    function applyColumnFreeze() {
+      const table = document.getElementById('excel-grid');
+      if (!table) return;
+
+      const headerRow = table.querySelector('thead tr');
+      if (!headerRow) return;
+
+      const ths = Array.from(headerRow.children);
+      const freezeCount = Math.max(0, Math.min(frozenColumnsCount, ths.length));
+
+      // Synchronize quick freeze dropdown in toolbar
+      const freezeSelect = document.getElementById('select-freeze-cols');
+      if (freezeSelect && freezeSelect.value !== String(freezeCount)) {
+        freezeSelect.value = String(freezeCount);
+      }
+
+      // Compute left pixel offsets dynamically based on actual column widths
+      let currentLeft = 0;
+      const leftPositions = [];
+
+      for (let i = 0; i < ths.length; i++) {
+        const th = ths[i];
+        if (th.style.display === 'none') {
+          leftPositions.push(currentLeft);
+          continue;
+        }
+        leftPositions.push(currentLeft);
+        if (i < freezeCount) {
+          const rect = th.getBoundingClientRect();
+          const colWidth = rect.width > 0 ? rect.width : (parseFloat(th.style.width) || parseFloat(th.style.minWidth) || 120);
+          currentLeft += colWidth;
+        }
+      }
+
+      // Determine which column is the last visible frozen boundary column
+      let lastVisibleFrozenIndex = -1;
+      for (let i = freezeCount - 1; i >= 0; i--) {
+        if (ths[i] && ths[i].style.display !== 'none') {
+          lastVisibleFrozenIndex = i;
+          break;
+        }
+      }
+
+      // Apply sticky styles to TH headers
+      ths.forEach((th, i) => {
+        th.classList.remove('col-freeze-boundary', 'th-freeze-pinned');
+        if (i < freezeCount) {
+          th.style.position = 'sticky';
+          th.style.left = `${leftPositions[i]}px`;
+          th.style.zIndex = '30';
+          th.classList.add('th-freeze-pinned');
+          if (i === lastVisibleFrozenIndex) {
+            th.classList.add('col-freeze-boundary');
+          }
+        } else {
+          th.style.position = 'sticky';
+          th.style.left = '';
+          th.style.zIndex = '10';
+        }
+      });
+
+      // Apply sticky styles to TD cells in all rows
+      const tbody = document.getElementById('excel-table-body');
+      if (tbody) {
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(tr => {
+          const tds = Array.from(tr.children);
+          tds.forEach((td, i) => {
+            td.classList.remove('col-freeze-boundary');
+            if (i < freezeCount) {
+              td.style.position = 'sticky';
+              td.style.left = `${leftPositions[i]}px`;
+              td.style.zIndex = '20';
+              if (i === lastVisibleFrozenIndex) {
+                td.classList.add('col-freeze-boundary');
+              }
+            } else {
+              td.style.position = '';
+              td.style.left = '';
+              td.style.zIndex = '';
+            }
+          });
+        });
+      }
     }
 
-    function closeInterestSettingsModal() {
-      document.getElementById('modal-interest-settings').style.display = 'none';
-    }
-
-    async function saveInterestSettings() {
-      const rateVal = Number(document.getElementById('settings-default-interest-rate').value) || 18.0;
-      const daysVal = Number(document.getElementById('settings-default-credit-days').value) || 30;
-      const discVal = Number(document.getElementById('settings-default-discount-percent').value) || 1.5;
-
-      defaultInterestRate = rateVal;
-      defaultCreditDays = daysVal;
-      defaultDiscountPercent = discVal;
-
+    // Set Frozen Column Count & Persist to Supabase Settings
+    async function setFrozenColumns(count) {
+      frozenColumnsCount = Math.max(0, parseInt(count, 10) || 0);
       try {
-        const settings = {
-          defaultInterestRate,
-          defaultCreditDays,
-          defaultDiscountPercent,
-          calculateInterest
-        };
+        let settings = {};
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+          settings = (await window.VishwaSupabase.get('yarn_ledger_settings')) || {};
+        }
+        settings.frozenColumnsCount = frozenColumnsCount;
         if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
           window.VishwaSupabase.set('yarn_ledger_settings', settings, true);
         }
       } catch (e) {}
 
-      closeInterestSettingsModal();
-      renderTable();
-      showToast('Interest, credit & discount terms updated successfully', 'success');
+      applyColumnFreeze();
+      showToast(frozenColumnsCount > 0 ? `Frozen ${frozenColumnsCount} column${frozenColumnsCount > 1 ? 's' : ''}` : 'Columns unfrozen', 'info');
+    }
+
+    // Open Column Freeze Context Menu on Header Right-Click
+    function openFreezeContextMenu(x, y, colIndex, colName) {
+      contextMenuTargetColIndex = colIndex;
+      const menu = document.getElementById('col-freeze-context-menu');
+      const nameEl = document.getElementById('menu-target-col-name');
+      if (!menu) return;
+
+      if (nameEl) nameEl.textContent = `Column: ${colName || '#' + (colIndex + 1)}`;
+
+      // Position context menu within viewport bounds
+      menu.style.display = 'flex';
+      const menuRect = menu.getBoundingClientRect();
+      const posX = (x + menuRect.width > window.innerWidth) ? (window.innerWidth - menuRect.width - 10) : x;
+      const posY = (y + menuRect.height > window.innerHeight) ? (window.innerHeight - menuRect.height - 10) : y;
+
+      menu.style.left = `${Math.max(10, posX)}px`;
+      menu.style.top = `${Math.max(10, posY)}px`;
+    }
+
+    function closeFreezeContextMenu() {
+      const menu = document.getElementById('col-freeze-context-menu');
+      if (menu) menu.style.display = 'none';
+      contextMenuTargetColIndex = -1;
+    }
+
+    // Context Menu Action Dispatcher
+    function handleFreezeContextAction(action) {
+      closeFreezeContextMenu();
+      if (action === 'freeze_this') {
+        if (contextMenuTargetColIndex >= 0) {
+          setFrozenColumns(contextMenuTargetColIndex + 1);
+        }
+      } else if (action === 'freeze_1') {
+        setFrozenColumns(1);
+      } else if (action === 'freeze_2') {
+        setFrozenColumns(2);
+      } else if (action === 'freeze_3') {
+        setFrozenColumns(3);
+      } else if (action === 'freeze_4') {
+        setFrozenColumns(4);
+      } else if (action === 'unfreeze') {
+        setFrozenColumns(0);
+      }
     }
 
     // Party Statement Modal Handlers
