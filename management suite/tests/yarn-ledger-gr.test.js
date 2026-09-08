@@ -2202,21 +2202,28 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
       }
 
       const effectiveAdjAmount = (actualAdj !== null && !isNaN(actualAdj))
-        ? actualAdj
-        : calcAdjAmount;
+        ? Number(Number(actualAdj).toFixed(2))
+        : Number(Number(calcAdjAmount).toFixed(2));
+
+      const roundOff = (row.roundOff !== undefined && row.roundOff !== null && row.roundOff !== '')
+        ? Number(Number(row.roundOff).toFixed(2))
+        : 0;
 
       const finalBill = Math.max(0, Number((grandTotal + effectiveAdjAmount).toFixed(2)));
-      const netBalance = Number((finalBill - paid).toFixed(2));
+      const rawNet = (finalBill + roundOff) - paid;
+      const netBalance = Math.abs(rawNet) <= 0.005 ? 0 : Number(rawNet.toFixed(2));
 
       let status = 'pending';
       if (isFullyReturned) {
         status = 'gr';
-      } else if (paid > 0 && netBalance <= 0) {
+      } else if (netBalance <= 0.01) {
         status = 'paid';
-      } else if (paid > 0 && netBalance > 0) {
+      } else if (paid > 0) {
         status = overdueDays > 0 ? 'overdue' : 'partial';
       } else if (overdueDays > 0) {
         status = 'overdue';
+      } else {
+        status = 'pending';
       }
 
       return {
@@ -2230,6 +2237,7 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
         calcAdjAmount,
         actualAdj,
         effectiveAdjAmount,
+        roundOff,
         finalBill,
         paid,
         netBalance,
@@ -2330,6 +2338,51 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(day45Result.finalBill, 100750);
     assert.strictEqual(day45Result.netBalance, 50750); // 100750 - 50000 = 50750
     assert.strictEqual(day45Result.status, 'overdue');
+
+    // Case 6: User entered Round Off (e.g. bill is ₹100,000.40, user enters round off -0.40 -> net payable is ₹100,000)
+    const roundOffDeductResult = computeRowFinancials({
+      date: billDate,
+      grandTotal: 100000.40,
+      creditDays: 30,
+      rateMonthly: 0,
+      roundOff: -0.40,
+      paymentDate: '2026-09-10',
+      paidAmount: 100000.00
+    });
+    assert.strictEqual(roundOffDeductResult.finalBill, 100000.40);
+    assert.strictEqual(roundOffDeductResult.roundOff, -0.40);
+    assert.strictEqual(roundOffDeductResult.netBalance, 0);
+    assert.strictEqual(roundOffDeductResult.status, 'paid');
+
+    // Case 7: Positive Round Off (e.g. +0.60)
+    const roundOffAddResult = computeRowFinancials({
+      date: billDate,
+      grandTotal: 99999.40,
+      creditDays: 30,
+      rateMonthly: 0,
+      roundOff: 0.60,
+      paymentDate: '2026-09-10',
+      paidAmount: 50000.00
+    });
+    assert.strictEqual(roundOffAddResult.finalBill, 99999.40);
+    assert.strictEqual(roundOffAddResult.roundOff, 0.60);
+    assert.strictEqual(roundOffAddResult.netBalance, 50000.00); // 99999.40 + 0.60 - 50000 = 50000
+    assert.strictEqual(roundOffAddResult.status, 'partial');
+
+    // Case 8: IEEE 754 Floating Point Precision (52345.67 - 0.67 - 52345 = 7.1e-15 -> strictly 0.00 and 'paid', not 'partial')
+    const floatPrecisionResult = computeRowFinancials({
+      date: billDate,
+      grandTotal: 52345.67,
+      creditDays: 30,
+      rateMonthly: 0,
+      roundOff: -0.67,
+      paymentDate: '2026-09-10',
+      paidAmount: 52345.00
+    });
+    assert.strictEqual(floatPrecisionResult.finalBill, 52345.67);
+    assert.strictEqual(floatPrecisionResult.roundOff, -0.67);
+    assert.strictEqual(floatPrecisionResult.netBalance, 0);
+    assert.strictEqual(floatPrecisionResult.status, 'paid');
   });
 });
 
