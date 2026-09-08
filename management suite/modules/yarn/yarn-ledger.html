@@ -3212,7 +3212,7 @@
               <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.44.54.61.19 1.16.17 1.6.1 1.06-.16 1.47-.86 1.47-1.43 0-.57-.41-.7-.66-.83z"/>
             </svg>
           </div>
-          <span>Send WhatsApp Payment Reminder</span>
+          <span>WhatsApp Payment Reminder</span>
         </div>
         <button class="modal-close-btn" onclick="closeWhatsAppReminderModal()">&times;</button>
       </div>
@@ -3335,14 +3335,20 @@
 
       </div>
 
-      <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
-        <button type="button" class="btn btn-secondary" onclick="closeWhatsAppReminderModal()">Cancel</button>
-        <button type="button" class="btn btn-whatsapp" onclick="sendWhatsAppReminder()" id="btn-send-whatsapp-action">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.44.54.61.19 1.16.17 1.6.1 1.06-.16 1.47-.86 1.47-1.43 0-.57-.41-.7-.66-.83z"/>
-          </svg>
-          <span>Open in WhatsApp</span>
-        </button>
+      <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div style="font-size: 0.74rem; color: var(--muted); display: flex; align-items: center; gap: 5px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>Message is drafted in WhatsApp chat box for your review. You click Send.</span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button type="button" class="btn btn-secondary" onclick="closeWhatsAppReminderModal()">Cancel</button>
+          <button type="button" class="btn btn-whatsapp" onclick="sendWhatsAppReminder()" id="btn-send-whatsapp-action" title="Open chat with message pre-typed in WhatsApp composer. You click send.">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.44.54.61.19 1.16.17 1.6.1 1.06-.16 1.47-.86 1.47-1.43 0-.57-.41-.7-.66-.83z"/>
+            </svg>
+            <span>Draft in WhatsApp</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -7430,11 +7436,17 @@
       const textarea = document.getElementById('wa-message-textarea');
       if (!textarea) return;
 
-      const message = textarea.value.trim();
+      // Clean message: trim any trailing newlines / carriage returns to ensure WhatsApp does not trigger Enter
+      const message = textarea.value.trim().replace(/\r\n/g, '\n').trim();
       if (!message) {
         showToast('Message content cannot be empty', 'error');
         textarea.focus();
         return;
+      }
+
+      // Also copy text to clipboard as a convenient backup
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(message).catch(() => {});
       }
 
       const encodedText = encodeURIComponent(message);
@@ -7459,11 +7471,11 @@
         }
 
         waUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
-        showToast('Opening WhatsApp chat with recipient...', 'success');
+        showToast('WhatsApp opened: message drafted in chat box. You click Send.', 'success');
       } else {
         // No phone number specified: open WhatsApp with prefilled message to let user choose any contact/chat
         waUrl = `https://wa.me/?text=${encodedText}`;
-        showToast('Opening WhatsApp to select recipient...', 'info');
+        showToast('WhatsApp opened: select contact and click Send.', 'info');
       }
 
       window.open(waUrl, '_blank');
