@@ -1756,16 +1756,25 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 }
 
 .vf-date-nav button {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
   border-radius: 8px;
-  border: 1px solid var(--border, #e2e8f0);
-  background: color-mix(in srgb, var(--fg, #0f172a) 4%, transparent);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--fg, #0f172a);
   font-size: 1rem;
   cursor: pointer;
   flex-shrink: 0;
+  box-shadow: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.vf-date-nav button:hover {
+  background: color-mix(in srgb, var(--fg, #0f172a) 6%, transparent);
 }
 
 .vf-date-nav-label {
@@ -1806,6 +1815,13 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   font-weight: 600;
   cursor: pointer;
   box-sizing: border-box;
+  box-shadow: none !important;
+  outline: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.vf-date-grid button:hover:not(.is-selected) {
+  background: color-mix(in srgb, var(--fg, #0f172a) 6%, transparent);
 }
 
 .vf-date-grid button.is-other {
@@ -1817,9 +1833,10 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 }
 
 .vf-date-grid button.is-selected {
-  background: var(--accent, #8b5cf6);
-  color: #fff;
-  border-color: var(--accent, #8b5cf6);
+  background: var(--accent, #8b5cf6) !important;
+  color: #fff !important;
+  border-color: var(--accent, #8b5cf6) !important;
+  box-shadow: none !important;
 }
 
 .vf-date-actions {
@@ -1839,7 +1856,17 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  padding: 0.35rem 0;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  box-shadow: none !important;
+}
+
+.vf-date-actions button:hover {
+  background: color-mix(in srgb, var(--accent, #8b5cf6) 10%, transparent);
+}
+
+.dark-mode .vf-date-grid button:hover:not(.is-selected) {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .dark-mode .vf-date-btn,

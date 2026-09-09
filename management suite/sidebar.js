@@ -317,13 +317,13 @@
     </button>
     <div class="vf-sb-accordion-wrapper" data-mode="weaving">
       <div class="vf-sb-accordion-inner" id="vf-mod-folder-1">
-        <a class="vf-sb-link child" href="modules/weaving/rm-weft-stock-book.html?tab=item-detail">
+        <a class="vf-sb-link child" href="modules/weaving/rm-weft-stock-book.html?tab=dashboard">
           <span class="vf-sb-icon vf-sb-icon-pink vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>
-          Weft Stock Register
+          Weft Stock Dashboard
         </a>
-        <a class="vf-sb-link child" href="modules/weaving/rm-weft-stock-book.html?tab=item-ledger-v2">
-          <span class="vf-sb-icon vf-sb-icon-pink vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>
-          Item-wise Ledger v2
+        <a class="vf-sb-link child" href="modules/weaving/rm-weft-stock-book.html?tab=stock-book">
+          <span class="vf-sb-icon vf-sb-icon-pink vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
+          Weft Stock Book
         </a>
         <a class="vf-sb-link child" href="modules/weaving/rm-weft-stock-book.html?tab=challan-history">
           <span class="vf-sb-icon vf-sb-icon-pink vf-sb-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>
@@ -925,7 +925,8 @@
     'orders': ['orders', 'rm orders'],
     'heat-map': ['heat-map', 'heatmap', 'delivery heat map', 'rm delivery heat map', 'yarn delivery heat map', 'yarn delivery heatmap'],
     'item-detail': ['item-detail', 'weft stock register', 'stock register'],
-    'item-ledger-v2': ['item-ledger-v2', 'item-wise ledger v2', 'item-wise ledger', 'ledger'],
+    'stock-book': ['stock-book', 'item-wise weft stock book', 'weft stock book', 'stock book', 'item-ledger-v2'],
+    'item-ledger-v2': ['item-ledger-v2', 'item-wise ledger v2', 'item-wise ledger', 'ledger', 'stock-book'],
     'challan-history': ['challan-history', 'challan register', 'challan history'],
     'low-stock': ['low-stock', 'low stock', 'low stock alerts'],
     'log': ['log', 'transaction log', 'log issue'],
@@ -977,7 +978,8 @@
       'orders': 'RM Orders',
       'heat-map': 'Delivery Heat Map',
       'item-detail': 'Weft Stock Register',
-      'item-ledger-v2': 'Item-wise Ledger',
+      'stock-book': 'Weft Stock Book',
+      'item-ledger-v2': 'Weft Stock Book',
       'challan-history': 'Challan History',
       'low-stock': 'Low Stock Alerts',
       'log': 'Transaction Log',
@@ -1809,7 +1811,7 @@
     // RM Weft Stock Book
     'rm-weft-stock-book': 'rm-weft-stock-book.html',
     'weft-ledger': 'rm-weft-stock-book.html?tab=item-detail',
-    'weft-beam-tracker': 'rm-weft-stock-book.html?tab=item-ledger-v2',
+    'weft-beam-tracker': 'rm-weft-stock-book.html?tab=stock-book',
     'weft-analytics': 'rm-weft-stock-book.html?tab=challan-history',
     'weft-low-stock': 'rm-weft-stock-book.html?tab=low-stock',
     'weft-log': 'rm-weft-stock-book.html?tab=log',
@@ -1902,8 +1904,8 @@
     { pattern: /order-book\.html\?view=heat-map/i, key: 'order-book-heatmap', parent: 'order-book' },
 
     // RM Weft Stock Book
-    { pattern: /rm-weft-stock-book\.html\?tab=item-detail/i, key: 'weft-ledger', parent: 'rm-weft-stock-book' },
-    { pattern: /rm-weft-stock-book\.html\?tab=item-ledger-v2/i, key: 'weft-beam-tracker', parent: 'rm-weft-stock-book' },
+    { pattern: /rm-weft-stock-book\.html(\?tab=(dashboard|item-detail))?$/i, key: 'weft-ledger', parent: 'rm-weft-stock-book' },
+    { pattern: /rm-weft-stock-book\.html\?tab=(stock-book|item-ledger-v2)/i, key: 'weft-beam-tracker', parent: 'rm-weft-stock-book' },
     { pattern: /rm-weft-stock-book\.html\?tab=challan-history/i, key: 'weft-analytics', parent: 'rm-weft-stock-book' },
     { pattern: /rm-weft-stock-book\.html\?tab=low-stock/i, key: 'weft-low-stock', parent: 'rm-weft-stock-book' },
     { pattern: /rm-weft-stock-book\.html\?tab=log/i, key: 'weft-log', parent: 'rm-weft-stock-book' },
