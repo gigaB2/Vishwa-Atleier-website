@@ -311,4 +311,28 @@ test('Weaving RM Orders — Multi-PC Sync & Supabase Single Source of Truth', as
     assert.strictEqual(weavingOrderUpdatedReceived, 1);
     assert.strictEqual(supabaseSyncReceived, 1);
   });
+
+  await t.test('8. Dual-Key Unified Sync: Saving yarn-orders strictly synchronizes both yarn-orders and yarn-rm-orders', () => {
+    const testOrders = [
+      {
+        id: 'WV-SYNC-999',
+        orderNumber: 'WV-999',
+        quality: 'WARP SILK 50D',
+        supplier: 'National Textiles',
+        orderedWeight: 1200,
+        status: 'Active',
+        batches: []
+      }
+    ];
+
+    vSupabase.saveToSupabase('yarn-orders', testOrders, true);
+
+    const savedYarnOrders = JSON.parse(env.localStorage.getItem('yarn-orders') || '[]');
+    const savedYarnRmOrders = JSON.parse(env.localStorage.getItem('yarn-rm-orders') || '[]');
+
+    assert.strictEqual(savedYarnOrders.length, 1, 'yarn-orders must be saved in localStorage');
+    assert.strictEqual(savedYarnRmOrders.length, 1, 'yarn-rm-orders must be mirrored and saved in localStorage');
+    assert.strictEqual(savedYarnOrders[0].id, 'WV-SYNC-999');
+    assert.strictEqual(savedYarnRmOrders[0].id, 'WV-SYNC-999');
+  });
 });

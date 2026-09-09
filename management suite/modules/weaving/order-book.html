@@ -1848,7 +1848,7 @@
         const useSyncedStorage = (key, initialValue) => {
             const [storedValue, setStoredValue] = useState(() => {
                 try {
-                    const item = window.localStorage.getItem(key);
+                    const item = window.localStorage.getItem(key) || (key === WEAVING_ORDERS_STORAGE_KEY ? window.localStorage.getItem('yarn-rm-orders') : null);
                     if (!item) return initialValue;
                     let parsed = JSON.parse(item);
                     if (Array.isArray(initialValue) && !Array.isArray(parsed)) return initialValue;
@@ -1863,9 +1863,11 @@
 
             useEffect(() => {
                 const handleStorageChange = (e) => {
-                    if (!e || e.key === key || !e.key) {
+                    const isTarget = !e || !e.key || e.key === key || 
+                        (key === WEAVING_ORDERS_STORAGE_KEY && (e.key === 'yarn-rm-orders' || e.key === 'yarn-orders'));
+                    if (isTarget) {
                         try {
-                            const item = window.localStorage.getItem(key);
+                            const item = window.localStorage.getItem(key) || (key === WEAVING_ORDERS_STORAGE_KEY ? window.localStorage.getItem('yarn-rm-orders') : null);
                             if (!item) {
                                 if (!window.VishwaSupabase || (typeof window.VishwaSupabase.isHydrated === 'function' && window.VishwaSupabase.isHydrated())) {
                                     setStoredValue(initialValue);
@@ -1888,7 +1890,8 @@
                 };
 
                 const handleSupabaseSync = (e) => {
-                    if (!e || !e.detail || e.detail.key === key || !e.detail.key) {
+                    const syncKey = e?.detail?.key;
+                    if (!syncKey || syncKey === key || (key === WEAVING_ORDERS_STORAGE_KEY && (syncKey === 'yarn-rm-orders' || syncKey === 'yarn-orders'))) {
                         handleStorageChange({ key });
                     }
                 };
@@ -1897,7 +1900,7 @@
                     handleStorageChange({ key });
                 };
 
-                const handleItemDeleted = (e) => {
+                const handleItemDeleted = () => {
                     handleStorageChange({ key });
                 };
 
@@ -1911,7 +1914,7 @@
                     if (e && e.data && typeof e.data === 'object') {
                         if ((e.data.type === 'YARN_ORDER_UPDATED' && key === WEAVING_ORDERS_STORAGE_KEY) ||
                             (e.data.type === 'WEAVING_ORDER_UPDATED' && key === WEAVING_ORDERS_STORAGE_KEY) ||
-                            (e.data.type === 'STORAGE_SYNC' && e.data.key === key)) {
+                            (e.data.type === 'STORAGE_SYNC' && (e.data.key === key || (key === WEAVING_ORDERS_STORAGE_KEY && (e.data.key === 'yarn-rm-orders' || e.data.key === 'yarn-orders'))))) {
                             handleStorageChange({ key });
                         }
                     }
@@ -1924,6 +1927,11 @@
                 window.addEventListener('yarn-order-updated', handleOrderUpdated);
                 window.addEventListener('weaving-order-updated', handleOrderUpdated);
                 window.addEventListener('message', handleMessage);
+
+                // If Supabase is already ready or hydrated, ensure immediate sync
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.isHydrated === 'function' && window.VishwaSupabase.isHydrated()) {
+                    handleStorageChange({ key });
+                }
 
                 return () => {
                     window.removeEventListener('storage', handleStorageChange);
