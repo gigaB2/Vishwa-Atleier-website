@@ -5678,7 +5678,6 @@
                 if (item.color) setSbColorFilter(item.color);
                 if (item.company) setSbSupplierFilter(item.company);
                 setActiveTab('stock-book');
-                setSelectedItem(null);
             };
 
             const filteredIssues = useMemo(() => {
@@ -6333,92 +6332,6 @@
                 );
             }
 
-            const Breadcrumbs = () => {
-                const crumbs = [];
-
-                // Root is always Weft Stock Dashboard
-                crumbs.push({
-                    label: (
-                        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
-                            Weft Stock Dashboard
-                        </span>
-                    ),
-                    action: () => { setActiveTab('item-detail'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }
-                });
-
-                if (selectedItem) {
-                    crumbs.push({
-                        label: (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '2px' }}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></svg>
-                                <span style={{ opacity: 0.6 }}>Ledger:</span>
-                                <span className="tag" style={{ margin: 0, textTransform: 'none', fontSize: '0.75rem', padding: '0.15rem 0.45rem' }}>{selectedItem.quality}</span>
-                                <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>•</span>
-                                <span style={{ fontSize: '0.82rem', color: 'var(--muted)', fontWeight: 500 }}>{selectedItem.company}</span>
-                                {selectedItem.code && (
-                                    <>
-                                        <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>•</span>
-                                        <span style={{ fontSize: '0.82rem', color: 'var(--muted)', fontWeight: 500 }}>{selectedItem.code}</span>
-                                    </>
-                                )}
-                                {selectedItem.color && (
-                                    <>
-                                        <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>•</span>
-                                        <span style={{ fontSize: '0.82rem', color: 'var(--muted)', fontWeight: 500 }}>{selectedItem.color}</span>
-                                    </>
-                                )}
-                            </span>
-                        ),
-                        action: () => { setActiveTab('item-detail'); setSelectedChallan(null); setSelectedBox(null); }
-                    });
-                }
-
-                if (selectedChallan) {
-                    crumbs.push({
-                        label: (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '2px' }}><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg>
-                                <span style={{ opacity: 0.6 }}>Challan:</span>
-                                <span className="tag" style={{ margin: 0, textTransform: 'none', fontSize: '0.75rem', padding: '0.15rem 0.45rem' }}>{selectedChallan.challanNumber || selectedChallan.challan}</span>
-                            </span>
-                        ),
-                        action: () => { setActiveTab('challan-detail'); setSelectedBox(null); }
-                    });
-                }
-
-                if (selectedBox) {
-                    crumbs.push({
-                        label: (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '2px' }}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></svg>
-                                <span style={{ opacity: 0.6 }}>Box:</span>
-                                <span className="tag" style={{ margin: 0, textTransform: 'none', fontSize: '0.75rem', padding: '0.15rem 0.45rem' }}>{selectedBox.boxNumber}</span>
-                            </span>
-                        )
-                    });
-                }
-
-                return (
-                    <div className="breadcrumbs">
-                        {crumbs.map((crumb, idx) => (
-                            <React.Fragment key={idx}>
-                                {idx > 0 && <span className="breadcrumb-separator">/</span>}
-                                {crumb.action ? (
-                                    <span className="breadcrumb-item breadcrumb-clickable" onClick={crumb.action}>
-                                        {crumb.label}
-                                    </span>
-                                ) : (
-                                    <span className="breadcrumb-item breadcrumb-current">
-                                        {crumb.label}
-                                    </span>
-                                )}
-                            </React.Fragment>
-                        ))}
-                    </div>
-                );
-            };
-
             return (
                 <div className={`app-container full-screen-wide ${darkMode ? 'dark-mode' : ''}`}>
                     {showSuccess && <div className="success-toast">Issue successfully recorded.</div>}
@@ -6427,29 +6340,26 @@
                         <div>
                             <div className="logo">
                                 {(activeTab === 'stock-book' || activeTab === 'item-ledger-v2') ? 'Weft Stock Book' :
-                                    activeTab === 'item-detail' ? (selectedItem ? 'Weft Item Ledger' : 'Weft Stock Dashboard') :
-                                        activeTab === 'challan-detail' ? 'Challan Details' :
-                                            activeTab === 'box-detail' ? 'Box Details' :
-                                                activeTab === 'challan-history' ? 'Challan Register' :
-                                                    activeTab === 'log' ? 'Daily Issue Book' : 'Weft Stock Book'}
+                                    activeTab === 'item-detail' ? 'Weft Stock Dashboard' :
+                                        activeTab === 'challan-history' ? 'Challan Register' :
+                                            activeTab === 'log' ? 'Daily Issue Book' : 'Weft Stock Book'}
                             </div>
                             <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
                                 {(activeTab === 'stock-book' || activeTab === 'item-ledger-v2')
                                     ? 'Visual box matrix inventory & lot tracking — Box status, available cones & lot tracking'
-                                    : (activeTab === 'item-detail' && !selectedItem ? 'High-level inventory overview — Quality breakdown, cones & available stock' : 'Yarn Issue & Inventory Tracking')}
+                                    : (activeTab === 'item-detail' ? 'High-level inventory overview — Quality breakdown, cones & available stock' : 'Yarn Issue & Inventory Tracking')}
                             </p>
                         </div>
                         <nav className="nav-tabs">
-                            <div className={`nav-tab ${activeTab === 'item-detail' || activeTab === 'challan-detail' || activeTab === 'box-detail' ? 'active' : ''}`} onClick={() => { setActiveTab('item-detail'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>📊 Weft Stock Dashboard</div>
-                            <div className={`nav-tab ${activeTab === 'stock-book' || activeTab === 'item-ledger-v2' ? 'active' : ''}`} onClick={() => { setActiveTab('stock-book'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>📦 Weft Stock Book</div>
-                            <div className={`nav-tab ${activeTab === 'challan-history' ? 'active' : ''}`} onClick={() => { setActiveTab('challan-history'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>🚚 Challan History</div>
-                            <div className={`nav-tab ${activeTab === 'log' ? 'active' : ''}`} onClick={() => { setActiveTab('log'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>📝 Daily Issue Book</div>
+                            <div className={`nav-tab ${activeTab === 'item-detail' ? 'active' : ''}`} onClick={() => { setActiveTab('item-detail'); }}>📊 Weft Stock Dashboard</div>
+                            <div className={`nav-tab ${activeTab === 'stock-book' || activeTab === 'item-ledger-v2' ? 'active' : ''}`} onClick={() => { setActiveTab('stock-book'); }}>📦 Weft Stock Book</div>
+                            <div className={`nav-tab ${activeTab === 'challan-history' ? 'active' : ''}`} onClick={() => { setActiveTab('challan-history'); }}>🚚 Challan History</div>
+                            <div className={`nav-tab ${activeTab === 'log' ? 'active' : ''}`} onClick={() => { setActiveTab('log'); }}>📝 Daily Issue Book</div>
                         </nav>
                     </header>
 
-                    {activeTab === 'item-detail' && !selectedItem && (
+                    {activeTab === 'item-detail' && (
                         <main>
-                            <Breadcrumbs />
 
                             {/* 1. Executive Metric Cards */}
                             <div className="dash-kpi-grid">
@@ -6689,10 +6599,11 @@
                                                         <button
                                                             type="button"
                                                             className="dash-btn-link"
-                                                            onClick={() => openItemDetail(item)}
-                                                            title="View boxes & challans in Weft Ledger"
+                                                            onClick={() => openItemStockBook(item)}
+                                                            title="View quality in Weft Stock Book"
+                                                            style={{ background: 'rgba(139, 92, 246, 0.12)', color: 'var(--accent)', borderColor: 'rgba(139, 92, 246, 0.3)' }}
                                                         >
-                                                            <span>View Ledger</span>
+                                                            <span>View Stock Book</span>
                                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
                                                         </button>
                                                     </div>
@@ -6739,8 +6650,8 @@
                                                         <tr
                                                             key={idx}
                                                             style={{ cursor: 'pointer' }}
-                                                            onClick={() => openItemDetail(item)}
-                                                            title="Click to view item details and challan ledger"
+                                                            onClick={() => openItemStockBook(item)}
+                                                            title="Click to view quality in Weft Stock Book"
                                                         >
                                                             <td><span className="badge badge-primary">{item.itemType}</span></td>
                                                             <td style={{ fontWeight: 600, color: 'var(--fg)' }}>{item.company || '—'}</td>
@@ -6793,15 +6704,6 @@
                                                                         <span>Stock Book</span>
                                                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
                                                                     </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        className="dash-btn-link"
-                                                                        onClick={() => openItemDetail(item)}
-                                                                        title="View challan register & box history"
-                                                                        style={{ padding: '0.3rem 0.55rem' }}
-                                                                    >
-                                                                        <span>Ledger</span>
-                                                                    </button>
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -6812,318 +6714,6 @@
                                     </table>
                                 </div>
                             </div>
-                        </main>
-                    )}
-
-                    {activeTab === 'item-detail' && selectedItem && (
-                        <main>
-                            <Breadcrumbs />
-
-                            <div className="search-bar" style={{ marginBottom: '1.5rem' }}>
-                                <div>
-                                    <VfDatePicker label="From Date" value={challanFromDate} onChange={setChallanFromDate} placeholder="From Date" />
-                                </div>
-                                <div>
-                                    <VfDatePicker label="To Date" value={challanToDate} onChange={setChallanToDate} placeholder="To Date" />
-                                </div>
-                            </div>
-
-                            <div className="movement-summary">
-                                <div className="card stat-card">
-                                    <h4>In (Gross)</h4>
-                                    <div className="value">{movementTotals.totalInKg.toFixed(2)}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                    <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{movementTotals.totalInCones} cones</p>
-                                </div>
-                                <div className="card stat-card">
-                                    <h4 style={{ color: 'var(--error)' }}>GR (calculated)</h4>
-                                    <div className="value" style={{ color: 'var(--error)' }}>{movementTotals.totalGrKg.toFixed(2)}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                    <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{movementTotals.totalGrCones} cones</p>
-                                </div>
-                                <div className="card stat-card">
-                                    <h4>Issued</h4>
-                                    <div className="value">{movementTotals.totalOutKg.toFixed(2)}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                    <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{movementTotals.totalOutCones} cones</p>
-                                </div>
-                                <div className="card stat-card">
-                                    <h4 style={{ color: 'var(--accent)' }}>Remaining (Stock)</h4>
-                                    <div className="value" style={{ color: 'var(--accent)' }}>{movementTotals.balanceKg.toFixed(2)}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                    <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{movementTotals.balanceCones} cones</p>
-                                </div>
-                            </div>
-
-                            <div className="table-container">
-                                <table className="movement-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Received Date</th>
-                                            <th>Challan #</th>
-                                            <th>Lot #</th>
-                                            <th className="in-col">In cones</th>
-                                            <th className="in-col">In weight(Kg)</th>
-                                            <th style={{ color: 'var(--error)' }}>Gr cones (calculated)</th>
-                                            <th style={{ color: 'var(--error)' }}>Gr weight(Kg) (calculated)</th>
-                                            <th className="out-col">Issued cones</th>
-                                            <th className="out-col">Issued weight(Kg)</th>
-                                            <th className="remaining-col">Remaining cones</th>
-                                            <th className="remaining-col">Remaining weight(Kg)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredMovementRows.map(row => {
-                                            const remainingCones = (parseInt(row.inCones) || 0) - (parseInt(row.grCones) || 0) - (parseInt(row.outCones) || 0);
-                                            const remainingKg = (parseFloat(row.inKg) || 0) - (parseFloat(row.grKg) || 0) - (parseFloat(row.outKg) || 0);
-                                            return (
-                                                <tr key={row.id} className="clickable-row" onClick={() => openChallanDetail(row)} title="View challan boxes">
-                                                    <td style={{ color: 'var(--muted)' }}>{formatDate(row.arrivalDate)} {row.isCarriedForward && <span className="tag" style={{ fontSize: '0.7rem', padding: '0.1rem 0.3rem', background: 'rgba(139,92,246,0.1)', color: 'var(--accent)', marginLeft: '0.5rem' }}>CF</span>}</td>
-                                                    <td><strong style={{ color: 'var(--accent)' }}>{row.challanNumber}</strong></td>
-                                                    <td>{row.lotNumber || '—'}</td>
-                                                    <td className="in-col">{row.inCones ? row.inCones : '—'}</td>
-                                                    <td className="in-col">{row.inKg ? `${parseFloat(row.inKg).toFixed(3)} kg` : '—'}</td>
-                                                    <td style={{ color: 'var(--error)' }}>{row.grCones || '0'}</td>
-                                                    <td style={{ color: 'var(--error)' }}>{row.grKg ? `${parseFloat(row.grKg).toFixed(3)} kg` : '0.000 kg'}</td>
-                                                    <td className="out-col">{row.outCones ? row.outCones : '—'}</td>
-                                                    <td className="out-col">{row.outKg ? `${parseFloat(row.outKg).toFixed(3)} kg` : '—'}</td>
-                                                    <td className="remaining-col">{remainingCones ? remainingCones : '—'}</td>
-                                                    <td className="remaining-col">{remainingKg ? `${remainingKg.toFixed(3)} kg` : '—'}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                        {filteredMovementRows.length === 0 && (
-                                            <tr>
-                                                <td colSpan="11" style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
-                                                    {challanFromDate || challanToDate ? 'No challan entries in the selected date range.' : 'No outgoing challan totals logged for this code yet. Upload and log a daily CSV to see deductions here.'}
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </main>
-                    )}
-
-                    {activeTab === 'challan-detail' && selectedItem && selectedChallan && (
-                        <main>
-                            <Breadcrumbs />
-
-                            {challanBoxRows.length > 0 && (() => {
-                                const totInCones = challanBoxRows.reduce((s, r) => s + (parseInt(r.cones) || 0), 0);
-                                const totInKg = challanBoxRows.reduce((s, r) => s + (parseFloat(r.totalWeight) || 0), 0);
-                                const totGrCones = challanBoxRows.reduce((s, r) => s + (parseInt(r.grCones) || 0), 0);
-                                const totGrKg = challanBoxRows.reduce((s, r) => s + (parseFloat(r.grWeight) || 0), 0);
-                                const totOutCones = challanBoxRows.reduce((s, r) => s + (parseInt(r.issuedCones) || 0), 0);
-                                const totOutKg = challanBoxRows.reduce((s, r) => s + (parseFloat(r.issuedKg) || 0), 0);
-
-                                const netInCones = totInCones - totGrCones;
-                                const netInKg = totInKg - totGrKg;
-
-                                const totRemCones = netInCones - totOutCones;
-                                const totRemKg = netInKg - totOutKg;
-                                return (
-                                    <div className="movement-summary" style={{ marginBottom: '2rem' }}>
-                                        <div className="card stat-card">
-                                            <h4>In (Gross)</h4>
-                                            <div className="value">{totInKg.toFixed(3)}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                            <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{totInCones} cones</p>
-                                        </div>
-                                        <div className="card stat-card">
-                                            <h4 style={{ color: 'var(--error)' }}>GR (calculated)</h4>
-                                            <div className="value" style={{ color: 'var(--error)' }}>{totGrKg.toFixed(3)}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                            <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{totGrCones} cones</p>
-                                        </div>
-                                        <div className="card stat-card">
-                                            <h4>Issued</h4>
-                                            <div className="value">{totOutKg ? `${totOutKg.toFixed(3)}` : '—'}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                            <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{totOutCones || '—'} cones</p>
-                                        </div>
-                                        <div className="card stat-card">
-                                            <h4 style={{ color: 'var(--accent)' }}>Remaining (Stock)</h4>
-                                            <div className="value" style={{ color: 'var(--accent)' }}>{totRemKg.toFixed(3)}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                            <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{totRemCones} cones</p>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-
-                            <div className="table-container">
-                                <table className="movement-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Box Number</th>
-                                            <th className="in-col">In cones</th>
-                                            <th className="in-col">In weight(Kg)</th>
-                                            <th style={{ color: 'var(--error)' }}>GR Cones (calculated)</th>
-                                            <th style={{ color: 'var(--error)' }}>GR (kg) (calculated)</th>
-                                            <th className="out-col">Issued cones</th>
-                                            <th className="out-col">Issued weight(Kg)</th>
-                                            <th className="remaining-col">Remaining cones</th>
-                                            <th className="remaining-col">Remaining weight(Kg)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {challanBoxRows.map(row => {
-                                            const displayCones = row.isCarriedForward ? row.openingStockCones : row.cones;
-                                            const displayWeight = row.isCarriedForward ? row.openingStockKg : row.totalWeight;
-                                            const displayGrCones = row.isCarriedForward ? 0 : row.grCones;
-                                            const displayGrWeight = row.isCarriedForward ? 0 : row.grWeight;
-
-                                            const remainingCones = displayCones - displayGrCones - (parseInt(row.issuedCones) || 0);
-                                            const remainingKg = displayWeight - displayGrWeight - (parseFloat(row.issuedKg) || 0);
-                                            return (
-                                                <tr key={row.id} className="clickable-row" onClick={() => openBoxDetail(row)} title="View box issue history">
-                                                    <td><strong style={{ color: 'var(--accent)' }}>{row.boxNumber} {row.isCarriedForward && <span className="tag" style={{ fontSize: '0.7rem', padding: '0.1rem 0.3rem', background: 'rgba(139,92,246,0.1)', color: 'var(--accent)', marginLeft: '0.5rem' }}>CF</span>}</strong></td>
-                                                    <td className="in-col">{displayCones}</td>
-                                                    <td className="in-col">{displayWeight.toFixed(3)}</td>
-                                                    <td style={{ color: 'var(--error)' }}>{displayGrCones || '0'}</td>
-                                                    <td style={{ color: 'var(--error)' }}>{displayGrWeight.toFixed(3)}</td>
-                                                    <td className="out-col">{row.issuedCones || '0'}</td>
-                                                    <td className="out-col">{row.issuedKg.toFixed(3)}</td>
-                                                    <td className="remaining-col">{remainingCones}</td>
-                                                    <td className="remaining-col">{remainingKg.toFixed(3)}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </main>
-                    )}
-
-                    {activeTab === 'box-detail' && selectedItem && selectedChallan && selectedBox && (
-                        <main>
-                            <Breadcrumbs />
-
-                            <div className="movement-summary">
-                                {(() => {
-                                    const inCones = parseInt(selectedBox.cones) || 0;
-                                    const inKg = parseFloat(selectedBox.totalWeight) || 0;
-                                    const grCones = parseInt(selectedBox.grCones) || 0;
-                                    const grWeight = parseFloat(selectedBox.grWeight) || 0;
-
-                                    const totOutCones = boxCombinedEntries.filter(e => e.isIssue).reduce((s, e) => s + (parseInt(e.cones) || 0), 0);
-                                    const totOutKg = boxCombinedEntries.filter(e => e.isIssue).reduce((s, e) => s + (parseFloat(e.net) || 0), 0);
-
-                                    const netInCones = inCones - grCones;
-                                    const netInKg = inKg - grWeight;
-
-                                    return (
-                                        <>
-                                            <div className="card stat-card">
-                                                <h4>Received</h4>
-                                                <div className="value">{inKg.toFixed(2)}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                                <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{inCones} cones</p>
-                                            </div>
-                                            <div className="card stat-card">
-                                                <h4 style={{ color: 'var(--error)' }}>GR (calculated)</h4>
-                                                <div className="value" style={{ color: 'var(--error)' }}>{grWeight.toFixed(2)}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                                <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{grCones} cones</p>
-                                            </div>
-                                            <div className="card stat-card">
-                                                <h4>Issued</h4>
-                                                <div className="value">{totOutKg.toFixed(2)}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                                <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{totOutCones} cones</p>
-                                            </div>
-                                            <div className="card stat-card">
-                                                <h4 style={{ color: 'var(--accent)' }}>Remaining</h4>
-                                                <div className="value" style={{ color: 'var(--accent)' }}>{Math.max(0, netInKg - totOutKg).toFixed(2)}<span style={{ fontSize: '1rem', marginLeft: '0.5rem' }}>kg</span></div>
-                                                <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{Math.max(0, netInCones - totOutCones)} cones</p>
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                            </div>
-                            <div className="table-container">
-                                <table className="movement-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Issue/GR date</th>
-                                            <th className="out-col">Issued cones</th>
-                                            <th className="out-col">Issued weight(Kg)</th>
-                                            <th style={{ color: 'var(--error)' }}>Gr cones (calculated)</th>
-                                            <th style={{ color: 'var(--error)' }}>Gr Weight(Kgs) (calculated)</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {boxCombinedEntries.map(entry => (
-                                            <tr key={entry.id}>
-                                                {editingIssueId === entry.id ? (
-                                                    <>
-                                                        <td><VfDatePicker value={editingIssueDraft.date || ''} onChange={(val) => updateIssueDraft('date', val)} className="csv-input" /></td>
-                                                        <td className="out-col"><input className="csv-input" type="number" value={editingIssueDraft.cones || ''} onChange={(e) => updateIssueConesDraft(e.target.value)} /></td>
-                                                        <td className="out-col"><input className="csv-input" type="number" step="0.001" value={editingIssueDraft.net || ''} readOnly title="Calculated from box kg per cone" /></td>
-                                                        <td style={{ color: 'var(--error)' }}>—</td>
-                                                        <td style={{ color: 'var(--error)' }}>—</td>
-                                                        <td>
-                                                            <div className="action-row">
-                                                                <button className="mini-button" type="button" onClick={saveIssueEdit}>Save</button>
-                                                                <button className="mini-button" type="button" onClick={cancelIssueEdit}>Cancel</button>
-                                                            </div>
-                                                        </td>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <td style={{ color: 'var(--muted)' }}>{formatDate(entry.date) || '—'}</td>
-                                                        <td className="out-col">{entry.isIssue ? (entry.cones || '—') : '—'}</td>
-                                                        <td className="out-col">
-                                                            {entry.isIssue ? (
-                                                                (() => {
-                                                                    const cw = selectedBoxConeWeight();
-                                                                    const c = parseFloat(entry.cones);
-                                                                    return (cw > 0 && c > 0) ? `${(c * cw).toFixed(3)} kg` : (entry.net ? `${parseFloat(entry.net).toFixed(3)} kg` : '—');
-                                                                })()
-                                                            ) : '—'}
-                                                        </td>
-                                                        <td style={{ color: 'var(--error)' }}>{entry.isGR ? (entry.grCones || '0') : '—'}</td>
-                                                        <td style={{ color: 'var(--error)' }}>{entry.isGR ? (parseFloat(entry.grWeight).toFixed(3) + ' kg') : '—'}</td>
-                                                        <td>
-                                                            {entry.isIssue ? (
-                                                                <div className="action-row">
-                                                                    <button
-                                                                        className="mini-button"
-                                                                        type="button"
-                                                                        onClick={() => startIssueEdit(entry)}
-                                                                        style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--accent)', color: 'var(--accent)' }}
-                                                                    >
-                                                                        Edit
-                                                                    </button>
-                                                                    <button
-                                                                        className="mini-button"
-                                                                        type="button"
-                                                                        onClick={() => deleteIssue(entry.id)}
-                                                                        style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--error)', color: 'var(--error)' }}
-                                                                    >
-                                                                        Delete
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <button
-                                                                    className="mini-button"
-                                                                    type="button"
-                                                                    onClick={() => editGR(entry.orderId, selectedItem.quality, selectedItem.code)}
-                                                                    title="Open RM Order Book to edit this GR"
-                                                                    style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--accent)', color: 'var(--accent)' }}
-                                                                >
-                                                                    Edit
-                                                                </button>
-                                                            )}
-                                                        </td>
-                                                    </>
-                                                )}
-                                            </tr>
-                                        ))}
-                                        {boxCombinedEntries.length === 0 && (
-                                            <tr>
-                                                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
-                                                    No box issue history or returns logged for this box yet.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                                Issue weight auto-calculates from this box: {selectedBoxConeWeight() > 0 ? `${selectedBoxConeWeight().toFixed(3)} kg per cone` : 'box cone weight unavailable'}.
-                            </p>
                         </main>
                     )}
 
@@ -7238,7 +6828,7 @@
                                                 onChange={(e) => setSbQualityFilter(e.target.value)}
                                             >
                                                 <option value="all">All Qualities</option>
-                                                {uniqueQualities.map(q => (
+                                                {sbQualityOptions.map(q => (
                                                     <option key={q} value={q}>{q}</option>
                                                 ))}
                                             </select>
