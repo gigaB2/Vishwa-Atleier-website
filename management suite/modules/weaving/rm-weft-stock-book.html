@@ -4917,7 +4917,7 @@
                     'box-detail': 'Box Details',
                     'low-stock': 'Low Stock Alerts',
                     'challan-history': 'Challan Register',
-                    'log': 'Transaction Log'
+                    'log': 'Daily Issue Book'
                 };
                 const tabName = (activeTab === 'item-detail' && selectedItem)
                     ? `${selectedItem.quality || 'Item'} - Weft Ledger`
@@ -6436,7 +6436,7 @@
                                             activeTab === 'box-detail' ? 'Box Details' :
                                                 activeTab === 'low-stock' ? 'Low Stock Alerts' :
                                                     activeTab === 'challan-history' ? 'Challan Register' :
-                                                        activeTab === 'log' ? 'Transaction Log' : 'Weft Stock Book'}
+                                                        activeTab === 'log' ? 'Daily Issue Book' : 'Weft Stock Book'}
                             </div>
                             <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
                                 {(activeTab === 'stock-book' || activeTab === 'item-ledger-v2')
@@ -6449,7 +6449,7 @@
                             <div className={`nav-tab ${activeTab === 'stock-book' || activeTab === 'item-ledger-v2' ? 'active' : ''}`} onClick={() => { setActiveTab('stock-book'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>📦 Weft Stock Book</div>
                             <div className={`nav-tab ${activeTab === 'low-stock' ? 'active' : ''}`} onClick={() => { setActiveTab('low-stock'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>📉 Low Stock</div>
                             <div className={`nav-tab ${activeTab === 'challan-history' ? 'active' : ''}`} onClick={() => { setActiveTab('challan-history'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>🚚 Challan History</div>
-                            <div className={`nav-tab ${activeTab === 'log' ? 'active' : ''}`} onClick={() => { setActiveTab('log'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>📝 Log Issue</div>
+                            <div className={`nav-tab ${activeTab === 'log' ? 'active' : ''}`} onClick={() => { setActiveTab('log'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>📝 Daily Issue Book</div>
                         </nav>
                     </header>
 
@@ -7597,7 +7597,7 @@
                                                                                                 </div>
                                                                                             )}
                                                                                             <div className="box-tooltip-hint">
-                                                                                                {box.effectiveStatus === 'available' ? '📦 In Stock (Issuance strictly via Transaction Logs)' :
+                                                                                                {box.effectiveStatus === 'available' ? '📦 In Stock (Issuance strictly via Daily Issue Book)' :
                                                                                                  box.effectiveStatus === 'issued' ? '↺ Click to un-issue back to stock' :
                                                                                                  '🔒 GR managed in Weaving RM Orders'}
                                                                                             </div>
@@ -7622,7 +7622,7 @@
 
                     {activeTab === 'log' && (
                         <main>
-                            <h2 style={{ marginBottom: '0.5rem' }}>Daily Issue Log</h2>
+                            <h2 style={{ marginBottom: '0.5rem' }}>Daily Issue Book</h2>
                             <p style={{ color: 'var(--muted)', marginBottom: '2rem' }}>Add issues individually or upload a CSV batch.</p>
 
                             <div className="card" style={{ marginBottom: '2rem', overflow: 'visible', zIndex: 10 }}>
