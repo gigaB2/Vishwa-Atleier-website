@@ -348,4 +348,113 @@ test('Weaving RM Orders — Multi-PC Sync & Supabase Single Source of Truth', as
     assert.strictEqual(savedYarnOrders.length, 1, 'Yarn orders must contain only yarn orders');
     assert.strictEqual(savedYarnOrders[0].id, 'YRN-ORD-201');
   });
+
+  await t.test('9. Goods Return (GR) Addition & Deletion Sync: GR addition computes net weight and GR deletion on PC 1 transmits without resurrection on PC 2', () => {
+    // Initial State: Batch with 2 boxes (50kg each, 0 GR)
+    const initialOrders = [
+      {
+        id: 'WV-ORD-301',
+        orderNumber: 'WV-301',
+        quality: 'WARP SILK 50D',
+        supplier: 'Silk Traders',
+        orderedWeight: 100,
+        status: 'Active',
+        batches: [
+          {
+            id: 'BCH-301',
+            challanNumber: 'CH-301',
+            receiveDate: '2026-09-08',
+            lotNumber: 'LOT-301',
+            grossWeight: 100,
+            returnedWeight: 0,
+            totalWeight: 100,
+            receivedQty: 100,
+            boxes: [
+              { boxNumber: 'B1', cones: 20, weight: 50, grossWeight: 50, remainingWeight: 50, returnedWeight: 0, returnedDate: '', status: 'available', updated_at: '2026-09-08T10:00:00.000Z' },
+              { boxNumber: 'B2', cones: 20, weight: 50, grossWeight: 50, remainingWeight: 50, returnedWeight: 0, returnedDate: '', status: 'available', updated_at: '2026-09-08T10:00:00.000Z' }
+            ],
+            updated_at: '2026-09-08T10:00:00.000Z'
+          }
+        ],
+        updatedAt: '2026-09-08T10:00:00.000Z'
+      }
+    ];
+
+    // Step 1: PC 1 adds GR of 10kg to B1
+    const pc1OrdersWithGR = [
+      {
+        id: 'WV-ORD-301',
+        orderNumber: 'WV-301',
+        quality: 'WARP SILK 50D',
+        supplier: 'Silk Traders',
+        orderedWeight: 100,
+        status: 'Active',
+        batches: [
+          {
+            id: 'BCH-301',
+            challanNumber: 'CH-301',
+            receiveDate: '2026-09-08',
+            lotNumber: 'LOT-301',
+            grossWeight: 100,
+            returnedWeight: 10,
+            totalWeight: 90,
+            receivedQty: 90,
+            boxes: [
+              { boxNumber: 'B1', cones: 20, weight: 50, grossWeight: 50, remainingWeight: 40, returnedWeight: 10, returnedDate: '2026-09-08', status: 'available', updated_at: '2026-09-08T11:00:00.000Z' },
+              { boxNumber: 'B2', cones: 20, weight: 50, grossWeight: 50, remainingWeight: 50, returnedWeight: 0, returnedDate: '', status: 'available', updated_at: '2026-09-08T10:00:00.000Z' }
+            ],
+            updated_at: '2026-09-08T11:00:00.000Z'
+          }
+        ],
+        updatedAt: '2026-09-08T11:00:00.000Z'
+      }
+    ];
+
+    // PC 2 merges PC 1's GR addition
+    const mergedOnPC2 = vSupabase.mergeDatasets('yarn-orders', initialOrders, pc1OrdersWithGR);
+    assert.strictEqual(mergedOnPC2[0].batches[0].grossWeight, 100);
+    assert.strictEqual(mergedOnPC2[0].batches[0].returnedWeight, 10);
+    assert.strictEqual(mergedOnPC2[0].batches[0].totalWeight, 90);
+    assert.strictEqual(mergedOnPC2[0].batches[0].boxes[0].returnedWeight, 10);
+    assert.strictEqual(mergedOnPC2[0].batches[0].boxes[0].remainingWeight, 40);
+    assert.strictEqual(mergedOnPC2[0].batches[0].boxes[0].grossWeight, 50);
+
+    // Step 2: PC 1 deletes the GR on B1 (sets returnedWeight: 0, restored to 50kg)
+    const pc1OrdersGRDeleted = [
+      {
+        id: 'WV-ORD-301',
+        orderNumber: 'WV-301',
+        quality: 'WARP SILK 50D',
+        supplier: 'Silk Traders',
+        orderedWeight: 100,
+        status: 'Active',
+        batches: [
+          {
+            id: 'BCH-301',
+            challanNumber: 'CH-301',
+            receiveDate: '2026-09-08',
+            lotNumber: 'LOT-301',
+            grossWeight: 100,
+            returnedWeight: 0,
+            totalWeight: 100,
+            receivedQty: 100,
+            boxes: [
+              { boxNumber: 'B1', cones: 20, weight: 50, grossWeight: 50, remainingWeight: 50, returnedWeight: 0, returnedDate: '', status: 'available', updated_at: '2026-09-08T12:00:00.000Z' },
+              { boxNumber: 'B2', cones: 20, weight: 50, grossWeight: 50, remainingWeight: 50, returnedWeight: 0, returnedDate: '', status: 'available', updated_at: '2026-09-08T10:00:00.000Z' }
+            ],
+            updated_at: '2026-09-08T12:00:00.000Z'
+          }
+        ],
+        updatedAt: '2026-09-08T12:00:00.000Z'
+      }
+    ];
+
+    // PC 2 receives the deletion and merges with its prior state that had the GR
+    const mergedAfterDeletion = vSupabase.mergeDatasets('yarn-orders', mergedOnPC2, pc1OrdersGRDeleted);
+    assert.strictEqual(mergedAfterDeletion[0].batches[0].boxes[0].returnedWeight, 0, 'Deleted GR must NOT resurrect on PC 2');
+    assert.strictEqual(mergedAfterDeletion[0].batches[0].boxes[0].remainingWeight, 50, 'Box 1 remaining weight must restore to 50kg');
+    assert.strictEqual(mergedAfterDeletion[0].batches[0].boxes[0].grossWeight, 50, 'Box 1 gross weight must remain 50kg');
+    assert.strictEqual(mergedAfterDeletion[0].batches[0].returnedWeight, 0, 'Batch returnedWeight must be 0');
+    assert.strictEqual(mergedAfterDeletion[0].batches[0].totalWeight, 100, 'Batch totalWeight must be 100');
+  });
 });

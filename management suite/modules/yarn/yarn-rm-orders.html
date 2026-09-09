@@ -4092,33 +4092,17 @@
           ? new Map(editingBatch.boxes.map(bx => [String(bx.boxNumber || bx.id).trim(), bx]))
           : new Map();
 
+        const nowIso = new Date().toISOString();
+
         const processedBoxes = (batchData.boxes || []).map(box => {
           const bNum = String(box.boxNumber || box.id).trim();
           const oldBx = existingBatchBoxesMap.get(bNum);
-          const retWt = Number(box.returnedWeight || box.grWeight || oldBx?.returnedWeight || oldBx?.grWeight || 0);
+          const retWt = Math.max(0, Number(box.returnedWeight || box.grWeight || 0));
 
-          const grossCandidates = [
-            Number(box.grossWeight || 0),
-            Number(oldBx?.grossWeight || 0),
-            Number(box.weight || 0),
-            Number(oldBx?.weight || 0),
-            box.remainingWeight !== undefined ? (Number(box.remainingWeight) + retWt) : 0,
-            oldBx?.remainingWeight !== undefined ? (Number(oldBx.remainingWeight) + retWt) : 0
-          ];
-          if (retWt > 0) {
-            if (Number(box.weight || 0) > 0 && Number(box.weight || 0) !== retWt) grossCandidates.push(Number(box.weight) + retWt);
-            if (Number(oldBx?.weight || 0) > 0 && Number(oldBx?.weight || 0) !== retWt) grossCandidates.push(Number(oldBx.weight) + retWt);
-          }
-          const grossWt = Math.max(...grossCandidates, retWt, 0);
-
-          const remWt = (box.remainingWeight !== undefined && Number(box.remainingWeight) >= 0 && (Number(box.remainingWeight) > 0 || retWt >= grossWt))
-            ? Number(box.remainingWeight)
-            : (oldBx?.remainingWeight !== undefined && Number(oldBx.remainingWeight) >= 0 && (Number(oldBx.remainingWeight) > 0 || retWt >= grossWt))
-              ? Number(oldBx.remainingWeight)
-              : Math.max(0, Number((grossWt - retWt).toFixed(2)));
-
-          const isFullyGr = (retWt > 0 && retWt >= grossWt - 0.001 && grossWt > 0) || 
-            ((box.status === 'gr' || oldBx?.status === 'gr') && (retWt === 0 || retWt >= grossWt - 0.001) && remWt <= 0);
+          // Gross weight is the full box weight entered by the user
+          const grossWt = Number(box.weight !== undefined && box.weight !== '' ? box.weight : (box.grossWeight || oldBx?.grossWeight || oldBx?.weight || 0));
+          const remWt = Math.max(0, Number((grossWt - retWt).toFixed(2)));
+          const isFullyGr = (retWt > 0 && retWt >= grossWt - 0.001 && grossWt > 0);
 
           const prevIssueDate = box.previousIssueDate || oldBx?.previousIssueDate || (oldBx?.status === 'issued' ? oldBx.issueDate : null);
           const prevIssuedTo = box.previousIssuedTo || oldBx?.previousIssuedTo || (oldBx?.status === 'issued' ? oldBx.issuedTo : null);
@@ -4140,20 +4124,31 @@
             ...box,
             grossWeight: grossWt,
             remainingWeight: remWt,
-            weight: isFullyGr ? grossWt : remWt,
+            weight: grossWt,
+            returnedWeight: retWt,
             status: status,
             issueDate: issueDate,
             issuedTo: issuedTo,
             previousIssueDate: prevIssueDate,
             previousIssuedTo: prevIssuedTo,
-            returnedDate: box.returnedDate ? addTimestampToDate(box.returnedDate) : ''
+            returnedDate: retWt > 0 && box.returnedDate ? addTimestampToDate(box.returnedDate) : '',
+            updated_at: nowIso
           };
         });
+
+        const grossTotal = (processedBoxes || []).reduce((acc, bx) => acc + (Number(bx.grossWeight) || Number(bx.weight) || 0), 0);
+        const totalGr = (processedBoxes || []).reduce((acc, bx) => acc + (Number(bx.returnedWeight) || 0), 0);
+        const tw = Math.max(0, Number((grossTotal - totalGr).toFixed(2)));
 
         const processed = {
           ...batchData,
           receiveDate: addTimestampToDate(batchData.receiveDate),
-          boxes: processedBoxes
+          boxes: processedBoxes,
+          grossWeight: grossTotal,
+          returnedWeight: totalGr,
+          totalWeight: tw,
+          receivedQty: tw,
+          updated_at: nowIso
         };
         
         let updatedBatches = editingBatch 
@@ -4923,6 +4918,7 @@
         if (data?.boxes && data.boxes.length > 0) {
           return data.boxes.map(b => ({
             ...b,
+            weight: (b.grossWeight !== undefined && b.grossWeight !== null && b.grossWeight !== '') ? b.grossWeight : (b.weight !== undefined && b.weight !== null ? b.weight : ''),
             returnedWeight: (b.returnedWeight !== undefined && b.returnedWeight !== null && b.returnedWeight !== '') ? b.returnedWeight : '',
             returnedDate: b.returnedDate ? b.returnedDate.split('T')[0] : ''
           }));

@@ -589,27 +589,9 @@
           const prevIssueDate = incBox.previousIssueDate || curBox.previousIssueDate || (incBox.status === 'issued' ? incBox.issueDate : (curBox.status === 'issued' ? curBox.issueDate : null));
           const prevIssuedTo = incBox.previousIssuedTo || curBox.previousIssuedTo || (incBox.status === 'issued' ? incBox.issuedTo : (curBox.status === 'issued' ? curBox.issuedTo : null));
 
-          const winnerRet = Math.max(Number(curBox.grWeight || curBox.returnedWeight || 0), Number(incBox.grWeight || incBox.returnedWeight || 0), Number(winner.grWeight || winner.returnedWeight || 0));
-          const grossCandidates = [
-            Number(curBox.grossWeight || 0),
-            Number(incBox.grossWeight || 0),
-            Number(winner.grossWeight || 0),
-            Number(curBox.weight || 0),
-            Number(incBox.weight || 0),
-            Number(winner.weight || 0),
-            curBox.remainingWeight !== undefined ? (Number(curBox.remainingWeight) + winnerRet) : 0,
-            incBox.remainingWeight !== undefined ? (Number(incBox.remainingWeight) + winnerRet) : 0,
-            winner.remainingWeight !== undefined ? (Number(winner.remainingWeight) + winnerRet) : 0
-          ];
-          if (winnerRet > 0) {
-            if (Number(curBox.weight || 0) > 0 && Number(curBox.weight || 0) !== winnerRet) grossCandidates.push(Number(curBox.weight) + winnerRet);
-            if (Number(incBox.weight || 0) > 0 && Number(incBox.weight || 0) !== winnerRet) grossCandidates.push(Number(incBox.weight) + winnerRet);
-            if (Number(winner.weight || 0) > 0 && Number(winner.weight || 0) !== winnerRet) grossCandidates.push(Number(winner.weight) + winnerRet);
-          }
-          const winnerGross = Math.max(...grossCandidates, winnerRet, 1);
-          const winnerRem = (winner.remainingWeight !== undefined && Number(winner.remainingWeight) >= 0 && (Number(winner.remainingWeight) > 0 || winnerRet >= winnerGross))
-            ? Number(winner.remainingWeight)
-            : Math.max(0, Number((winnerGross - winnerRet).toFixed(2)));
+          const winnerRet = Number(winner.returnedWeight !== undefined && winner.returnedWeight !== null && winner.returnedWeight !== '' ? winner.returnedWeight : (winner.grWeight || 0));
+          const winnerGross = Number(winner.grossWeight !== undefined && winner.grossWeight !== null && winner.grossWeight !== '' ? winner.grossWeight : (winner.weight || loser.grossWeight || loser.weight || 0));
+          const winnerRem = Math.max(0, Number((winnerGross - winnerRet).toFixed(2)));
 
           const isWinnerGr = (winnerRet > 0 && winnerRet >= winnerGross - 0.001 && winnerGross > 0) || 
             (winner.status === 'gr' && (winnerRet === 0 || winnerRet >= winnerGross - 0.001) && winnerRem <= 0);
@@ -621,19 +603,27 @@
               grossWeight: winnerGross,
               remainingWeight: 0,
               weight: winnerGross,
+              returnedWeight: winnerRet,
+              returnedDate: winner.returnedDate || '',
               status: 'gr',
               issueDate: null,
               issuedTo: null,
               previousIssueDate: prevIssueDate,
-              previousIssuedTo: prevIssuedTo
+              previousIssuedTo: prevIssuedTo,
+              updated_at: winner.updated_at || new Date().toISOString()
             });
             return;
           }
 
           if (curBox.status === 'issued' && incBox.status === 'issued') {
             boxMap.set(bId, {
-              ...curBox,
-              ...incBox,
+              ...loser,
+              ...winner,
+              grossWeight: winnerGross,
+              remainingWeight: winnerRem,
+              weight: winnerGross,
+              returnedWeight: winnerRet,
+              returnedDate: winnerRet > 0 ? (winner.returnedDate || '') : '',
               status: 'issued',
               issueDate: winner.issueDate || curBox.issueDate || incBox.issueDate || prevIssueDate,
               issuedTo: winner.issuedTo || curBox.issuedTo || incBox.issuedTo || prevIssuedTo,
@@ -647,6 +637,11 @@
               boxMap.set(bId, {
                 ...loser,
                 ...winner,
+                grossWeight: winnerGross,
+                remainingWeight: winnerRem,
+                weight: winnerGross,
+                returnedWeight: winnerRet,
+                returnedDate: winnerRet > 0 ? (winner.returnedDate || '') : '',
                 status: 'issued',
                 issueDate: prevIssueDate,
                 issuedTo: prevIssuedTo || 'Department',
@@ -656,8 +651,13 @@
               });
             } else {
               boxMap.set(bId, {
-                ...curBox,
-                ...incBox,
+                ...loser,
+                ...winner,
+                grossWeight: winnerGross,
+                remainingWeight: winnerRem,
+                weight: winnerGross,
+                returnedWeight: winnerRet,
+                returnedDate: winnerRet > 0 ? (winner.returnedDate || '') : '',
                 status: 'available',
                 issueDate: null,
                 issuedTo: null,
@@ -681,8 +681,13 @@
             // An available box ONLY overwrites an issued box if it was explicitly unissued after the issuance
             if (unissuedTime > 0 && unissuedTime >= issuedTime) {
               boxMap.set(bId, {
-                ...issuedBox,
-                ...availBox,
+                ...loser,
+                ...winner,
+                grossWeight: winnerGross,
+                remainingWeight: winnerRem,
+                weight: winnerGross,
+                returnedWeight: winnerRet,
+                returnedDate: winnerRet > 0 ? (winner.returnedDate || '') : '',
                 status: 'available',
                 issueDate: null,
                 issuedTo: null,
@@ -693,8 +698,13 @@
               });
             } else {
               boxMap.set(bId, {
-                ...availBox,
-                ...issuedBox,
+                ...loser,
+                ...winner,
+                grossWeight: winnerGross,
+                remainingWeight: winnerRem,
+                weight: winnerGross,
+                returnedWeight: winnerRet,
+                returnedDate: winnerRet > 0 ? (winner.returnedDate || '') : '',
                 status: 'issued',
                 issueDate: issuedBox.issueDate || prevIssueDate,
                 issuedTo: issuedBox.issuedTo || prevIssuedTo,
@@ -890,30 +900,12 @@
                 const prevIssueDate = locBx.previousIssueDate || remBx.previousIssueDate || (locBx.status === 'issued' ? locBx.issueDate : (remBx.status === 'issued' ? remBx.issueDate : null));
                 const prevIssuedTo = locBx.previousIssuedTo || remBx.previousIssuedTo || (locBx.status === 'issued' ? locBx.issuedTo : (remBx.status === 'issued' ? remBx.issuedTo : null));
 
-                const winnerRet = Math.max(Number(locBx.returnedWeight || locBx.grWeight || 0), Number(remBx.returnedWeight || remBx.grWeight || 0), Number(winner.returnedWeight || winner.grWeight || 0));
-                const grossCandidates = [
-                  Number(locBx.grossWeight || 0),
-                  Number(remBx.grossWeight || 0),
-                  Number(winner.grossWeight || 0),
-                  Number(locBx.weight || 0),
-                  Number(remBx.weight || 0),
-                  Number(winner.weight || 0),
-                  locBx.remainingWeight !== undefined ? (Number(locBx.remainingWeight) + winnerRet) : 0,
-                  remBx.remainingWeight !== undefined ? (Number(remBx.remainingWeight) + winnerRet) : 0,
-                  winner.remainingWeight !== undefined ? (Number(winner.remainingWeight) + winnerRet) : 0
-                ];
-                if (winnerRet > 0) {
-                  if (Number(locBx.weight || 0) > 0 && Number(locBx.weight || 0) !== winnerRet) grossCandidates.push(Number(locBx.weight) + winnerRet);
-                  if (Number(remBx.weight || 0) > 0 && Number(remBx.weight || 0) !== winnerRet) grossCandidates.push(Number(remBx.weight) + winnerRet);
-                  if (Number(winner.weight || 0) > 0 && Number(winner.weight || 0) !== winnerRet) grossCandidates.push(Number(winner.weight) + winnerRet);
-                }
-                const winnerGross = Math.max(...grossCandidates, winnerRet, 1);
-                const winnerRem = (winner.remainingWeight !== undefined && Number(winner.remainingWeight) >= 0 && (Number(winner.remainingWeight) > 0 || winnerRet >= winnerGross))
-                  ? Number(winner.remainingWeight)
-                  : Math.max(0, Number((winnerGross - winnerRet).toFixed(2)));
+                const winnerRet = Number(winner.returnedWeight !== undefined && winner.returnedWeight !== null && winner.returnedWeight !== '' ? winner.returnedWeight : (winner.grWeight || 0));
+                const winnerGross = Number(winner.grossWeight !== undefined && winner.grossWeight !== null && winner.grossWeight !== '' ? winner.grossWeight : (winner.weight || loser.grossWeight || loser.weight || 0));
+                const winnerRem = Math.max(0, Number((winnerGross - winnerRet).toFixed(2)));
 
                 const isWinnerGr = (winnerRet > 0 && winnerRet >= winnerGross - 0.001 && winnerGross > 0) || 
-                  (winner.status === 'gr' && (winnerRet === 0 || winnerRet >= winnerGross - 0.001) && winnerRem <= 0);
+                  (winner.status === 'gr' && winnerRet > 0);
 
                 if (isWinnerGr) {
                   bBoxMap.set(bxId, {
@@ -922,51 +914,36 @@
                     grossWeight: winnerGross,
                     remainingWeight: 0,
                     weight: winnerGross,
+                    returnedWeight: winnerRet,
+                    returnedDate: winner.returnedDate || '',
                     status: 'gr',
                     issueDate: null,
                     issuedTo: null,
                     previousIssueDate: prevIssueDate,
-                    previousIssuedTo: prevIssuedTo
+                    previousIssuedTo: prevIssuedTo,
+                    updated_at: winner.updated_at || new Date().toISOString()
                   });
                   return;
                 }
 
+                let mergedStatus = winner.status || 'available';
+                let mergedIssueDate = winner.issueDate || null;
+                let mergedIssuedTo = winner.issuedTo || null;
+
                 if (locBx.status === 'issued' && remBx.status === 'issued') {
-                  bBoxMap.set(bxId, {
-                    ...remBx,
-                    ...locBx,
-                    status: 'issued',
-                    issueDate: winner.issueDate || locBx.issueDate || remBx.issueDate || prevIssueDate,
-                    issuedTo: winner.issuedTo || locBx.issuedTo || remBx.issuedTo || prevIssuedTo,
-                    previousIssueDate: prevIssueDate,
-                    previousIssuedTo: prevIssuedTo,
-                    updated_at: winner.updated_at || locBx.updated_at || remBx.updated_at
-                  });
+                  mergedStatus = 'issued';
+                  mergedIssueDate = winner.issueDate || locBx.issueDate || remBx.issueDate || prevIssueDate;
+                  mergedIssuedTo = winner.issuedTo || locBx.issuedTo || remBx.issuedTo || prevIssuedTo;
                 } else if (locBx.status !== 'issued' && remBx.status !== 'issued') {
                   const wasIssued = Boolean(prevIssueDate && (!winner.unissued_at || new Date(winner.unissued_at).getTime() < new Date(prevIssueDate).getTime()));
                   if (wasIssued) {
-                    bBoxMap.set(bxId, {
-                      ...loser,
-                      ...winner,
-                      status: 'issued',
-                      issueDate: prevIssueDate,
-                      issuedTo: prevIssuedTo || 'Department',
-                      previousIssueDate: prevIssueDate,
-                      previousIssuedTo: prevIssuedTo,
-                      updated_at: winner.updated_at || new Date().toISOString()
-                    });
+                    mergedStatus = 'issued';
+                    mergedIssueDate = prevIssueDate;
+                    mergedIssuedTo = prevIssuedTo || 'Department';
                   } else {
-                    bBoxMap.set(bxId, {
-                      ...remBx,
-                      ...locBx,
-                      status: 'available',
-                      issueDate: null,
-                      issuedTo: null,
-                      previousIssueDate: null,
-                      previousIssuedTo: null,
-                      unissued_at: winner.unissued_at || locBx.unissued_at || remBx.unissued_at || winner.updated_at,
-                      updated_at: winner.updated_at || locBx.updated_at || remBx.updated_at
-                    });
+                    mergedStatus = 'available';
+                    mergedIssueDate = null;
+                    mergedIssuedTo = null;
                   }
                 } else {
                   const issuedBx = (locBx.status === 'issued') ? locBx : remBx;
@@ -980,37 +957,47 @@
 
                   // An available box ONLY overwrites an issued box if it was explicitly unissued after the issuance
                   if (unissuedTime > 0 && unissuedTime >= issuedTime) {
-                    bBoxMap.set(bxId, {
-                      ...issuedBx,
-                      ...availBx,
-                      status: 'available',
-                      issueDate: null,
-                      issuedTo: null,
-                      previousIssueDate: null,
-                      previousIssuedTo: null,
-                      unissued_at: availBx.unissued_at,
-                      updated_at: availBx.updated_at || new Date().toISOString()
-                    });
+                    mergedStatus = 'available';
+                    mergedIssueDate = null;
+                    mergedIssuedTo = null;
                   } else {
-                    bBoxMap.set(bxId, {
-                      ...availBx,
-                      ...issuedBx,
-                      status: 'issued',
-                      issueDate: issuedBx.issueDate || prevIssueDate,
-                      issuedTo: issuedBx.issuedTo || prevIssuedTo,
-                      previousIssueDate: prevIssueDate,
-                      previousIssuedTo: prevIssuedTo,
-                      updated_at: issuedBx.updated_at || new Date().toISOString()
-                    });
+                    mergedStatus = 'issued';
+                    mergedIssueDate = issuedBx.issueDate || prevIssueDate;
+                    mergedIssuedTo = issuedBx.issuedTo || prevIssuedTo;
                   }
                 }
+
+                bBoxMap.set(bxId, {
+                  ...loser,
+                  ...winner,
+                  grossWeight: winnerGross,
+                  remainingWeight: winnerRem,
+                  weight: winnerGross,
+                  returnedWeight: winnerRet,
+                  returnedDate: winnerRet > 0 ? (winner.returnedDate || '') : '',
+                  status: mergedStatus,
+                  issueDate: mergedIssueDate,
+                  issuedTo: mergedIssuedTo,
+                  previousIssueDate: prevIssueDate,
+                  previousIssuedTo: prevIssuedTo,
+                  updated_at: winner.updated_at || new Date().toISOString()
+                });
               }
             });
+
+            const mergedBoxes = Array.from(bBoxMap.values());
+            const mergedGross = mergedBoxes.reduce((acc, bx) => acc + (Number(bx.grossWeight) || Number(bx.weight) || 0), 0);
+            const mergedGr = mergedBoxes.reduce((acc, bx) => acc + (Number(bx.returnedWeight) || 0), 0);
+            const mergedNet = Math.max(0, Number((mergedGross - mergedGr).toFixed(2)));
 
             batchMap.set(bk, {
               ...remB,
               ...locB,
-              boxes: Array.from(bBoxMap.values())
+              boxes: mergedBoxes,
+              grossWeight: mergedGross,
+              returnedWeight: mergedGr,
+              totalWeight: mergedNet,
+              receivedQty: mergedNet
             });
           }
         });
