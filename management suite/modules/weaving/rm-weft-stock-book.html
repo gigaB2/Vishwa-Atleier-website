@@ -1418,6 +1418,7 @@
             align-items: center;
             height: 100%;
             top: 0;
+            user-select: none;
         }
 
         .select-input-wrapper input {
@@ -1426,22 +1427,21 @@
 
         .dropdown-list {
             position: absolute;
-            top: 100%;
+            top: calc(100% + 6px);
             left: 0;
             right: 0;
             width: 100%;
-            max-width: 100%;
+            min-width: 0;
             box-sizing: border-box;
             background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: 16px;
-            margin-top: 0.75rem;
-            box-shadow: var(--shadow-xl);
-            z-index: 1000;
-            max-height: 300px;
+            border: 1.5px solid var(--accent);
+            border-radius: 12px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22), 0 4px 12px rgba(139, 92, 246, 0.15);
+            z-index: 999999 !important;
+            max-height: 280px;
             overflow-x: hidden;
             overflow-y: auto;
-            animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .input-group {
@@ -1449,6 +1449,12 @@
             max-width: 100%;
             min-width: 0;
             box-sizing: border-box;
+            position: relative;
+        }
+
+        .input-group:focus-within,
+        .input-group:has(.dropdown-list) {
+            z-index: 999999 !important;
         }
 
         .dropdown-list::-webkit-scrollbar {
@@ -1472,7 +1478,7 @@
         @keyframes slideDown {
             from {
                 opacity: 0;
-                transform: translateY(-10px);
+                transform: translateY(-6px);
             }
 
             to {
@@ -1482,10 +1488,10 @@
         }
 
         .dropdown-item {
-            padding: 1rem 1.25rem;
+            padding: 0.75rem 1rem;
             cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 0.95rem;
+            transition: all 0.15s ease;
+            font-size: 0.88rem;
             color: var(--fg);
             border-bottom: 1px solid var(--border);
             text-align: left;
@@ -1499,33 +1505,32 @@
         }
 
         .dropdown-item:hover {
-            background: rgba(139, 92, 246, 0.08);
+            background: rgba(139, 92, 246, 0.1);
             color: var(--accent);
-            padding-left: 1.5rem;
+            padding-left: 1.25rem;
         }
 
         .dropdown-item.selected {
-            background: rgba(139, 92, 246, 0.12);
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.18), rgba(139, 92, 246, 0.06));
             color: var(--accent);
             font-weight: 700;
         }
 
         .dropdown-empty {
-            padding: 2rem;
+            padding: 1.5rem 1rem;
             text-align: center;
             color: var(--muted);
-            font-size: 0.95rem;
+            font-size: 0.85rem;
         }
 
         /* Log Issue Table Responsiveness & Multi-Device Container Optimization */
         .table-responsive-container {
             width: 100%;
             max-width: 100%;
-            overflow-x: auto !important;
-            overflow-y: visible;
-            -webkit-overflow-scrolling: touch;
+            overflow: visible !important;
             position: relative;
             box-sizing: border-box;
+            padding-bottom: 0.5rem;
         }
 
         .log-issue-table,
@@ -1537,7 +1542,6 @@
 
         .log-issue-table {
             width: 100%;
-            min-width: 1100px;
             border-collapse: separate;
             border-spacing: 0 0.5rem;
             position: relative;
@@ -1570,13 +1574,13 @@
 
         .log-issue-table tr:focus-within,
         .log-issue-table tr:has(.dropdown-list) {
-            z-index: 9999 !important;
+            z-index: 99999 !important;
             position: relative !important;
         }
 
         .log-issue-table td:focus-within,
         .log-issue-table td:has(.dropdown-list) {
-            z-index: 10000 !important;
+            z-index: 999999 !important;
             position: relative !important;
         }
 
@@ -1640,61 +1644,54 @@
 
         /* Column specific widths for log table (Desktop / Laptop) */
         .col-date {
-            width: 14%;
-            min-width: 140px;
+            width: 13%;
         }
 
         .col-quality {
-            width: 15%;
-            min-width: 150px;
+            width: 16%;
         }
 
         .col-supplier {
-            width: 14%;
-            min-width: 140px;
+            width: 15%;
         }
 
         .col-code {
             width: 10%;
-            min-width: 100px;
         }
 
         .col-color {
             width: 10%;
-            min-width: 100px;
         }
 
         .col-box {
             width: 11%;
-            min-width: 110px;
         }
 
         .col-cones {
             width: 7%;
-            min-width: 75px;
         }
 
         .col-weight {
             width: 9%;
-            min-width: 90px;
         }
 
         .col-details {
-            width: 10%;
-            min-width: 100px;
+            width: 14%;
         }
 
         .col-action {
             width: 5%;
-            min-width: 65px;
         }
 
-        /* Specific fix for date inputs to avoid squishing and icon clipping */
+        /* Specific fix for date inputs matching yarn-rm-orders style */
         input[type="date"].log-input,
         input[type="date"] {
-            padding: 0.5rem 0.5rem !important;
-            font-size: 0.82rem !important;
-            min-width: 130px;
+            padding: 0.6rem 0.85rem !important;
+            font-size: 0.85rem !important;
+            border-radius: 10px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            min-width: 0 !important;
         }
 
         input[type="date"]::-webkit-calendar-picker-indicator {
@@ -3817,9 +3814,12 @@
 
             if (className === 'log-input') {
                 return (
-                    <div className="input-group" style={{ marginBottom: 0, position: 'relative', zIndex: isOpen ? 10001 : 1 }} ref={dropdownRef}>
+                    <div className="input-group" style={{ marginBottom: 0, position: 'relative', width: '100%' }} ref={dropdownRef}>
                         {label && <label>{label}</label>}
-                        <div className="select-input-wrapper" onClick={() => setIsOpen(!isOpen)}>
+                        <div className="select-input-wrapper" onClick={() => {
+                            setIsOpen(!isOpen);
+                            if (!isOpen) setSearch('');
+                        }}>
                             <input
                                 type="text"
                                 placeholder={placeholder}
@@ -3835,13 +3835,27 @@
                                 }}
                                 autoComplete="off"
                                 className={className}
-                                style={{ cursor: 'text' }}
+                                style={{ cursor: 'text', width: '100%' }}
                             />
                             <i>{isOpen ? '▴' : '▾'}</i>
                         </div>
 
                         {isOpen && (
-                            <div className="dropdown-list" style={{ zIndex: 10002 }}>
+                            <div 
+                                className="dropdown-list" 
+                                style={{ 
+                                    position: 'absolute',
+                                    top: 'calc(100% + 4px)',
+                                    left: 0,
+                                    right: 0,
+                                    width: '100%',
+                                    maxWidth: '100%',
+                                    boxSizing: 'border-box',
+                                    zIndex: 999999,
+                                    margin: 0
+                                }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                            >
                                 {showEmpty && (
                                     <div
                                         className={`dropdown-item ${!value ? 'selected' : ''}`}
@@ -7529,21 +7543,30 @@
 
                     {activeTab === 'log' && (
                         <main>
-                            <h2 style={{ marginBottom: '0.5rem' }}>Daily Issue Book</h2>
-                            <p style={{ color: 'var(--muted)', marginBottom: '2rem' }}>Add issues individually or upload a CSV batch.</p>
-
                             <div className="card" style={{ marginBottom: '2rem', overflow: 'visible', zIndex: 10 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
-                                    <div>
-                                        <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Add Issue Entries</h3>
-                                        <p style={{ color: 'var(--muted)', fontSize: '0.82rem', margin: '0.2rem 0 0 0' }}>Log yarn issue entries individually or in batch</p>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.15))', border: '1px solid rgba(139, 92, 246, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                        </div>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '1.25rem', letterSpacing: '-0.3px' }}>Add Issue Entries</h3>
+                                            <p style={{ color: 'var(--muted)', fontSize: '0.82rem', margin: '0.2rem 0 0 0' }}>Log yarn issue entries individually or in batch directly to weft inventory</p>
+                                        </div>
                                     </div>
-                                    <span className="tag" style={{ background: 'rgba(139, 92, 246, 0.08)', color: 'var(--accent)', border: '1px solid rgba(139, 92, 246, 0.2)', padding: '0.35rem 0.8rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>
-                                        {multiIssueForm.length} {multiIssueForm.length === 1 ? 'Row Entry' : 'Row Entries'}
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                        <span className="tag" style={{ background: 'rgba(139, 92, 246, 0.08)', color: 'var(--accent)', border: '1px solid rgba(139, 92, 246, 0.2)', padding: '0.35rem 0.8rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                            {multiIssueForm.length} {multiIssueForm.length === 1 ? 'Row' : 'Rows'}
+                                        </span>
+                                        {multiIssueForm.some(r => r.net) && (
+                                            <span className="tag" style={{ background: 'rgba(16, 185, 129, 0.08)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '0.35rem 0.8rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                                {multiIssueForm.reduce((acc, r) => acc + (parseFloat(r.net) || 0), 0).toFixed(3)} Kg Total
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <form onSubmit={handleAddIndividualIssue}>
-                                    <div className="table-responsive-container" style={{ overflowX: 'auto', maxWidth: '100%' }}>
+                                    <div className="table-responsive-container" style={{ overflow: 'visible', maxWidth: '100%' }}>
                                         <table className="log-issue-table">
                                             <thead>
                                                 <tr>
@@ -7563,12 +7586,16 @@
                                                 {multiIssueForm.map((row, index) => (
                                                     <tr key={row.id} style={{ position: 'relative', zIndex: multiIssueForm.length - index }}>
                                                         <td data-label="Date">
-                                                            <VfDatePicker
-                                                                value={row.date}
-                                                                onChange={(val) => updateIssueRow(row.id, 'date', val)}
-                                                                required
-                                                                className="log-input"
-                                                            />
+                                                            <div className="input-group" style={{ marginBottom: 0, position: 'relative', width: '100%' }}>
+                                                                <input
+                                                                    type="date"
+                                                                    value={row.date || ''}
+                                                                    onChange={(e) => updateIssueRow(row.id, 'date', e.target.value)}
+                                                                    required
+                                                                    className="log-input"
+                                                                    style={{ borderRadius: '10px' }}
+                                                                />
+                                                            </div>
                                                         </td>
                                                         <td data-label="Quality">
                                                             <SearchableDropdown
@@ -7680,11 +7707,13 @@
                                             type="button"
                                             onClick={addIssueRow}
                                             className="subtle-button"
-                                            style={{ padding: '0.65rem 1.5rem' }}
+                                            style={{ padding: '0.7rem 1.5rem', borderRadius: '10px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                                         >
-                                            + Add more
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                            Add Row
                                         </button>
-                                        <button type="submit" style={{ flex: 1 }}>
+                                        <button type="submit" style={{ flex: 1, height: '42px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                             Log All Issue Entries
                                         </button>
                                     </div>
@@ -7692,26 +7721,50 @@
                             </div>
 
                             <div className="card">
-                                <h3 style={{ marginBottom: '1rem' }}>Issue History</h3>
-                                <div className="search-bar">
-                                    <div style={{ flex: 2 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.85rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        </div>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Issue History</h3>
+                                            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.15rem 0 0 0' }}>Log of all recorded issues across inventory boxes</p>
+                                        </div>
+                                    </div>
+                                    <span className="tag" style={{ background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)', padding: '0.3rem 0.75rem', borderRadius: '16px', fontSize: '0.75rem' }}>
+                                        {filteredIssues.length} {filteredIssues.length === 1 ? 'Record' : 'Records'}
+                                    </span>
+                                </div>
+                                <div className="search-bar" style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                                    <div style={{ flex: 2, minWidth: '220px' }}>
                                         <label>Search Issues</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Search quality, code, box, details..."
-                                            value={issueSearch}
-                                            onChange={(e) => setIssueSearch(e.target.value)}
-                                        />
+                                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                            <input
+                                                type="text"
+                                                placeholder="Search quality, code, box, details..."
+                                                value={issueSearch}
+                                                onChange={(e) => setIssueSearch(e.target.value)}
+                                                style={{ paddingLeft: '2.4rem' }}
+                                            />
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '0.85rem', color: 'var(--muted)', pointerEvents: 'none' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                        </div>
                                     </div>
-                                    <div style={{ flex: 1, minWidth: 0, maxWidth: '100%' }}>
-                                        <VfDatePicker
-                                            label="Filter by Date"
-                                            value={dateFilter}
-                                            onChange={(val) => setDateFilter(val)}
-                                            placeholder="All Dates"
-                                        />
+                                    <div style={{ flex: 1, minWidth: '160px', maxWidth: '100%' }}>
+                                        <div className="input-group" style={{ marginBottom: 0 }}>
+                                            <label>Filter by Date</label>
+                                            <input
+                                                type="date"
+                                                value={dateFilter || ''}
+                                                onChange={(e) => setDateFilter(e.target.value)}
+                                                style={{ borderRadius: '10px' }}
+                                            />
+                                        </div>
                                     </div>
-                                    <button onClick={() => { setDateFilter(''); setIssueSearch(''); }} style={{ fontSize: '0.8rem', padding: '0.6rem 1rem' }}>Clear</button>
+                                    {(issueSearch || dateFilter) && (
+                                        <button onClick={() => { setDateFilter(''); setIssueSearch(''); }} className="subtle-button" style={{ fontSize: '0.8rem', padding: '0.65rem 1.25rem', height: '42px', borderRadius: '10px' }}>
+                                            Clear Filters
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="table-container">
                                     <table>
@@ -7726,7 +7779,7 @@
                                                 <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('history-table', 'cones')}>Issued cones{getSortArrow('history-table', 'cones')}</th>
                                                 <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('history-table', 'net')}>Issued weight(Kg){getSortArrow('history-table', 'net')}</th>
                                                 <th className="optional-column">Details</th>
-                                                <th>Actions</th>
+                                                <th style={{ textAlign: 'center' }}>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -7757,7 +7810,7 @@
                                                     <tr key={issue.id} className={isRowEditing ? "" : "clickable-row"} onClick={isRowEditing ? null : openHistoryBoxDetail} title={isRowEditing ? "" : "View box issue history"}>
                                                         {isRowEditing ? (
                                                             <>
-                                                                <td><VfDatePicker value={editingIssueDraft.date || ''} onChange={(val) => updateIssueDraft('date', val)} className="csv-input" style={{ width: '100%' }} /></td>
+                                                                <td><input className="csv-input" type="date" value={editingIssueDraft.date || ''} onChange={(e) => updateIssueDraft('date', e.target.value)} style={{ width: '100%' }} /></td>
                                                                 <td><strong>{issue.quality}</strong></td>
                                                                 <td className="optional-column">{issue.supplier || '—'}</td>
                                                                 <td className="optional-column">{issue.code || '—'}</td>
@@ -7767,9 +7820,9 @@
                                                                 <td><input className="csv-input" type="number" step="0.001" value={editingIssueDraft.net || ''} readOnly title="Calculated from box kg per cone" style={{ width: '100%' }} /></td>
                                                                 <td className="optional-column"><input className="csv-input" type="text" value={editingIssueDraft.details || ''} onChange={(e) => updateIssueDraft('details', e.target.value)} style={{ width: '100%' }} /></td>
                                                                 <td>
-                                                                    <div className="action-row" style={{ gap: '4px', justifyContent: 'center' }}>
-                                                                        <button className="mini-button" type="button" onClick={saveIssueEdit} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}>Save</button>
-                                                                        <button className="mini-button" type="button" onClick={cancelIssueEdit} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}>Cancel</button>
+                                                                    <div className="action-row" style={{ gap: '6px', justifyContent: 'center' }}>
+                                                                        <button className="mini-button" type="button" onClick={saveIssueEdit} style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', borderRadius: '6px', background: 'var(--accent)', color: '#fff', border: 'none' }}>Save</button>
+                                                                        <button className="mini-button" type="button" onClick={cancelIssueEdit} style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}>Cancel</button>
                                                                     </div>
                                                                 </td>
                                                             </>
@@ -7780,14 +7833,14 @@
                                                                 <td className="optional-column">{issue.supplier || '—'}</td>
                                                                 <td className="optional-column">{issue.code || '—'}</td>
                                                                 <td className="optional-column">{issue.color}</td>
-                                                                <td>{issue.box || '—'}</td>
+                                                                <td><span className="tag" style={{ background: 'var(--bg)', color: 'var(--fg)', border: '1px solid var(--border)', fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>{issue.box || '—'}</span></td>
                                                                 <td>{issue.cones}</td>
-                                                                <td>{issue.net} kg</td>
+                                                                <td><strong>{issue.net}</strong> kg</td>
                                                                 <td className="optional-column" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }} title={issue.details}>{issue.details}</td>
                                                                 <td>
-                                                                    <div className="action-row" style={{ gap: '4px', justifyContent: 'center' }}>
-                                                                        <button className="mini-button" type="button" onClick={(e) => { e.stopPropagation(); startIssueEdit(issue); }} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--accent)', color: 'var(--accent)' }}>Edit</button>
-                                                                        <button className="mini-button" type="button" onClick={(e) => { e.stopPropagation(); deleteIssue(issue.id); }} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--error)', color: 'var(--error)' }}>Delete</button>
+                                                                    <div className="action-row" style={{ gap: '6px', justifyContent: 'center' }}>
+                                                                        <button className="mini-button" type="button" onClick={(e) => { e.stopPropagation(); startIssueEdit(issue); }} style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem', borderRadius: '6px', backgroundColor: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.3)', color: 'var(--accent)', cursor: 'pointer' }}>Edit</button>
+                                                                        <button className="mini-button" type="button" onClick={(e) => { e.stopPropagation(); deleteIssue(issue.id); }} style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem', borderRadius: '6px', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', color: 'var(--error)', cursor: 'pointer' }}>Delete</button>
                                                                     </div>
                                                                 </td>
                                                             </>
