@@ -4860,8 +4860,6 @@
                 details: ''
             }]);
             const [qualitySearchFilter, setQualitySearchFilter] = useState('');
-            const [lowStockThreshold, setLowStockThreshold] = useState(10);
-            const [lowStockSearch, setLowStockSearch] = useState('');
             const [sortState, setSortState] = useState({
                 'history-table': { column: 'date', dir: 'desc' }
             });
@@ -4915,7 +4913,6 @@
                     'item-ledger-v2': 'Weft Stock Book',
                     'challan-detail': 'Challan Details',
                     'box-detail': 'Box Details',
-                    'low-stock': 'Low Stock Alerts',
                     'challan-history': 'Challan Register',
                     'log': 'Daily Issue Book'
                 };
@@ -4925,7 +4922,7 @@
                 document.title = `${tabName} - Vishwa Fashions`;
 
                 // Keep URL ?tab= in sync so sidebar links land on the right screen
-                const topLevelTabs = ['dashboard', 'stock-book', 'item-detail', 'item-ledger-v2', 'low-stock', 'challan-history', 'log'];
+                const topLevelTabs = ['dashboard', 'stock-book', 'item-detail', 'item-ledger-v2', 'challan-history', 'log'];
                 if (topLevelTabs.includes(activeTab)) {
                     const url = new URL(window.location.href);
                     let syncTab = activeTab;
@@ -5669,21 +5666,6 @@
                 setActiveTab('stock-book');
                 setSelectedItem(null);
             };
-
-            const lowStockItems = useMemo(() => {
-                const q = lowStockSearch.toLowerCase();
-                return inventory
-                    .filter(item => {
-                        const remaining = item.remainingKg;
-                        const matchesSearch = !q ||
-                            (item.quality || '').toLowerCase().includes(q) ||
-                            (item.company || '').toLowerCase().includes(q) ||
-                            String(item.code || '').toLowerCase().includes(q) ||
-                            (item.color || '').toLowerCase().includes(q);
-                        return remaining < lowStockThreshold && matchesSearch;
-                    })
-                    .sort((a, b) => a.remainingKg - b.remainingKg);
-            }, [inventory, lowStockThreshold, lowStockSearch]);
 
             const filteredIssues = useMemo(() => {
                 let filtered = issues;
@@ -6434,9 +6416,8 @@
                                     activeTab === 'item-detail' ? (selectedItem ? 'Weft Item Ledger' : 'Weft Stock Dashboard') :
                                         activeTab === 'challan-detail' ? 'Challan Details' :
                                             activeTab === 'box-detail' ? 'Box Details' :
-                                                activeTab === 'low-stock' ? 'Low Stock Alerts' :
-                                                    activeTab === 'challan-history' ? 'Challan Register' :
-                                                        activeTab === 'log' ? 'Daily Issue Book' : 'Weft Stock Book'}
+                                                activeTab === 'challan-history' ? 'Challan Register' :
+                                                    activeTab === 'log' ? 'Daily Issue Book' : 'Weft Stock Book'}
                             </div>
                             <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
                                 {(activeTab === 'stock-book' || activeTab === 'item-ledger-v2')
@@ -6447,84 +6428,10 @@
                         <nav className="nav-tabs">
                             <div className={`nav-tab ${activeTab === 'item-detail' || activeTab === 'challan-detail' || activeTab === 'box-detail' ? 'active' : ''}`} onClick={() => { setActiveTab('item-detail'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>📊 Weft Stock Dashboard</div>
                             <div className={`nav-tab ${activeTab === 'stock-book' || activeTab === 'item-ledger-v2' ? 'active' : ''}`} onClick={() => { setActiveTab('stock-book'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>📦 Weft Stock Book</div>
-                            <div className={`nav-tab ${activeTab === 'low-stock' ? 'active' : ''}`} onClick={() => { setActiveTab('low-stock'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>📉 Low Stock</div>
                             <div className={`nav-tab ${activeTab === 'challan-history' ? 'active' : ''}`} onClick={() => { setActiveTab('challan-history'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>🚚 Challan History</div>
                             <div className={`nav-tab ${activeTab === 'log' ? 'active' : ''}`} onClick={() => { setActiveTab('log'); setSelectedItem(null); setSelectedChallan(null); setSelectedBox(null); }}>📝 Daily Issue Book</div>
                         </nav>
                     </header>
-
-                    {activeTab === 'low-stock' && (
-                        <main>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-                                <div>
-                                    <h2>Low Stock Alerts</h2>
-                                    <p style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>Yarn lines below {lowStockThreshold} kg, sorted by lowest available stock.</p>
-                                </div>
-                                <div className="tag" style={{ color: 'var(--accent)', alignSelf: 'center' }}>{lowStockItems.length} active alerts</div>
-                            </div>
-                            <div className="search-bar" style={{ marginBottom: '1.5rem' }}>
-                                <div style={{ flex: 2 }}>
-                                    <label>Search</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Quality, code, color, or company..."
-                                        value={lowStockSearch}
-                                        onChange={(e) => setLowStockSearch(e.target.value)}
-                                    />
-                                </div>
-                                <div style={{ flex: '0 0 180px' }}>
-                                    <label>Low stock below (kg)</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="9999"
-                                        step="1"
-                                        value={lowStockThreshold}
-                                        onChange={(e) => setLowStockThreshold(parseFloat(e.target.value) || 10)}
-                                    />
-                                </div>
-                            </div>
-                            <div className="table-container">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('low-stock-table', 'quality')}>Yarn Quality{getSortArrow('low-stock-table', 'quality')}</th>
-                                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('low-stock-table', 'company')}>Supplier{getSortArrow('low-stock-table', 'company')}</th>
-                                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('low-stock-table', 'code')}>Code{getSortArrow('low-stock-table', 'code')}</th>
-                                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('low-stock-table', 'color')}>Color{getSortArrow('low-stock-table', 'color')}</th>
-                                            <th style={{ color: 'var(--error)' }}>Gr cones (calculated)</th>
-                                            <th style={{ color: 'var(--error)' }}>Gr weight (calculated)</th>
-                                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('low-stock-table', 'remainingCones')}>Remaining cones{getSortArrow('low-stock-table', 'remainingCones')}</th>
-                                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('low-stock-table', 'remainingKg')}>Remaining weight(Kg){getSortArrow('low-stock-table', 'remainingKg')}</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sortData(lowStockItems, 'low-stock-table', ['quality', 'company', 'code', 'color', 'remainingCones', 'remainingKg']).map((item, idx) => {
-                                            return (
-                                                <tr className="clickable-row" key={idx} onClick={() => openItemDetail(item)} title="Open box-wise deductions">
-                                                    <td><strong>{item.quality}</strong></td>
-                                                    <td>{item.company}</td>
-                                                    <td>{item.code}</td>
-                                                    <td>{item.color}</td>
-                                                    <td style={{ color: 'var(--error)' }}>{item.totalGrCones || '0'}</td>
-                                                    <td style={{ color: 'var(--error)' }}>{(item.totalGrWeight || 0).toFixed(2)} kg</td>
-                                                    <td>{item.remainingCones}</td>
-                                                    <td>{item.remainingKg.toFixed(2)} kg</td>
-                                                    <td><span className="tag" style={{ color: 'var(--accent)' }}>Low Stock</span></td>
-                                                </tr>
-                                            );
-                                        })}
-                                        {lowStockItems.length === 0 && (
-                                            <tr>
-                                                <td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: 'var(--muted)' }}>No low stock alerts.</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </main>
-                    )}
 
                     {activeTab === 'item-detail' && !selectedItem && (
                         <main>
