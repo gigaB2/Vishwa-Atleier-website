@@ -745,8 +745,8 @@
 
     const allMergedLots = Array.from(mergedLotMap.values());
 
-    // Single Source of Truth Enforcement: Reconcile stock lots strictly against active yarn-rm-orders / yarn-orders
-    const rawOrders = (typeof cache !== 'undefined' && cache && (cache['yarn-orders'] || cache['yarn-rm-orders'])) || (nativeLocalStorage && typeof nativeLocalStorage.getItem === 'function' ? (nativeLocalStorage.getItem('yarn-orders') || nativeLocalStorage.getItem('yarn-rm-orders')) : null);
+    // Single Source of Truth Enforcement: Reconcile stock lots strictly against active yarn-rm-orders
+    const rawOrders = (typeof cache !== 'undefined' && cache && cache['yarn-rm-orders']) || (nativeLocalStorage && typeof nativeLocalStorage.getItem === 'function' ? nativeLocalStorage.getItem('yarn-rm-orders') : null);
     if (rawOrders !== null && rawOrders !== undefined) {
       try {
         const parsedOrders = typeof rawOrders === 'string' ? JSON.parse(rawOrders) : rawOrders;
@@ -1300,47 +1300,35 @@
     const finalVal = mergeDatasets(key, currentVal, valStr);
     const finalValSerialized = typeof finalVal === 'string' ? finalVal : JSON.stringify(finalVal);
 
-    const keysToUpdate = (key === 'yarn-orders' || key === 'yarn-rm-orders')
-      ? ['yarn-orders', 'yarn-rm-orders']
-      : [key];
+    if (cache[key] !== finalValSerialized) {
+      cache[key] = finalValSerialized;
+      safeLocalStorageSet(key, finalValSerialized);
+      lastSavedHashes[key] = computeHash(finalValSerialized);
+      lastKnownTimestamps[key] = new Date().toISOString();
 
-    keysToUpdate.forEach(k => {
-      if (cache[k] !== finalValSerialized) {
-        cache[k] = finalValSerialized;
-        safeLocalStorageSet(k, finalValSerialized);
-        lastSavedHashes[k] = computeHash(finalValSerialized);
-        lastKnownTimestamps[k] = new Date().toISOString();
-
-        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: k, value: finalValSerialized, isRemote: true } }));
-        try {
-          window.dispatchEvent(new StorageEvent('storage', { key: k, newValue: finalValSerialized }));
-        } catch(e) {
-          window.dispatchEvent(new Event('storage'));
-        }
+      window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key, value: finalValSerialized, isRemote: true } }));
+      try {
+        window.dispatchEvent(new StorageEvent('storage', { key: key, newValue: finalValSerialized }));
+      } catch(e) {
+        window.dispatchEvent(new Event('storage'));
       }
-    });
+    }
   }
 
   function handleIncomingRemoteUpdate(key, valStr, isDelete = false) {
     if (isLocalOnlyKey(key)) return;
-    const keysToDelete = (key === 'yarn-orders' || key === 'yarn-rm-orders')
-      ? ['yarn-orders', 'yarn-rm-orders']
-      : [key];
-
     if (isDelete) {
-      keysToDelete.forEach(k => {
-        delete cache[k];
-        delete lastKnownTimestamps[k];
-        delete lastSavedHashes[k];
-        delete pendingRemoteUpdates[k];
-        try { nativeLocalStorage.removeItem(k); } catch(e) {}
-        window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: k, value: null, isRemote: true } }));
-        try {
-          window.dispatchEvent(new StorageEvent('storage', { key: k, newValue: null }));
-        } catch(e) {
-          window.dispatchEvent(new Event('storage'));
-        }
-      });
+      delete cache[key];
+      delete lastKnownTimestamps[key];
+      delete lastSavedHashes[key];
+      delete pendingRemoteUpdates[key];
+      try { nativeLocalStorage.removeItem(key); } catch(e) {}
+      window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key, value: null, isRemote: true } }));
+      try {
+        window.dispatchEvent(new StorageEvent('storage', { key: key, newValue: null }));
+      } catch(e) {
+        window.dispatchEvent(new Event('storage'));
+      }
       return;
     }
 
@@ -2747,14 +2735,6 @@
         cache[key] = valStr;
         safeLocalStorageSet(key, valStr);
 
-        if (key === 'yarn-orders' || key === 'yarn-rm-orders') {
-          const counterpartKey = key === 'yarn-orders' ? 'yarn-rm-orders' : 'yarn-orders';
-          cache[counterpartKey] = valStr;
-          safeLocalStorageSet(counterpartKey, valStr);
-          lastSavedHashes[counterpartKey] = payloadHash;
-          lastLocalWrites[counterpartKey] = lastLocalWrites[key];
-        }
-
         // Broadcast immediately over Realtime WebSocket & BroadcastChannel (instant sub-50ms sync, 0 DB queries)
         broadcastRealtimeUpdate(key, value);
 
@@ -3125,8 +3105,8 @@
               }
             }
 
-            // Dedicated Relational Synchronization for Yarn & Weaving RM Orders
-            if ((key === 'yarn-rm-orders' || key === 'yarn-orders') && Array.isArray(value)) {
+            // Dedicated Relational Synchronization for Yarn RM Orders
+            if (key === 'yarn-rm-orders' && Array.isArray(value)) {
               try {
                 const orderRows = [];
                 const batchRows = [];
@@ -5170,6 +5150,7 @@
 
             // Reconcile Dedicated Yarn RM Orders Relational Tables
             try {
+              const oKey = 'yarn-rm-orders';
               const dbOrders = await fetchAllRowsPaginated('vf_yarn_orders', '*', 'order=order_date.desc');
               const dbBatches = await fetchAllRowsPaginated('vf_yarn_order_batches', '*', 'order=receive_date.desc');
               const dbBoxes = await fetchAllRowsPaginated('vf_yarn_order_boxes', '*', 'order=box_number.asc');
@@ -5208,8 +5189,7 @@
                   let finalStatus = o.status || 'Active';
                   let finalUpdatedAt = o.updated_at || o.updatedAt || null;
                   try {
-                    const kvRaw = kvMap['yarn-orders'] || kvMap['yarn-rm-orders'] || cache['yarn-orders'] || cache['yarn-rm-orders'] || '[]';
-                    const kvOrders = JSON.parse(kvRaw);
+                    const kvOrders = JSON.parse(kvMap[oKey] || cache[oKey] || '[]');
                     if (Array.isArray(kvOrders)) {
                       const kvOrder = kvOrders.find(x => x.id === o.id);
                       if (kvOrder && Array.isArray(kvOrder.batches)) {
@@ -5272,20 +5252,18 @@
 
                 let localOrders = [];
                 try {
-                  const locOrdRaw = cache['yarn-orders'] || cache['yarn-rm-orders'] || nativeLocalStorage.getItem('yarn-orders') || nativeLocalStorage.getItem('yarn-rm-orders');
+                  const locOrdRaw = cache[oKey] || nativeLocalStorage.getItem(oKey);
                   if (locOrdRaw) localOrders = JSON.parse(locOrdRaw);
                 } catch(e) {}
                 const finalOrders = mergeYarnOrdersDatasets(localOrders, reconstructedOrders);
 
                 const oStr = JSON.stringify(finalOrders);
-                const lastOrderWrite = Math.max(lastLocalWrites['yarn-orders'] || 0, lastLocalWrites['yarn-rm-orders'] || 0);
+                const lastOrderWrite = lastLocalWrites[oKey] || 0;
                 if (Date.now() - lastOrderWrite >= 3000) {
-                  ['yarn-orders', 'yarn-rm-orders'].forEach(k => {
-                    cache[k] = oStr;
-                    lastSavedHashes[k] = computeHash(oStr);
-                    safeLocalStorageSet(k, oStr);
-                    if (!updatedKeys.includes(k)) updatedKeys.push(k);
-                  });
+                  cache[oKey] = oStr;
+                  lastSavedHashes[oKey] = computeHash(oStr);
+                  safeLocalStorageSet(oKey, oStr);
+                  if (!updatedKeys.includes(oKey)) updatedKeys.push(oKey);
                   hasChanges = true;
                 }
               }

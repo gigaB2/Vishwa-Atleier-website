@@ -312,11 +312,11 @@ test('Weaving RM Orders — Multi-PC Sync & Supabase Single Source of Truth', as
     assert.strictEqual(supabaseSyncReceived, 1);
   });
 
-  await t.test('8. Dual-Key Unified Sync: Saving yarn-orders strictly synchronizes both yarn-orders and yarn-rm-orders', () => {
-    const testOrders = [
+  await t.test('8. Dataset Isolation: Weaving RM orders (yarn-orders) and Yarn RM orders (yarn-rm-orders) remain strictly separate', () => {
+    const weavingOrders = [
       {
-        id: 'WV-SYNC-999',
-        orderNumber: 'WV-999',
+        id: 'WV-ORD-101',
+        orderNumber: 'WV-101',
         quality: 'WARP SILK 50D',
         supplier: 'National Textiles',
         orderedWeight: 1200,
@@ -325,14 +325,27 @@ test('Weaving RM Orders — Multi-PC Sync & Supabase Single Source of Truth', as
       }
     ];
 
-    vSupabase.saveToSupabase('yarn-orders', testOrders, true);
+    const yarnOrders = [
+      {
+        id: 'YRN-ORD-201',
+        orderNumber: 'YRN-201',
+        quality: '20/1 BRT POLY',
+        supplier: 'Reliance Industries',
+        orderedWeight: 5000,
+        status: 'Active',
+        batches: []
+      }
+    ];
 
-    const savedYarnOrders = JSON.parse(env.localStorage.getItem('yarn-orders') || '[]');
-    const savedYarnRmOrders = JSON.parse(env.localStorage.getItem('yarn-rm-orders') || '[]');
+    vSupabase.saveToSupabase('yarn-orders', weavingOrders, true);
+    vSupabase.saveToSupabase('yarn-rm-orders', yarnOrders, true);
 
-    assert.strictEqual(savedYarnOrders.length, 1, 'yarn-orders must be saved in localStorage');
-    assert.strictEqual(savedYarnRmOrders.length, 1, 'yarn-rm-orders must be mirrored and saved in localStorage');
-    assert.strictEqual(savedYarnOrders[0].id, 'WV-SYNC-999');
-    assert.strictEqual(savedYarnRmOrders[0].id, 'WV-SYNC-999');
+    const savedWeavingOrders = JSON.parse(env.localStorage.getItem('yarn-orders') || '[]');
+    const savedYarnOrders = JSON.parse(env.localStorage.getItem('yarn-rm-orders') || '[]');
+
+    assert.strictEqual(savedWeavingOrders.length, 1, 'Weaving orders must contain only weaving orders');
+    assert.strictEqual(savedWeavingOrders[0].id, 'WV-ORD-101');
+    assert.strictEqual(savedYarnOrders.length, 1, 'Yarn orders must contain only yarn orders');
+    assert.strictEqual(savedYarnOrders[0].id, 'YRN-ORD-201');
   });
 });
