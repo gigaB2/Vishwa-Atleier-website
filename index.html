@@ -352,6 +352,7 @@
         <a href="#bento" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Infrastructure</a>
         <a href="#lookbook" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Look Books</a>
         <a href="#group-companies" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Group Entities</a>
+        <a href="#global-presence" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Global Reach</a>
         <a href="#footer" class="font-label-caps text-xs text-primary/80 hover:text-primary transition-colors nav-link">Contact</a>
         <button type="button" data-open-modal="inquiry" data-interest="Wholesale Catalog / Export Inquiry"
           class="font-label-caps text-xs border border-primary text-primary hover:bg-primary hover:text-white px-3.5 py-1.5 transition-colors cursor-pointer inline-flex items-center gap-1.5">
@@ -396,8 +397,13 @@
             <span class="text-[10px] text-secondary">→</span>
           </a>
           <a class="font-label-caps text-xs text-primary hover:text-tertiary-container hover:bg-surface-container p-3 transition-colors flex items-center justify-between nav-link"
+            href="#global-presence">
+            <span>06. Global Reach</span>
+            <span class="text-[10px] text-secondary">→</span>
+          </a>
+          <a class="font-label-caps text-xs text-primary hover:text-tertiary-container hover:bg-surface-container p-3 transition-colors flex items-center justify-between nav-link"
             href="#footer">
-            <span>06. Contact</span>
+            <span>07. Contact</span>
             <span class="text-[10px] text-secondary">→</span>
           </a>
           <button type="button" data-open-modal="inquiry" data-interest="Wholesale Catalog / Export Inquiry"
@@ -1519,6 +1525,147 @@
       </div>
     </section>
 
+    <!-- Global Manufacturing & Export Footprint (COBE 3D Interactive WebGL Globe) -->
+    <section class="py-16 md:py-24 bg-surface-container-low overflow-hidden border-t border-outline-variant" id="global-presence">
+      <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+        <!-- Section Header -->
+        <div class="text-center max-w-3xl mx-auto mb-12 md:mb-16">
+          <span class="font-label-caps text-label-caps text-secondary tracking-widest block mb-3">GLOBAL DISTRIBUTION & LOOM CAPABILITY</span>
+          <h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg mb-4 text-primary">Worldwide Textile Reach</h2>
+          <p class="text-secondary font-body-md">
+            From our core manufacturing powerhouse in <strong>Surat, Gujarat</strong>, Vishwa Atelier supplies master-woven Jacquard silks, bespoke textiles, and luxury fabrics to leading fashion houses across premier international design capitals.
+          </p>
+        </div>
+
+        <!-- Interactive Globe Container & Cities Dashboard -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center bg-white border border-outline-variant p-6 sm:p-8 md:p-12 shadow-sm relative">
+          
+          <!-- Left / Main: 3D WebGL Canvas Area -->
+          <div class="lg:col-span-7 flex flex-col items-center justify-center relative">
+            <!-- Globe Status Badge -->
+            <div class="self-start mb-4 inline-flex items-center gap-2.5 px-3.5 py-1.5 bg-surface border border-outline-variant/80 text-primary font-label-caps text-xs">
+              <span class="relative flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <span>Headquarters: Surat, Gujarat (India)</span>
+            </div>
+
+            <!-- Canvas Wrapper with Drag Interaction & Smooth Touch Controls -->
+            <div class="relative w-full aspect-square max-w-[500px] flex items-center justify-center cursor-grab active:cursor-grabbing select-none" id="globe-wrapper">
+              <canvas id="cobe-globe" class="touch-none" style="width: 100%; height: 100%; max-width: 500px; aspect-ratio: 1 / 1;"></canvas>
+            </div>
+
+            <p class="font-label-caps text-[11px] text-secondary mt-3 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm">touch_app</span>
+              <span>Click or drag to rotate & explore the interactive globe</span>
+            </p>
+          </div>
+
+          <!-- Right / Sidebar: Hub Focus & Major World Cities -->
+          <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Primary Manufacturing Hub Spotlight Card (Dynamically Updated On City Click) -->
+            <div class="p-6 bg-surface border-2 border-primary shadow-sm relative overflow-hidden transition-all duration-300" id="city-spotlight-card">
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <span id="spotlight-tag" class="bg-primary text-white text-[10px] font-label-caps px-2.5 py-1 uppercase tracking-wider">Manufacturing Hub</span>
+                <span id="spotlight-coords" class="font-mono text-xs text-primary font-semibold">21.17° N, 72.83° E</span>
+              </div>
+              <h3 id="spotlight-name" class="font-headline-md text-2xl text-primary font-bold">Surat, Gujarat</h3>
+              <p id="spotlight-role" class="text-xs font-label-caps text-secondary uppercase tracking-wider mt-0.5">Vishwa Atelier Central Looms & Mills</p>
+              <p id="spotlight-desc" class="font-body-md text-sm text-on-surface-variant mt-2 leading-relaxed">
+                Central production epicenter operating electronic Jacquard Rapier looms, Airjet weaving complexes, and zari yarn plants in GIDC Sachin.
+              </p>
+              <div class="grid grid-cols-2 gap-3 pt-3 mt-3 border-t border-outline-variant/60 text-xs">
+                <div>
+                  <span id="spotlight-stat1-lbl" class="text-secondary font-label-caps block text-[10px]">Monthly Production</span>
+                  <span id="spotlight-stat1-val" class="font-bold text-primary">200,000+ Meters</span>
+                </div>
+                <div>
+                  <span id="spotlight-stat2-lbl" class="text-secondary font-label-caps block text-[10px]">Industrial Footprint</span>
+                  <span id="spotlight-stat2-val" class="font-bold text-primary">5 Group Units</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Global Cities Network Interactive Selector -->
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="font-label-caps text-xs text-secondary uppercase tracking-wider">Global Partner Capitals</span>
+                <span class="font-label-caps text-[11px] text-secondary">Click to focus</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2.5" id="cobe-city-buttons">
+                <button type="button" data-lat="21.1702" data-lon="72.8311"
+                  class="city-btn active text-left p-3 bg-surface border border-primary hover:border-primary transition-all duration-200 cursor-pointer group">
+                  <div class="flex items-center justify-between">
+                    <span class="font-label-caps text-xs font-bold text-primary">Surat</span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  </div>
+                  <span class="text-[11px] text-secondary group-hover:text-primary transition-colors block mt-0.5">HQ / Manufacturing Hub</span>
+                </button>
+
+                <button type="button" data-lat="40.7128" data-lon="-74.006"
+                  class="city-btn text-left p-3 bg-surface border border-outline-variant hover:border-primary transition-all duration-200 cursor-pointer group">
+                  <div class="flex items-center justify-between">
+                    <span class="font-label-caps text-xs font-bold text-primary">New York</span>
+                    <span class="w-2 h-2 rounded-full bg-primary/40 group-hover:bg-primary transition-colors"></span>
+                  </div>
+                  <span class="text-[11px] text-secondary group-hover:text-primary transition-colors block mt-0.5">Americas Partner Hub</span>
+                </button>
+
+                <button type="button" data-lat="51.5074" data-lon="-0.1278"
+                  class="city-btn text-left p-3 bg-surface border border-outline-variant hover:border-primary transition-all duration-200 cursor-pointer group">
+                  <div class="flex items-center justify-between">
+                    <span class="font-label-caps text-xs font-bold text-primary">London</span>
+                    <span class="w-2 h-2 rounded-full bg-primary/40 group-hover:bg-primary transition-colors"></span>
+                  </div>
+                  <span class="text-[11px] text-secondary group-hover:text-primary transition-colors block mt-0.5">Europe Fashion Line</span>
+                </button>
+
+                <button type="button" data-lat="25.2048" data-lon="55.2708"
+                  class="city-btn text-left p-3 bg-surface border border-outline-variant hover:border-primary transition-all duration-200 cursor-pointer group">
+                  <div class="flex items-center justify-between">
+                    <span class="font-label-caps text-xs font-bold text-primary">Dubai</span>
+                    <span class="w-2 h-2 rounded-full bg-primary/40 group-hover:bg-primary transition-colors"></span>
+                  </div>
+                  <span class="text-[11px] text-secondary group-hover:text-primary transition-colors block mt-0.5">Middle East Trade</span>
+                </button>
+
+                <button type="button" data-lat="35.6762" data-lon="139.6503"
+                  class="city-btn text-left p-3 bg-surface border border-outline-variant hover:border-primary transition-all duration-200 cursor-pointer group">
+                  <div class="flex items-center justify-between">
+                    <span class="font-label-caps text-xs font-bold text-primary">Tokyo</span>
+                    <span class="w-2 h-2 rounded-full bg-primary/40 group-hover:bg-primary transition-colors"></span>
+                  </div>
+                  <span class="text-[11px] text-secondary group-hover:text-primary transition-colors block mt-0.5">East Asia Silk Route</span>
+                </button>
+
+                <button type="button" data-lat="-33.8688" data-lon="151.2093"
+                  class="city-btn text-left p-3 bg-surface border border-outline-variant hover:border-primary transition-all duration-200 cursor-pointer group">
+                  <div class="flex items-center justify-between">
+                    <span class="font-label-caps text-xs font-bold text-primary">Sydney</span>
+                    <span class="w-2 h-2 rounded-full bg-primary/40 group-hover:bg-primary transition-colors"></span>
+                  </div>
+                  <span class="text-[11px] text-secondary group-hover:text-primary transition-colors block mt-0.5">Oceania Network</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Global Action Button -->
+            <div class="pt-2">
+              <button type="button" data-open-modal="inquiry" data-interest="International Export / Global Distribution"
+                class="w-full bg-primary text-white hover:bg-neutral-800 px-6 py-3.5 font-label-caps text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                <span>Inquire For Global Export & Wholesale</span>
+                <span class="material-symbols-outlined text-sm">public</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Stay Woven In Section -->
     <section class="py-16 md:py-20 bg-primary text-white text-center">
       <div class="max-w-2xl mx-auto px-margin-mobile">
@@ -1706,8 +1853,8 @@
     </div>
   </div>
 
-  <!-- JavaScript Controller -->
-  <script src="js/main.js"></script>
+  <!-- JavaScript Controller (ES Module) -->
+  <script type="module" src="js/main.js"></script>
 </body>
 
 </html>

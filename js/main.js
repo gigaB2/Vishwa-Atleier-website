@@ -2,6 +2,8 @@
  * Vishwa Atelier — Luxury Master Textile Controller
  */
 
+import createGlobe from './vendor/cobe.esm.js';
+
 document.addEventListener('DOMContentLoaded', () => {
   initProcessStepper();
   initLookbookSlider();
@@ -10,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initGroupCompaniesSlider();
   initAutoplayVideos();
   initInquiryModal();
+  initCobeGlobe();
 });
 
 /* 1. Manufacturing Process Stepper */
@@ -690,5 +693,324 @@ function initInquiryModal() {
     });
   }
 }
+
+/* 8. COBE 3D Interactive WebGL Globe Controller */
+function initCobeGlobe() {
+  const canvas = document.getElementById('cobe-globe');
+  const globeWrapper = document.getElementById('globe-wrapper');
+  const cityButtons = document.querySelectorAll('.city-btn');
+
+  if (!canvas || !globeWrapper) return;
+
+  // Globe angles & spring state (phi = 0, theta = -0.5 as specified)
+  let phi = 0;
+  let theta = -0.5;
+  let targetPhi = null;
+  let targetTheta = null;
+  
+  // Dragging state
+  let pointerInteracting = null;
+  let pointerInteractionMovement = { x: 0, y: 0 };
+  let dragVelocity = { x: 0, y: 0 };
+
+  // World Cities Markers matching playground spec with Surat base
+  const markers = [
+    { location: [21.1702, 72.8311], size: 0.06, color: [0.06, 0.72, 0.5] }, // Surat (Manufacturing Base Hub in Emerald)
+    { location: [51.5074, -0.1278], size: 0.04, color: [0.1, 0.1, 1.0] },    // London (Royal Blue)
+    { location: [25.2048, 55.2708], size: 0.04, color: [0.1, 0.1, 1.0] },    // Dubai (Royal Blue)
+    { location: [1.3521, 103.8198], size: 0.04, color: [0.1, 0.1, 1.0] },    // Singapore (Royal Blue)
+    { location: [35.6762, 139.6503], size: 0.04, color: [0.1, 0.1, 1.0] },   // Tokyo (Royal Blue)
+    { location: [-33.8688, 151.2093], size: 0.04, color: [0.1, 0.1, 1.0] }   // Sydney (Royal Blue)
+  ];
+
+  function startGlobe() {
+    try {
+      let width = canvas.offsetWidth || 500;
+      const onResize = () => {
+        if (canvas) {
+          width = canvas.offsetWidth;
+        }
+      };
+      window.addEventListener('resize', onResize);
+
+      const globe = createGlobe(canvas, {
+        devicePixelRatio: 2,
+        width: width * 2 || 1000,
+        height: width * 2 || 1000,
+        phi: 0,
+        theta: -0.5,
+        dark: 0,
+        diffuse: 1.2,
+        mapSamples: 40000,
+        mapBrightness: 6.0,
+        mapBaseBrightness: 0.0,
+        baseColor: [1, 1, 1],
+        markerColor: [0.1, 0.1, 1.0],
+        glowColor: [1, 1, 1],
+        scale: 1.0,
+        offset: [0, 0],
+        markerElevation: 0.0,
+        markers: markers,
+        arcs: []
+      });
+
+      // Continuous rotation (Auto Rotate enabled as in playground settings)
+      function animate() {
+        if (pointerInteracting !== null) {
+          // Dragged by user
+        } else if (targetPhi !== null && targetTheta !== null) {
+          phi += (targetPhi - phi) * 0.05;
+          theta += (targetTheta - theta) * 0.05;
+          if (Math.abs(targetPhi - phi) < 0.002 && Math.abs(targetTheta - theta) < 0.002) {
+            targetPhi = null;
+            targetTheta = null;
+          }
+        } else {
+          // Auto Rotate
+          if (Math.abs(dragVelocity.x) > 0.0001 || Math.abs(dragVelocity.y) > 0.0001) {
+            phi += dragVelocity.x;
+            theta += dragVelocity.y;
+            dragVelocity.x *= 0.92;
+            dragVelocity.y *= 0.92;
+          } else {
+            phi += 0.004;
+          }
+        }
+
+        theta = Math.max(-1.2, Math.min(1.2, theta));
+
+        const currentW = (canvas.offsetWidth || width || 500) * 2;
+        globe.update({
+          phi: phi + pointerInteractionMovement.x,
+          theta: Math.max(-1.2, Math.min(1.2, theta + pointerInteractionMovement.y)),
+          width: currentW,
+          height: currentW
+        });
+
+        requestAnimationFrame(animate);
+      }
+
+      requestAnimationFrame(animate);
+
+    } catch (err) {
+      console.error('COBE WebGL Globe initialization error:', err);
+    }
+  }
+
+  // Pointer Drag Handler directly on canvas & wrapper
+  const onPointerDown = (clientX, clientY) => {
+    pointerInteracting = { x: clientX, y: clientY };
+    pointerInteractionMovement = { x: 0, y: 0 };
+    dragVelocity = { x: 0, y: 0 };
+    targetPhi = null;
+    targetTheta = null;
+    globeWrapper.style.cursor = 'grabbing';
+  };
+
+  const onPointerMove = (clientX, clientY) => {
+    if (pointerInteracting !== null) {
+      const deltaX = clientX - pointerInteracting.x;
+      const deltaY = clientY - pointerInteracting.y;
+      
+      const speed = 0.005;
+      pointerInteractionMovement = {
+        x: deltaX * speed,
+        y: deltaY * speed
+      };
+      
+      // Calculate instantaneous velocity for toss inertia
+      dragVelocity = {
+        x: deltaX * 0.001,
+        y: deltaY * 0.001
+      };
+    }
+  };
+
+  const onPointerUp = () => {
+    if (pointerInteracting !== null) {
+      phi += pointerInteractionMovement.x;
+      theta += pointerInteractionMovement.y;
+      pointerInteractionMovement = { x: 0, y: 0 };
+      pointerInteracting = null;
+      globeWrapper.style.cursor = 'grab';
+    }
+  };
+
+  // Attach Pointer Events (supports mouse and pen)
+  canvas.addEventListener('pointerdown', (e) => {
+    canvas.setPointerCapture(e.pointerId);
+    onPointerDown(e.clientX, e.clientY);
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    onPointerMove(e.clientX, e.clientY);
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    onPointerUp();
+  });
+
+  canvas.addEventListener('pointercancel', (e) => {
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    onPointerUp();
+  });
+
+  // Touch Events fallback for mobile devices
+  canvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 0) {
+      onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: true });
+
+  canvas.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 0) {
+      onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: true });
+
+  canvas.addEventListener('touchend', () => {
+    onPointerUp();
+  });
+
+  // City Details Data for dynamic spotlight updates
+  const cityData = {
+    'Surat': {
+      tag: 'Manufacturing Hub',
+      coords: '21.17° N, 72.83° E',
+      role: 'Vishwa Atelier Central Looms & Mills',
+      desc: 'Central production epicenter operating electronic Jacquard Rapier looms, Airjet weaving complexes, and zari yarn plants in GIDC Sachin.',
+      stat1Lbl: 'Monthly Production',
+      stat1Val: '200,000+ Meters',
+      stat2Lbl: 'Industrial Footprint',
+      stat2Val: '5 Group Units'
+    },
+    'New York': {
+      tag: 'Americas Partner Hub',
+      coords: '40.71° N, 74.01° W',
+      role: 'North American Wholesale & Designer Distribution',
+      desc: 'Direct import pipeline servicing luxury boutiques, couture designers, and premier bridal salons across Manhattan and the US East Coast.',
+      stat1Lbl: 'Turnaround Time',
+      stat1Val: '4-7 Days Air Freight',
+      stat2Lbl: 'Client Segment',
+      stat2Val: 'Haute Couture & Retail'
+    },
+    'London': {
+      tag: 'Europe Fashion Line',
+      coords: '51.51° N, 0.13° W',
+      role: 'UK & European Design Houses Line',
+      desc: 'Supplying bespoke high-definition jacquards and heritage silk textiles to British and Continental fashion houses and luxury ateliers.',
+      stat1Lbl: 'Certifications',
+      stat1Val: 'OEKO-TEX / ISO 9001',
+      stat2Lbl: 'Fabric Lines',
+      stat2Val: 'Bespoke Looms & Silks'
+    },
+    'Dubai': {
+      tag: 'Middle East Trade Hub',
+      coords: '25.20° N, 55.27° E',
+      role: 'GCC & MENA Region Export Trade Center',
+      desc: 'Major distribution gateway providing high-sheen zari drapes, metallic-wrapped filament fabrics, and luxury occasion sarees across the Gulf.',
+      stat1Lbl: 'Direct Shipping',
+      stat1Val: 'Weekly Ocean & Air',
+      stat2Lbl: 'Product Focus',
+      stat2Val: 'Zari Silks & Sarees'
+    },
+    'Tokyo': {
+      tag: 'East Asia Silk Route',
+      coords: '35.68° N, 139.65° E',
+      role: 'East Asian High-Precision Textile Network',
+      desc: 'Collaborative pipeline for ultra-fine denier weave structures, micro-filament jacquards, and contemporary Asian couture drapes.',
+      stat1Lbl: 'Loom Precision',
+      stat1Val: '2688 Electronic Hooks',
+      stat2Lbl: 'Quality Grade',
+      stat2Val: 'Zero-Defect Standard'
+    },
+    'Sydney': {
+      tag: 'Oceania Network',
+      coords: '33.87° S, 151.21° E',
+      role: 'Australia & Pacific Retail Distribution',
+      desc: 'Connecting Surat master weavers with premier bridal ateliers, multicultural fashion designers, and high-end boutique department stores.',
+      stat1Lbl: 'Fulfillment',
+      stat1Val: 'Door-to-Door Logistics',
+      stat2Lbl: 'Collection Scope',
+      stat2Val: 'AVF, VK & Bloom Series'
+    }
+  };
+
+  // City selector buttons: smooth focus to clicked location & update spotlight info
+  cityButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lat = parseFloat(btn.getAttribute('data-lat'));
+      const lon = parseFloat(btn.getAttribute('data-lon'));
+      const cityName = btn.querySelector('.font-bold')?.textContent?.trim() || '';
+
+      if (isNaN(lat) || isNaN(lon)) return;
+
+      // Update button active state
+      cityButtons.forEach(b => {
+        b.classList.remove('active', 'border-primary');
+        b.classList.add('border-outline-variant');
+        const dot = b.querySelector('.rounded-full');
+        if (dot && !b.querySelector('.bg-emerald-500')) {
+          dot.classList.remove('bg-primary');
+          dot.classList.add('bg-primary/40');
+        }
+      });
+      btn.classList.add('active', 'border-primary');
+      btn.classList.remove('border-outline-variant');
+      const activeDot = btn.querySelector('.rounded-full');
+      if (activeDot && !activeDot.classList.contains('bg-emerald-500')) {
+        activeDot.classList.add('bg-primary');
+        activeDot.classList.remove('bg-primary/40');
+      }
+
+      // Update Spotlight Information Card with rich details
+      const info = cityData[cityName];
+      if (info) {
+        const tagEl = document.getElementById('spotlight-tag');
+        const coordsEl = document.getElementById('spotlight-coords');
+        const nameEl = document.getElementById('spotlight-name');
+        const roleEl = document.getElementById('spotlight-role');
+        const descEl = document.getElementById('spotlight-desc');
+        const stat1Lbl = document.getElementById('spotlight-stat1-lbl');
+        const stat1Val = document.getElementById('spotlight-stat1-val');
+        const stat2Lbl = document.getElementById('spotlight-stat2-lbl');
+        const stat2Val = document.getElementById('spotlight-stat2-val');
+
+        if (tagEl) tagEl.textContent = info.tag;
+        if (coordsEl) coordsEl.textContent = info.coords;
+        if (nameEl) nameEl.textContent = cityName;
+        if (roleEl) roleEl.textContent = info.role;
+        if (descEl) descEl.textContent = info.desc;
+        if (stat1Lbl) stat1Lbl.textContent = info.stat1Lbl;
+        if (stat1Val) stat1Val.textContent = info.stat1Val;
+        if (stat2Lbl) stat2Lbl.textContent = info.stat2Lbl;
+        if (stat2Val) stat2Val.textContent = info.stat2Val;
+      }
+
+      // Accurate COBE focus projection:
+      // In COBE shaders: state.phi rotates horizontally, state.theta tilts vertically
+      // Location is rendered at: phi = -lonRad + PI/2, theta = latRad * 0.5
+      const lonRad = (lon * Math.PI) / 180;
+      const latRad = (lat * Math.PI) / 180;
+
+      const desiredPhi = -lonRad + Math.PI / 2;
+      const twoPi = Math.PI * 2;
+      const currentMod = ((phi % twoPi) + twoPi) % twoPi;
+      const targetMod = ((desiredPhi % twoPi) + twoPi) % twoPi;
+      let diff = targetMod - currentMod;
+      if (diff > Math.PI) diff -= twoPi;
+      if (diff < -Math.PI) diff += twoPi;
+
+      targetPhi = phi + diff;
+      targetTheta = Math.max(-0.6, Math.min(0.6, latRad * 0.4));
+      dragVelocity = { x: 0, y: 0 };
+      pointerInteractionMovement = { x: 0, y: 0 };
+    });
+  });
+
+  startGlobe();
+}
+
 
 
