@@ -655,6 +655,8 @@ function initInquiryModal() {
       name: document.getElementById('lead-name')?.value?.trim() || '',
       phone: document.getElementById('lead-phone')?.value?.trim() || '',
       email: document.getElementById('lead-email')?.value?.trim() || '',
+      market: document.getElementById('lead-market')?.value || 'Domestic India',
+      reqType: document.getElementById('lead-req-type')?.value || 'Existing Catalogue',
       interest: document.getElementById('lead-interest')?.value || '',
       moq: document.getElementById('lead-moq')?.value || '',
       message: document.getElementById('lead-message')?.value?.trim() || ''
@@ -676,7 +678,7 @@ function initInquiryModal() {
           return;
         }
       }
-      const text = `Hello Vishwa Atelier,%0A%0A*New B2B Inquiry:*%0A• *Name / Entity:* ${encodeURIComponent(data.name || 'Trade Buyer')}%0A• *Contact:* ${encodeURIComponent(data.phone)}%0A• *Email:* ${encodeURIComponent(data.email || 'N/A')}%0A• *Requirement:* ${encodeURIComponent(data.interest)}%0A• *Volume / MOQ:* ${encodeURIComponent(data.moq)}%0A• *Notes:* ${encodeURIComponent(data.message || 'N/A')}`;
+      const text = `Hello Vishwa Atelier,%0A%0A*New Qualified B2B Inquiry:*%0A• *Buyer / Entity:* ${encodeURIComponent(data.name || 'Trade Buyer')}%0A• *Contact:* ${encodeURIComponent(data.phone)}%0A• *Corporate Email:* ${encodeURIComponent(data.email || 'N/A')}%0A• *Target Market:* ${encodeURIComponent(data.market)}%0A• *Requirement Type:* ${encodeURIComponent(data.reqType)}%0A• *Category:* ${encodeURIComponent(data.interest)}%0A• *Scale / MOQ:* ${encodeURIComponent(data.moq)}%0A• *Specifications:* ${encodeURIComponent(data.message || 'N/A')}`;
       window.open(`https://wa.me/919313772824?text=${text}`, '_blank');
       closeModal();
     });
@@ -686,8 +688,8 @@ function initInquiryModal() {
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const data = getFormData();
-      const subject = encodeURIComponent(`B2B Inquiry: ${data.interest} - ${data.name}`);
-      const body = encodeURIComponent(`Name / Company: ${data.name}\nWhatsApp / Phone: ${data.phone}\nCorporate Email: ${data.email || 'N/A'}\nProduct Requirement: ${data.interest}\nEstimated Volume / MOQ: ${data.moq}\n\nSpecifications / Notes:\n${data.message || 'N/A'}`);
+      const subject = encodeURIComponent(`B2B RFQ [${data.market}]: ${data.reqType} - ${data.name}`);
+      const body = encodeURIComponent(`Buyer / Company: ${data.name}\nWhatsApp / Phone: ${data.phone}\nCorporate Email: ${data.email || 'N/A'}\nTarget Market: ${data.market}\nRequirement Type: ${data.reqType}\nProduct Category: ${data.interest}\nEstimated Volume / MOQ: ${data.moq}\n\nSpecifications & Timeline:\n${data.message || 'N/A'}`);
       window.location.href = `mailto:vishwa@vishwafashions.com,rajiv@vishwafashions.com?subject=${subject}&body=${body}`;
       closeModal();
     });
