@@ -11483,15 +11483,83 @@ Return STRICT JSON matching:
                (fullLabel.toLowerCase() === val.toLowerCase() || (p.name || '').trim().toLowerCase() === rawBase);
       }) || fpQualities.find(p => (p.name || '').trim().toLowerCase() === rawBase);
 
-      if (fpProd) {
-        const denierEl = document.getElementById('prod-ai-denier');
-        const tpmEl = document.getElementById('prod-ai-tpm');
-        const twistEl = document.getElementById('prod-ai-twist');
+      const storageKeys = {
+        covering: 'costing-covering-products-v1',
+        tfo: 'costing-tfo-products-v1',
+        doubler: 'costing-doubler-products-v1'
+      };
+      const key = storageKeys[activeDivision];
+      const products = JSON.parse(localStorage.getItem(key) || '[]');
+      const prod = products.find(p => (p.name || '').trim().toLowerCase() === (val || '').trim().toLowerCase()) || products.find(p => (p.name || '').trim().toLowerCase() === rawBase);
 
-        if (denierEl && fpProd.denier) denierEl.value = parseFloat(parseFloat(fpProd.denier).toFixed(2));
-        if (tpmEl && fpProd.tpm) tpmEl.value = parseInt(fpProd.tpm, 10);
-        if (twistEl && fpProd.twist && Array.from(twistEl.options).some(o => o.value === fpProd.twist)) {
-          twistEl.value = fpProd.twist;
+      const productLogs = (dataStore[activeDivision]?.production || []).filter(l => (l.productName || '').trim().toLowerCase() === (val || '').trim().toLowerCase() || (l.productName || '').trim().toLowerCase() === rawBase);
+      productLogs.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.id || '').localeCompare(a.id || ''));
+
+      const denierEl = document.getElementById('prod-ai-denier');
+      const tpmEl = document.getElementById('prod-ai-tpm');
+      const twistEl = document.getElementById('prod-ai-twist');
+      const colorEl = document.getElementById('prod-ai-color');
+      const lotEl = document.getElementById('prod-ai-lot');
+
+      // 1. Denier
+      if (denierEl) {
+        if (fpProd && fpProd.denier) {
+          denierEl.value = parseFloat(parseFloat(fpProd.denier).toFixed(2));
+        } else if (prod) {
+          const denierVal = prod.resultantDenier || (prod.calcs && prod.calcs.resultantDenier) || '';
+          if (denierVal) denierEl.value = parseFloat(parseFloat(denierVal).toFixed(2));
+        } else if (productLogs.length > 0 && productLogs[0].denier) {
+          denierEl.value = parseFloat(parseFloat(productLogs[0].denier).toFixed(2));
+        }
+      }
+
+      // 2. TPM
+      if (tpmEl) {
+        if (fpProd && fpProd.tpm) {
+          tpmEl.value = parseInt(fpProd.tpm, 10);
+        } else if (prod) {
+          const tpmVal = prod.tpm || prod.totalTpm || '';
+          if (tpmVal !== undefined && tpmVal !== '') tpmEl.value = parseInt(tpmVal, 10);
+        } else if (productLogs.length > 0 && productLogs[0].tpm) {
+          tpmEl.value = parseInt(productLogs[0].tpm, 10);
+        }
+      }
+
+      // 3. Twist
+      if (twistEl) {
+        let twistVal = '';
+        if (fpProd && fpProd.twist) {
+          twistVal = fpProd.twist;
+        } else if (prod) {
+          twistVal = getTwistConfig(prod);
+        } else if (productLogs.length > 0 && productLogs[0].twist) {
+          twistVal = productLogs[0].twist;
+        }
+        if (twistVal && Array.from(twistEl.options).some(o => o.value === twistVal)) {
+          twistEl.value = twistVal;
+        }
+      }
+
+      // 4. Color (FP Quality color -> secondary yarn color for 2/3 ply -> past production log)
+      if (colorEl) {
+        if (fpProd && fpProd.color) {
+          colorEl.value = fpProd.color;
+        } else {
+          const extractedColor = getSecondaryColor(prod || fpProd);
+          if (extractedColor) {
+            colorEl.value = extractedColor;
+          } else if (productLogs.length > 0 && productLogs[0].color) {
+            colorEl.value = productLogs[0].color;
+          }
+        }
+      }
+
+      // 5. Lot No (auto-fill if currently blank)
+      if (lotEl && !lotEl.value.trim()) {
+        if (productLogs.length > 0 && productLogs[0].lotNo) {
+          lotEl.value = cleanLotNumber(productLogs[0].lotNo);
+        } else if (prod && (prod.lotNo || prod.lot)) {
+          lotEl.value = cleanLotNumber(prod.lotNo || prod.lot);
         }
       }
     };
@@ -11655,7 +11723,11 @@ Return STRICT JSON matching:
       // Fetch matched product config
       const fpQualities = JSON.parse(localStorage.getItem('yarn-fp-qualities') || '[]');
       const rawBase = productName.replace(/\s*\[.*?\]\s*$/, '').trim().toLowerCase();
-      const fpProd = fpQualities.find(p => (p.name || '').trim().toLowerCase() === rawBase);
+      const fpProd = fpQualities.find(p => {
+        const fullLabel = p.composition ? `${(p.name || '').trim()} [${p.composition.trim()}]` : (p.name || '').trim();
+        return (p.division || '').toLowerCase() === activeDivision.toLowerCase() &&
+               (fullLabel.toLowerCase() === productName.toLowerCase() || (p.name || '').trim().toLowerCase() === rawBase);
+      }) || fpQualities.find(p => (p.name || '').trim().toLowerCase() === rawBase);
 
       validRows.forEach((r, idx) => {
         const boriNo = `${prefix}${startNum + idx}`;
