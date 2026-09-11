@@ -2633,11 +2633,88 @@
       box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);
       animation: qrDotPulse 1.6s infinite cubic-bezier(0.66, 0, 0, 1);
     }
-    @keyframes qrDotPulse {
-      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
-      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
-      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+    .prod-ai-crop-viewport {
+      position: relative;
+      width: 100%;
+      height: 60vh;
+      min-height: 380px;
+      max-height: 580px;
+      background: #090d16;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      touch-action: none;
     }
+    .prod-ai-crop-viewport img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+      -webkit-user-drag: none;
+    }
+    .prod-ai-crop-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .prod-ai-crop-box {
+      position: absolute;
+      border: 2px solid #38bdf8;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65), 0 0 15px rgba(56, 189, 248, 0.4);
+      cursor: move;
+      pointer-events: auto;
+      touch-action: none;
+      box-sizing: border-box;
+    }
+    .prod-ai-crop-box::before {
+      content: '';
+      position: absolute;
+      top: 33.33%;
+      left: 0;
+      right: 0;
+      height: 33.33%;
+      border-top: 1px dashed rgba(255, 255, 255, 0.35);
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.35);
+      pointer-events: none;
+    }
+    .prod-ai-crop-box::after {
+      content: '';
+      position: absolute;
+      left: 33.33%;
+      top: 0;
+      bottom: 0;
+      width: 33.33%;
+      border-left: 1px dashed rgba(255, 255, 255, 0.35);
+      border-right: 1px dashed rgba(255, 255, 255, 0.35);
+      pointer-events: none;
+    }
+    .prod-ai-crop-handle {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: #38bdf8;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      pointer-events: auto;
+      z-index: 5;
+    }
+    .prod-ai-crop-handle.tl { top: -7px; left: -7px; cursor: nwse-resize; }
+    .prod-ai-crop-handle.tr { top: -7px; right: -7px; cursor: nesw-resize; }
+    .prod-ai-crop-handle.bl { bottom: -7px; left: -7px; cursor: nesw-resize; }
+    .prod-ai-crop-handle.br { bottom: -7px; right: -7px; cursor: nwse-resize; }
+    .prod-ai-crop-handle.tm { top: -7px; left: calc(50% - 7px); cursor: ns-resize; border-radius: 3px; }
+    .prod-ai-crop-handle.bm { bottom: -7px; left: calc(50% - 7px); cursor: ns-resize; border-radius: 3px; }
+    .prod-ai-crop-handle.ml { top: calc(50% - 7px); left: -7px; cursor: ew-resize; border-radius: 3px; }
+    .prod-ai-crop-handle.mr { top: calc(50% - 7px); right: -7px; cursor: ew-resize; border-radius: 3px; }
   </style>
   <script src="../../sidebar.js" defer></script>
 </head>
@@ -10210,7 +10287,7 @@
               const reader = new FileReader();
               reader.onload = (evt) => {
                 currentProdAiImageDataUrl = evt.target.result;
-                startProdAiImageScan(currentProdAiImageDataUrl);
+                openProdAiCropStep(currentProdAiImageDataUrl);
               };
               reader.readAsDataURL(blob);
               break;
@@ -10322,16 +10399,13 @@
             statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
             statusBadge.style.color = '#10b981';
           }
-          if (statusText) statusText.textContent = '✅ Photo received! Analyzing...';
+          if (statusText) statusText.textContent = '✅ Photo received! Loading crop tool...';
           if (pulseEl) pulseEl.className = '';
 
           setTimeout(() => {
             currentProdAiImageDataUrl = payload.imageUrl;
-            compressImageForAi(payload.imageUrl, 1920, 0.9, (optimizedDataUrl) => {
-              currentProdAiImageDataUrl = optimizedDataUrl;
-              startProdAiImageScan(optimizedDataUrl);
-            });
-          }, 500);
+            openProdAiCropStep(payload.imageUrl);
+          }, 400);
         }
       }, 1500);
     };
@@ -10365,11 +10439,13 @@
       stopProdAiPhoneQrPolling();
 
       const uploadStep = document.getElementById('prod-ai-step-upload');
+      const cropStep = document.getElementById('prod-ai-step-crop');
       const progressStep = document.getElementById('prod-ai-step-progress');
       const reviewStep = document.getElementById('prod-ai-step-review');
       const errorBanner = document.getElementById('prod-ai-error-banner');
 
       if (uploadStep) uploadStep.style.display = 'block';
+      if (cropStep) cropStep.style.display = 'none';
       if (progressStep) progressStep.style.display = 'none';
       if (reviewStep) reviewStep.style.display = 'none';
       if (errorBanner) errorBanner.style.display = 'none';
@@ -10395,13 +10471,283 @@
       const reader = new FileReader();
       reader.onload = (e) => {
         const rawDataUrl = e.target.result;
-        // Compress / optimize image to maximum 1920px for reliable Gemini Vision transmission
-        compressImageForAi(rawDataUrl, 1920, 0.9, (optimizedDataUrl) => {
-          currentProdAiImageDataUrl = optimizedDataUrl;
-          startProdAiImageScan(optimizedDataUrl);
-        });
+        currentProdAiImageDataUrl = rawDataUrl;
+        openProdAiCropStep(rawDataUrl);
       };
       reader.readAsDataURL(file);
+    };
+
+    // =========================================================================
+    // INTERACTIVE CROPPING & ROTATION ENGINE
+    // =========================================================================
+    let prodAiCropState = {
+      rawImage: null,
+      rotation: 0,
+      x: 5,   // percent of displayed image
+      y: 5,
+      w: 90,
+      h: 90,
+      isDragging: false,
+      dragType: null,
+      startX: 0,
+      startY: 0,
+      initBox: null
+    };
+
+    window.openProdAiCropStep = function(dataUrl) {
+      const uploadStep = document.getElementById('prod-ai-step-upload');
+      const cropStep = document.getElementById('prod-ai-step-crop');
+      const progressStep = document.getElementById('prod-ai-step-progress');
+      const reviewStep = document.getElementById('prod-ai-step-review');
+      const errorBanner = document.getElementById('prod-ai-error-banner');
+
+      if (uploadStep) uploadStep.style.display = 'none';
+      if (cropStep) cropStep.style.display = 'block';
+      if (progressStep) progressStep.style.display = 'none';
+      if (reviewStep) reviewStep.style.display = 'none';
+      if (errorBanner) errorBanner.style.display = 'none';
+
+      prodAiCropState.rotation = 0;
+      prodAiCropState.x = 5;
+      prodAiCropState.y = 5;
+      prodAiCropState.w = 90;
+      prodAiCropState.h = 90;
+
+      const cropImg = document.getElementById('prod-ai-crop-img');
+      const img = new Image();
+      img.onload = function() {
+        prodAiCropState.rawImage = img;
+        if (cropImg) {
+          cropImg.src = img.src;
+          cropImg.onload = function() {
+            updateProdAiCropOverlay();
+            initProdAiCropEventListeners();
+          };
+          updateProdAiCropOverlay();
+          initProdAiCropEventListeners();
+        }
+      };
+      img.src = dataUrl;
+    };
+
+    window.rotateProdAiCropImage = function() {
+      if (!prodAiCropState.rawImage) return;
+      prodAiCropState.rotation = (prodAiCropState.rotation + 90) % 360;
+      
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const srcImg = prodAiCropState.rawImage;
+
+      if (prodAiCropState.rotation % 180 !== 0) {
+        canvas.width = srcImg.height;
+        canvas.height = srcImg.width;
+      } else {
+        canvas.width = srcImg.width;
+        canvas.height = srcImg.height;
+      }
+
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((prodAiCropState.rotation * Math.PI) / 180);
+      ctx.drawImage(srcImg, -srcImg.width / 2, -srcImg.height / 2);
+      ctx.restore();
+
+      const rotatedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      const newImg = new Image();
+      newImg.onload = function() {
+        prodAiCropState.rawImage = newImg;
+        prodAiCropState.rotation = 0;
+        const cropImg = document.getElementById('prod-ai-crop-img');
+        if (cropImg) {
+          cropImg.src = rotatedDataUrl;
+          updateProdAiCropOverlay();
+        }
+      };
+      newImg.src = rotatedDataUrl;
+    };
+
+    window.resetProdAiCropBox = function() {
+      prodAiCropState.x = 5;
+      prodAiCropState.y = 5;
+      prodAiCropState.w = 90;
+      prodAiCropState.h = 90;
+      updateProdAiCropOverlay();
+    };
+
+    function updateProdAiCropOverlay() {
+      const viewport = document.getElementById('prod-ai-crop-viewport');
+      const cropImg = document.getElementById('prod-ai-crop-img');
+      const cropBox = document.getElementById('prod-ai-crop-box');
+      if (!viewport || !cropImg || !cropBox) return;
+
+      const vRect = viewport.getBoundingClientRect();
+      const iRect = cropImg.getBoundingClientRect();
+
+      const imgLeft = iRect.left - vRect.left;
+      const imgTop = iRect.top - vRect.top;
+      const imgW = iRect.width;
+      const imgH = iRect.height;
+
+      if (imgW <= 0 || imgH <= 0) {
+        setTimeout(updateProdAiCropOverlay, 50);
+        return;
+      }
+
+      const boxLeft = imgLeft + (prodAiCropState.x / 100) * imgW;
+      const boxTop = imgTop + (prodAiCropState.y / 100) * imgH;
+      const boxWidth = (prodAiCropState.w / 100) * imgW;
+      const boxHeight = (prodAiCropState.h / 100) * imgH;
+
+      cropBox.style.left = `${boxLeft}px`;
+      cropBox.style.top = `${boxTop}px`;
+      cropBox.style.width = `${boxWidth}px`;
+      cropBox.style.height = `${boxHeight}px`;
+    }
+
+    function initProdAiCropEventListeners() {
+      const viewport = document.getElementById('prod-ai-crop-viewport');
+      const cropBox = document.getElementById('prod-ai-crop-box');
+      if (!viewport || !cropBox || viewport.dataset.cropInit === 'true') return;
+      viewport.dataset.cropInit = 'true';
+
+      const onPointerDown = (e, handleType) => {
+        e.preventDefault();
+        e.stopPropagation();
+        prodAiCropState.isDragging = true;
+        prodAiCropState.dragType = handleType;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        prodAiCropState.startX = clientX;
+        prodAiCropState.startY = clientY;
+        prodAiCropState.initBox = {
+          x: prodAiCropState.x,
+          y: prodAiCropState.y,
+          w: prodAiCropState.w,
+          h: prodAiCropState.h
+        };
+      };
+
+      // Handle pointer events on crop box (move)
+      cropBox.addEventListener('mousedown', (e) => {
+        if (e.target.dataset.handle) return;
+        onPointerDown(e, 'move');
+      });
+      cropBox.addEventListener('touchstart', (e) => {
+        if (e.target.dataset.handle) return;
+        onPointerDown(e, 'move');
+      }, { passive: false });
+
+      // Handle pointer events on individual resize handles
+      const handles = cropBox.querySelectorAll('.prod-ai-crop-handle');
+      handles.forEach(h => {
+        h.addEventListener('mousedown', (e) => onPointerDown(e, h.dataset.handle));
+        h.addEventListener('touchstart', (e) => onPointerDown(e, h.dataset.handle), { passive: false });
+      });
+
+      const onPointerMove = (clientX, clientY) => {
+        if (!prodAiCropState.isDragging || !prodAiCropState.initBox) return;
+        const cropImg = document.getElementById('prod-ai-crop-img');
+        if (!cropImg) return;
+        const iRect = cropImg.getBoundingClientRect();
+        if (iRect.width <= 0 || iRect.height <= 0) return;
+
+        const dx = ((clientX - prodAiCropState.startX) / iRect.width) * 100;
+        const dy = ((clientY - prodAiCropState.startY) / iRect.height) * 100;
+        const init = prodAiCropState.initBox;
+
+        let { x, y, w, h } = init;
+
+        if (prodAiCropState.dragType === 'move') {
+          x = Math.max(0, Math.min(100 - w, init.x + dx));
+          y = Math.max(0, Math.min(100 - h, init.y + dy));
+        } else {
+          const type = prodAiCropState.dragType;
+          if (type.includes('l')) {
+            const newX = Math.max(0, Math.min(init.x + init.w - 5, init.x + dx));
+            w = init.w + (init.x - newX);
+            x = newX;
+          }
+          if (type.includes('r')) {
+            w = Math.max(5, Math.min(100 - init.x, init.w + dx));
+          }
+          if (type.includes('t')) {
+            const newY = Math.max(0, Math.min(init.y + init.h - 5, init.y + dy));
+            h = init.h + (init.y - newY);
+            y = newY;
+          }
+          if (type.includes('b')) {
+            h = Math.max(5, Math.min(100 - init.y, init.h + dy));
+          }
+        }
+
+        prodAiCropState.x = Math.max(0, Math.min(100, x));
+        prodAiCropState.y = Math.max(0, Math.min(100, y));
+        prodAiCropState.w = Math.max(5, Math.min(100 - prodAiCropState.x, w));
+        prodAiCropState.h = Math.max(5, Math.min(100 - prodAiCropState.y, h));
+
+        updateProdAiCropOverlay();
+      };
+
+      window.addEventListener('mousemove', (e) => {
+        if (prodAiCropState.isDragging) {
+          onPointerMove(e.clientX, e.clientY);
+        }
+      });
+
+      window.addEventListener('touchmove', (e) => {
+        if (prodAiCropState.isDragging && e.touches.length > 0) {
+          onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: false });
+
+      const onPointerUp = () => {
+        if (prodAiCropState.isDragging) {
+          prodAiCropState.isDragging = false;
+          prodAiCropState.dragType = null;
+        }
+      };
+
+      window.addEventListener('mouseup', onPointerUp);
+      window.addEventListener('touchend', onPointerUp);
+      window.addEventListener('resize', updateProdAiCropOverlay);
+    }
+
+    window.confirmProdAiCropAndScan = function() {
+      if (!prodAiCropState.rawImage) return;
+
+      const rawImg = prodAiCropState.rawImage;
+      const naturalW = rawImg.naturalWidth || rawImg.width;
+      const naturalH = rawImg.naturalHeight || rawImg.height;
+
+      const cropX = Math.round((prodAiCropState.x / 100) * naturalW);
+      const cropY = Math.round((prodAiCropState.y / 100) * naturalH);
+      const cropW = Math.round((prodAiCropState.w / 100) * naturalW);
+      const cropH = Math.round((prodAiCropState.h / 100) * naturalH);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(10, cropW);
+      canvas.height = Math.max(10, cropH);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.drawImage(
+        rawImg,
+        cropX, cropY, cropW, cropH,
+        0, 0, canvas.width, canvas.height
+      );
+
+      const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      currentProdAiImageDataUrl = croppedDataUrl;
+
+      // Hide crop step and compress before starting Gemini scan
+      const cropStep = document.getElementById('prod-ai-step-crop');
+      if (cropStep) cropStep.style.display = 'none';
+
+      compressImageForAi(croppedDataUrl, 1920, 0.9, (optimizedDataUrl) => {
+        currentProdAiImageDataUrl = optimizedDataUrl;
+        startProdAiImageScan(optimizedDataUrl);
+      });
     };
 
     function compressImageForAi(dataUrl, maxDim, quality, callback) {
@@ -11440,6 +11786,51 @@ Return STRICT JSON matching:
                 <button type="button" class="btn btn-primary" onclick="initProdAiPhoneQrSession()" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); padding: 0.65rem 1.4rem; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);">
                   📱 Generate Mobile QR
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 1.5: Interactive Crop & Rotate Tool -->
+        <div id="prod-ai-step-crop" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <div style="font-weight: 800; font-size: 1.05rem; color: var(--fg); display: flex; align-items: center; gap: 6px;">
+                <span>✂️ Crop & Adjust Challan Area</span>
+              </div>
+              <div style="font-size: 0.8rem; color: var(--muted);">
+                Drag the crop box or corners to select only the table/weight section for higher OCR accuracy.
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary" onclick="rotateProdAiCropImage()" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; font-weight: 600; min-height: 36px; border-radius: 8px;">
+                🔄 Rotate 90°
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="resetProdAiCropBox()" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; font-weight: 600; min-height: 36px; border-radius: 8px;">
+                ⛶ Reset Box
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="resetProdAiScanDropzone()" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; font-weight: 600; min-height: 36px; border-radius: 8px;">
+                ↺ Change Photo
+              </button>
+              <button type="button" class="btn btn-primary" onclick="confirmProdAiCropAndScan()" style="padding: 0.4rem 1.25rem; font-size: 0.88rem; font-weight: 700; min-height: 36px; background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); border: none; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35); border-radius: 8px;">
+                ✨ Confirm & Scan with AI
+              </button>
+            </div>
+          </div>
+
+          <div class="prod-ai-crop-viewport" id="prod-ai-crop-viewport">
+            <img id="prod-ai-crop-img" src="" alt="Challan to Crop">
+            <div class="prod-ai-crop-overlay" id="prod-ai-crop-overlay">
+              <div class="prod-ai-crop-box" id="prod-ai-crop-box">
+                <div class="prod-ai-crop-handle tl" data-handle="tl"></div>
+                <div class="prod-ai-crop-handle tr" data-handle="tr"></div>
+                <div class="prod-ai-crop-handle bl" data-handle="bl"></div>
+                <div class="prod-ai-crop-handle br" data-handle="br"></div>
+                <div class="prod-ai-crop-handle tm" data-handle="tm"></div>
+                <div class="prod-ai-crop-handle bm" data-handle="bm"></div>
+                <div class="prod-ai-crop-handle ml" data-handle="ml"></div>
+                <div class="prod-ai-crop-handle mr" data-handle="mr"></div>
               </div>
             </div>
           </div>
