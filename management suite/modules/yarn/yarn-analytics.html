@@ -977,28 +977,28 @@
         <div class="kpi-sub" id="kpi-revenue-sub">Gross Invoice Value</div>
       </div>
 
-      <!-- Card 5: Avg Price Realization -->
+      <!-- Card 5: GST Collection -->
       <div class="kpi-card">
         <div class="kpi-top">
-          <span class="kpi-label">Avg Realization</span>
+          <span class="kpi-label">GST Collection</span>
           <div class="kpi-icon-wrap icon-pink">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="18" x2="12" y2="20"/><line x1="12" y1="4" x2="12" y2="6"/></svg>
           </div>
         </div>
-        <div class="kpi-val" id="kpi-avg-rate">₹ 0 /kg</div>
-        <div class="kpi-sub" id="kpi-avg-rate-sub">Weighted Avg Rate</div>
+        <div class="kpi-val" id="kpi-avg-rate">₹ 0.00</div>
+        <div class="kpi-sub" id="kpi-avg-rate-sub">Total 5% GST Collected</div>
       </div>
 
-      <!-- Card 6: Active Qualities Count -->
+      <!-- Card 6: Total Sales (Sales Realized + GST) -->
       <div class="kpi-card">
         <div class="kpi-top">
-          <span class="kpi-label">Active Qualities</span>
+          <span class="kpi-label">Total Sales</span>
           <div class="kpi-icon-wrap icon-cyan">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
           </div>
         </div>
-        <div class="kpi-val" id="kpi-qualities-count">0</div>
-        <div class="kpi-sub" id="kpi-lots-count">0 Running Lots</div>
+        <div class="kpi-val" id="kpi-qualities-count">₹ 0.00</div>
+        <div class="kpi-sub" id="kpi-lots-count">Sales Realized + GST (Gross)</div>
       </div>
     </div>
 
@@ -1255,7 +1255,8 @@
     const rawData = {
       covering: { production: [], sales: [] },
       tfo: { production: [], sales: [] },
-      doubler: { production: [], sales: [] }
+      doubler: { production: [], sales: [] },
+      salesLedger: []
     };
 
     // Helper: Determine if dark mode is active
@@ -1385,7 +1386,7 @@
       }
     }
 
-    // Load logs from localStorage and Supabase
+    // Load logs and sales ledger from localStorage and Supabase
     function fetchAllYarnData() {
       ['covering', 'tfo', 'doubler'].forEach(div => {
         let prod = [];
@@ -1405,6 +1406,23 @@
         rawData[div].production = Array.isArray(prod) ? prod : [];
         rawData[div].sales = Array.isArray(sales) ? sales : [];
       });
+
+      // Load Yarn Sales Ledger data from Supabase cache or localStorage
+      let salesLedger = [];
+      try {
+        if (window.VishwaSupabase && window.VishwaSupabase.cache && window.VishwaSupabase.cache['yarn_sales_ledger_data']) {
+          salesLedger = window.VishwaSupabase.cache['yarn_sales_ledger_data'];
+        }
+        if (!Array.isArray(salesLedger) || salesLedger.length === 0) {
+          salesLedger = JSON.parse(localStorage.getItem('yarn_sales_ledger_data') || '[]');
+        }
+      } catch(e) {
+        console.error('Error loading yarn_sales_ledger_data:', e);
+      }
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
+        salesLedger = window.VishwaSupabase.filterDeletedEntities(salesLedger, 'yarn_ledger_deleted_keys');
+      }
+      rawData.salesLedger = Array.isArray(salesLedger) ? salesLedger : [];
     }
 
     let isCloudSyncing = false;
@@ -1416,6 +1434,17 @@
       try {
         if (window.VishwaSupabase && typeof window.VishwaSupabase.loadAll === 'function') {
           await window.VishwaSupabase.loadAll(true);
+        }
+
+        // Explicitly load yarn_sales_ledger_data if VishwaSupabase.get exists
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+          try {
+            const remoteLedger = await window.VishwaSupabase.get('yarn_sales_ledger_data');
+            if (Array.isArray(remoteLedger) && remoteLedger.length > 0) {
+              localStorage.setItem('yarn_sales_ledger_data', JSON.stringify(remoteLedger));
+              rawData.salesLedger = remoteLedger;
+            }
+          } catch(e) {}
         } else if (window.VF_DB && typeof window.VF_DB.isConfigured === 'function' && window.VF_DB.isConfigured()) {
           // Fallback direct table fetch if loadAll is not ready
           await Promise.allSettled(['covering', 'tfo', 'doubler'].map(async div => {
@@ -1592,9 +1621,31 @@
       allProduction.sort((a, b) => new Date(a.date || a.createdAt || 0) - new Date(b.date || b.createdAt || 0));
       allSales.sort((a, b) => new Date(a.date || a.saleDate || a.createdAt || 0) - new Date(b.date || b.saleDate || b.createdAt || 0));
 
+      // 3. Filter Sales Ledger rows according to division, date range & quality
+      let filteredLedger = (rawData.salesLedger || []).filter(row => {
+        if (!row) return false;
+        // Division check
+        if (currentDivision !== 'all') {
+          const expectedSrc = `yarn_${currentDivision}_sales`;
+          if (row.source && row.source !== expectedSrc && row.source !== 'manual') return false;
+        }
+        // Date range check
+        if (!isDateWithinSelectedRange(row.date)) return false;
+        // Quality check
+        if (currentQuality !== 'all') {
+          const targetQ = currentQuality.trim().toLowerCase();
+          const cleanQ = String(row.quality || '').replace(/\s*\[.*?\]\s*$/, '').trim().toLowerCase();
+          if (cleanQ !== targetQ && String(row.quality || '').trim().toLowerCase() !== targetQ) {
+            return false;
+          }
+        }
+        return true;
+      });
+
       return {
         production: allProduction,
         sales: allSales,
+        salesLedger: filteredLedger,
         rawProdListForStock: rawProdListForStock,
         availableQualities: sortedQualities
       };
@@ -1622,7 +1673,7 @@
       }
     }
 
-    // Update KPI Header Cards with 100% accurate weighted average realization
+    // Update KPI Header Cards matching Yarn Sales Ledger Collections (₹ 13,96,493.09)
     function renderKPICards(dataset) {
       let totalProdWeight = 0;
       let totalProdBori = dataset.production.length;
@@ -1644,7 +1695,11 @@
         if (p.lotNo || p.lot) lotsSet.add(p.lotNo || p.lot);
       });
 
+      let totalGstRevenue = 0;
+      let totalGrossSales = 0;
+
       dataset.sales.forEach(s => {
+        let subtotal = 0;
         if (s.items && Array.isArray(s.items) && s.items.length > 0) {
           totalSalesBori += s.items.length;
           s.items.forEach(i => {
@@ -1654,6 +1709,7 @@
 
             totalSalesWeight += w;
             totalSalesRevenue += amt;
+            subtotal += amt;
 
             if (rate > 0 && w > 0) {
               weightedRateSumAmount += (rate * w);
@@ -1676,6 +1732,7 @@
 
           totalSalesWeight += w;
           totalSalesRevenue += amt;
+          subtotal += amt;
 
           if (rate > 0 && w > 0) {
             weightedRateSumAmount += (rate * w);
@@ -1689,7 +1746,53 @@
           if (q && q !== '-') qualitiesSet.add(q);
           if (s.lotNo || s.lot) lotsSet.add(s.lotNo || s.lot);
         }
+
+        // Calculate GST for this sale
+        let gstAmt = 0;
+        if (s.gstAmount !== undefined && s.gstAmount !== null && !isNaN(parseFloat(s.gstAmount))) {
+          gstAmt = parseFloat(s.gstAmount);
+        } else if (s.gst !== undefined && s.gst !== null && !isNaN(parseFloat(s.gst))) {
+          gstAmt = parseFloat(s.gst);
+        } else if (s.totalAmount && parseFloat(s.totalAmount) > subtotal) {
+          gstAmt = parseFloat(s.totalAmount) - subtotal;
+        } else {
+          const gstRate = (s.gstRate !== undefined && s.gstRate !== null) ? parseFloat(s.gstRate) : 5;
+          gstAmt = (subtotal * gstRate) / 100;
+        }
+
+        let grossTotal = 0;
+        if (s.totalAmount && parseFloat(s.totalAmount) > 0) {
+          grossTotal = parseFloat(s.totalAmount);
+        } else {
+          grossTotal = subtotal + gstAmt;
+        }
+
+        totalGstRevenue += gstAmt;
+        totalGrossSales += grossTotal;
       });
+
+      // Calculate totals directly from Sales Ledger to match yarn-ledger.html
+      let ledgerPaidCollection = 0;
+      let ledgerTotalBilled = 0;
+      let ledgerGstTotal = 0;
+      const ledgerRows = dataset.salesLedger || [];
+
+      if (ledgerRows.length > 0) {
+        ledgerRows.forEach(r => {
+          const paid = Number(r.paidAmount) || 0;
+          const grand = Number(r.grandTotal) || 0;
+          const sub = Number(r.subtotal) || 0;
+          const gst = grand > sub ? (grand - sub) : ((sub * (Number(r.gstPercent) || 5)) / 100);
+          ledgerPaidCollection += paid;
+          ledgerTotalBilled += grand;
+          ledgerGstTotal += gst;
+        });
+      }
+
+      // If ledger paid collection exists (> 0), use it; otherwise fallback to totalSalesRevenue
+      const finalRealizedCollection = (ledgerPaidCollection > 0) ? ledgerPaidCollection : totalSalesRevenue;
+      const finalGrossSales = (ledgerTotalBilled > 0) ? ledgerTotalBilled : totalGrossSales;
+      const finalGstRevenue = (ledgerGstTotal > 0) ? ledgerGstTotal : totalGstRevenue;
 
       // Calculate Live In-Hand Stock using getBoriStock
       let netStockWeight = 0;
@@ -1716,21 +1819,23 @@
       document.getElementById('kpi-stock-weight').textContent = formatWeight(netStockWeight);
       document.getElementById('kpi-stock-bori').textContent = `${netStockBori.toLocaleString()} Boris Available`;
 
-      document.getElementById('kpi-revenue-val').textContent = formatCurrency(totalSalesRevenue);
-      document.getElementById('kpi-revenue-sub').textContent = 'Commercial Realization (Ex-GST)';
+      // Card 4: Sales Realized / Ledger Collection
+      document.getElementById('kpi-revenue-val').textContent = formatCurrency(finalRealizedCollection);
+      document.getElementById('kpi-revenue-sub').textContent = ledgerPaidCollection > 0 
+        ? 'Total Ledger Collection (Paid)' 
+        : 'Commercial Realization (Ex-GST)';
 
-      document.getElementById('kpi-avg-rate').textContent = `₹ ${avgRate.toFixed(2)} /kg`;
-      document.getElementById('kpi-avg-rate-sub').textContent = weightedRateSumWeight > 0
-        ? `Weighted Rate (${formatWeight(weightedRateSumWeight)} billed)`
-        : 'Weighted Avg Rate';
+      // Card 5: GST Collection
+      document.getElementById('kpi-avg-rate').textContent = formatCurrency(finalGstRevenue);
+      document.getElementById('kpi-avg-rate-sub').textContent = avgRate > 0 
+        ? `Avg Rate: ₹ ${avgRate.toFixed(2)}/kg • 5% GST` 
+        : 'Total 5% GST Collection';
 
-      if (currentQuality !== 'all') {
-        document.getElementById('kpi-qualities-count').textContent = '1 Quality';
-        document.getElementById('kpi-lots-count').textContent = `${lotsSet.size} Running Lots (${currentQuality})`;
-      } else {
-        document.getElementById('kpi-qualities-count').textContent = qualitiesSet.size.toString();
-        document.getElementById('kpi-lots-count').textContent = `${lotsSet.size} Distinct Lots`;
-      }
+      // Card 6: Total Sales (Gross Invoiced / Billed)
+      document.getElementById('kpi-qualities-count').textContent = formatCurrency(finalGrossSales);
+      document.getElementById('kpi-lots-count').textContent = (currentQuality !== 'all') 
+        ? `Gross Billed (${lotsSet.size} Lots)` 
+        : `Gross Invoiced (${qualitiesSet.size} Qualities • ${lotsSet.size} Lots)`;
     }
 
     // Toggle Skeletons
@@ -2728,7 +2833,7 @@
 
       // Storage sync across tabs in same browser
       window.addEventListener('storage', (e) => {
-        if (!e.key || e.key.startsWith('yarn_') || e.key === 'yarn-fp-qualities' || e.key === 'yarn-qualities' || e.key === 'vf_deleted_entity_ids') {
+        if (!e.key || e.key.startsWith('yarn_') || e.key === 'yarn-fp-qualities' || e.key === 'yarn-qualities' || e.key === 'vf_deleted_entity_ids' || e.key === 'yarn_sales_ledger_data' || e.key === 'yarn_ledger_deleted_keys') {
           fetchAllYarnData();
           scheduleRefresh(40);
         }

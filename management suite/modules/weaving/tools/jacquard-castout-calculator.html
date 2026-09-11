@@ -4067,12 +4067,7 @@
             epContent += `ROW_01: ${row1BitPattern}\n`;
 
             if (currentPickMode === 'inching') {
-                const row2BitPattern = sortedHooks.map(item => {
-                    if (!item.isCastOutSelected) {
-                        return item.active ? '0' : '1';
-                    }
-                    return '0';
-                }).join('');
+                const row2BitPattern = sortedHooks.map(item => item.active ? '0' : '1').join('');
                 epContent += `ROW_02: ${row2BitPattern}\n`;
             }
 
@@ -4100,10 +4095,7 @@
                 if (currentPickMode === 'inching') {
                     fileContent += `\n; --- PICK 2 (INCHING - INVERTED ACTIVE HOOKS) ---\n`;
                     sortedHooks.forEach(item => {
-                        let bit = '0';
-                        if (!item.isCastOutSelected) {
-                            bit = item.active ? '0' : '1';
-                        }
+                        const bit = item.active ? '0' : '1';
                         fileContent += `PICK_2 | HOOK_${String(item.globalIndex).padStart(5, '0')} | ROW_${String(item.row).padStart(2, '0')}_COL_${String(item.col).padStart(3, '0')} | ${bit}\n`;
                     });
                 }
@@ -4129,10 +4121,7 @@
             if (currentPickMode === 'inching') {
                 fileContent += `\n; --- PICK 2 (INCHING - INVERTED ACTIVE HOOKS) ---\n`;
                 sortedHooks.forEach(item => {
-                    let bit = '0';
-                    if (!item.isCastOutSelected) {
-                        bit = item.active ? '0' : '1';
-                    }
+                    const bit = item.active ? '0' : '1';
                     fileContent += `PICK_2 | HOOK_${String(item.globalIndex).padStart(5, '0')} | ROW_${String(item.row).padStart(2, '0')}_COL_${String(item.col).padStart(3, '0')} | ${bit}\n`;
                 });
             }
@@ -4196,7 +4185,7 @@
             }
             bytes[start + hookBytes] = 1; // Weft selector
 
-            // Row 2 (Pick 2 - Inching Mode: inverted active hooks, cast-out stays 0)
+            // Row 2 (Pick 2 - Inching Mode: inverted active hooks)
             if (currentPickMode === 'inching') {
                 start = headerSize + rowWidth;
                 for (let b = 0; b < hookBytes; b++) {
@@ -4205,10 +4194,7 @@
                         const c = b * 8 + bitIdx;
                         if (c < width) {
                             const item = sortedHooks[c];
-                            let activeBit = 0;
-                            if (item && !item.isCastOutSelected) {
-                                activeBit = item.active ? 0 : 1;
-                            }
+                            const activeBit = (item && item.active) ? 0 : 1;
                             byteVal = (byteVal << 1) | activeBit;
                         } else {
                             byteVal = byteVal << 1;
