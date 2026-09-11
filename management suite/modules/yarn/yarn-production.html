@@ -3,6 +3,7 @@
 <head>
   <script src="../../assets/config.js"></script>
   <script src="../../assets/supabase-client.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <script>
     (function() {
@@ -2391,6 +2392,252 @@
         display: flex !important;
       }
     }
+
+    /* =========================================================================
+       AI PRODUCTION CHALLAN SCANNER MODAL STYLES
+       ========================================================================= */
+    .prod-ai-modal-card {
+      max-width: 1280px;
+      width: 95%;
+      border-radius: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      max-height: 92vh;
+      overflow: hidden;
+      animation: prodAiModalPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes prodAiModalPop {
+      0% { opacity: 0; transform: scale(0.96) translateY(12px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .prod-ai-dropzone-wrap {
+      border: 2.5px dashed var(--border);
+      border-radius: 16px;
+      padding: 3rem 2rem;
+      text-align: center;
+      background: rgba(124, 58, 237, 0.02);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+    .prod-ai-dropzone-wrap:hover,
+    .prod-ai-dropzone-wrap.dragover {
+      border-color: var(--accent);
+      background: rgba(124, 58, 237, 0.08);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.15);
+    }
+    .prod-ai-dropzone-icon {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+      display: inline-block;
+      filter: drop-shadow(0 4px 12px rgba(124, 58, 237, 0.25));
+    }
+    .prod-ai-progress-wrap {
+      padding: 4rem 2rem;
+      text-align: center;
+      max-width: 580px;
+      margin: 0 auto;
+    }
+    .prod-ai-sparkle-icon {
+      animation: prodAiSparklePulse 1.8s infinite ease-in-out;
+      display: inline-block;
+    }
+    @keyframes prodAiSparklePulse {
+      0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.4)); }
+      50% { transform: scale(1.15) rotate(8deg); filter: drop-shadow(0 0 20px rgba(236, 72, 153, 0.6)); }
+    }
+    .prod-ai-stage-text {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: var(--font-display);
+      color: var(--fg);
+      margin-bottom: 1.5rem;
+      min-height: 28px;
+    }
+    .prod-ai-progress-track {
+      height: 10px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    .prod-ai-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #7c3aed, #ec4899, #f97316);
+      border-radius: 999px;
+      transition: width 0.2s ease-out;
+      box-shadow: 0 0 14px rgba(124, 58, 237, 0.6);
+    }
+    .prod-ai-review-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 1.25rem;
+      height: 100%;
+      min-height: 520px;
+    }
+    @media (max-width: 980px) {
+      .prod-ai-review-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+    }
+    .prod-ai-img-preview-card {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .prod-ai-img-container {
+      flex: 1;
+      min-height: 260px;
+      max-height: 500px;
+      overflow: hidden;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-in;
+      position: relative;
+      user-select: none;
+      touch-action: none;
+    }
+    .prod-ai-img-container.zoomed {
+      cursor: grab;
+    }
+    .prod-ai-img-container.zoomed:active,
+    .prod-ai-img-container.panning {
+      cursor: grabbing !important;
+    }
+    .prod-ai-img-container img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transform-origin: center center;
+      transition: transform 0.15s ease-out;
+      pointer-events: none;
+    }
+    .prod-ai-batch-box {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(236, 72, 153, 0.04) 100%);
+      border: 1.5px solid rgba(124, 58, 237, 0.25);
+      border-radius: 14px;
+      padding: 1rem 1.15rem;
+      margin-bottom: 1rem;
+    }
+    .prod-ai-batch-title {
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .prod-ai-table-wrap {
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 290px;
+      background: var(--surface);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.02);
+    }
+    .prod-ai-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .prod-ai-table th {
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      border-bottom: 1.5px solid var(--border);
+      padding: 0.55rem 0.65rem;
+      font-size: 0.76rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      z-index: 10;
+      white-space: nowrap;
+    }
+    .prod-ai-table td {
+      padding: 0.4rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .prod-ai-table tr:hover {
+      background: rgba(124, 58, 237, 0.04);
+    }
+    .prod-ai-input {
+      font-size: 0.85rem;
+      padding: 0.35rem 0.55rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--fg);
+      font-weight: 600;
+      font-family: var(--font-body);
+      transition: border-color 0.2s;
+    }
+    .prod-ai-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+    }
+    .prod-ai-badge-row {
+      display: flex;
+      gap: 0.65rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .prod-ai-stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--fg);
+    }
+    .prod-ai-stat-pill.highlight {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #10b981;
+    }
+    .live-dot-pulse {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-right: 6px;
+      box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);
+      animation: qrDotPulse 1.6s infinite cubic-bezier(0.66, 0, 0, 1);
+    }
+    @keyframes qrDotPulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+    }
   </style>
   <script src="../../sidebar.js" defer></script>
 </head>
@@ -2452,7 +2699,15 @@
 
       <!-- Add Production Log Form -->
       <div class="card">
-        <h3 id="prod-form-title">Add Yarn Production Log</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+          <h3 id="prod-form-title" style="margin-bottom: 0;">Add Yarn Production Log</h3>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button type="button" id="btn-prod-ai-scan" class="btn btn-primary" onclick="openProdAiScanModal()" style="display: inline-flex; align-items: center; gap: 7px; padding: 0.5rem 1rem; font-size: 0.88rem; font-weight: 700; background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); border: none; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35); cursor: pointer; border-radius: 10px; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+              <span style="font-size: 1.1rem; line-height: 1;">📷</span>
+              <span>Scan Challan / Phone Upload</span>
+            </button>
+          </div>
+        </div>
         <form id="production-form">
           <input type="hidden" id="prod-edit-id">
           <div class="yp-form-2row">
@@ -9935,35 +10190,1426 @@
       initProdTwistCustomSelect();
       initFromUrl();
       initExcelCellSelection();
-      broadcastYarnPresence();
-      setInterval(updateClock, 1000);
-      updateClock();
+      // Global Paste Listener for Production Challan Scan
+      window.addEventListener('paste', (e) => {
+        const clipboardData = e.clipboardData || window.clipboardData;
+        if (!clipboardData || !clipboardData.items) return;
 
-      window.addEventListener('storage', (e) => {
-        handleRemoteDataSync(e.key);
-      });
-      window.addEventListener('supabase-sync', (e) => {
-        handleRemoteDataSync(e?.detail?.key);
-      });
-      window.addEventListener('supabase-ready', () => {
-        handleRemoteDataSync();
-      });
-      window.addEventListener('focus', () => {
-        if (!document.querySelector('.action-menu-dropdown.show')) {
-          refreshAllViews();
+        const activeEl = document.activeElement;
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) {
+          if (!activeEl.closest('#modal-prod-ai-scan')) return;
         }
-        broadcastYarnPresence();
-      });
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-          if (!document.querySelector('.action-menu-dropdown.show')) {
-            refreshAllViews();
+
+        for (let i = 0; i < clipboardData.items.length; i++) {
+          const item = clipboardData.items[i];
+          if (item.type && item.type.indexOf('image') !== -1) {
+            const blob = item.getAsFile();
+            if (blob) {
+              e.preventDefault();
+              openProdAiScanModal();
+              const reader = new FileReader();
+              reader.onload = (evt) => {
+                currentProdAiImageDataUrl = evt.target.result;
+                startProdAiImageScan(currentProdAiImageDataUrl);
+              };
+              reader.readAsDataURL(blob);
+              break;
+            }
           }
-          broadcastYarnPresence();
         }
       });
     });
+
+    // =========================================================================
+    // AI PRODUCTION CHALLAN & HANDWRITTEN REGISTER SCANNER LOGIC
+    // =========================================================================
+    let currentProdAiImageDataUrl = null;
+    let prodAiScanInterval = null;
+    let prodAiExtractedRows = [];
+    let prodAiDropdownOptions = [];
+    let prodAiQrSessionId = null;
+    let prodAiQrPollInterval = null;
+
+    window.openProdAiScanModal = function() {
+      const modal = document.getElementById('modal-prod-ai-scan');
+      if (!modal) return;
+      modal.style.display = 'flex';
+      setTimeout(() => modal.classList.add('active'), 10);
+      resetProdAiScanDropzone();
+    };
+
+    window.closeProdAiScanModal = function() {
+      const modal = document.getElementById('modal-prod-ai-scan');
+      if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.style.display = 'none', 200);
+      }
+      if (prodAiScanInterval) clearInterval(prodAiScanInterval);
+      stopProdAiPhoneQrPolling();
+    };
+
+    window.stopProdAiPhoneQrPolling = function() {
+      if (prodAiQrPollInterval) {
+        clearInterval(prodAiQrPollInterval);
+        prodAiQrPollInterval = null;
+      }
+    };
+
+    window.initProdAiPhoneQrSession = function() {
+      stopProdAiPhoneQrPolling();
+      prodAiQrSessionId = 'ch_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
+
+      const qrLaunchView = document.getElementById('prod-ai-qr-launch-view');
+      const qrView = document.getElementById('prod-ai-qr-view');
+      const canvasContainer = document.getElementById('prod-ai-qr-code-canvas');
+      const statusBadge = document.getElementById('prod-ai-qr-status-badge');
+      const statusText = document.getElementById('prod-ai-qr-status-text');
+      const pulseEl = document.getElementById('prod-ai-qr-pulse');
+
+      if (qrLaunchView) qrLaunchView.style.display = 'none';
+      if (qrView) qrView.style.display = 'flex';
+
+      if (statusBadge) {
+        statusBadge.style.background = 'rgba(139, 92, 246, 0.1)';
+        statusBadge.style.color = 'var(--accent)';
+      }
+      if (statusText) statusText.textContent = 'Waiting for phone camera upload...';
+      if (pulseEl) pulseEl.className = 'live-dot-pulse';
+
+      const scanUrl = new URL('../../upload.html', window.location.href).href + `?session=${prodAiQrSessionId}&type=challan`;
+
+      if (canvasContainer) {
+        canvasContainer.innerHTML = '';
+        if (typeof QRCode !== 'undefined') {
+          try {
+            new QRCode(canvasContainer, {
+              text: scanUrl,
+              width: 150,
+              height: 150,
+              colorDark: '#0f172a',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.M
+            });
+          } catch(e) {
+            const encoded = encodeURIComponent(scanUrl);
+            canvasContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encoded}" alt="QR" style="width:150px;height:150px;border-radius:8px;" />`;
+          }
+        } else {
+          const encoded = encodeURIComponent(scanUrl);
+          canvasContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encoded}" alt="QR" style="width:150px;height:150px;border-radius:8px;" />`;
+        }
+      }
+
+      // Start Polling for uploaded photo
+      const pollKey = `bl_qr_session_${prodAiQrSessionId}`;
+      prodAiQrPollInterval = setInterval(async () => {
+        let payload = null;
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+          try {
+            payload = await window.VishwaSupabase.get(pollKey);
+          } catch(e) {}
+        }
+        if (!payload) {
+          try {
+            const raw = localStorage.getItem(pollKey);
+            if (raw) payload = JSON.parse(raw);
+          } catch(e) {}
+        }
+
+        if (payload && payload.imageUrl) {
+          stopProdAiPhoneQrPolling();
+          if (statusBadge) {
+            statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+            statusBadge.style.color = '#10b981';
+          }
+          if (statusText) statusText.textContent = '✅ Photo received! Analyzing...';
+          if (pulseEl) pulseEl.className = '';
+
+          setTimeout(() => {
+            currentProdAiImageDataUrl = payload.imageUrl;
+            compressImageForAi(payload.imageUrl, 1920, 0.9, (optimizedDataUrl) => {
+              currentProdAiImageDataUrl = optimizedDataUrl;
+              startProdAiImageScan(optimizedDataUrl);
+            });
+          }, 500);
+        }
+      }, 1500);
+    };
+
+    window.copyProdAiPhoneUploadLink = function() {
+      if (!prodAiQrSessionId) {
+        initProdAiPhoneQrSession();
+      }
+      const scanUrl = new URL('../../upload.html', window.location.href).href + `?session=${prodAiQrSessionId}&type=challan`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(scanUrl).then(() => {
+          showToast('📱 Phone upload link copied to clipboard!', 'info');
+        }).catch(() => {
+          prompt('Copy link:', scanUrl);
+        });
+      } else {
+        prompt('Copy link:', scanUrl);
+      }
+    };
+
+    window.openProdAiPhoneUploadTab = function() {
+      if (!prodAiQrSessionId) {
+        initProdAiPhoneQrSession();
+      }
+      const scanUrl = new URL('../../upload.html', window.location.href).href + `?session=${prodAiQrSessionId}&type=challan`;
+      window.open(scanUrl, '_blank');
+    };
+
+    window.resetProdAiScanDropzone = function() {
+      if (prodAiScanInterval) clearInterval(prodAiScanInterval);
+      stopProdAiPhoneQrPolling();
+
+      const uploadStep = document.getElementById('prod-ai-step-upload');
+      const progressStep = document.getElementById('prod-ai-step-progress');
+      const reviewStep = document.getElementById('prod-ai-step-review');
+      const errorBanner = document.getElementById('prod-ai-error-banner');
+
+      if (uploadStep) uploadStep.style.display = 'block';
+      if (progressStep) progressStep.style.display = 'none';
+      if (reviewStep) reviewStep.style.display = 'none';
+      if (errorBanner) errorBanner.style.display = 'none';
+
+      const qrLaunchView = document.getElementById('prod-ai-qr-launch-view');
+      const qrView = document.getElementById('prod-ai-qr-view');
+      if (qrLaunchView) qrLaunchView.style.display = 'block';
+      if (qrView) qrView.style.display = 'none';
+
+      const fileInput = document.getElementById('prod-ai-file-input');
+      if (fileInput) fileInput.value = '';
+      currentProdAiImageDataUrl = null;
+      prodAiExtractedRows = [];
+    };
+
+    window.handleProdAiFileSelected = function(files) {
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file (JPG, PNG, WEBP).');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const rawDataUrl = e.target.result;
+        // Compress / optimize image to maximum 1920px for reliable Gemini Vision transmission
+        compressImageForAi(rawDataUrl, 1920, 0.9, (optimizedDataUrl) => {
+          currentProdAiImageDataUrl = optimizedDataUrl;
+          startProdAiImageScan(optimizedDataUrl);
+        });
+      };
+      reader.readAsDataURL(file);
+    };
+
+    function compressImageForAi(dataUrl, maxDim, quality, callback) {
+      const img = new Image();
+      img.onload = function() {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        const resultUrl = canvas.toDataURL('image/jpeg', quality || 0.9);
+        callback(resultUrl);
+      };
+      img.onerror = function() {
+        callback(dataUrl);
+      };
+      img.src = dataUrl;
+    }
+
+    let prodAiZoomLevel = 1;
+    let prodAiPanX = 0;
+    let prodAiPanY = 0;
+    let isProdAiPanning = false;
+    let prodAiPanStartX = 0;
+    let prodAiPanStartY = 0;
+
+    function applyProdAiTransform(container, img) {
+      if (!container || !img) return;
+      if (prodAiZoomLevel <= 1) {
+        prodAiZoomLevel = 1;
+        prodAiPanX = 0;
+        prodAiPanY = 0;
+        container.classList.remove('zoomed');
+        img.style.transform = 'scale(1) translate(0px, 0px)';
+      } else {
+        container.classList.add('zoomed');
+        // Bound panning so the image stays visible
+        const maxPan = Math.max(150, 200 * (prodAiZoomLevel - 1));
+        prodAiPanX = Math.max(-maxPan, Math.min(maxPan, prodAiPanX));
+        prodAiPanY = Math.max(-maxPan, Math.min(maxPan, prodAiPanY));
+        img.style.transform = `scale(${prodAiZoomLevel}) translate(${prodAiPanX}px, ${prodAiPanY}px)`;
+      }
+      const btn = document.getElementById('prod-ai-zoom-toggle-btn');
+      if (btn) {
+        btn.textContent = prodAiZoomLevel > 1 ? `🔍 Fit Normal (${Math.round(prodAiZoomLevel * 100)}%)` : '🔍 Zoom 180%';
+      }
+    }
+
+    window.toggleProdAiImgZoom = function() {
+      const container = document.getElementById('prod-ai-img-container');
+      const img = document.getElementById('prod-ai-preview-img');
+      if (!container || !img) return;
+
+      if (prodAiZoomLevel > 1) {
+        prodAiZoomLevel = 1;
+        prodAiPanX = 0;
+        prodAiPanY = 0;
+      } else {
+        prodAiZoomLevel = 1.8;
+        prodAiPanX = 0;
+        prodAiPanY = 0;
+      }
+      applyProdAiTransform(container, img);
+    };
+
+    function initProdAiPanAndZoomListeners() {
+      const container = document.getElementById('prod-ai-img-container');
+      const img = document.getElementById('prod-ai-preview-img');
+      if (!container || !img || container.dataset.panInit === 'true') return;
+      container.dataset.panInit = 'true';
+
+      // Mouse drag pan
+      container.addEventListener('mousedown', (e) => {
+        if (prodAiZoomLevel <= 1) return;
+        isProdAiPanning = true;
+        container.classList.add('panning');
+        prodAiPanStartX = e.clientX - prodAiPanX;
+        prodAiPanStartY = e.clientY - prodAiPanY;
+        e.preventDefault();
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isProdAiPanning) return;
+        prodAiPanX = (e.clientX - prodAiPanStartX);
+        prodAiPanY = (e.clientY - prodAiPanStartY);
+        applyProdAiTransform(container, img);
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isProdAiPanning) {
+          isProdAiPanning = false;
+          container.classList.remove('panning');
+        }
+      });
+
+      // Touch drag pan
+      let initialTouchDistance = 0;
+      container.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1 && prodAiZoomLevel > 1) {
+          isProdAiPanning = true;
+          container.classList.add('panning');
+          prodAiPanStartX = e.touches[0].clientX - prodAiPanX;
+          prodAiPanStartY = e.touches[0].clientY - prodAiPanY;
+        } else if (e.touches.length === 2) {
+          initialTouchDistance = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+        }
+      }, { passive: true });
+
+      container.addEventListener('touchmove', (e) => {
+        if (isProdAiPanning && e.touches.length === 1) {
+          prodAiPanX = (e.touches[0].clientX - prodAiPanStartX);
+          prodAiPanY = (e.touches[0].clientY - prodAiPanStartY);
+          applyProdAiTransform(container, img);
+        } else if (e.touches.length === 2 && initialTouchDistance > 0) {
+          const currentDistance = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          const factor = currentDistance / initialTouchDistance;
+          prodAiZoomLevel = Math.max(1, Math.min(3.5, prodAiZoomLevel * factor));
+          initialTouchDistance = currentDistance;
+          applyProdAiTransform(container, img);
+        }
+      }, { passive: true });
+
+      container.addEventListener('touchend', () => {
+        isProdAiPanning = false;
+        container.classList.remove('panning');
+      });
+
+      // Wheel zoom (smooth Ctrl+Wheel or regular wheel)
+      container.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.2 : -0.2;
+        prodAiZoomLevel = Math.max(1, Math.min(3.5, prodAiZoomLevel + delta));
+        if (prodAiZoomLevel === 1) {
+          prodAiPanX = 0;
+          prodAiPanY = 0;
+        }
+        applyProdAiTransform(container, img);
+      }, { passive: false });
+    }
+
+    function getStoredGeminiConfig() {
+      let apiKey = '';
+      let selectedModel = 'gemini-2.0-flash';
+      try {
+        const rawKey = localStorage.getItem('gemini-api-key');
+        if (rawKey) {
+          try { apiKey = JSON.parse(rawKey); } catch (_) { apiKey = rawKey; }
+        }
+      } catch (e) {}
+      if (!apiKey && typeof window !== 'undefined' && window.APP_CONFIG && window.APP_CONFIG.GEMINI_API_KEY) {
+        apiKey = window.APP_CONFIG.GEMINI_API_KEY;
+      }
+      try {
+        const rawModel = localStorage.getItem('selected-gemini-model');
+        if (rawModel) {
+          try { selectedModel = JSON.parse(rawModel); } catch (_) { selectedModel = rawModel; }
+        }
+      } catch (e) {}
+      if (!selectedModel && typeof window !== 'undefined' && window.APP_CONFIG && window.APP_CONFIG.SELECTED_GEMINI_MODEL) {
+        selectedModel = window.APP_CONFIG.SELECTED_GEMINI_MODEL;
+      }
+      return { apiKey: (apiKey || '').trim(), selectedModel: (selectedModel || 'gemini-2.0-flash').trim() };
+    }
+
+    async function startProdAiImageScan(dataUrl) {
+      const { apiKey, selectedModel } = getStoredGeminiConfig();
+
+      const uploadStep = document.getElementById('prod-ai-step-upload');
+      const progressStep = document.getElementById('prod-ai-step-progress');
+      const reviewStep = document.getElementById('prod-ai-step-review');
+      const errorBanner = document.getElementById('prod-ai-error-banner');
+      const errorMsg = document.getElementById('prod-ai-error-msg');
+      const stageLabel = document.getElementById('prod-ai-stage-label');
+      const progressBar = document.getElementById('prod-ai-progress-bar');
+      const progressPct = document.getElementById('prod-ai-progress-pct');
+
+      if (!apiKey) {
+        if (progressStep) progressStep.style.display = 'none';
+        if (uploadStep) uploadStep.style.display = 'block';
+        if (errorBanner && errorMsg) {
+          errorBanner.style.display = 'block';
+          errorMsg.innerHTML = `
+            Gemini API Key is missing. Please configure your Google Gemini API key in 
+            <a href="../settings.html#gemini-settings" style="color: var(--accent); font-weight: 700; text-decoration: underline;" target="_blank">Settings &gt; Gemini AI</a>.
+          `;
+        }
+        return;
+      }
+
+      if (uploadStep) uploadStep.style.display = 'none';
+      if (reviewStep) reviewStep.style.display = 'none';
+      if (errorBanner) errorBanner.style.display = 'none';
+      if (progressStep) progressStep.style.display = 'block';
+
+      let progress = 10;
+      if (progressBar) progressBar.style.width = '10%';
+      if (progressPct) progressPct.textContent = '10%';
+      if (stageLabel) stageLabel.textContent = 'Uploading slip & initializing Gemini Vision AI...';
+
+      const startTime = Date.now();
+      if (prodAiScanInterval) clearInterval(prodAiScanInterval);
+      prodAiScanInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 1200) {
+          progress = Math.min(30, progress + 3);
+          if (stageLabel) stageLabel.textContent = 'Analyzing challan handwriting & header fields...';
+        } else if (elapsed < 3500) {
+          progress = Math.min(70, progress + 2.5);
+          if (stageLabel) stageLabel.textContent = 'Reading handwritten table weights, rolls count & bori lists...';
+        } else if (elapsed < 6500) {
+          progress = Math.min(90, progress + 1);
+          if (stageLabel) stageLabel.textContent = 'Structuring rows & calculating net weights...';
+        } else {
+          progress = Math.min(96, progress + 0.3);
+          if (stageLabel) stageLabel.textContent = 'Finalizing batch data table...';
+        }
+        if (progressBar) progressBar.style.width = `${progress}%`;
+        if (progressPct) progressPct.textContent = `${Math.round(progress)}%`;
+      }, 150);
+
+      try {
+        let base64Data = '';
+        let mimeType = 'image/jpeg';
+        if (dataUrl.startsWith('data:')) {
+          const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+          if (match) {
+            mimeType = match[1];
+            base64Data = match[2];
+          } else {
+            base64Data = dataUrl.split(',')[1] || dataUrl;
+          }
+        } else {
+          base64Data = dataUrl;
+        }
+
+        const prompt = `You are an expert OCR AI specializing in Indian textile manufacturing mill production slips, hand-written weight registers, bori slips, delivery challans, and weighing scale sheets.
+Your sole primary job is to extract the table rows of Boris / Boxes containing:
+1. Cones / Rolls quantity (number of cones / rolls in each bori, e.g. 12, 14, 15, 16, 20, etc.)
+2. Gross Weight (e.g. 17.100, 18.250, 20.40, etc.)
+3. Tare Weight (e.g. 2.790, 2.80, 0.00, etc. If missing/empty in a row, use 0)
+4. Net Weight (Gross Weight - Tare Weight, e.g. 14.310, 15.450, etc.)
+
+EXTRACTION RULES:
+- Inspect all rows, columns, or handwritten lists of bori weights and cone numbers.
+- Extract every bori row into the "rows" array with:
+  - "cones": number of cones/rolls for that bori (also alias "rolls")
+  - "grossWeight": number (Gross weight in kg with decimals)
+  - "tareWeight": number (Tare weight in kg with decimals, default 0 if not listed)
+  - "netWeight": number (Net weight in kg. If not explicitly written, compute grossWeight - tareWeight)
+- If there is a starting bori number or serial number (e.g. 1, 23, 63, 101), extract "startBoriNumber".
+- Also extract any general "productName" / Quality or "lotNo" if visible at the top/header, otherwise null.
+- Ignore summary/grand total rows as entries.
+
+Return STRICT JSON matching:
+{
+  "productName": "Quality name if visible or null",
+  "lotNo": "Lot number if visible or null",
+  "startBoriNumber": 63,
+  "defaultTare": 2.79,
+  "defaultRolls": 14,
+  "rows": [
+    {
+      "cones": 14,
+      "grossWeight": 17.100,
+      "tareWeight": 2.790,
+      "netWeight": 14.310
+    }
+  ]
+}`;
+
+        // 1. Discover available models from user's Gemini API Key or use standard robust fallbacks
+        let modelConfigs = [];
+        try {
+          const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+          if (listRes.ok) {
+            const listJson = await listRes.json();
+            if (listJson.models && Array.isArray(listJson.models)) {
+              const supported = listJson.models
+                .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+                .map(m => m.name.replace(/^models\//, ''))
+                .filter(Boolean);
+              
+              // Prioritize flash/lite models
+              const flashModels = supported.filter(m => m.includes('flash') || m.includes('lite'));
+              const otherModels = supported.filter(m => !m.includes('flash') && !m.includes('lite'));
+              
+              modelConfigs = [...flashModels, ...otherModels].map(id => ({ id, ver: 'v1beta' }));
+            }
+          }
+        } catch (e) {
+          console.warn('[AI Scanner] Could not dynamic-list models:', e);
+        }
+
+        if (modelConfigs.length === 0) {
+          const rawSelected = selectedModel ? selectedModel.replace(/^models\//, '') : '';
+          modelConfigs = [
+            { id: rawSelected || 'gemini-2.0-flash', ver: 'v1beta' },
+            { id: 'gemini-2.0-flash', ver: 'v1beta' },
+            { id: 'gemini-2.5-flash', ver: 'v1beta' },
+            { id: 'gemini-2.0-flash-lite', ver: 'v1beta' },
+            { id: 'gemini-2.0-flash-exp', ver: 'v1beta' },
+            { id: 'gemini-flash-latest', ver: 'v1' },
+            { id: 'gemini-1.5-flash-latest', ver: 'v1beta' }
+          ];
+        }
+
+        const uniqueConfigs = [];
+        const seenKeys = new Set();
+        for (const cfg of modelConfigs) {
+          if (!cfg.id) continue;
+          const k = `${cfg.id}-${cfg.ver}`;
+          if (!seenKeys.has(k)) {
+            uniqueConfigs.push(cfg);
+            seenKeys.add(k);
+          }
+        }
+
+        let success = false;
+        let lastError = '';
+        let parsedData = null;
+
+        for (const config of uniqueConfigs) {
+          try {
+            console.log(`[AI Scanner] Trying model: ${config.id} (${config.ver})`);
+            
+            const requestBody = {
+              contents: [{
+                parts: [
+                  { text: prompt },
+                  { inline_data: { mime_type: mimeType, data: base64Data } }
+                ]
+              }],
+              generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 8192
+              }
+            };
+
+            let res = await fetch(`https://generativelanguage.googleapis.com/${config.ver}/models/${config.id}:generateContent?key=${apiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(requestBody)
+            });
+
+            // If camelCase inlineData required
+            if (!res.ok && res.status === 400) {
+              const altBody = {
+                contents: [{
+                  parts: [
+                    { text: prompt },
+                    { inlineData: { mimeType: mimeType, data: base64Data } }
+                  ]
+                }],
+                generationConfig: {
+                  temperature: 0.1,
+                  maxOutputTokens: 8192
+                }
+              };
+              res = await fetch(`https://generativelanguage.googleapis.com/${config.ver}/models/${config.id}:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(altBody)
+              });
+            }
+
+            if (!res.ok) {
+              const errBody = await res.text();
+              console.warn(`[AI Scanner] Model ${config.id} (${config.ver}) HTTP ${res.status}:`, errBody);
+              lastError = `${config.id} (HTTP ${res.status}): ${errBody}`;
+              continue;
+            }
+
+            const json = await res.json();
+            
+            if (json.error) {
+              console.warn(`[AI Scanner] Model ${config.id} error:`, json.error);
+              lastError = json.error.message || JSON.stringify(json.error);
+              continue;
+            }
+
+            const textResponse = json.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!textResponse) {
+              console.warn(`[AI Scanner] Empty candidate from ${config.id}`);
+              lastError = `Empty response candidate from ${config.id}.`;
+              continue;
+            }
+
+            console.log(`[AI Scanner] Received raw response from ${config.id}:`, textResponse);
+
+            // Clean any potential markdown code fence or trailing text
+            let cleanedText = textResponse.trim();
+            const jsonBlockMatch = cleanedText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+            if (jsonBlockMatch) {
+              cleanedText = jsonBlockMatch[1].trim();
+            } else {
+              const startIdx = cleanedText.indexOf('{');
+              const endIdx = cleanedText.lastIndexOf('}');
+              if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+                cleanedText = cleanedText.substring(startIdx, endIdx + 1);
+              }
+            }
+
+            try {
+              parsedData = JSON.parse(cleanedText);
+            } catch (pErr) {
+              try {
+                // Try extracting JSON array [...] if root is an array
+                const arrMatch = cleanedText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+                if (arrMatch) {
+                  parsedData = { rows: JSON.parse(arrMatch[0]) };
+                } else {
+                  // Try fixing common trailing comma JSON errors
+                  const fixedJson = cleanedText.replace(/,\s*([\]}])/g, '$1');
+                  parsedData = JSON.parse(fixedJson);
+                }
+              } catch (pErr2) {
+                console.warn(`[AI Scanner] JSON parse failed on ${config.id}:`, pErr2, cleanedText);
+              }
+            }
+
+            if (parsedData) {
+              // Ensure we check if rows exist in any format
+              const candidateRows = Array.isArray(parsedData) ? parsedData : (parsedData.rows || parsedData.items || parsedData.boxes || parsedData.boris || parsedData.data || parsedData.table || []);
+              if (candidateRows.length > 0 || parsedData.productName || parsedData.lotNo) {
+                if (Array.isArray(parsedData)) {
+                  parsedData = { rows: parsedData };
+                }
+                success = true;
+                break;
+              }
+            }
+          } catch (err) {
+            console.warn(`[AI Scanner] Model ${config.id} attempt failed:`, err);
+            lastError = err.message || String(err);
+          }
+        }
+
+        if (prodAiScanInterval) clearInterval(prodAiScanInterval);
+
+        if (!success || !parsedData) {
+          throw new Error(lastError || 'Failed to extract production logs from the image.');
+        }
+
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressPct) progressPct.textContent = '100%';
+
+        setTimeout(() => {
+          renderProdAiReviewScreen(parsedData);
+        }, 300);
+
+      } catch (err) {
+        if (prodAiScanInterval) clearInterval(prodAiScanInterval);
+        console.error('[AI Scanner Error]:', err);
+        if (progressStep) progressStep.style.display = 'none';
+        if (uploadStep) uploadStep.style.display = 'block';
+        if (errorBanner && errorMsg) {
+          errorBanner.style.display = 'block';
+          errorMsg.innerHTML = `<strong>Scan Failed:</strong> ${err.message || err}. Please ensure your Gemini API Key is active in Settings.`;
+        }
+      }
+    }
+
+    function renderProdAiReviewScreen(extracted) {
+      const progressStep = document.getElementById('prod-ai-step-progress');
+      const reviewStep = document.getElementById('prod-ai-step-review');
+      if (progressStep) progressStep.style.display = 'none';
+      if (reviewStep) reviewStep.style.display = 'block';
+
+      // 1. Set Image Preview & Initialize Interactive Pan/Zoom
+      const previewImg = document.getElementById('prod-ai-preview-img');
+      const container = document.getElementById('prod-ai-img-container');
+      if (previewImg && currentProdAiImageDataUrl) {
+        previewImg.src = currentProdAiImageDataUrl;
+        prodAiZoomLevel = 1;
+        prodAiPanX = 0;
+        prodAiPanY = 0;
+        applyProdAiTransform(container, previewImg);
+        initProdAiPanAndZoomListeners();
+      }
+
+      // 2. Set Header Date
+      const dateEl = document.getElementById('prod-ai-date');
+      if (dateEl) {
+        dateEl.value = (extracted && extracted.date && normalizeIsoDate(extracted.date)) ? normalizeIsoDate(extracted.date) : (document.getElementById('prod-date')?.value || new Date().toISOString().split('T')[0]);
+      }
+
+      // 3. Set Prefix & Start Bori Number
+      const prefixMap = { covering: 'C-', tfo: 'T-', doubler: 'D-' };
+      const prefixEl = document.getElementById('prod-ai-bori-prefix');
+      if (prefixEl) prefixEl.textContent = prefixMap[activeDivision] || 'B-';
+
+      const startBoriEl = document.getElementById('prod-ai-start-bori');
+      let startBoriNum = generateNextBoriNumber(activeDivision);
+      if (extracted && extracted.startBoriNumber && !isNaN(parseInt(extracted.startBoriNumber, 10))) {
+        startBoriNum = parseInt(extracted.startBoriNumber, 10);
+      } else if (extracted && extracted.rows && extracted.rows.length > 0 && extracted.rows[0].boriNumber) {
+        const firstRowClean = String(extracted.rows[0].boriNumber).replace(/^[C|T|D|B]-?/i, '');
+        const pNum = parseInt(firstRowClean, 10);
+        if (!isNaN(pNum) && pNum > 0) startBoriNum = pNum;
+      }
+      if (startBoriEl) startBoriEl.value = startBoriNum;
+
+      // 4. Default Tare Weight
+      const tareEl = document.getElementById('prod-ai-default-tare');
+      if (tareEl) {
+        const dTare = (extracted && extracted.defaultTare !== undefined && extracted.defaultTare !== null) ? parseFloat(extracted.defaultTare) : 0;
+        tareEl.value = !isNaN(dTare) ? dTare : 0;
+      }
+
+      // 5. Populate Products Datalist / Options
+      initProdAiProductDropdown(extracted?.productName);
+
+      // 6. Set Lot Number
+      const lotPrefixMap = { covering: 'C-Lot ', tfo: 'T-Lot ', doubler: 'D-Lot ' };
+      const lotPrefixEl = document.getElementById('prod-ai-lot-prefix');
+      if (lotPrefixEl) lotPrefixEl.textContent = lotPrefixMap[activeDivision] || 'LOT-';
+
+      const lotEl = document.getElementById('prod-ai-lot');
+      if (lotEl) {
+        let lotVal = '';
+        if (extracted && extracted.lotNo) {
+          lotVal = cleanLotNumber(extracted.lotNo);
+        } else {
+          lotVal = cleanLotNumber(document.getElementById('prod-lot')?.value || '');
+        }
+        lotEl.value = lotVal;
+      }
+
+      // 7. Color, Denier, TPM, Twist
+      const colorEl = document.getElementById('prod-ai-color');
+      if (colorEl) colorEl.value = extracted?.color || document.getElementById('prod-color')?.value || '';
+
+      const denierEl = document.getElementById('prod-ai-denier');
+      if (denierEl) denierEl.value = extracted?.denier || document.getElementById('prod-denier')?.value || '';
+
+      const tpmEl = document.getElementById('prod-ai-tpm');
+      if (tpmEl) tpmEl.value = extracted?.tpm || document.getElementById('prod-tpm')?.value || '';
+
+      const twistEl = document.getElementById('prod-ai-twist');
+      if (twistEl) {
+        let twistOptions = '';
+        if (activeDivision === 'covering' || activeDivision === 'tfo') {
+          twistOptions = `<option value="S">S Twist</option><option value="Z">Z Twist</option>`;
+        } else {
+          twistOptions = `
+            <option value="S/Z">S/Z Twist</option>
+            <option value="Z/S">Z/S Twist</option>
+            <option value="S/S">S/S Twist</option>
+            <option value="Z/Z">Z/Z Twist</option>
+            <option value="2Core">2Core</option>
+            <option value="2Core/S">2Core/S</option>
+            <option value="2Core/Z">2Core/Z</option>
+          `;
+        }
+        twistEl.innerHTML = twistOptions;
+        if (extracted?.twist && Array.from(twistEl.options).some(o => o.value === extracted.twist)) {
+          twistEl.value = extracted.twist;
+        } else if (document.getElementById('prod-twist')?.value) {
+          twistEl.value = document.getElementById('prod-twist').value;
+        }
+      }
+
+      // 8. Build Extracted Table Rows (supporting any nested object/array structure)
+      let rawRows = [];
+      if (extracted) {
+        if (Array.isArray(extracted)) {
+          rawRows = extracted;
+        } else if (Array.isArray(extracted.rows) && extracted.rows.length > 0) {
+          rawRows = extracted.rows;
+        } else if (Array.isArray(extracted.items) && extracted.items.length > 0) {
+          rawRows = extracted.items;
+        } else if (Array.isArray(extracted.boxes) && extracted.boxes.length > 0) {
+          rawRows = extracted.boxes;
+        } else if (Array.isArray(extracted.boris) && extracted.boris.length > 0) {
+          rawRows = extracted.boris;
+        } else if (Array.isArray(extracted.data) && extracted.data.length > 0) {
+          rawRows = extracted.data;
+        } else if (Array.isArray(extracted.table) && extracted.table.length > 0) {
+          rawRows = extracted.table;
+        } else if (Array.isArray(extracted.weights) && extracted.weights.length > 0) {
+          rawRows = extracted.weights;
+        } else {
+          // If object keys are numeric (e.g. { "0": {...}, "1": {...} })
+          const objValues = Object.values(extracted).filter(v => v && typeof v === 'object');
+          const foundArray = objValues.find(v => Array.isArray(v) && v.length > 0);
+          if (foundArray) {
+            rawRows = foundArray;
+          }
+        }
+      }
+
+      if (rawRows.length === 0) {
+        rawRows = [{ rolls: 12, grossWeight: 0, tareWeight: 0, netWeight: 0 }];
+      }
+
+      prodAiExtractedRows = [];
+      const defaultTareVal = parseFloat(tareEl?.value) || 0;
+      const defaultRollsVal = extracted?.defaultRolls || 12;
+
+      rawRows.forEach((r, idx) => {
+        if (!r) return;
+
+        // If row is a primitive number (e.g. gross weight number directly in array)
+        if (typeof r === 'number' || typeof r === 'string') {
+          const num = parseFloat(String(r).replace(/[^0-9.]/g, '')) || 0;
+          if (num > 0) {
+            prodAiExtractedRows.push({
+              id: 'row_' + Date.now() + '_' + idx,
+              rolls: defaultRollsVal,
+              grossWeight: num,
+              tareWeight: defaultTareVal,
+              netWeight: Math.max(0, parseFloat((num - defaultTareVal).toFixed(2)))
+            });
+          }
+          return;
+        }
+
+        if (typeof r !== 'object') return;
+
+        // Parse gross weight across all common synonyms
+        let rawGross = r.grossWeight !== undefined ? r.grossWeight : (r.gross !== undefined ? r.gross : (r.gross_weight !== undefined ? r.gross_weight : (r.gro_wt !== undefined ? r.gro_wt : (r.gr_wt !== undefined ? r.gr_wt : (r.gross_wt !== undefined ? r.gross_wt : (r.weight !== undefined ? r.weight : 0))))));
+        const gross = parseFloat(String(rawGross).replace(/[^0-9.]/g, '')) || 0;
+
+        // Parse tare weight across all common synonyms
+        let rawTare = r.tareWeight !== undefined ? r.tareWeight : (r.tare !== undefined ? r.tare : (r.tare_weight !== undefined ? r.tare_weight : (r.tar_wt !== undefined ? r.tar_wt : (r.tare_wt !== undefined ? r.tare_wt : defaultTareVal))));
+        let tare = 0;
+        if (rawTare !== undefined && rawTare !== null && String(rawTare).trim() !== '') {
+          tare = parseFloat(String(rawTare).replace(/[^0-9.]/g, '')) || 0;
+        } else {
+          tare = defaultTareVal;
+        }
+
+        // Parse net weight
+        let rawNet = r.netWeight !== undefined ? r.netWeight : (r.net !== undefined ? r.net : (r.net_weight !== undefined ? r.net_weight : (r.nt_wt !== undefined ? r.nt_wt : (r.net_wt !== undefined ? r.net_wt : null))));
+        let net = 0;
+        if (rawNet !== null && rawNet !== undefined && String(rawNet).trim() !== '') {
+          net = parseFloat(String(rawNet).replace(/[^0-9.]/g, '')) || 0;
+        } else {
+          net = Math.max(0, gross - tare);
+        }
+        net = parseFloat(net.toFixed(2));
+
+        // Parse rolls / cones count
+        let rawRolls = r.rolls !== undefined ? r.rolls : (r.cones !== undefined ? r.cones : (r.cone !== undefined ? r.cone : (r.rollsQty !== undefined ? r.rollsQty : (r.qty !== undefined ? r.qty : defaultRollsVal))));
+        const rolls = parseInt(String(rawRolls).replace(/[^0-9]/g, ''), 10) || defaultRollsVal;
+
+        prodAiExtractedRows.push({
+          id: 'row_' + Date.now() + '_' + idx,
+          rolls: rolls,
+          grossWeight: gross,
+          tareWeight: tare,
+          netWeight: net
+        });
+      });
+
+      if (prodAiExtractedRows.length === 0) {
+        prodAiExtractedRows = [{ id: 'row_' + Date.now(), rolls: 12, grossWeight: 0, tareWeight: 0, netWeight: 0 }];
+      }
+
+      renderProdAiTableRows();
+    }
+
+    function initProdAiProductDropdown(suggestedName = '') {
+      const dropdown = document.getElementById('prod-ai-product-select');
+      if (!dropdown) return;
+
+      const fpQualities = JSON.parse(localStorage.getItem('yarn-fp-qualities') || '[]');
+      const fpItems = fpQualities
+        .filter(q => (q.division || '').toLowerCase() === activeDivision.toLowerCase())
+        .map(q => {
+          const name = (q && q.name) ? q.name.trim() : '';
+          if (!name) return null;
+          const comp = (q.composition || '').trim();
+          return {
+            label: comp ? `${name} [${comp}]` : name,
+            value: comp ? `${name} [${comp}]` : name,
+            quality: q
+          };
+        })
+        .filter(Boolean);
+
+      dropdown.innerHTML = '<option value="">-- Select Product Quality --</option>';
+      fpItems.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.value;
+        opt.textContent = item.label;
+        dropdown.appendChild(opt);
+      });
+
+      if (suggestedName) {
+        const match = fpItems.find(i => i.value.toLowerCase().includes(suggestedName.toLowerCase()) || suggestedName.toLowerCase().includes(i.label.toLowerCase()));
+        if (match) {
+          dropdown.value = match.value;
+          onProdAiProductSelected(match.value);
+          return;
+        }
+      }
+
+      // Check main form's selected product
+      const currentFormProd = document.getElementById('prod-name')?.value || document.getElementById('prod-name-search')?.value;
+      if (currentFormProd && Array.from(dropdown.options).some(o => o.value === currentFormProd)) {
+        dropdown.value = currentFormProd;
+        onProdAiProductSelected(currentFormProd);
+      }
+    }
+
+    window.onProdAiProductSelected = function(val) {
+      if (!val) return;
+      const fpQualities = JSON.parse(localStorage.getItem('yarn-fp-qualities') || '[]');
+      const rawBase = val.replace(/\s*\[.*?\]\s*$/, '').trim().toLowerCase();
+      const fpProd = fpQualities.find(p => {
+        const fullLabel = p.composition ? `${(p.name || '').trim()} [${p.composition.trim()}]` : (p.name || '').trim();
+        return (p.division || '').toLowerCase() === activeDivision.toLowerCase() &&
+               (fullLabel.toLowerCase() === val.toLowerCase() || (p.name || '').trim().toLowerCase() === rawBase);
+      }) || fpQualities.find(p => (p.name || '').trim().toLowerCase() === rawBase);
+
+      if (fpProd) {
+        const denierEl = document.getElementById('prod-ai-denier');
+        const tpmEl = document.getElementById('prod-ai-tpm');
+        const twistEl = document.getElementById('prod-ai-twist');
+
+        if (denierEl && fpProd.denier) denierEl.value = parseFloat(parseFloat(fpProd.denier).toFixed(2));
+        if (tpmEl && fpProd.tpm) tpmEl.value = parseInt(fpProd.tpm, 10);
+        if (twistEl && fpProd.twist && Array.from(twistEl.options).some(o => o.value === fpProd.twist)) {
+          twistEl.value = fpProd.twist;
+        }
+      }
+    };
+
+    window.onProdAiDefaultTareChanged = function(val) {
+      const tareNum = parseFloat(val) || 0;
+      prodAiExtractedRows.forEach(row => {
+        row.tareWeight = tareNum;
+        row.netWeight = Math.max(0, parseFloat(((row.grossWeight || 0) - tareNum).toFixed(2)));
+      });
+      renderProdAiTableRows();
+    };
+
+    window.addProdAiRow = function() {
+      const defaultTare = parseFloat(document.getElementById('prod-ai-default-tare')?.value) || 0;
+      prodAiExtractedRows.push({
+        id: 'row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        rolls: 12,
+        grossWeight: 0,
+        tareWeight: defaultTare,
+        netWeight: 0
+      });
+      renderProdAiTableRows();
+    };
+
+    window.removeProdAiRow = function(index) {
+      if (prodAiExtractedRows.length <= 1) {
+        prodAiExtractedRows = [{ id: 'row_' + Date.now(), rolls: 12, grossWeight: 0, tareWeight: 0, netWeight: 0 }];
+      } else {
+        prodAiExtractedRows.splice(index, 1);
+      }
+      renderProdAiTableRows();
+    };
+
+    window.updateProdAiRowField = function(index, field, val) {
+      const row = prodAiExtractedRows[index];
+      if (!row) return;
+
+      if (field === 'rolls') {
+        row.rolls = parseInt(val, 10) || 0;
+      } else if (field === 'grossWeight') {
+        row.grossWeight = parseFloat(val) || 0;
+        row.netWeight = Math.max(0, parseFloat((row.grossWeight - (row.tareWeight || 0)).toFixed(2)));
+      } else if (field === 'tareWeight') {
+        row.tareWeight = parseFloat(val) || 0;
+        row.netWeight = Math.max(0, parseFloat(((row.grossWeight || 0) - row.tareWeight).toFixed(2)));
+      } else if (field === 'netWeight') {
+        row.netWeight = parseFloat(val) || 0;
+      }
+
+      updateProdAiTableTotalsOnly();
+    };
+
+    function renderProdAiTableRows() {
+      const tbody = document.getElementById('prod-ai-table-body');
+      if (!tbody) return;
+
+      const prefixMap = { covering: 'C-', tfo: 'T-', doubler: 'D-' };
+      const prefix = prefixMap[activeDivision] || 'B-';
+      const startNum = parseInt(document.getElementById('prod-ai-start-bori')?.value, 10) || 101;
+
+      tbody.innerHTML = '';
+
+      prodAiExtractedRows.forEach((row, idx) => {
+        const boriNo = `${prefix}${startNum + idx}`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="text-align: center; font-weight: 700; color: var(--muted);">${idx + 1}</td>
+          <td>
+            <span style="font-weight: 800; color: var(--accent); font-family: var(--font-mono); font-size: 0.95rem;">${boriNo}</span>
+          </td>
+          <td>
+            <input type="number" class="prod-ai-input" value="${row.rolls}" min="1" step="1" style="width: 80px; text-align: center;" oninput="updateProdAiRowField(${idx}, 'rolls', this.value)">
+          </td>
+          <td>
+            <input type="number" class="prod-ai-input" value="${row.grossWeight || ''}" placeholder="0.00" min="0" step="any" style="width: 110px; font-weight: 700;" oninput="updateProdAiRowField(${idx}, 'grossWeight', this.value)">
+          </td>
+          <td>
+            <input type="number" class="prod-ai-input" value="${row.tareWeight !== undefined ? row.tareWeight : 0}" placeholder="0.00" min="0" step="any" style="width: 90px; color: var(--muted);" oninput="updateProdAiRowField(${idx}, 'tareWeight', this.value)">
+          </td>
+          <td>
+            <input type="number" class="prod-ai-input" value="${row.netWeight || ''}" placeholder="0.00" min="0" step="any" style="width: 110px; font-weight: 800; color: #10b981;" oninput="updateProdAiRowField(${idx}, 'netWeight', this.value)">
+          </td>
+          <td style="text-align: center;">
+            <button type="button" class="btn-icon" onclick="removeProdAiRow(${idx})" title="Remove Row" style="color: #ef4444; border: none; background: transparent; cursor: pointer; font-size: 1.1rem; padding: 2px 6px;">
+              🗑️
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      updateProdAiTableTotalsOnly();
+    }
+
+    function updateProdAiTableTotalsOnly() {
+      let totalBoris = prodAiExtractedRows.length;
+      let totalRolls = 0;
+      let totalGross = 0;
+      let totalTare = 0;
+      let totalNet = 0;
+
+      prodAiExtractedRows.forEach(r => {
+        totalRolls += (parseInt(r.rolls, 10) || 0);
+        totalGross += (parseFloat(r.grossWeight) || 0);
+        totalTare += (parseFloat(r.tareWeight) || 0);
+        totalNet += (parseFloat(r.netWeight) || 0);
+      });
+
+      const pillBoris = document.getElementById('prod-ai-stat-boris');
+      const pillRolls = document.getElementById('prod-ai-stat-rolls');
+      const pillGross = document.getElementById('prod-ai-stat-gross');
+      const pillNet = document.getElementById('prod-ai-stat-net');
+
+      if (pillBoris) pillBoris.textContent = `📦 ${totalBoris} Boris`;
+      if (pillRolls) pillRolls.textContent = `🧵 ${totalRolls} Cones`;
+      if (pillGross) pillGross.textContent = `⚖️ Gross: ${totalGross.toFixed(2)} Kg`;
+      if (pillNet) pillNet.textContent = `✨ Net: ${totalNet.toFixed(2)} Kg`;
+    }
+
+    window.saveProdAiBatchLogs = function() {
+      const dateVal = document.getElementById('prod-ai-date')?.value;
+      const productSelect = document.getElementById('prod-ai-product-select');
+      const productName = (productSelect ? productSelect.value : '').trim();
+      const lotPrefix = document.getElementById('prod-ai-lot-prefix')?.textContent || '';
+      const rawLot = (document.getElementById('prod-ai-lot')?.value || '').trim();
+      const lotNo = rawLot ? `${lotPrefix}${cleanLotNumber(rawLot)}` : '';
+      const color = (document.getElementById('prod-ai-color')?.value || '').trim();
+      const denier = parseFloat(document.getElementById('prod-ai-denier')?.value) || 0;
+      const tpm = parseInt(document.getElementById('prod-ai-tpm')?.value, 10) || 0;
+      const twist = document.getElementById('prod-ai-twist')?.value || 'S';
+      const startNum = parseInt(document.getElementById('prod-ai-start-bori')?.value, 10) || 101;
+      const prefixMap = { covering: 'C-', tfo: 'T-', doubler: 'D-' };
+      const prefix = prefixMap[activeDivision] || 'B-';
+
+      if (!dateVal) {
+        showToast('Please specify a valid production date.', 'error');
+        return;
+      }
+      if (!productName) {
+        showToast('Please select or specify a Product Quality.', 'error');
+        return;
+      }
+      if (!lotNo) {
+        showToast('Please enter a Lot Number.', 'error');
+        return;
+      }
+
+      // Filter valid rows
+      const validRows = prodAiExtractedRows.filter(r => (parseFloat(r.netWeight) > 0 || parseFloat(r.grossWeight) > 0));
+      if (validRows.length === 0) {
+        showToast('No valid rows with net weight found to upload.', 'error');
+        return;
+      }
+
+      // Duplicate Bori Number check against current division
+      const existingBoris = new Set(dataStore[activeDivision].production.map(l => (l.boriNo || '').toLowerCase()));
+      const duplicateList = [];
+      const newLogs = [];
+
+      // Fetch matched product config
+      const fpQualities = JSON.parse(localStorage.getItem('yarn-fp-qualities') || '[]');
+      const rawBase = productName.replace(/\s*\[.*?\]\s*$/, '').trim().toLowerCase();
+      const fpProd = fpQualities.find(p => (p.name || '').trim().toLowerCase() === rawBase);
+
+      validRows.forEach((r, idx) => {
+        const boriNo = `${prefix}${startNum + idx}`;
+        if (existingBoris.has(boriNo.toLowerCase())) {
+          duplicateList.push(boriNo);
+        }
+
+        const grossVal = parseFloat(r.grossWeight) || 0;
+        const tareVal = parseFloat(r.tareWeight) || 0;
+        const netVal = parseFloat((parseFloat(r.netWeight) || Math.max(0, grossVal - tareVal)).toFixed(2));
+
+        newLogs.push({
+          id: 'p_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substr(2, 6),
+          date: dateVal,
+          boriNo: boriNo,
+          productName: productName,
+          productId: fpProd ? fpProd.id : '',
+          lotNo: lotNo,
+          color: color,
+          denier: denier,
+          tpm: tpm,
+          twist: twist,
+          rolls: parseInt(r.rolls, 10) || 12,
+          grossWeight: grossVal,
+          tareWeight: tareVal,
+          qty: netVal,
+          configType: fpProd ? fpProd.configType : '',
+          ply: fpProd ? fpProd.ply : '',
+          yarns: fpProd && fpProd.yarns ? fpProd.yarns : []
+        });
+      });
+
+      if (duplicateList.length > 0) {
+        showToast(`Cannot upload batch: Bori numbers [${duplicateList.slice(0, 4).join(', ')}${duplicateList.length > 4 ? '...' : ''}] already exist!`, 'error');
+        return;
+      }
+
+      // Append all logs and save
+      dataStore[activeDivision].production.push(...newLogs);
+      saveLogs('production');
+      closeProdAiScanModal();
+
+      const totalKg = newLogs.reduce((sum, item) => sum + (item.qty || 0), 0);
+      const divLabel = activeDivision === 'doubler' ? 'Doubler/MX' : activeDivision.toUpperCase();
+      showToast(`✨ Successfully uploaded batch of ${newLogs.length} Boris (${totalKg.toFixed(2)} Kg) to ${divLabel} Production Logs!`, 'success');
+      refreshAllViews();
+    };
+
   </script>
+
+  <!-- =========================================================================
+       MODAL: AI CHALLAN & PHONE UPLOAD SCANNER (BATCH PRODUCTION LOGS)
+       ========================================================================= -->
+  <div class="modal-overlay" id="modal-prod-ai-scan" style="z-index: 100060; display: none;">
+    <div class="modal-card prod-ai-modal-card">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border); padding: 1.15rem 1.75rem; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.5rem; line-height: 1;">📷</span>
+          <div>
+            <h3 style="margin: 0; font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; color: var(--fg);">
+              Scan Challan & Auto Batch Production Upload
+            </h3>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-top: 2px;">
+              Auto-extracts rolls and gross weights from handwritten slips and creates sequential Boris in bulk
+            </div>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="closeProdAiScanModal()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem; overflow-y: auto; flex: 1;">
+        <!-- Error Banner -->
+        <div id="prod-ai-error-banner" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1.5px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 0.85rem 1.25rem; margin-bottom: 1.25rem; color: #ef4444; font-size: 0.9rem;">
+          <span id="prod-ai-error-msg"></span>
+        </div>
+
+        <!-- STEP 1: Upload / Camera Dropzone & Phone QR Option -->
+        <div id="prod-ai-step-upload">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+            <!-- Dropzone / File Browse Card -->
+            <div class="prod-ai-dropzone-wrap" id="prod-ai-dropzone" onclick="document.getElementById('prod-ai-file-input').click()" style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 280px;">
+              <input type="file" id="prod-ai-file-input" accept="image/*" style="display: none;" onchange="handleProdAiFileSelected(this.files)">
+              <div class="prod-ai-dropzone-icon">📑</div>
+              <h3 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 0.4rem; color: var(--fg);">
+                Upload or Drop File
+              </h3>
+              <p style="color: var(--muted); font-size: 0.88rem; max-width: 320px; margin: 0 auto 1.25rem auto; line-height: 1.4;">
+                Select image from PC, drag & drop or paste (Ctrl+V)
+              </p>
+              <button type="button" class="btn btn-primary" style="background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); pointer-events: none; padding: 0.6rem 1.4rem; font-weight: 700;">
+                📁 Browse Image
+              </button>
+            </div>
+
+            <!-- Mobile Phone QR Upload Card -->
+            <div style="border: 2px solid var(--border); border-radius: 16px; padding: 1.5rem; background: var(--surface); display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: space-between; min-height: 280px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+              <div>
+                <div style="font-size: 2.4rem; margin-bottom: 0.4rem;">📱</div>
+                <h3 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 0.3rem; color: var(--fg);">
+                  Scan with Mobile Phone
+                </h3>
+                <p style="color: var(--muted); font-size: 0.84rem; max-width: 300px; margin: 0 auto 1rem auto; line-height: 1.4;">
+                  Use phone camera to directly capture challans without transferring files.
+                </p>
+              </div>
+
+              <div id="prod-ai-qr-view" style="display: none; flex-direction: column; align-items: center; width: 100%;">
+                <div style="background: #ffffff; padding: 10px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); margin-bottom: 0.75rem; display: flex; justify-content: center; align-items: center; width: 170px; height: 170px;">
+                  <div id="prod-ai-qr-code-canvas" style="width: 150px; height: 150px;"></div>
+                </div>
+                
+                <div id="prod-ai-qr-status-badge" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.4rem 0.85rem; border-radius: 8px; background: rgba(139, 92, 246, 0.1); color: var(--accent); font-weight: 600; font-size: 0.8rem; margin-bottom: 0.75rem;">
+                  <span class="live-dot-pulse" id="prod-ai-qr-pulse"></span>
+                  <span id="prod-ai-qr-status-text">Waiting for phone camera upload...</span>
+                </div>
+
+                <div style="display: flex; gap: 0.4rem; width: 100%; justify-content: center;">
+                  <button type="button" class="btn btn-secondary" onclick="copyProdAiPhoneUploadLink()" style="flex: 1; padding: 0.4rem; font-size: 0.78rem;">
+                    📋 Copy Link
+                  </button>
+                  <button type="button" class="btn btn-secondary" onclick="openProdAiPhoneUploadTab()" style="padding: 0.4rem 0.75rem; font-size: 0.78rem;">
+                    ↗️ Open Tab
+                  </button>
+                </div>
+              </div>
+
+              <div id="prod-ai-qr-launch-view">
+                <button type="button" class="btn btn-primary" onclick="initProdAiPhoneQrSession()" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); padding: 0.65rem 1.4rem; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);">
+                  📱 Generate Mobile QR
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Progress Animation -->
+        <div id="prod-ai-step-progress" style="display: none;">
+          <div class="prod-ai-progress-wrap">
+            <div style="font-size: 3rem; margin-bottom: 1rem;" class="prod-ai-sparkle-icon">✨</div>
+            <div class="prod-ai-stage-text" id="prod-ai-stage-label">Initializing Gemini Vision AI Engine...</div>
+            <div class="prod-ai-progress-track">
+              <div class="prod-ai-progress-fill" id="prod-ai-progress-bar"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); font-family: var(--font-mono); margin-top: 0.75rem; font-weight: 600;">
+              <span>Gemini Multimodal OCR Engine</span>
+              <span id="prod-ai-progress-pct" style="color: var(--accent); font-weight: 700;">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3: Review & Batch Data Entry Screen -->
+        <div id="prod-ai-step-review" style="display: none;">
+          <div class="prod-ai-review-grid">
+            <!-- Left: Scanned Document Preview -->
+            <div class="prod-ai-img-preview-card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <div>
+                  <span style="font-size: 0.85rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; display: flex; align-items: center; gap: 0.35rem;">
+                    <span>📑</span> Scanned Slip
+                  </span>
+                  <span style="font-size: 0.72rem; color: var(--muted); display: block;">Click zoom or use mouse wheel, then drag to pan</span>
+                </div>
+                <div style="display: flex; gap: 0.45rem; align-items: center;">
+                  <button type="button" class="btn btn-secondary" id="prod-ai-zoom-toggle-btn" onclick="toggleProdAiImgZoom()" style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 700; min-height: 30px; border-radius: 8px;">
+                    🔍 Zoom 180%
+                  </button>
+                  <button type="button" class="btn btn-secondary" onclick="resetProdAiScanDropzone()" style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 700; min-height: 30px; border-radius: 8px;">
+                    ↺ Re-upload
+                  </button>
+                </div>
+              </div>
+              <div class="prod-ai-img-container" id="prod-ai-img-container">
+                <img id="prod-ai-preview-img" src="" alt="Scanned Challan Document">
+              </div>
+            </div>
+
+            <!-- Right: Batch Specs & Extracted Table Grid -->
+            <div style="display: flex; flex-direction: column; overflow: hidden;">
+              <!-- Batch Parameters Card -->
+              <div class="prod-ai-batch-box">
+                <div class="prod-ai-batch-title">
+                  <span>⚙️ Batch Production Parameters (Applied to all Boris)</span>
+                </div>
+                
+                <!-- Row 1: Date, Start Bori, Product Name, Lot No -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="prod-ai-date" style="font-size: 0.78rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: 4px;">Date *</label>
+                    <input type="date" id="prod-ai-date" class="prod-ai-input" style="width: 100%;" required>
+                  </div>
+                  
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="prod-ai-start-bori" style="font-size: 0.78rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: 4px;">Start Bori Number *</label>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span id="prod-ai-bori-prefix" style="font-weight: bold; color: var(--accent); padding: 5px 8px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid var(--border);">C-</span>
+                      <input type="number" id="prod-ai-start-bori" class="prod-ai-input" min="1" style="width: 100%;" oninput="renderProdAiTableRows()">
+                    </div>
+                  </div>
+
+                  <div class="form-group" style="grid-column: span 2; margin-bottom: 0;">
+                    <label for="prod-ai-product-select" style="font-size: 0.78rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: 4px;">Product Quality *</label>
+                    <select id="prod-ai-product-select" class="prod-ai-input" style="width: 100%; font-weight: 700;" onchange="onProdAiProductSelected(this.value)">
+                      <option value="">-- Select Product Quality --</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="prod-ai-lot" style="font-size: 0.78rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: 4px;">Lot No *</label>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span id="prod-ai-lot-prefix" style="font-weight: bold; color: var(--accent); padding: 5px 8px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid var(--border); white-space: nowrap;">C-Lot </span>
+                      <input type="text" id="prod-ai-lot" class="prod-ai-input" placeholder="e.g. 101" style="width: 100%;">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Row 2: Color, Denier, TPM, Twist, Default Tare -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 0.75rem;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="prod-ai-color" style="font-size: 0.78rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: 4px;">Color</label>
+                    <input type="text" id="prod-ai-color" class="prod-ai-input" placeholder="e.g. White" style="width: 100%;">
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="prod-ai-denier" style="font-size: 0.78rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: 4px;">Denier</label>
+                    <input type="number" id="prod-ai-denier" class="prod-ai-input" placeholder="Denier" step="any" style="width: 100%;">
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="prod-ai-tpm" style="font-size: 0.78rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: 4px;">TPM</label>
+                    <input type="number" id="prod-ai-tpm" class="prod-ai-input" placeholder="TPM" min="0" style="width: 100%;">
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="prod-ai-twist" style="font-size: 0.78rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: 4px;">Twist</label>
+                    <select id="prod-ai-twist" class="prod-ai-input" style="width: 100%;">
+                      <option value="S">S Twist</option>
+                      <option value="Z">Z Twist</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="prod-ai-default-tare" style="font-size: 0.78rem; font-weight: 700; color: var(--accent); display: block; margin-bottom: 4px;">Default Tare (Kg)</label>
+                    <input type="number" id="prod-ai-default-tare" class="prod-ai-input" value="0.00" step="any" min="0" style="width: 100%; border-color: rgba(124, 58, 237, 0.4);" oninput="onProdAiDefaultTareChanged(this.value)">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Extracted Bori Rows Table -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <div style="font-weight: 800; font-size: 0.95rem; color: var(--fg); display: flex; align-items: center; gap: 6px;">
+                  <span>📋 Extracted Bori Weight Register</span>
+                  <span style="font-size: 0.78rem; color: var(--muted); font-weight: normal;">(Net Wt = Gross Wt - Tare Wt)</span>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="addProdAiRow()" style="padding: 0.3rem 0.75rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px;">
+                  + Add Row
+                </button>
+              </div>
+
+              <div class="prod-ai-table-wrap">
+                <table class="prod-ai-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 40px; text-align: center;">#</th>
+                      <th>Bori / Box No</th>
+                      <th>Cones</th>
+                      <th>Gross Wt (Kg)</th>
+                      <th>Tare Wt (Kg)</th>
+                      <th>Net Wt (Kg)</th>
+                      <th style="width: 40px; text-align: center;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="prod-ai-table-body">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Summary Badges Row -->
+              <div class="prod-ai-badge-row">
+                <span class="prod-ai-stat-pill" id="prod-ai-stat-boris">📦 0 Boris</span>
+                <span class="prod-ai-stat-pill" id="prod-ai-stat-rolls">🧵 0 Cones</span>
+                <span class="prod-ai-stat-pill" id="prod-ai-stat-gross">⚖️ Gross: 0.00 Kg</span>
+                <span class="prod-ai-stat-pill highlight" id="prod-ai-stat-net">✨ Net: 0.00 Kg</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 1.15rem 1.75rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.75rem; background: var(--surface);">
+        <button type="button" class="btn btn-secondary" onclick="closeProdAiScanModal()" style="min-height: 42px; font-weight: 600; padding: 0.5rem 1.25rem;">
+          Cancel
+        </button>
+        <button type="button" id="btn-prod-ai-save" class="btn btn-primary" onclick="saveProdAiBatchLogs()" style="min-height: 42px; font-weight: 700; padding: 0.5rem 1.75rem; background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); border: none; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);">
+          💾 Save & Upload Batch to Production Logs
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Batch Sell Modal -->
   <div id="batch-sell-modal" class="modal-overlay">
     <div class="modal-content" style="max-width: 1200px; width: 95%;">
