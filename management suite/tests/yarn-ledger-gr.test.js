@@ -851,6 +851,205 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(dblRow.qty, 200);
   });
 
+  await t.test('sales ledger sync: propagates sales with invoiceNo/billNo and refreshes existing row rate & amounts without overwriting payments', () => {
+    const defaultCreditDays = 30;
+    const defaultDiscountPercent = 0;
+    const defaultInterestRate = 18;
+
+    const salesLedger = [
+      {
+        id: 'SAL-sales_covering_INV_999',
+        syncKey: 'sales_covering_INV_999',
+        source: 'yarn_covering_sales',
+        date: '2026-09-01',
+        challanNo: 'INV-999',
+        partyName: 'Draft Buyer',
+        buyerPhone: '',
+        quality: '40D/34F SPANDEX',
+        qty: 50,
+        rate: 300,
+        subtotal: 15000,
+        gstPercent: 5,
+        grandTotal: 15750,
+        paidAmount: 5000,
+        paymentDate: '2026-09-05',
+        creditDays: 30,
+        discountPercent: 0,
+        interestRate: 18,
+        interestPaid: 0,
+        remarks: 'Partially paid',
+        isManual: false
+      }
+    ];
+
+    const mockDataMap = {
+      yarn_covering_sales_logs: [
+        // Updated existing bill with invoiceNo and increased qty/rate
+        {
+          id: 'INV_999',
+          invoiceNo: 'INV-999',
+          customerName: 'Final Buyer Pvt Ltd',
+          buyerPhone: '9876543210',
+          date: '2026-09-01',
+          totalQty: 80,
+          rate: 320,
+          taxableAmount: 25600,
+          gstAmount: 1280,
+          totalAmount: 26880,
+          composition: '40D/34F SPANDEX PREMIUM',
+          items: [{ composition: '40D/34F SPANDEX PREMIUM', saleQty: 80, rate: 320 }]
+        },
+        // Brand new bill with only invoiceNo and no challanNo
+        {
+          id: 'NEW_INV_1001',
+          invoiceNo: 'INV-1001',
+          customerName: 'Brand New Client',
+          buyerPhone: '9999988888',
+          date: '2026-09-04',
+          totalQty: 120,
+          rate: 340,
+          taxableAmount: 40800,
+          gstAmount: 2040,
+          totalAmount: 42840,
+          composition: '70D/68F SPANDEX',
+          items: [{ composition: '70D/68F SPANDEX', saleQty: 120, rate: 340 }]
+        }
+      ]
+    };
+
+    const ledgerDeletedKeys = new Set();
+    let syncAdded = 0;
+    let syncUpdated = 0;
+
+    for (const div of ['covering', 'tfo', 'doubler']) {
+      const rawSales = mockDataMap[`yarn_${div}_sales_logs`] || [];
+      rawSales.forEach(sale => {
+        if (!sale) return;
+        const challanNo = (sale.challanNo || sale.challanNumber || sale.invoiceNo || sale.billNo || sale.id || '').trim();
+        const invoiceNo = (sale.invoiceNo || sale.billNo || sale.challanNo || '').trim();
+        const customerName = (sale.customerName || sale.customer || 'Direct Sale').trim();
+        const saleDate = (sale.date || sale.invoiceDate || sale.saleDate || new Date().toISOString().split('T')[0]).split('T')[0];
+        const uniqueSyncKey = `sales_${div}_${sale.id || challanNo || invoiceNo}`;
+        const deterministicId = 'SAL-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+        if (ledgerDeletedKeys.has(deterministicId) || ledgerDeletedKeys.has(uniqueSyncKey) || (challanNo && ledgerDeletedKeys.has(challanNo)) || (sale.id && ledgerDeletedKeys.has(sale.id))) {
+          return;
+        }
+
+        const existingRow = salesLedger.find(r => 
+          r.id === deterministicId || 
+          r.syncKey === uniqueSyncKey || 
+          (r.source === `yarn_${div}_sales` && (r.challanNo === challanNo || (sale.id && r.syncKey && r.syncKey.endsWith(sale.id))) && (r.partyName === customerName || !r.partyName || !customerName))
+        );
+
+        const qualityStr = sale.composition || 'COVERING Yarn';
+        const qty = Number(sale.totalQty) || Number(sale.saleQty) || Number(sale.weight) || Number(sale.qty) || 0;
+        const rate = Number(sale.rate) || 0;
+        const subtotal = Number(sale.taxableAmount) || Number(sale.subtotalAmount) || Number(sale.subtotal) || Number((qty * rate).toFixed(2));
+        const gstAmount = Number(sale.gstAmount) || Number(sale.gst) || 0;
+        const grandTotal = Number(sale.totalAmount) || Number(sale.grandTotal) || Number(sale.amount) || Number((subtotal + gstAmount).toFixed(2));
+        const gstPercent = (sale.gstRate !== undefined && sale.gstRate !== null) ? Number(sale.gstRate) : (subtotal > 0 ? Number(((gstAmount / subtotal) * 100).toFixed(1)) : 0);
+
+        if (!existingRow && challanNo) {
+          const nowIso = new Date().toISOString();
+          salesLedger.push({
+            id: deterministicId,
+            syncKey: uniqueSyncKey,
+            source: `yarn_${div}_sales`,
+            date: saleDate,
+            challanNo: challanNo,
+            partyName: customerName,
+            buyerPhone: sale.buyerPhone || sale.phone || sale.mobile || '',
+            quality: qualityStr,
+            qty: qty,
+            rate: rate,
+            subtotal: subtotal,
+            gstPercent: gstPercent,
+            grandTotal: grandTotal,
+            paidAmount: Number(sale.receivedAmount) || 0,
+            paymentDate: sale.paymentDate || '',
+            creditDays: defaultCreditDays,
+            discountPercent: defaultDiscountPercent,
+            interestRate: defaultInterestRate,
+            interestPaid: 0,
+            remarks: '',
+            isManual: false,
+            created_at: nowIso,
+            updated_at: nowIso
+          });
+          syncAdded++;
+        } else if (existingRow) {
+          const oldRate = existingRow.rate;
+          const oldQty = existingRow.qty;
+          const oldSubtotal = existingRow.subtotal;
+          const oldGrandTotal = existingRow.grandTotal;
+          const oldParty = existingRow.partyName;
+          const oldDate = existingRow.date;
+          const oldChallan = existingRow.challanNo;
+
+          if (!existingRow.id || existingRow.id.startsWith('SAL-1') || existingRow.id.length > 30) {
+            existingRow.id = deterministicId;
+          }
+          existingRow.syncKey = uniqueSyncKey;
+          existingRow.source = `yarn_${div}_sales`;
+          existingRow.isManual = false;
+          if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
+          if (!existingRow.buyerPhone && (sale.buyerPhone || sale.phone || sale.mobile)) {
+            existingRow.buyerPhone = sale.buyerPhone || sale.phone || sale.mobile;
+          }
+
+          if (customerName && customerName !== 'Direct Sale') {
+            existingRow.partyName = customerName;
+          }
+          if (saleDate && !existingRow.date) {
+            existingRow.date = saleDate;
+          }
+          if (challanNo && (!existingRow.challanNo || existingRow.challanNo === '-')) {
+            existingRow.challanNo = challanNo;
+          }
+
+          if (qty > 0 || rate > 0) {
+            existingRow.qty = qty;
+            existingRow.rate = rate;
+            existingRow.subtotal = subtotal;
+            if (gstPercent !== undefined && gstPercent !== null) existingRow.gstPercent = gstPercent;
+            existingRow.grandTotal = grandTotal;
+          }
+
+          existingRow.quality = qualityStr;
+
+          if (oldRate !== rate || oldQty !== qty || oldSubtotal !== subtotal || oldGrandTotal !== grandTotal || oldParty !== customerName || oldDate !== saleDate || oldChallan !== challanNo) {
+            syncUpdated++;
+          }
+        }
+      });
+    }
+
+    assert.strictEqual(syncAdded, 1, '1 new invoice should be added');
+    assert.strictEqual(syncUpdated, 1, '1 existing row should be updated');
+    assert.strictEqual(salesLedger.length, 2, 'Sales ledger should now contain 2 rows');
+
+    const updatedRow = salesLedger.find(r => r.challanNo === 'INV-999');
+    assert.ok(updatedRow);
+    assert.strictEqual(updatedRow.partyName, 'Final Buyer Pvt Ltd');
+    assert.strictEqual(updatedRow.buyerPhone, '9876543210');
+    assert.strictEqual(updatedRow.qty, 80);
+    assert.strictEqual(updatedRow.rate, 320);
+    assert.strictEqual(updatedRow.subtotal, 25600);
+    assert.strictEqual(updatedRow.grandTotal, 26880);
+    assert.strictEqual(updatedRow.paidAmount, 5000, 'Paid amount must remain intact');
+    assert.strictEqual(updatedRow.paymentDate, '2026-09-05', 'Payment date must remain intact');
+    assert.strictEqual(updatedRow.remarks, 'Partially paid', 'Remarks must remain intact');
+
+    const newRow = salesLedger.find(r => r.challanNo === 'INV-1001');
+    assert.ok(newRow);
+    assert.strictEqual(newRow.partyName, 'Brand New Client');
+    assert.strictEqual(newRow.qty, 120);
+    assert.strictEqual(newRow.rate, 340);
+    assert.strictEqual(newRow.subtotal, 40800);
+    assert.strictEqual(newRow.grandTotal, 42840);
+  });
+
   await t.test('multi-division FP quality datalist aggregates all Covering, TFO, and Doubler qualities without duplicates', () => {
     const mockDataMap = {
       'yarn-fp-qualities': [

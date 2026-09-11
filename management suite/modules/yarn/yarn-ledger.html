@@ -4297,6 +4297,8 @@
       window.addEventListener('supabase-item-deleted', handleRemoteSync);
       window.addEventListener('yarn-order-updated', handleRemoteSync);
       window.addEventListener('yarn-stock-updated', handleRemoteSync);
+      window.addEventListener('yarn-sales-updated', handleRemoteSync);
+      window.addEventListener('yarn-sale-updated', handleRemoteSync);
 
       window.addEventListener('focus', async () => {
         const activeEl = document.activeElement;
@@ -4835,13 +4837,14 @@
           if (Array.isArray(rawSales)) {
             rawSales.forEach(sale => {
               if (!sale) return;
-              const challanNo = (sale.challanNo || sale.challanNumber || '').trim();
+              const challanNo = (sale.challanNo || sale.challanNumber || sale.invoiceNo || sale.billNo || sale.id || '').trim();
+              const invoiceNo = (sale.invoiceNo || sale.billNo || sale.challanNo || '').trim();
               const customerName = (sale.customerName || sale.customer || 'Direct Sale').trim();
-              const saleDate = (sale.date || sale.saleDate || new Date().toISOString().split('T')[0]).split('T')[0];
-              const uniqueSyncKey = `sales_${div}_${sale.id || challanNo}`;
+              const saleDate = (sale.date || sale.invoiceDate || sale.saleDate || new Date().toISOString().split('T')[0]).split('T')[0];
+              const uniqueSyncKey = `sales_${div}_${sale.id || challanNo || invoiceNo}`;
               const deterministicId = 'SAL-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-              if (ledgerDeletedKeys.has(deterministicId) || ledgerDeletedKeys.has(uniqueSyncKey) || (challanNo && ledgerDeletedKeys.has(challanNo))) {
+              if (ledgerDeletedKeys.has(deterministicId) || ledgerDeletedKeys.has(uniqueSyncKey) || (challanNo && ledgerDeletedKeys.has(challanNo)) || (sale.id && ledgerDeletedKeys.has(sale.id))) {
                 return;
               }
 
@@ -4849,7 +4852,7 @@
               const existingRow = ledgerData.sales.find(r => 
                 r.id === deterministicId || 
                 r.syncKey === uniqueSyncKey || 
-                (r.source === `yarn_${div}_sales` && r.challanNo === challanNo && (r.partyName === customerName || !r.partyName || !customerName))
+                (r.source === `yarn_${div}_sales` && (r.challanNo === challanNo || (sale.id && r.syncKey && r.syncKey.endsWith(sale.id))) && (r.partyName === customerName || !r.partyName || !customerName))
               );
 
               const qualityStr = extractSaleQuality(sale, div, dataMap);
@@ -4879,8 +4882,8 @@
                   grandTotal: grandTotal,
                   paidAmount: Number(sale.receivedAmount) || 0,
                   paymentDate: sale.paymentDate || '',
-                  creditDays: defaultCreditDays,
-                  discountPercent: defaultDiscountPercent,
+                  creditDays: (sale.creditDays !== undefined && sale.creditDays !== null && sale.creditDays !== '') ? Number(sale.creditDays) : defaultCreditDays,
+                  discountPercent: (sale.discountValue !== undefined && sale.discountType === 'percent') ? Number(sale.discountValue) : defaultDiscountPercent,
                   interestRate: defaultInterestRate,
                   interestPaid: 0,
                   remarks: '',
@@ -4893,6 +4896,14 @@
                 if (existingRow.remarks && (existingRow.remarks.startsWith('Auto-synced') || existingRow.remarks.includes('Auto-synced'))) {
                   existingRow.remarks = '';
                 }
+                const oldRate = existingRow.rate;
+                const oldQty = existingRow.qty;
+                const oldSubtotal = existingRow.subtotal;
+                const oldGrandTotal = existingRow.grandTotal;
+                const oldParty = existingRow.partyName;
+                const oldDate = existingRow.date;
+                const oldChallan = existingRow.challanNo;
+
                 if (!existingRow.id || existingRow.id.startsWith('SAL-1') || existingRow.id.length > 30) {
                   existingRow.id = deterministicId;
                 }
@@ -4902,6 +4913,25 @@
                 if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
                 if (!existingRow.buyerPhone && (sale.buyerPhone || sale.phone || sale.mobile)) {
                   existingRow.buyerPhone = sale.buyerPhone || sale.phone || sale.mobile;
+                }
+
+                if (customerName && customerName !== 'Direct Sale') {
+                  existingRow.partyName = customerName;
+                }
+                if (saleDate && !existingRow.date) {
+                  existingRow.date = saleDate;
+                }
+                if (challanNo && (!existingRow.challanNo || existingRow.challanNo === '-')) {
+                  existingRow.challanNo = challanNo;
+                }
+
+                // Update qty, rate, subtotal, gstPercent, grandTotal if changed in source sale
+                if (qty > 0 || rate > 0) {
+                  existingRow.qty = qty;
+                  existingRow.rate = rate;
+                  existingRow.subtotal = subtotal;
+                  if (gstPercent !== undefined && gstPercent !== null) existingRow.gstPercent = gstPercent;
+                  existingRow.grandTotal = grandTotal;
                 }
 
                 // Update quality if existing was generic or blank
@@ -4917,6 +4947,10 @@
                   syncUpdated++;
                 } else if (!existingRow.quality) {
                   existingRow.quality = qualityStr;
+                }
+
+                if (oldRate !== rate || oldQty !== qty || oldSubtotal !== subtotal || oldGrandTotal !== grandTotal || oldParty !== customerName || oldDate !== saleDate || oldChallan !== challanNo) {
+                  syncUpdated++;
                 }
               }
             });
