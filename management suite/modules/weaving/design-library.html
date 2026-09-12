@@ -2612,13 +2612,13 @@
                         }
                     }
 
-                    // If neither Supabase nor local has designs, initialize empty
-                    setStoredValue([]);
+                    // If neither Supabase nor local has designs, preserve any in-memory state or initialize empty
+                    setStoredValue(prev => (Array.isArray(prev) && prev.length > 0 ? prev : []));
                     setReady(true);
                     return [];
                 } catch(err) {
                     console.error("Hydration error:", err);
-                    setStoredValue([]);
+                    setStoredValue(prev => (Array.isArray(prev) && prev.length > 0 ? prev : []));
                     setReady(true);
                     return [];
                 }

@@ -2654,6 +2654,8 @@
     return allRows;
   }
 
+  const fetchAllRows = fetchAllRowsPaginated;
+
   // Supabase REST API Client
   const supabaseApi = {
     isHydrated: () => isHydrated,
@@ -7084,7 +7086,7 @@
       const order = options.order ? `&order=${encodeURIComponent(options.order)}` : '';
       const filter = options.filter ? `&${options.filter}` : '';
       const extra = `${order}${filter}`;
-      return await fetchAllRows(tableName, select, extra);
+      return await fetchAllRowsPaginated(tableName, select, extra);
     },
 
     // Generic Batch Upsert Helper (Chunks of 50 for Network Safety)
@@ -7642,6 +7644,7 @@
         return rows.filter(r => !r.deleted).map(r => {
           const meta = (r.metadata && typeof r.metadata === 'object') ? r.metadata : {};
           return {
+            ...meta,
             id: r.id,
             code: r.design_number || meta.code || r.design_name,
             name: r.design_name || meta.name || r.design_number,
@@ -7668,8 +7671,7 @@
             lastUpdated: meta.lastUpdated || (r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
             cropBox: meta.cropBox || null,
             ocrBinarizeThreshold: meta.ocrBinarizeThreshold || 140,
-            deleted: Boolean(r.deleted),
-            ...meta
+            deleted: Boolean(r.deleted)
           };
         });
       },
@@ -7998,7 +8000,7 @@
 
         for (const t of tables) {
           try {
-            backup.supabase_relational[t] = await fetchAllRows(t, '*');
+            backup.supabase_relational[t] = await fetchAllRowsPaginated(t, '*');
           } catch(e) {
             backup.supabase_relational[t] = [];
           }
