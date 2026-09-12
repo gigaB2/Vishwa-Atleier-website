@@ -1801,43 +1801,53 @@
 
         // Auto-detect repeating sequence from feeder array
         function detectRepeatSequence(feeders) {
+            if (!feeders || feeders.length === 0) return [1];
+            
+            // If all values are identical
+            const uniqueFeeders = Array.from(new Set(feeders));
+            if (uniqueFeeders.length === 1) return uniqueFeeders;
+
+            // Trim lead-in uniform picks if any
             let start = 0;
             while (start < feeders.length && feeders[start] === feeders[0]) {
                 start++;
             }
-            if (start >= feeders.length) return [feeders[0] || 0];
-            
-            const activeFeeders = feeders.slice(start);
+            // If trimmed too much (e.g. over 80% was lead-in), look at the active portion
+            const activeFeeders = start < feeders.length - 8 ? feeders.slice(start) : feeders;
             const n = activeFeeders.length;
-            
-            for (let L = 1; L <= Math.min(16, n / 4); L++) {
+
+            // Try detecting strict or dominant periodic pattern (period length 2 to 32)
+            for (let L = 2; L <= Math.min(32, Math.floor(n / 3)); L++) {
                 let matchCount = 0;
-                let mismatches = 0;
+                let totalChecks = 0;
                 for (let i = 0; i < n - L; i++) {
                     if (activeFeeders[i] === activeFeeders[i + L]) {
                         matchCount++;
-                    } else {
-                        mismatches++;
                     }
+                    totalChecks++;
                 }
-                if (matchCount / (matchCount + mismatches) > 0.98) {
+                if (totalChecks > 0 && (matchCount / totalChecks) > 0.85) {
                     const seqs = {};
                     for (let i = 0; i <= n - L; i += L) {
                         const seq = activeFeeders.slice(i, i + L).join(',');
                         seqs[seq] = (seqs[seq] || 0) + 1;
                     }
                     let bestSeq = Object.keys(seqs)[0];
-                    let maxCount = seqs[bestSeq];
+                    let maxCount = seqs[bestSeq] || 0;
                     for (let seq in seqs) {
                         if (seqs[seq] > maxCount) {
                             bestSeq = seq;
                             maxCount = seqs[seq];
                         }
                     }
-                    return bestSeq.split(',').map(Number);
+                    if (bestSeq) {
+                        return bestSeq.split(',').map(Number);
+                    }
                 }
             }
-            return [...new Set(activeFeeders)].slice(0, 8);
+
+            // Fallback: return unique feeders encountered in the design
+            return uniqueFeeders.slice(0, 8);
         }
 
         var metaData = null;
@@ -1883,6 +1893,7 @@
                 const text = textDecoder.decode(data);
                 const lines = text.split(/\r?\n/);
                 const rowBitStrings = [];
+                const rowFeeders = [];
 
                 for (let line of lines) {
                     const trimmed = line.trim();
@@ -1894,7 +1905,20 @@
                     } else if (trimmed.startsWith('ROW_') || (trimmed.includes(':') && trimmed.includes('ROW'))) {
                         const parts = trimmed.split(':');
                         if (parts.length >= 2) {
-                            rowBitStrings.push(parts[1].trim());
+                            const content = parts.slice(1).join(':').trim();
+                            // Check for trailing feeder indicator e.g. "1010101... | F2" or "1010101... , 2"
+                            let bitPart = content;
+                            let fVal = 1;
+                            if (content.includes('|') || content.includes(',')) {
+                                const tokens = content.split(/[|,]/);
+                                bitPart = tokens[0].trim();
+                                const parsedF = parseInt(tokens[1].replace(/[^0-9]/g, ''), 10);
+                                if (!isNaN(parsedF) && parsedF >= 1 && parsedF <= 16) {
+                                    fVal = parsedF;
+                                }
+                            }
+                            rowBitStrings.push(bitPart);
+                            rowFeeders.push(fVal);
                         }
                     }
                 }
@@ -1927,11 +1951,12 @@
                         liftCount += BIT_COUNT[byteVal];
                     }
                     totalLifts += liftCount;
-                    rowSlice[hookBytes] = 1;
+                    const feeder = rowFeeders[y] || 1;
+                    rowSlice[hookBytes] = feeder;
                     rows.push(rowSlice);
 
-                    weftSequence.push(1);
-                    weftCounts[1] = (weftCounts[1] || 0) + 1;
+                    weftSequence.push(feeder);
+                    weftCounts[feeder] = (weftCounts[feeder] || 0) + 1;
                 }
             } else {
                 // Binary Bonas EP Header
@@ -1949,6 +1974,33 @@
                 rowWidth = hookBytes + 4;
                 picksCount = data[3] | (data[4] << 8);
 
+                // Step 1: Scan all 4 control bytes across ALL rows to find the active shuttle selector byte
+                const colStats = [0, 1, 2, 3].map(colIdx => {
+                    const valCounts = {};
+                    let nonZeroCount = 0;
+                    for (let y = 0; y < picksCount; y++) {
+                        const start = 38 + y * rowWidth;
+                        if (start + rowWidth <= data.length) {
+                            const val = data[start + hookBytes + colIdx];
+                            valCounts[val] = (valCounts[val] || 0) + 1;
+                            if (val !== 0 && val !== 255) nonZeroCount++;
+                        }
+                    }
+                    const uniqueKeys = Object.keys(valCounts);
+                    return { colIdx, uniqueCount: uniqueKeys.length, nonZeroCount, valCounts, uniqueKeys };
+                });
+
+                // Choose the control byte column with the best feeder distribution (>1 unique values)
+                let bestColIdx = -1;
+                let maxVariation = 0;
+                for (let c of colStats) {
+                    if (c.uniqueCount > maxVariation && c.uniqueCount > 1) {
+                        maxVariation = c.uniqueCount;
+                        bestColIdx = c.colIdx;
+                    }
+                }
+                if (bestColIdx === -1) bestColIdx = 0;
+
                 for (let y = 0; y < picksCount; y++) {
                     const start = 38 + y * rowWidth;
                     if (start + rowWidth > data.length) break;
@@ -1965,10 +2017,27 @@
                     }
                     totalLifts += liftCount;
 
-                    let feeder = rowSlice[hookBytes] || 0;
-                    if (feeder === 255) {
+                    // Dedicated auxiliary shuttle selector hook byte (hookBytes - 1)
+                    const auxByte = hookBytes > 0 ? rowSlice[hookBytes - 1] : 0;
+                    const auxLow2 = auxByte & 0x03;
+                    const rawFeederByte = rowSlice[hookBytes + bestColIdx];
+
+                    let feeder = 1;
+                    if (auxLow2 >= 1 && auxLow2 <= 3 && (auxByte === 0x21 || auxByte === 0x42 || auxByte === 0x81 || auxByte === 0x82 || auxByte === 0x83)) {
+                        feeder = auxLow2;
+                    } else if ((rawFeederByte & 0x22) !== 0 && (rawFeederByte & 0x88) === 0) {
+                        feeder = 2;
+                    } else if ((rawFeederByte & 0x88) !== 0 && (rawFeederByte & 0x22) === 0) {
+                        feeder = 3;
+                    } else if (rawFeederByte > 0 && rawFeederByte !== 255) {
+                        const nib = (rawFeederByte & 0x0F) || ((rawFeederByte >> 4) & 0x0F);
+                        feeder = nib === 2 ? 2 : (nib === 8 ? 3 : (nib === 4 ? 4 : (nib === 1 ? 1 : ((rawFeederByte % 4) + 1))));
+                    } else {
                         feeder = 1;
                     }
+
+                    // Sync the primary feeder byte position in rowSlice so downstream tables/renderers stay consistent
+                    rowSlice[hookBytes] = feeder;
                     weftSequence.push(feeder);
                     weftCounts[feeder] = (weftCounts[feeder] || 0) + 1;
                 }

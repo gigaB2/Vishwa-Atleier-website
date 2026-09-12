@@ -4335,11 +4335,50 @@
                     const rowWidth = hookBytes + 4;
                     const picksCount = data[3] | (data[4] << 8);
                     const weftCounts = {};
+
+                    // Pre-scan control bytes across sample picks to find the active shuttle column
+                    const samplePicks = Math.min(picksCount, 500);
+                    const colVariations = [0, 1, 2, 3].map(colIdx => {
+                        const uniqueVals = new Set();
+                        for (let y = 0; y < samplePicks; y++) {
+                            const start = 38 + y * rowWidth;
+                            if (start + rowWidth <= data.length) {
+                                uniqueVals.add(data[start + hookBytes + colIdx]);
+                            }
+                        }
+                        return { colIdx, count: uniqueVals.size, vals: Array.from(uniqueVals) };
+                    });
+
+                    let bestColIdx = -1;
+                    let maxVariation = 0;
+                    for (let c of colVariations) {
+                        if (c.count > maxVariation && c.count > 1) {
+                            maxVariation = c.count;
+                            bestColIdx = c.colIdx;
+                        }
+                    }
+                    if (bestColIdx === -1) bestColIdx = 0;
+
                     for (let y = 0; y < picksCount; y++) {
                         const start = 38 + y * rowWidth;
                         if (start + rowWidth > data.length) break;
-                        let feeder = data[start + hookBytes] || 0;
-                        if (feeder === 255) feeder = 1;
+                        const auxByte = hookBytes > 0 ? data[start + hookBytes - 1] : 0;
+                        const auxLow2 = auxByte & 0x03;
+                        const rawByte = data[start + hookBytes + bestColIdx];
+
+                        let feeder = 1;
+                        if (auxLow2 >= 1 && auxLow2 <= 3 && (auxByte === 0x21 || auxByte === 0x42 || auxByte === 0x81 || auxByte === 0x82 || auxByte === 0x83)) {
+                            feeder = auxLow2;
+                        } else if ((rawByte & 0x22) !== 0 && (rawByte & 0x88) === 0) {
+                            feeder = 2;
+                        } else if ((rawByte & 0x88) !== 0 && (rawByte & 0x22) === 0) {
+                            feeder = 3;
+                        } else if (rawByte > 0 && rawByte !== 255) {
+                            const nib = (rawByte & 0x0F) || ((rawByte >> 4) & 0x0F);
+                            feeder = nib === 2 ? 2 : (nib === 8 ? 3 : (nib === 4 ? 4 : (nib === 1 ? 1 : ((rawByte % 4) + 1))));
+                        } else {
+                            feeder = 1;
+                        }
                         weftCounts[feeder] = (weftCounts[feeder] || 0) + 1;
                     }
                     return { hooksCount, picksCount, weftCounts };
