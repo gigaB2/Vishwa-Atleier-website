@@ -2664,16 +2664,9 @@
                         localStorage.setItem('deleted-designs', JSON.stringify(Array.from(tombstoneSet)));
                     } catch(e) {}
 
-                    // Active cloud rows (strictly exclude anything in tombstoneSet)
+                    // Active cloud rows (Supabase is single source of truth for active designs)
                     const cleanCloud = Array.isArray(cloudDesigns)
-                        ? cloudDesigns.filter(d => {
-                            if (!d || (!d.id && !d.code) || d.deleted) return false;
-                            const idStr = String(d.id || '').trim().toLowerCase();
-                            const codeStr = String(d.code || '').trim().toLowerCase();
-                            if (idStr && tombstoneSet.has(idStr)) return false;
-                            if (codeStr && tombstoneSet.has(codeStr)) return false;
-                            return true;
-                        })
+                        ? cloudDesigns.filter(d => d && (d.id || d.code) && !d.deleted)
                         : [];
 
                     // Read local backup from IDB and purge tombstoned items
@@ -4905,11 +4898,12 @@
                         try {
                             const saveRes = await window.VF_DB.weaving.saveDesign(savedDesignObj);
                             if (saveRes && saveRes.success) {
-                                triggerToast(`Design ${formData.code} successfully updated in Cloud!`, "success");
+                                triggerToast(`Design ${formData.code} successfully updated in Supabase Cloud!`, "success");
                             } else {
                                 queuePendingCloudDesign(savedDesignObj);
                                 console.warn("saveDesign returned notice:", saveRes);
-                                triggerToast(`Design updated locally. Cloud sync pending (auto-retrying in background).`, "warning");
+                                const errDetail = (saveRes && saveRes.error) ? String(saveRes.error) : 'Check connection';
+                                triggerToast(`Supabase Error: ${errDetail}`, "error");
                             }
                         } catch (err) {
                             queuePendingCloudDesign(savedDesignObj);
@@ -4959,11 +4953,12 @@
                         try {
                             const saveRes = await window.VF_DB.weaving.saveDesign(newDesign);
                             if (saveRes && saveRes.success) {
-                                triggerToast(`Design ${newDesign.code} successfully saved to Cloud!`, "success");
+                                triggerToast(`Design ${newDesign.code} successfully saved to Supabase Cloud!`, "success");
                             } else {
                                 queuePendingCloudDesign(newDesign);
                                 console.warn("saveDesign returned notice:", saveRes);
-                                triggerToast(`Design saved locally. Cloud sync pending (auto-retrying in background).`, "warning");
+                                const errDetail = (saveRes && saveRes.error) ? String(saveRes.error) : 'Check connection';
+                                triggerToast(`Supabase Error: ${errDetail}`, "error");
                             }
                         } catch (err) {
                             queuePendingCloudDesign(newDesign);
