@@ -76,4 +76,41 @@ describe('Design Library — Sync & Deletion Engine Tests', () => {
         assert.ok(htmlCode.includes("isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`"), 
             "Date parsing must convert DD-MM-YYYY to YYYY-MM-DD for accurate comparison");
     });
+
+    it('6. cleanCloud in design-library.html filters out tombstones to prevent cloud rows resurrecting', () => {
+        const htmlCode = fs.readFileSync(
+            path.resolve(__dirname, '../modules/weaving/design-library.html'),
+            'utf-8'
+        );
+
+        assert.ok(htmlCode.includes("if (idStr && tombstoneSet.has(idStr)) return false;"),
+            "cleanCloud must check idStr against tombstoneSet");
+        assert.ok(htmlCode.includes("if (codeStr && tombstoneSet.has(codeStr)) return false;"),
+            "cleanCloud must check codeStr against tombstoneSet");
+    });
+
+    it('7. filterDeletedEntities in supabase-client.js checks item.code and item.design_number', () => {
+        const clientCode = fs.readFileSync(
+            path.resolve(__dirname, '../assets/supabase-client.js'),
+            'utf-8'
+        );
+
+        assert.ok(clientCode.includes("item.code && tombstoneSet.has(String(item.code).trim().toLowerCase())"),
+            "filterDeletedEntities must reject items matching deleted design code");
+        assert.ok(clientCode.includes("item.design_number && tombstoneSet.has(String(item.design_number).trim().toLowerCase())"),
+            "filterDeletedEntities must reject items matching deleted design_number");
+    });
+
+    it('8. handleDelete prunes vf_pending_designs_queue and syncPendingCloudDesigns skips tombstoned items', () => {
+        const htmlCode = fs.readFileSync(
+            path.resolve(__dirname, '../modules/weaving/design-library.html'),
+            'utf-8'
+        );
+
+        assert.ok(htmlCode.includes("localStorage.getItem('vf_pending_designs_queue')"),
+            "handleDelete must inspect pending queue to purge deleted designs");
+        assert.ok(htmlCode.includes("if ((pId && tombSet.has(pId)) || (pCode && tombSet.has(pCode)))"),
+            "syncPendingCloudDesigns must skip items found in tombstones");
+    });
 });
+

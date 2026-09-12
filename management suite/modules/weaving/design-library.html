@@ -2570,8 +2570,24 @@
                 const queue = JSON.parse(raw);
                 if (!Array.isArray(queue) || queue.length === 0) return;
                 isSyncingPendingQueue = true;
+
+                // Load tombstones to ensure deleted designs are never accidentally resurrected
+                let localDel = [];
+                try {
+                    const rawDel = localStorage.getItem('deleted-designs');
+                    if (rawDel) localDel = JSON.parse(rawDel);
+                } catch(e) {}
+                const tombSet = new Set((Array.isArray(localDel) ? localDel : []).map(s => String(s).trim().toLowerCase()).filter(Boolean));
+
                 const remaining = [];
                 for (const pending of queue) {
+                    if (!pending) continue;
+                    const pId = String(pending.id || '').trim().toLowerCase();
+                    const pCode = String(pending.code || '').trim().toLowerCase();
+                    // If design was deleted, discard it from pending queue entirely!
+                    if ((pId && tombSet.has(pId)) || (pCode && tombSet.has(pCode))) {
+                        continue;
+                    }
                     try {
                         const res = await window.VF_DB.weaving.saveDesign(pending);
                         if (res && res.success) {
@@ -2666,7 +2682,14 @@
 
                     // Active cloud rows (Supabase is single source of truth for active designs)
                     const cleanCloud = Array.isArray(cloudDesigns)
-                        ? cloudDesigns.filter(d => d && (d.id || d.code) && !d.deleted)
+                        ? cloudDesigns.filter(d => {
+                            if (!d || (!d.id && !d.code) || d.deleted) return false;
+                            const idStr = String(d.id || '').trim().toLowerCase();
+                            const codeStr = String(d.code || '').trim().toLowerCase();
+                            if (idStr && tombstoneSet.has(idStr)) return false;
+                            if (codeStr && tombstoneSet.has(codeStr)) return false;
+                            return true;
+                        })
                         : [];
 
                     // Read local backup from IDB and purge tombstoned items
@@ -2752,7 +2775,21 @@
                 getDesignsFromIDB().then(local => {
                     if (cancelled) return;
                     if (Array.isArray(local) && local.length > 0) {
-                        setStoredValue(local);
+                        let localDel = [];
+                        try {
+                            const rawDel = localStorage.getItem('deleted-designs');
+                            if (rawDel) localDel = JSON.parse(rawDel);
+                        } catch(e) {}
+                        const tombSet = new Set((Array.isArray(localDel) ? localDel : []).map(s => String(s).trim().toLowerCase()).filter(Boolean));
+                        const filtered = local.filter(d => {
+                            if (!d || (!d.id && !d.code) || d.deleted) return false;
+                            const dId = String(d.id || '').trim().toLowerCase();
+                            const dCode = String(d.code || '').trim().toLowerCase();
+                            if (dId && tombSet.has(dId)) return false;
+                            if (dCode && tombSet.has(dCode)) return false;
+                            return true;
+                        });
+                        setStoredValue(filtered);
                         setReady(true);
                     }
                 });
@@ -4999,7 +5036,7 @@
                     setDesigns(prev => {
                         const list = Array.isArray(prev) ? prev : [];
                         remaining = list.filter(d => {
-                            if (idStr && String(d.id || '').trim() === idStr) return false;
+                            if (idStr && String(d.id || '').trim().toLowerCase() === idStr.toLowerCase()) return false;
                             if (cleanCode && String(d.code || '').trim().toUpperCase() === cleanCode) return false;
                             return true;
                         });
@@ -5022,7 +5059,32 @@
                     }
 
                     // 3. Purge from local IndexedDB
-                    saveDesignsToIDB(remaining);
+                    if (remaining.length >= 0) {
+                        saveDesignsToIDB(remaining);
+                    }
+
+                    // 3b. Evict from pending upload queue so offline retry never resurrects it
+                    try {
+                        const rawQueue = localStorage.getItem('vf_pending_designs_queue');
+                        if (rawQueue) {
+                            const queueList = JSON.parse(rawQueue);
+                            if (Array.isArray(queueList)) {
+                                const cleanQ = queueList.filter(d => {
+                                    if (!d) return false;
+                                    const dId = String(d.id || '').trim().toLowerCase();
+                                    const dCode = String(d.code || '').trim().toLowerCase();
+                                    if (idStr && dId === idStr.toLowerCase()) return false;
+                                    if (codeStr && dCode === codeStr.toLowerCase()) return false;
+                                    return true;
+                                });
+                                if (cleanQ.length > 0) {
+                                    localStorage.setItem('vf_pending_designs_queue', JSON.stringify(cleanQ));
+                                } else {
+                                    localStorage.removeItem('vf_pending_designs_queue');
+                                }
+                            }
+                        }
+                    } catch(e) {}
 
                     // 4. Record tombstone in local deleted-designs
                     try {

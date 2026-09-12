@@ -310,6 +310,9 @@
         if (item.dayWorker && tombstoneSet.has(String(item.dayWorker).trim().toLowerCase())) return false;
         if (item.nightWorker && tombstoneSet.has(String(item.nightWorker).trim().toLowerCase())) return false;
         if (item.machineName && tombstoneSet.has(String(item.machineName).trim().toLowerCase())) return false;
+        if (item.code && tombstoneSet.has(String(item.code).trim().toLowerCase())) return false;
+        if (item.design_number && tombstoneSet.has(String(item.design_number).trim().toLowerCase())) return false;
+        if (item.designNumber && tombstoneSet.has(String(item.designNumber).trim().toLowerCase())) return false;
       } catch(e) {}
       return true;
     });
@@ -4874,7 +4877,7 @@
             const kvMap = {};
 
             // PRIORITY STEP 1: Pre-populate and cache all deleted entity tombstones FIRST
-            const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids', 'yarn_ledger_deleted_keys', 'vf_deleted_yarn_orders'];
+            const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids', 'yarn_ledger_deleted_keys', 'vf_deleted_yarn_orders', 'deleted-designs'];
             tombstoneKeys.forEach(tKey => {
               const tRow = rows.find(r => r && r.key === tKey);
               if (tRow && tRow.value) {
@@ -5827,8 +5830,15 @@
 
                   finalDesigns = [...pendingLocal, ...reconstructedDesigns];
                 } else {
-                  // Cloud query returned empty or table not yet created — preserve local designs completely!
-                  finalDesigns = Array.isArray(localDesigns) ? localDesigns : [];
+                  // Cloud query returned empty or table not yet created — preserve local designs completely (strictly non-tombstoned)!
+                  finalDesigns = Array.isArray(localDesigns) ? localDesigns.filter(d => {
+                    if (!d || (!d.id && !d.code) || d.deleted) return false;
+                    const idStr = String(d.id || '').trim().toLowerCase();
+                    const codeStr = String(d.code || '').trim().toLowerCase();
+                    if (idStr && tombstoneSet.has(idStr)) return false;
+                    if (codeStr && tombstoneSet.has(codeStr)) return false;
+                    return true;
+                  }) : [];
                 }
 
                 const dStr = JSON.stringify(finalDesigns);
@@ -6122,7 +6132,7 @@
             rows.forEach(row => {
               if (!row || !row.key || isLocalOnlyKey(row.key)) return;
               try {
-                if (row.key === 'vf_deleted_entity_ids' || row.key === 'vf_deleted_costing_ids') {
+                if (row.key === 'vf_deleted_entity_ids' || row.key === 'vf_deleted_costing_ids' || row.key === 'deleted-designs') {
                   try {
                     const remoteTombstones = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
                     if (Array.isArray(remoteTombstones)) {
@@ -8128,11 +8138,11 @@
             // Using PATCH avoids NOT NULL constraints on columns like design_name
             let filterParam = '';
             if (idStr && codeStr) {
-              filterParam = `or=(id.eq.${encodeURIComponent(idStr)},design_number.eq.${encodeURIComponent(codeStr)})`;
+              filterParam = `or=(id.eq.${encodeURIComponent(idStr)},design_number.eq.${encodeURIComponent(codeStr)},design_number.ilike.${encodeURIComponent(codeStr)})`;
             } else if (idStr) {
-              filterParam = `id=eq.${encodeURIComponent(idStr)}`;
+              filterParam = `or=(id.eq.${encodeURIComponent(idStr)},design_number.ilike.${encodeURIComponent(idStr)})`;
             } else {
-              filterParam = `design_number=eq.${encodeURIComponent(codeStr)}`;
+              filterParam = `or=(design_number.eq.${encodeURIComponent(codeStr)},design_number.ilike.${encodeURIComponent(codeStr)})`;
             }
 
             const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?${filterParam}`, {
@@ -8192,6 +8202,9 @@
             const delStr = JSON.stringify(delList);
             safeLocalStorageSet('deleted-designs', delStr);
             cache['deleted-designs'] = delStr;
+            if (typeof supabaseLocalStorage !== 'undefined' && typeof supabaseLocalStorage.set === 'function') {
+              supabaseLocalStorage.set('deleted-designs', delList, true);
+            }
           }
         } catch(e) {}
 
