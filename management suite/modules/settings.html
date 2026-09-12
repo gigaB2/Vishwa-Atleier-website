@@ -1997,10 +1997,15 @@
       <!-- Quick Setup Guide & 1-Click SQL Schema copy for buyers -->
       <div style="background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
-          <span style="font-size: 0.85rem; font-weight: 700; color: var(--fg);"><i class="ri-terminal-box-line" style="color: var(--accent);"></i> New Client Database Setup (1-Click SQL)</span>
-          <button type="button" onclick="copySupabaseSqlSchema()" class="save-btn" style="min-height: 32px; padding: 0.25rem 0.75rem; font-size: 0.75rem; background: var(--surface); color: var(--fg); border: 1px solid var(--border); box-shadow: none;">
-            <i class="ri-file-copy-line"></i> Copy Schema SQL
-          </button>
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--fg);"><i class="ri-terminal-box-line" style="color: var(--accent);"></i> Database Setup (1-Click SQL Schema)</span>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" onclick="copySupabaseSqlSchema()" class="save-btn" style="min-height: 32px; padding: 0.25rem 0.75rem; font-size: 0.75rem; background: var(--surface); color: var(--fg); border: 1px solid var(--border); box-shadow: none;">
+              <i class="ri-file-copy-line"></i> Copy Schema SQL
+            </button>
+            <button type="button" onclick="downloadSupabaseSqlSchema()" class="save-btn" style="min-height: 32px; padding: 0.25rem 0.75rem; font-size: 0.75rem; background: var(--surface); color: var(--fg); border: 1px solid var(--border); box-shadow: none;">
+              <i class="ri-download-2-line"></i> Download SQL File
+            </button>
+          </div>
         </div>
         <p style="font-size: 0.75rem; color: var(--muted); margin: 0; line-height: 1.45;">
           Selling to a new customer? Run the provided <strong style="color: var(--fg);">supabase-schema.sql</strong> script in their Supabase SQL Editor to automatically create all synchronized tables and Realtime channels.
@@ -3329,7 +3334,34 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_audit_logs' AND policyname = 'Allow public access to vf_audit_logs') THEN
         CREATE POLICY "Allow public access to vf_audit_logs" ON public.vf_audit_logs FOR ALL USING (true) WITH CHECK (true);
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fabric_designs' AND policyname = 'Allow public access to vf_fabric_designs') THEN
+        CREATE POLICY "Allow public access to vf_fabric_designs" ON public.vf_fabric_designs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
 END $$;
+
+CREATE TABLE IF NOT EXISTS public.vf_fabric_designs (
+    id TEXT PRIMARY KEY,
+    design_name TEXT NOT NULL,
+    design_number TEXT,
+    quality TEXT,
+    image_url TEXT,
+    ep_file_url TEXT,
+    picks INTEGER DEFAULT 0,
+    repeats INTEGER DEFAULT 1,
+    total_hooks INTEGER DEFAULT 0,
+    width NUMERIC(10, 2),
+    avg_weight NUMERIC(10, 3),
+    costing_id TEXT,
+    deleted BOOLEAN DEFAULT false,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_designs_name ON public.vf_fabric_designs(design_name);
+CREATE INDEX IF NOT EXISTS idx_vf_designs_quality ON public.vf_fabric_designs(quality);
+CREATE INDEX IF NOT EXISTS idx_vf_designs_deleted ON public.vf_fabric_designs(deleted);
+CREATE INDEX IF NOT EXISTS idx_vf_designs_updated_at ON public.vf_fabric_designs(updated_at DESC);
+ALTER TABLE public.vf_fabric_designs ENABLE ROW LEVEL SECURITY;
 
 INSERT INTO storage.buckets (id, name, public) VALUES ('vf_media_assets', 'vf_media_assets', true) ON CONFLICT (id) DO NOTHING;
 
@@ -3349,6 +3381,7 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_costing_doubler_products;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_costing_covering_products;
         ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_audit_logs;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_designs;
     END IF;
 EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
 `;
@@ -3395,6 +3428,33 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
         }).catch(() => {
           showToast("Schema script is located at assets/supabase-schema.sql", "info");
         });
+      });
+  }
+
+  function downloadSupabaseSqlSchema() {
+    const triggerDownload = (sqlContent) => {
+      const blob = new Blob([sqlContent], { type: 'text/sql;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'supabase-schema.sql';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("supabase-schema.sql downloaded! Open in Supabase SQL Editor.", "success");
+    };
+
+    const sqlUrl = '../assets/supabase-schema.sql';
+    fetch(sqlUrl)
+      .then(res => {
+        if (!res.ok) throw new Error("Network response not ok");
+        return res.text();
+      })
+      .then(triggerDownload)
+      .catch(() => {
+        const fallback = typeof fallbackSql !== 'undefined' ? fallbackSql : `-- Supabase Schema\n-- Full schema file available in assets/supabase-schema.sql`;
+        triggerDownload(fallback);
       });
   }
 
