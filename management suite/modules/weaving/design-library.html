@@ -2920,6 +2920,11 @@
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
             ),
+            Upload: () => (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+            ),
             Eye: () => (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
@@ -3606,6 +3611,106 @@
                 }
             });
             const [linkModalDesign, setLinkModalDesign] = useState(null);
+
+            // Supabase Cloud Connection & Sync Status State
+            const [supabaseStatus, setSupabaseStatus] = useState(() => {
+                return (window.VF_DB && typeof window.VF_DB.getStatus === 'function') ? window.VF_DB.getStatus() : 'connecting';
+            });
+
+            useEffect(() => {
+                const handleStatusChange = (e) => {
+                    if (e && e.detail && e.detail.status) {
+                        setSupabaseStatus(e.detail.status);
+                    }
+                };
+                window.addEventListener('supabase-status', handleStatusChange);
+                return () => window.removeEventListener('supabase-status', handleStatusChange);
+            }, []);
+
+            // 1-Click Backup & Export all Designs (instant zero-network transfer to other PCs)
+            const handleExportDesigns = () => {
+                try {
+                    const exportPayload = JSON.stringify(designs, null, 2);
+                    const blob = new Blob([exportPayload], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const dateStr = new Date().toISOString().split('T')[0];
+                    a.download = `vishwa_designs_backup_${dateStr}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    if (typeof triggerToast === 'function') {
+                        triggerToast(`Exported ${designs.length} designs to backup file!`, "success");
+                    }
+                } catch (err) {
+                    console.error("Export error:", err);
+                    if (typeof triggerToast === 'function') triggerToast("Failed to export designs: " + err.message, "error");
+                }
+            };
+
+            // 1-Click Import Designs from Backup (instantly populates this PC and queues for Cloud)
+            const handleImportDesigns = (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    try {
+                        const imported = JSON.parse(ev.target.result);
+                        if (!Array.isArray(imported)) {
+                            alert("Invalid design backup file. Expected an array of designs.");
+                            return;
+                        }
+
+                        let addedCount = 0;
+                        let updatedCount = 0;
+                        const mergedList = [...designs];
+
+                        for (const item of imported) {
+                            if (!item || (!item.id && !item.code)) continue;
+                            const idKey = item.id ? String(item.id) : null;
+                            const codeKey = item.code ? String(item.code).trim().toLowerCase() : null;
+
+                            const existingIdx = mergedList.findIndex(d => 
+                                (idKey && String(d.id) === idKey) || 
+                                (codeKey && String(d.code).trim().toLowerCase() === codeKey)
+                            );
+
+                            if (existingIdx !== -1) {
+                                mergedList[existingIdx] = { ...mergedList[existingIdx], ...item };
+                                updatedCount++;
+                            } else {
+                                mergedList.unshift(item);
+                                addedCount++;
+                            }
+
+                            // Queue for automatic Cloud sync once connection is restored
+                            if (typeof queuePendingCloudDesign === 'function') {
+                                queuePendingCloudDesign(item);
+                            }
+                        }
+
+                        updateDesignsWithHistory(mergedList);
+                        await saveDesignsToIDB(mergedList);
+
+                        if (typeof triggerToast === 'function') {
+                            triggerToast(`Imported ${addedCount} new, ${updatedCount} updated designs!`, "success");
+                        }
+
+                        // Try immediate cloud sync if online
+                        if (typeof syncPendingCloudDesigns === 'function') {
+                            syncPendingCloudDesigns();
+                        }
+
+                        e.target.value = '';
+                    } catch (err) {
+                        console.error("Import error:", err);
+                        alert("Error importing design backup: " + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
 
             const handleStartEdit = (design) => {
                 setSelectedDesign(null);
@@ -4908,7 +5013,55 @@
                             <h1 style={{ display: 'inline', fontSize: 'inherit', margin: 0 }}><a href="#" className="logo">Vishwa Fashions</a></h1>
                             <span className="nav-badge">Loom Design Library</span>
                         </div>
-                        <div className="dl-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div className="dl-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                            {/* Backup Export Button */}
+                            <button
+                                type="button"
+                                className="btn btn-outline"
+                                onClick={handleExportDesigns}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.45rem',
+                                    padding: '0.45rem 0.75rem',
+                                    fontSize: '0.78rem',
+                                    fontWeight: '600',
+                                    borderRadius: '8px',
+                                    borderColor: 'var(--border)',
+                                    background: 'var(--surface)',
+                                    color: 'var(--fg)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                title="Download all designs (with images, cards, and EP files) to a backup file to transfer to another PC"
+                            >
+                                <Icons.Download /> Export / Backup
+                            </button>
+
+                            {/* Backup Import Button */}
+                            <label
+                                className="btn btn-outline"
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.45rem',
+                                    padding: '0.45rem 0.75rem',
+                                    fontSize: '0.78rem',
+                                    fontWeight: '600',
+                                    borderRadius: '8px',
+                                    borderColor: 'var(--border)',
+                                    background: 'var(--surface)',
+                                    color: 'var(--fg)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    margin: 0
+                                }}
+                                title="Import designs from a backup file (transfers instantly between PCs without cloud)"
+                            >
+                                <Icons.Upload /> Import
+                                <input type="file" accept=".json" onChange={handleImportDesigns} style={{ display: 'none' }} />
+                            </label>
+
                             {/* Supabase Cloud Sync Visual Indicator & Quick Sync Trigger */}
                             <button
                                 type="button"
@@ -4930,7 +5083,7 @@
                                         }
                                     } catch(e) {
                                         console.error("Manual cloud sync error:", e);
-                                        if (typeof triggerToast === 'function') triggerToast("Cloud sync failed. Please check network connection.", "error");
+                                        if (typeof triggerToast === 'function') triggerToast("Cloud sync failed. Supabase compute may be paused in dashboard.", "error");
                                     }
                                 }}
                                 style={{
@@ -4941,23 +5094,23 @@
                                     fontSize: '0.78rem',
                                     fontWeight: '700',
                                     borderRadius: '8px',
-                                    borderColor: 'rgba(16, 185, 129, 0.4)',
-                                    background: 'rgba(16, 185, 129, 0.08)',
-                                    color: '#10b981',
+                                    borderColor: supabaseStatus === 'connected' ? 'rgba(16, 185, 129, 0.4)' : (supabaseStatus === 'connecting' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(245, 158, 11, 0.4)'),
+                                    background: supabaseStatus === 'connected' ? 'rgba(16, 185, 129, 0.08)' : (supabaseStatus === 'connecting' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(245, 158, 11, 0.1)'),
+                                    color: supabaseStatus === 'connected' ? '#10b981' : (supabaseStatus === 'connecting' ? '#3b82f6' : '#f59e0b'),
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease'
                                 }}
-                                title="Connected to Supabase Cloud. Click to instantly download and synchronize designs from other computers."
+                                title={supabaseStatus === 'connected' ? "Supabase Cloud is online. Click to refresh designs." : "Supabase Cloud is offline or paused. Designs are saved safely in your local computer. Click to retry connection."}
                             >
                                 <span style={{
                                     width: '8px',
                                     height: '8px',
                                     borderRadius: '50%',
-                                    background: '#10b981',
-                                    boxShadow: '0 0 8px #10b981',
+                                    background: supabaseStatus === 'connected' ? '#10b981' : (supabaseStatus === 'connecting' ? '#3b82f6' : '#f59e0b'),
+                                    boxShadow: `0 0 8px ${supabaseStatus === 'connected' ? '#10b981' : (supabaseStatus === 'connecting' ? '#3b82f6' : '#f59e0b')}`,
                                     display: 'inline-block'
                                 }}></span>
-                                ☁️ Supabase Synced
+                                {supabaseStatus === 'connected' ? '☁️ Supabase Synced' : (supabaseStatus === 'connecting' ? '🔄 Connecting...' : '⚠️ Cloud Offline (Local Only)')}
                             </button>
                             <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
                                 <Icons.Plus /> Add Design
