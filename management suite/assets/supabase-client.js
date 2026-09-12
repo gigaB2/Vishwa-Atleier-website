@@ -4384,7 +4384,7 @@
 
         if (targetIds.length === 0) return;
 
-        const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids', 'yarn_ledger_deleted_keys', 'vf_deleted_yarn_orders'];
+        const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids', 'yarn_ledger_deleted_keys', 'vf_deleted_yarn_orders', 'deleted-designs'];
         tombstoneKeys.forEach(tKey => {
           let deletedIds = [];
           try {
@@ -5794,16 +5794,42 @@
                   if (locStr) localDesigns = JSON.parse(locStr);
                 } catch(e) {}
 
-                // Supabase is the single source of truth for loom designs
-                const finalDesigns = (reconstructedDesigns && reconstructedDesigns.length > 0) ? reconstructedDesigns : [];
+                // Merge reconstructed designs from cloud with any local designs that have not landed in cloud yet
+                let finalDesigns = [];
+                if (Array.isArray(reconstructedDesigns) && reconstructedDesigns.length > 0) {
+                  const cloudIds = new Set(reconstructedDesigns.map(d => String(d.id || '').trim().toLowerCase()));
+                  const cloudCodes = new Set(reconstructedDesigns.map(d => String(d.code || '').trim().toUpperCase()));
+
+                  // Keep local designs that are not yet in cloud and not tombstoned
+                  const pendingLocal = Array.isArray(localDesigns) ? localDesigns.filter(d => {
+                    if (!d || (!d.id && !d.code) || d.deleted) return false;
+                    const idStr = String(d.id || '').trim().toLowerCase();
+                    const codeStr = String(d.code || '').trim().toUpperCase();
+                    if (idStr && tombstoneSet.has(idStr)) return false;
+                    if (codeStr && tombstoneSet.has(codeStr.toLowerCase())) return false;
+                    if (idStr && cloudIds.has(idStr)) return false;
+                    if (codeStr && cloudCodes.has(codeStr)) return false;
+                    return true;
+                  }) : [];
+
+                  finalDesigns = [...pendingLocal, ...reconstructedDesigns];
+                } else {
+                  // Cloud query returned empty or table not yet created — preserve local designs completely!
+                  finalDesigns = Array.isArray(localDesigns) ? localDesigns : [];
+                }
+
                 const dStr = JSON.stringify(finalDesigns);
                 const lastDWrite = lastLocalWrites[dKey] || 0;
                 if (Date.now() - lastDWrite >= 3000) {
-                  cache[dKey] = dStr;
-                  lastSavedHashes[dKey] = computeHash(dStr);
-                  safeLocalStorageSet(dKey, dStr);
-                  if (!updatedKeys.includes(dKey)) updatedKeys.push(dKey);
-                  hasChanges = true;
+                  const oldHash = lastSavedHashes[dKey] || computeHash(cache[dKey] || '');
+                  const newHash = computeHash(dStr);
+                  if (oldHash !== newHash) {
+                    cache[dKey] = dStr;
+                    lastSavedHashes[dKey] = newHash;
+                    safeLocalStorageSet(dKey, dStr);
+                    if (!updatedKeys.includes(dKey)) updatedKeys.push(dKey);
+                    hasChanges = true;
+                  }
                 }
               }
             } catch (dErr) {
@@ -8025,6 +8051,10 @@
           metadata: metadata,
           updated_at: new Date().toISOString()
         };
+
+        if (!design.deleted && typeof supabaseLocalStorage !== 'undefined' && typeof supabaseLocalStorage.unrecordDeletion === 'function') {
+          await supabaseLocalStorage.unrecordDeletion('loom-designs', [id, code]);
+        }
 
         const res = await VF_DB.upsert('vf_fabric_designs', [row]);
         if (res.success) {

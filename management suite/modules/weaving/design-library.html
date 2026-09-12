@@ -2718,8 +2718,16 @@
 
                         const combined = [...pendingInMemory, ...pendingFromIDB, ...cleanCloud];
 
-                        // Cache clean combined set back to IDB
+                        // Cache clean combined set back to IDB and cache
                         saveDesignsToIDB(combined);
+                        try {
+                            const dStr = JSON.stringify(combined);
+                            localStorage.setItem('loom-designs', dStr);
+                            if (window.VishwaSupabase) {
+                                if (window.VishwaSupabase.cache) window.VishwaSupabase.cache['loom-designs'] = dStr;
+                                if (window.VishwaSupabase.lastLocalWrites) window.VishwaSupabase.lastLocalWrites['loom-designs'] = Date.now();
+                            }
+                        } catch(e) {}
 
                         // If there are genuine offline designs from IDB that cloud never received, rescue them in background
                         if (pendingFromIDB.length > 0 && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.saveDesign === 'function') {
@@ -2896,6 +2904,14 @@
                 setStoredValue(prev => {
                     const valueToStore = value instanceof Function ? value(prev) : value;
                     saveDesignsToIDB(valueToStore);
+                    try {
+                        const dStr = JSON.stringify(valueToStore);
+                        localStorage.setItem('loom-designs', dStr);
+                        if (window.VishwaSupabase) {
+                            if (window.VishwaSupabase.cache) window.VishwaSupabase.cache['loom-designs'] = dStr;
+                            if (window.VishwaSupabase.lastLocalWrites) window.VishwaSupabase.lastLocalWrites['loom-designs'] = Date.now();
+                        }
+                    } catch(e) {}
                     return valueToStore;
                 });
             }, [key]);
@@ -4865,6 +4881,26 @@
                     closeAddModal();
                     triggerToast(`Updating Design ${formData.code}...`, "info");
 
+                    // Un-tombstone updated design
+                    try {
+                        const rawDel = localStorage.getItem('deleted-designs');
+                        if (rawDel) {
+                            const delList = JSON.parse(rawDel);
+                            if (Array.isArray(delList)) {
+                                const tId = String(savedDesignObj.id).trim().toLowerCase();
+                                const tCode = String(savedDesignObj.code).trim().toLowerCase();
+                                const cleanDel = delList.filter(s => {
+                                    const sLow = String(s).trim().toLowerCase();
+                                    return sLow !== tId && sLow !== tCode;
+                                });
+                                localStorage.setItem('deleted-designs', JSON.stringify(cleanDel));
+                            }
+                        }
+                        if (window.VishwaSupabase && typeof window.VishwaSupabase.unrecordDeletion === 'function') {
+                            window.VishwaSupabase.unrecordDeletion('loom-designs', [savedDesignObj.id, savedDesignObj.code]);
+                        }
+                    } catch(e) {}
+
                     if (savedDesignObj && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.saveDesign === 'function') {
                         try {
                             const saveRes = await window.VF_DB.weaving.saveDesign(savedDesignObj);
@@ -4898,6 +4934,26 @@
                     updateDesignsWithHistory([newDesign, ...designs]);
                     closeAddModal();
                     triggerToast(`Saving Design ${newDesign.code} to Cloud...`, "info");
+
+                    // Un-tombstone new design
+                    try {
+                        const rawDel = localStorage.getItem('deleted-designs');
+                        if (rawDel) {
+                            const delList = JSON.parse(rawDel);
+                            if (Array.isArray(delList)) {
+                                const tId = String(newDesign.id).trim().toLowerCase();
+                                const tCode = String(newDesign.code).trim().toLowerCase();
+                                const cleanDel = delList.filter(s => {
+                                    const sLow = String(s).trim().toLowerCase();
+                                    return sLow !== tId && sLow !== tCode;
+                                });
+                                localStorage.setItem('deleted-designs', JSON.stringify(cleanDel));
+                            }
+                        }
+                        if (window.VishwaSupabase && typeof window.VishwaSupabase.unrecordDeletion === 'function') {
+                            window.VishwaSupabase.unrecordDeletion('loom-designs', [newDesign.id, newDesign.code]);
+                        }
+                    } catch(e) {}
 
                     if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.saveDesign === 'function') {
                         try {
@@ -5014,54 +5070,6 @@
                             <span className="nav-badge">Loom Design Library</span>
                         </div>
                         <div className="dl-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                            {/* Backup Export Button */}
-                            <button
-                                type="button"
-                                className="btn btn-outline"
-                                onClick={handleExportDesigns}
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.45rem',
-                                    padding: '0.45rem 0.75rem',
-                                    fontSize: '0.78rem',
-                                    fontWeight: '600',
-                                    borderRadius: '8px',
-                                    borderColor: 'var(--border)',
-                                    background: 'var(--surface)',
-                                    color: 'var(--fg)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease'
-                                }}
-                                title="Download all designs (with images, cards, and EP files) to a backup file to transfer to another PC"
-                            >
-                                <Icons.Download /> Export / Backup
-                            </button>
-
-                            {/* Backup Import Button */}
-                            <label
-                                className="btn btn-outline"
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.45rem',
-                                    padding: '0.45rem 0.75rem',
-                                    fontSize: '0.78rem',
-                                    fontWeight: '600',
-                                    borderRadius: '8px',
-                                    borderColor: 'var(--border)',
-                                    background: 'var(--surface)',
-                                    color: 'var(--fg)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    margin: 0
-                                }}
-                                title="Import designs from a backup file (transfers instantly between PCs without cloud)"
-                            >
-                                <Icons.Upload /> Import
-                                <input type="file" accept=".json" onChange={handleImportDesigns} style={{ display: 'none' }} />
-                            </label>
-
                             {/* Supabase Cloud Sync Visual Indicator & Quick Sync Trigger */}
                             <button
                                 type="button"
