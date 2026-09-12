@@ -17,7 +17,8 @@ const testFiles = [
   path.join(__dirname, 'presence-engine.test.js'),
   path.join(__dirname, 'yarn-ledger-gr.test.js'),
   path.join(__dirname, 'yarn-concurrency.test.js'),
-  path.join(__dirname, 'weaving-orders-sync.test.js')
+  path.join(__dirname, 'weaving-orders-sync.test.js'),
+  path.join(__dirname, 'design-library-sync-delete.test.js')
 ];
 
 let failed = 0;

@@ -2628,7 +2628,7 @@
                     const registerTombstone = (val) => {
                         if (!val) return;
                         const s = String(val).trim().toLowerCase();
-                        if (s && !/^\d{1,4}$/.test(s)) {
+                        if (s) {
                             tombstoneSet.add(s);
                         }
                     };
@@ -2795,7 +2795,22 @@
                                 saveDesignsToIDB(updated);
                                 return updated;
                             });
-                            return; // Done instantly without waiting for full network roundtrip!
+                            // Hydrate complete design (including heavy EP / raw image) in background
+                            const targetId = incoming.id || info.id;
+                            if (targetId && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignById === 'function') {
+                                window.VF_DB.weaving.getDesignById(targetId).then(full => {
+                                    if (full) {
+                                        setStoredValue(prev => {
+                                            const list = Array.isArray(prev) ? prev : [];
+                                            const filtered = list.filter(d => String(d.id).trim() !== String(full.id).trim() && String(d.code || '').trim().toUpperCase() !== String(full.code || '').trim().toUpperCase());
+                                            const updated = [full, ...filtered];
+                                            saveDesignsToIDB(updated);
+                                            return updated;
+                                        });
+                                    }
+                                }).catch(() => {});
+                            }
+                            return;
                         } else if (info.id && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignById === 'function') {
                             window.VF_DB.weaving.getDesignById(info.id).then(single => {
                                 if (single) {
@@ -2807,7 +2822,7 @@
                                         return updated;
                                     });
                                 }
-                            });
+                            }).catch(() => {});
                             return;
                         }
                     }
@@ -3557,12 +3572,10 @@
 
 
 
-            // Listen to global financial year change events
+            // Global financial year listener — Design Library is a perpetual pattern catalog across all financial years
             React.useEffect(() => {
                 const handleFYChange = (e) => {
-                    if (e && e.detail && e.detail.fy) {
-                        setFyFilter(e.detail.fy);
-                    }
+                    // Design Library displays all master patterns company-wide; keep fyFilter as 'All' by default
                 };
                 window.addEventListener('fyChanged', handleFYChange);
                 return () => window.removeEventListener('fyChanged', handleFYChange);
@@ -4322,9 +4335,14 @@
                     const matchesItem = itemFilter === 'All' || design.item === itemFilter;
                     let matchesFY = fyFilter === 'All';
                     if (!matchesFY && design.createdDate) {
+                        const parts = String(design.createdDate).split('-');
+                        let isoDate = design.createdDate;
+                        if (parts.length === 3 && parts[0].length === 2 && parts[2].length === 4) {
+                            isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        }
                         const range = FYEngine ? FYEngine.getFYDateRange(fyFilter) : { start: null, end: null };
-                        if (range.start && range.end) {
-                            matchesFY = design.createdDate >= range.start && design.createdDate <= range.end;
+                        if (range && range.start && range.end) {
+                            matchesFY = isoDate >= range.start && isoDate <= range.end;
                         } else {
                             matchesFY = getFinancialYear(design.createdDate) === fyFilter;
                         }
@@ -4972,24 +4990,38 @@
             // Delete Design (Tombstone Delete)
             const handleDelete = (id, code) => {
                 const deleteAction = async () => {
-                    const idStr = String(id).trim();
+                    const idStr = String(id || '').trim();
                     const codeStr = String(code || '').trim();
                     const cleanCode = codeStr.toUpperCase();
 
-                    // 1. Immediately prune from React state
-                    const remaining = designs.filter(d => {
-                        if (String(d.id).trim() === idStr) return false;
-                        if (cleanCode && String(d.code || '').trim().toUpperCase() === cleanCode) return false;
-                        return true;
+                    // 1. Immediately prune from React state & local storage functionally
+                    let remaining = [];
+                    setDesigns(prev => {
+                        const list = Array.isArray(prev) ? prev : [];
+                        remaining = list.filter(d => {
+                            if (idStr && String(d.id || '').trim() === idStr) return false;
+                            if (cleanCode && String(d.code || '').trim().toUpperCase() === cleanCode) return false;
+                            return true;
+                        });
+                        setUndoStack(u => [...u, list]);
+                        saveDesignsToIDB(remaining);
+                        try {
+                            const dStr = JSON.stringify(remaining);
+                            localStorage.setItem('loom-designs', dStr);
+                            if (window.VishwaSupabase) {
+                                if (window.VishwaSupabase.cache) window.VishwaSupabase.cache['loom-designs'] = dStr;
+                                if (window.VishwaSupabase.lastLocalWrites) window.VishwaSupabase.lastLocalWrites['loom-designs'] = Date.now();
+                            }
+                        } catch(e) {}
+                        return remaining;
                     });
-                    updateDesignsWithHistory(remaining);
 
-                    // 2. Immediately close inspector/modal if open
-                    if (selectedDesign && (String(selectedDesign.id).trim() === idStr || (cleanCode && String(selectedDesign.code || '').trim().toUpperCase() === cleanCode))) {
+                    // 2. Close inspector if open for this design
+                    if (selectedDesign && ((idStr && String(selectedDesign.id || '').trim() === idStr) || (cleanCode && String(selectedDesign.code || '').trim().toUpperCase() === cleanCode))) {
                         setSelectedDesign(null);
                     }
 
-                    // 3. Immediately purge from local IndexedDB
+                    // 3. Purge from local IndexedDB
                     saveDesignsToIDB(remaining);
 
                     // 4. Record tombstone in local deleted-designs
@@ -5033,14 +5065,15 @@
                     }
                 };
 
+                const displayName = code || id || 'this design';
                 if (typeof window.showConfirmToast === 'function') {
                     window.showConfirmToast(
-                        `Are you sure you want to delete Design ${code}? This cannot be undone.`,
+                        `Are you sure you want to delete Design ${displayName}? This will remove it from all devices.`,
                         deleteAction,
                         null,
                         'Confirm Delete'
                     );
-                } else if (confirm(`Are you sure you want to delete Design ${code}? This cannot be undone.`)) {
+                } else if (confirm(`Are you sure you want to delete Design ${displayName}? This will remove it from all devices.`)) {
                     deleteAction();
                 }
             };
@@ -5256,6 +5289,21 @@
                                             title="Link to Costing Sheet"
                                         >
                                             🔗
+                                        </button>
+                                        <button 
+                                            className="btn btn-outline" 
+                                            onClick={(e) => { e.stopPropagation(); handleDelete(design.id, design.code); }}
+                                            style={{ 
+                                                flex: '0 0 auto', 
+                                                padding: '0.5rem', 
+                                                width: '38px', 
+                                                minWidth: 'unset',
+                                                color: 'var(--danger, #ef4444)',
+                                                borderColor: 'var(--border)'
+                                            }}
+                                            title="Delete Design"
+                                        >
+                                            <Icons.Trash />
                                         </button>
                                     </div>
                                 </div>
@@ -6682,7 +6730,7 @@
                                     <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => handleStartEdit(selectedDesign)}>
                                         <Icons.Edit /> Edit Specs
                                     </button>
-                                    <button className="btn btn-error" style={{ padding: '0.75rem', minWidth: '48px' }} title="Delete Design" onClick={() => { handleDelete(selectedDesign.id, selectedDesign.code); setSelectedDesign(null); }}>
+                                    <button className="btn btn-error" style={{ padding: '0.75rem', minWidth: '48px' }} title="Delete Design" onClick={() => handleDelete(selectedDesign.id, selectedDesign.code)}>
                                         <Icons.Trash />
                                     </button>
                                 </div>

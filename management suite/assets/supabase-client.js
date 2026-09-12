@@ -260,12 +260,24 @@
         }
       } catch(e) {}
     });
-    return Array.from(new Set(deleted.map(s => String(s).trim()).filter(s => {
+
+    let designTombs = [];
+    try {
+      const dRaw = cache['deleted-designs'] || nativeLocalStorage.getItem('deleted-designs');
+      if (dRaw) {
+        const dParsed = typeof dRaw === 'string' ? JSON.parse(dRaw) : dRaw;
+        if (Array.isArray(dParsed)) designTombs = dParsed.map(s => String(s).trim()).filter(Boolean);
+      }
+    } catch(e) {}
+
+    const filteredGeneral = deleted.map(s => String(s).trim()).filter(s => {
       if (!s) return false;
       // Filter out pure short sequence digits (e.g. "1", "2", "01") from global tombstones as they are document sequence numbers, not permanent entity IDs
       if (/^\d{1,4}$/.test(s)) return false;
       return true;
-    })));
+    });
+
+    return Array.from(new Set([...filteredGeneral, ...designTombs]));
   }
 
   function filterDeletedEntities(a, b) {
@@ -2647,8 +2659,8 @@
 
     while (hasMore) {
       try {
-        const separator = tableOrPath.includes('?') ? '&' : '?';
-        const url = `${SUPABASE_URL}/rest/v1/${tableOrPath}${separator}select=${encodeURIComponent(select)}&limit=${pageSize}&offset=${offset}${extraParams ? ('&' + extraParams) : ''}`;
+        const cleanExtra = extraParams ? String(extraParams).replace(/^&/, '') : '';
+        const url = `${SUPABASE_URL}/rest/v1/${tableOrPath}${separator}select=${select}&limit=${pageSize}&offset=${offset}${cleanExtra ? ('&' + cleanExtra) : ''}`;
         const res = await fetch(url, {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
@@ -7916,7 +7928,7 @@
         }
       },
       async getDesignsWithTombstones(options = {}) {
-        const select = options.select || 'id,design_name,design_number,quality,image_url,picks,repeats,total_hooks,width,avg_weight,deleted,metadata,created_at,updated_at';
+        const select = options.select || 'id,design_name,design_number,quality,image_url,ep_file_url,picks,repeats,total_hooks,width,avg_weight,deleted,metadata,created_at,updated_at';
         const rows = await VF_DB.fetchTable('vf_fabric_designs', { order: 'created_at.desc', select: select, ...options });
         if (!Array.isArray(rows)) return { designs: [], tombstones: [] };
 
@@ -8100,17 +8112,87 @@
         return res;
       },
       async deleteDesign(id, code = '') {
-        if (!id) return { success: false };
-        const idStr = String(id).trim();
+        const idStr = String(id || '').trim();
         const codeStr = String(code || '').trim();
+        if (!idStr && !codeStr) return { success: false, error: 'Empty identifier' };
         const targetIds = [idStr, codeStr].filter(Boolean);
 
-        const res = await VF_DB.upsert('vf_fabric_designs', [{
-          id: idStr,
-          deleted: true,
-          metadata: { deleted: true, code: codeStr },
-          updated_at: new Date().toISOString()
-        }]);
+        let success = false;
+        let patchAttempted = false;
+
+        if (VF_DB.isConfigured() && SUPABASE_URL && SUPABASE_ANON_KEY) {
+          patchAttempted = true;
+          try {
+            // 1. Try PATCH on existing design row by id or design_number (soft-delete / tombstone)
+            // Using PATCH avoids NOT NULL constraints on columns like design_name
+            let filterParam = '';
+            if (idStr && codeStr) {
+              filterParam = `or=(id.eq.${encodeURIComponent(idStr)},design_number.eq.${encodeURIComponent(codeStr)})`;
+            } else if (idStr) {
+              filterParam = `id=eq.${encodeURIComponent(idStr)}`;
+            } else {
+              filterParam = `design_number=eq.${encodeURIComponent(codeStr)}`;
+            }
+
+            const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?${filterParam}`, {
+              method: 'PATCH',
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify({
+                deleted: true,
+                updated_at: new Date().toISOString()
+              })
+            });
+
+            if (patchRes.ok) {
+              const patchedRows = await patchRes.json().catch(() => []);
+              if (Array.isArray(patchedRows) && patchedRows.length > 0) {
+                success = true;
+              } else {
+                // If row didn't exist in Supabase yet, insert a tombstone row with valid design_name
+                const tombstoneRow = {
+                  id: idStr || `DEL-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                  design_name: codeStr || idStr || 'Deleted Design',
+                  design_number: codeStr || idStr,
+                  deleted: true,
+                  metadata: { deleted: true, code: codeStr, id: idStr },
+                  updated_at: new Date().toISOString()
+                };
+                const upsertRes = await VF_DB.upsert('vf_fabric_designs', [tombstoneRow]);
+                success = upsertRes.success;
+              }
+            } else {
+              console.warn("deleteDesign PATCH returned:", patchRes.status, await patchRes.text().catch(() => ''));
+            }
+          } catch (err) {
+            console.error("deleteDesign network exception:", err);
+          }
+        } else {
+          // If offline or unconfigured, local tombstone succeeds
+          success = true;
+        }
+
+        // Always register in local deleted-designs tombstones
+        try {
+          const rawDel = nativeLocalStorage.getItem('deleted-designs');
+          const delList = rawDel ? JSON.parse(rawDel) : [];
+          let changed = false;
+          targetIds.forEach(t => {
+            if (!delList.includes(t)) {
+              delList.push(t);
+              changed = true;
+            }
+          });
+          if (changed) {
+            const delStr = JSON.stringify(delList);
+            safeLocalStorageSet('deleted-designs', delStr);
+            cache['deleted-designs'] = delStr;
+          }
+        } catch(e) {}
 
         try {
           if (typeof supabaseLocalStorage !== 'undefined' && typeof supabaseLocalStorage.recordDeletion === 'function') {
@@ -8118,18 +8200,18 @@
           }
         } catch(e) {}
 
-        if (res.success) {
-          try {
-            broadcastRealtimeUpdate('loom-designs-signal', {
-              action: 'design_deleted',
-              id: idStr,
-              code: codeStr,
-              timestamp: Date.now()
-            });
-            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', deletedId: idStr, deletedCode: codeStr } }));
-          } catch(e) {}
-        }
-        return res;
+        // Broadcast realtime delete event so all connected devices immediately remove the design
+        try {
+          broadcastRealtimeUpdate('loom-designs-signal', {
+            action: 'design_deleted',
+            id: idStr,
+            code: codeStr,
+            timestamp: Date.now()
+          });
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', deletedId: idStr, deletedCode: codeStr } }));
+        } catch(e) {}
+
+        return { success: success || !patchAttempted };
       },
       async getDeletedDesignIds() {
         if (!VF_DB.isConfigured()) return [];
