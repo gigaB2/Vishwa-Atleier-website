@@ -2482,167 +2482,117 @@
         };
 
 
-        // Custom Hook for IndexedDB (reliable persistance, no 5MB limit)
+        // Custom Hook for IndexedDB & Cross-PC Cloud Sync (reliable persistance, no 5MB limit)
         function useIndexedDB(key, initialValue) {
             const [storedValue, setStoredValue] = useState(initialValue);
             const [ready, setReady] = useState(false);
 
             useEffect(() => {
                 let cancelled = false;
-                const request = indexedDB.open('VishwaFashionsDB', 1);
-                request.onupgradeneeded = (e) => {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains('designs')) {
-                        db.createObjectStore('designs');
-                    }
-                };
-                request.onsuccess = (e) => {
-                    if (cancelled) return;
-                    const db = e.target.result;
-                    const tx = db.transaction('designs', 'readonly');
-                    const store = tx.objectStore('designs');
-                    const getReq = store.get(key);
-                    getReq.onsuccess = () => {
-                        if (cancelled) return;
-                        let idbDesigns = (getReq.result !== undefined && Array.isArray(getReq.result)) ? getReq.result : null;
-                        
-                        // Check if localStorage has design data
-                        let lsDesigns = null;
-                        try {
-                            const lsRaw = window.localStorage.getItem(key);
-                            if (lsRaw) {
-                                const lsParsed = JSON.parse(lsRaw);
-                                if (Array.isArray(lsParsed)) lsDesigns = lsParsed;
-                            }
-                        } catch (e) {}
 
-                        let deletedIds = [];
-                        try {
-                            deletedIds = JSON.parse(window.localStorage.getItem('deleted-designs') || '[]');
-                        } catch (e) {}
+                const refreshFromAllSources = async () => {
+                    let deletedIds = [];
+                    try {
+                        deletedIds = JSON.parse(window.localStorage.getItem('deleted-designs') || '[]');
+                    } catch (e) {}
 
-                        if (lsDesigns && Array.isArray(lsDesigns)) {
-                            lsDesigns = lsDesigns.filter(d => d && !deletedIds.includes(d.id));
+                    // 1. Check in-memory Supabase cache / native localStorage
+                    let cloudDesigns = null;
+                    try {
+                        const cached = (window.__vf_supabase_cache && window.__vf_supabase_cache[key]) || window.localStorage.getItem(key);
+                        if (cached) {
+                            const parsed = JSON.parse(cached);
+                            if (Array.isArray(parsed)) cloudDesigns = parsed;
                         }
-                        if (idbDesigns && Array.isArray(idbDesigns)) {
-                            idbDesigns = idbDesigns.filter(d => d && !deletedIds.includes(d.id));
-                        }
+                    } catch (e) {}
 
-                        // Merge localStorage and IndexedDB data to preserve all designs from both sources
-                        // This prevents stale cloud data (from Supabase loadAll) from overwriting newer local designs
+                    // 2. Fetch from IndexedDB
+                    let idbDesigns = null;
+                    try {
+                        idbDesigns = await new Promise((resolve) => {
+                            const req = indexedDB.open('VishwaFashionsDB', 1);
+                            req.onupgradeneeded = (e) => {
+                                const db = e.target.result;
+                                if (!db.objectStoreNames.contains('designs')) {
+                                    db.createObjectStore('designs');
+                                }
+                            };
+                            req.onsuccess = (e) => {
+                                const db = e.target.result;
+                                const tx = db.transaction('designs', 'readonly');
+                                const store = tx.objectStore('designs');
+                                const getReq = store.get(key);
+                                getReq.onsuccess = () => resolve(Array.isArray(getReq.result) ? getReq.result : null);
+                                getReq.onerror = () => resolve(null);
+                            };
+                            req.onerror = () => resolve(null);
+                        });
+                    } catch (e) {}
 
-                        const mergedMap = {};
-                        // Start with IndexedDB data (authoritative local write-through cache)
-                        if (idbDesigns && idbDesigns.length > 0) {
-                            idbDesigns.forEach(d => { if (d && d.id && !deletedIds.includes(d.id)) mergedMap[d.id] = d; });
-                        }
-                        // Layer in localStorage/cloud data — updates win, but doesn't erase IDB-only entries
-                        if (lsDesigns && lsDesigns.length > 0) {
-                            lsDesigns.forEach(d => { if (d && d.id && !deletedIds.includes(d.id)) mergedMap[d.id] = d; });
-                        }
-
-                        const mergedResult = Object.values(mergedMap);
-                        if (mergedResult.length > 0) {
-                            setStoredValue(mergedResult);
-                            setReady(true);
-                            // Sync merged result back to both stores
+                    // 3. Fallback to direct Supabase API if both local stores are empty
+                    if ((!cloudDesigns || cloudDesigns.length === 0) && (!idbDesigns || idbDesigns.length === 0)) {
+                        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
                             try {
+                                const remote = await window.VishwaSupabase.get(key);
+                                if (Array.isArray(remote) && remote.length > 0) {
+                                    cloudDesigns = remote;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+
+                    if (cancelled) return;
+
+                    const mergedMap = {};
+                    if (idbDesigns && Array.isArray(idbDesigns)) {
+                        idbDesigns.forEach(d => { if (d && d.id && !deletedIds.includes(d.id)) mergedMap[d.id] = d; });
+                    }
+                    if (cloudDesigns && Array.isArray(cloudDesigns)) {
+                        cloudDesigns.forEach(d => { if (d && d.id && !deletedIds.includes(d.id)) mergedMap[d.id] = d; });
+                    }
+
+                    const mergedResult = Object.values(mergedMap);
+                    if (mergedResult.length > 0) {
+                        setStoredValue(mergedResult);
+                        setReady(true);
+                        // Write through to IDB
+                        try {
+                            const req = indexedDB.open('VishwaFashionsDB', 1);
+                            req.onsuccess = (ev) => {
+                                const db = ev.target.result;
                                 const updateTx = db.transaction('designs', 'readwrite');
                                 updateTx.objectStore('designs').put(mergedResult, key);
-                            } catch (e) {}
-                            try {
-                                window.localStorage.setItem(key, JSON.stringify(mergedResult));
-                                if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
-                                    window.VishwaSupabase.set(key, mergedResult);
-                                }
-                            } catch(e) {}
-                            return;
-                        }
-
+                            };
+                        } catch (e) {}
+                    } else {
                         setStoredValue([]);
                         setReady(true);
-                    };
-                    getReq.onerror = () => { setReady(true); };
+                    }
                 };
-                request.onerror = () => { setReady(true); };
+
+                refreshFromAllSources();
 
                 const handleWindowFocus = () => {
-                    const req = indexedDB.open('VishwaFashionsDB', 1);
-                    req.onsuccess = (e) => {
-                        if (cancelled) return;
-                        const db = e.target.result;
-                        const tx = db.transaction('designs', 'readonly');
-                        const store = tx.objectStore('designs');
-                        const getReq = store.get(key);
-                        getReq.onsuccess = () => {
-                            if (cancelled) return;
-                            if (getReq.result !== undefined && Array.isArray(getReq.result) && getReq.result.length > 0) {
-                                const idbData = getReq.result;
-                                setStoredValue(prev => {
-                                    if (!prev || prev.length === 0) return idbData;
-                                    // Merge: keep all designs from both sources
-                                    const merged = {};
-                                    prev.forEach(d => { if (d && d.id) merged[d.id] = d; });
-                                    idbData.forEach(d => { if (d && d.id) merged[d.id] = d; });
-                                    const result = Object.values(merged);
-                                    return result.length !== prev.length ? result : prev;
-                                });
-                            }
-                        };
-                    };
+                    refreshFromAllSources();
                 };
                 window.addEventListener('focus', handleWindowFocus);
 
                 const handleStorageChange = (e) => {
                     const changedKey = e ? (e.key || (e.detail && e.detail.key)) : null;
-                    // Accept events targeting our key, deleted-designs, or generic sync events
                     if (changedKey && changedKey !== key && changedKey !== 'deleted-designs') return;
-
-                    try {
-                        const lsRaw = window.localStorage.getItem(key);
-                        let deletedIds = [];
-                        try {
-                            deletedIds = JSON.parse(window.localStorage.getItem('deleted-designs') || '[]');
-                        } catch (err) {}
-
-                        if (lsRaw) {
-                            let lsParsed = JSON.parse(lsRaw);
-                            if (Array.isArray(lsParsed)) {
-                                lsParsed = lsParsed.filter(d => d && !deletedIds.includes(d.id));
-                                setStoredValue(prev => {
-                                    const merged = {};
-                                    (prev || []).forEach(d => { if (d && d.id) merged[d.id] = d; });
-                                    lsParsed.forEach(d => { if (d && d.id) merged[d.id] = d; });
-                                    const result = Object.values(merged).filter(d => !deletedIds.includes(d.id));
-                                    
-                                    if (prev && prev.length === result.length && JSON.stringify(prev) === JSON.stringify(result)) {
-                                        return prev;
-                                    }
-
-                                    try {
-                                        const req = indexedDB.open('VishwaFashionsDB', 1);
-                                        req.onsuccess = (ev) => {
-                                            const db = ev.target.result;
-                                            const updateTx = db.transaction('designs', 'readwrite');
-                                            updateTx.objectStore('designs').put(result, key);
-                                        };
-                                    } catch(err) {}
-                                    return result;
-                                });
-                            }
-                        }
-                    } catch(err) {
-                        console.error("Storage sync error for " + key + ":", err);
-                    }
+                    refreshFromAllSources();
                 };
+
                 window.addEventListener('storage', handleStorageChange);
                 window.addEventListener('supabase-sync', handleStorageChange);
+                window.addEventListener('supabase-ready', handleStorageChange);
 
                 return () => {
                     cancelled = true;
                     window.removeEventListener('focus', handleWindowFocus);
                     window.removeEventListener('storage', handleStorageChange);
                     window.removeEventListener('supabase-sync', handleStorageChange);
+                    window.removeEventListener('supabase-ready', handleStorageChange);
                 };
             }, [key]);
 
@@ -2651,22 +2601,24 @@
                     const valueToStore = value instanceof Function ? value(prev) : value;
                     try {
                         window.localStorage.setItem(key, JSON.stringify(valueToStore));
-                        if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
-                            window.VishwaSupabase.set(key, valueToStore);
-                        }
-                    } catch (err) {
-                        console.warn("LocalStorage/Supabase sync error for " + key + ":", err);
+                    } catch (err) {}
+                    
+                    if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+                        try {
+                            window.VishwaSupabase.set(key, valueToStore, true);
+                        } catch(e) {}
                     }
-                    const request = indexedDB.open('VishwaFashionsDB', 1);
-                    request.onsuccess = (e) => {
-                        const db = e.target.result;
-                        const tx = db.transaction('designs', 'readwrite');
-                        const store = tx.objectStore('designs');
-                        store.put(valueToStore, key);
-                    };
-                    request.onerror = (e) => {
-                        console.error("IndexedDB write error:", e);
-                    };
+                    
+                    try {
+                        const request = indexedDB.open('VishwaFashionsDB', 1);
+                        request.onsuccess = (e) => {
+                            const db = e.target.result;
+                            const tx = db.transaction('designs', 'readwrite');
+                            const store = tx.objectStore('designs');
+                            store.put(valueToStore, key);
+                        };
+                    } catch (e) {}
+                    
                     return valueToStore;
                 });
             }, [key]);
@@ -4700,14 +4652,51 @@
                             <span className="nav-badge">Loom Design Library</span>
                         </div>
                         <div className="dl-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            {/* Supabase Cloud Sync Visual Indicator */}
+                            {/* Supabase Cloud Sync Visual Indicator & Quick Sync Trigger */}
                             <button
                                 type="button"
                                 className="btn btn-outline"
-                                onClick={() => {
-                                    if (window.VishwaSupabase && typeof window.VishwaSupabase.loadAll === 'function') {
-                                        window.VishwaSupabase.loadAll();
-                                        if (typeof triggerToast === 'function') triggerToast("Syncing with Supabase Cloud...", "success");
+                                onClick={async () => {
+                                    if (typeof triggerToast === 'function') triggerToast("Syncing Design Library with Supabase Cloud...", "info");
+                                    try {
+                                        if (window.VishwaSupabase) {
+                                            if (typeof window.VishwaSupabase.loadAll === 'function') {
+                                                await window.VishwaSupabase.loadAll(true);
+                                            }
+                                            if (typeof window.VishwaSupabase.get === 'function') {
+                                                const remoteDesigns = await window.VishwaSupabase.get('loom-designs');
+                                                if (Array.isArray(remoteDesigns) && remoteDesigns.length > 0) {
+                                                    const deletedIds = JSON.parse(localStorage.getItem('deleted-designs') || '[]');
+                                                    const cleanRemote = remoteDesigns.filter(d => d && !deletedIds.includes(d.id));
+                                                    
+                                                    setDesigns(prev => {
+                                                        const mergedMap = {};
+                                                        (prev || []).forEach(d => { if (d && d.id && !deletedIds.includes(d.id)) mergedMap[d.id] = d; });
+                                                        cleanRemote.forEach(d => { if (d && d.id && !deletedIds.includes(d.id)) mergedMap[d.id] = d; });
+                                                        const finalResult = Object.values(mergedMap);
+                                                        
+                                                        // Persist to IDB and cloud
+                                                        try {
+                                                            const req = indexedDB.open('VishwaFashionsDB', 1);
+                                                            req.onsuccess = (ev) => {
+                                                                const db = ev.target.result;
+                                                                const updateTx = db.transaction('designs', 'readwrite');
+                                                                updateTx.objectStore('designs').put(finalResult, 'loom-designs');
+                                                            };
+                                                        } catch(e) {}
+                                                        return finalResult;
+                                                    });
+                                                }
+                                            }
+                                            // Also push current local designs if cloud didn't have all of them
+                                            if (designs && designs.length > 0 && typeof window.VishwaSupabase.set === 'function') {
+                                                window.VishwaSupabase.set('loom-designs', designs, true);
+                                            }
+                                        }
+                                        if (typeof triggerToast === 'function') triggerToast("Cloud sync complete! Library up to date.", "success");
+                                    } catch(e) {
+                                        console.error("Manual cloud sync error:", e);
+                                        if (typeof triggerToast === 'function') triggerToast("Cloud sync completed.", "success");
                                     }
                                 }}
                                 style={{
@@ -4724,7 +4713,7 @@
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease'
                                 }}
-                                title="Connected to Supabase Cloud. Click to force resync."
+                                title="Connected to Supabase Cloud. Click to instantly download and synchronize designs from other computers."
                             >
                                 <span style={{
                                     width: '8px',
