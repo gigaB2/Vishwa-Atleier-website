@@ -2482,40 +2482,89 @@
         };
 
 
-        // Custom Hook for IndexedDB & Cross-PC Cloud Sync (reliable persistance, no 5MB limit)
+        // Custom Hook for Supabase Cloud Single Source of Truth & Local Rescue
         function useIndexedDB(key, initialValue) {
             const [storedValue, setStoredValue] = useState(initialValue);
             const [ready, setReady] = useState(false);
 
-            useEffect(() => {
-                let cancelled = false;
+            const loadFromSupabase = useCallback(async (isManualRefresh = false) => {
+                let deletedIds = [];
+                try {
+                    deletedIds = JSON.parse(window.localStorage.getItem('deleted-designs') || '[]');
+                } catch (e) {}
 
-                const refreshFromAllSources = async () => {
-                    let deletedIds = [];
-                    try {
-                        deletedIds = JSON.parse(window.localStorage.getItem('deleted-designs') || '[]');
-                    } catch (e) {}
-
-                    // 1. Check in-memory Supabase cache / native localStorage
+                try {
+                    // 1. Primary Source of Truth: Fetch directly from Supabase vf_fabric_designs
                     let cloudDesigns = null;
-                    try {
-                        const cached = (window.__vf_supabase_cache && window.__vf_supabase_cache[key]) || window.localStorage.getItem(key);
-                        if (cached) {
-                            const parsed = JSON.parse(cached);
-                            if (Array.isArray(parsed)) cloudDesigns = parsed;
+                    if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesigns === 'function') {
+                        cloudDesigns = await window.VF_DB.weaving.getDesigns();
+                    } else if (window.VF_DB && typeof window.VF_DB.fetchTable === 'function') {
+                        const relRows = await window.VF_DB.fetchTable('vf_fabric_designs', { order: 'created_at.desc' });
+                        if (Array.isArray(relRows)) {
+                            cloudDesigns = relRows.filter(d => !d.deleted).map(d => {
+                                const meta = (d.metadata && typeof d.metadata === 'object') ? d.metadata : {};
+                                return {
+                                    id: d.id,
+                                    code: d.design_number || meta.code || d.design_name,
+                                    name: d.design_name || meta.name || d.design_number,
+                                    item: d.quality || meta.item || 'Jacquard',
+                                    loomType: meta.loomType || 'Jacquard',
+                                    hooksCount: d.total_hooks || meta.hooksCount || 0,
+                                    picksCount: d.picks || meta.picksCount || 0,
+                                    cardCount: meta.cardCount || '',
+                                    ends: meta.ends || '',
+                                    reed: meta.reed || '',
+                                    description: meta.description || '',
+                                    previewImage: d.image_url || meta.previewImage || '',
+                                    specImage: meta.specImage || '',
+                                    originalImage: meta.originalImage || '',
+                                    epFile: d.ep_file_url || meta.epFile || '',
+                                    epFileName: meta.epFileName || '',
+                                    designer: meta.designer || '',
+                                    jacquardType: meta.jacquardType || '',
+                                    productionFace: meta.productionFace || 'Front',
+                                    pettiCount: meta.pettiCount || 1,
+                                    pettiDetails: meta.pettiDetails || [{ name: '', cards: '' }],
+                                    variants: meta.variants || [],
+                                    createdDate: meta.createdDate || (d.created_at ? new Date(d.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
+                                    lastUpdated: meta.lastUpdated || (d.updated_at ? new Date(d.updated_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
+                                    cropBox: meta.cropBox || null,
+                                    ocrBinarizeThreshold: meta.ocrBinarizeThreshold || 140,
+                                    ...meta
+                                };
+                            });
                         }
-                    } catch (e) {}
+                    }
 
-                    // 2. Fetch from IndexedDB
-                    let idbDesigns = null;
-                    try {
-                        idbDesigns = await new Promise((resolve) => {
+                    if (Array.isArray(cloudDesigns) && cloudDesigns.length > 0) {
+                        const cleanCloud = cloudDesigns.filter(d => d && (d.id || d.code) && !deletedIds.includes(d.id));
+                        setStoredValue(cleanCloud);
+                        setReady(true);
+
+                        // Also cache in IndexedDB as offline read backup
+                        try {
                             const req = indexedDB.open('VishwaFashionsDB', 1);
                             req.onupgradeneeded = (e) => {
                                 const db = e.target.result;
-                                if (!db.objectStoreNames.contains('designs')) {
-                                    db.createObjectStore('designs');
-                                }
+                                if (!db.objectStoreNames.contains('designs')) db.createObjectStore('designs');
+                            };
+                            req.onsuccess = (ev) => {
+                                const db = ev.target.result;
+                                const tx = db.transaction('designs', 'readwrite');
+                                tx.objectStore('designs').put(cleanCloud, key);
+                            };
+                        } catch(e) {}
+                        return cleanCloud;
+                    }
+
+                    // 2. Rescue Mechanism: If Supabase has 0 designs, check if this computer has offline/local designs
+                    let localRescueDesigns = null;
+                    try {
+                        localRescueDesigns = await new Promise((resolve) => {
+                            const req = indexedDB.open('VishwaFashionsDB', 1);
+                            req.onupgradeneeded = (e) => {
+                                const db = e.target.result;
+                                if (!db.objectStoreNames.contains('designs')) db.createObjectStore('designs');
                             };
                             req.onsuccess = (e) => {
                                 const db = e.target.result;
@@ -2527,102 +2576,67 @@
                             };
                             req.onerror = () => resolve(null);
                         });
-                    } catch (e) {}
-
-                    // 3. Query direct Supabase KV API and Relational Table API
-                    if ((!cloudDesigns || cloudDesigns.length === 0)) {
-                        if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
-                            try {
-                                const remote = await window.VishwaSupabase.get(key);
-                                if (Array.isArray(remote) && remote.length > 0) {
-                                    cloudDesigns = remote;
-                                }
-                            } catch (e) {}
-                        }
-                    }
-
-                    // 4. Also check vf_fabric_designs relational table directly
-                    let relationalDesigns = null;
-                    try {
-                        if (window.VF_DB && typeof window.VF_DB.fetchTable === 'function') {
-                            const relRows = await window.VF_DB.fetchTable('vf_fabric_designs', { order: 'created_at.desc' });
-                            if (Array.isArray(relRows) && relRows.length > 0) {
-                                relationalDesigns = relRows.filter(d => !d.deleted).map(d => {
-                                    const meta = (d.metadata && typeof d.metadata === 'object') ? d.metadata : {};
-                                    return {
-                                        id: d.id,
-                                        code: d.design_number || meta.code || d.design_name,
-                                        item: d.quality || meta.item || 'Jacquard',
-                                        loomType: meta.loomType || 'Jacquard',
-                                        hooksCount: d.total_hooks || meta.hooksCount || 0,
-                                        picksCount: d.picks || meta.picksCount || 0,
-                                        cardCount: meta.cardCount || '',
-                                        ends: meta.ends || '',
-                                        reed: meta.reed || '',
-                                        description: meta.description || '',
-                                        previewImage: d.image_url || meta.previewImage || '',
-                                        specImage: meta.specImage || '',
-                                        originalImage: meta.originalImage || '',
-                                        epFile: d.ep_file_url || meta.epFile || '',
-                                        epFileName: meta.epFileName || '',
-                                        designer: meta.designer || '',
-                                        jacquardType: meta.jacquardType || '',
-                                        productionFace: meta.productionFace || 'Front',
-                                        pettiCount: meta.pettiCount || 1,
-                                        pettiDetails: meta.pettiDetails || [{ name: '', cards: '' }],
-                                        variants: meta.variants || [],
-                                        createdDate: meta.createdDate || (d.created_at ? new Date(d.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
-                                        lastUpdated: meta.lastUpdated || (d.updated_at ? new Date(d.updated_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
-                                        ...meta
-                                    };
-                                });
-                            }
-                        }
                     } catch(e) {}
 
-                    if (cancelled) return;
-
-                    const mergedMap = {};
-                    if (idbDesigns && Array.isArray(idbDesigns)) {
-                        idbDesigns.forEach(d => { if (d && (d.id || d.code) && !deletedIds.includes(d.id)) mergedMap[d.id || d.code] = d; });
-                    }
-                    if (relationalDesigns && Array.isArray(relationalDesigns)) {
-                        relationalDesigns.forEach(d => { if (d && (d.id || d.code) && !deletedIds.includes(d.id)) mergedMap[d.id || d.code] = d; });
-                    }
-                    if (cloudDesigns && Array.isArray(cloudDesigns)) {
-                        cloudDesigns.forEach(d => { if (d && (d.id || d.code) && !deletedIds.includes(d.id)) mergedMap[d.id || d.code] = d; });
-                    }
-
-                    const mergedResult = Object.values(mergedMap);
-                    if (mergedResult.length > 0) {
-                        setStoredValue(mergedResult);
-                        setReady(true);
-                        // Write through to IDB
+                    if (!localRescueDesigns || localRescueDesigns.length === 0) {
                         try {
-                            const req = indexedDB.open('VishwaFashionsDB', 1);
-                            req.onsuccess = (ev) => {
-                                const db = ev.target.result;
-                                const updateTx = db.transaction('designs', 'readwrite');
-                                updateTx.objectStore('designs').put(mergedResult, key);
-                            };
-                        } catch (e) {}
-                    } else {
-                        setStoredValue([]);
-                        setReady(true);
+                            const lsVal = window.localStorage.getItem(key);
+                            if (lsVal) {
+                                const parsed = JSON.parse(lsVal);
+                                if (Array.isArray(parsed) && parsed.length > 0) localRescueDesigns = parsed;
+                            }
+                        } catch(e) {}
                     }
-                };
 
-                refreshFromAllSources();
+                    if (Array.isArray(localRescueDesigns) && localRescueDesigns.length > 0) {
+                        const cleanRescue = localRescueDesigns.filter(d => d && (d.id || d.code) && !deletedIds.includes(d.id));
+                        if (cleanRescue.length > 0) {
+                            console.log(`Found ${cleanRescue.length} local designs to rescue and sync to Supabase...`);
+                            setStoredValue(cleanRescue);
+                            setReady(true);
+
+                            // Push rescued designs up to Supabase so other computers receive them immediately!
+                            if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.saveDesign === 'function') {
+                                for (const des of cleanRescue) {
+                                    try {
+                                        await window.VF_DB.weaving.saveDesign(des);
+                                    } catch(err) {
+                                        console.warn("Rescue sync error for design:", des.code, err);
+                                    }
+                                }
+                                if (typeof window.showToast === 'function') {
+                                    window.showToast(`Rescued & synced ${cleanRescue.length} designs to Supabase cloud!`, "success");
+                                }
+                            }
+                            return cleanRescue;
+                        }
+                    }
+
+                    // If neither Supabase nor local has designs, initialize empty
+                    setStoredValue([]);
+                    setReady(true);
+                    return [];
+                } catch(err) {
+                    console.error("Hydration error:", err);
+                    setStoredValue([]);
+                    setReady(true);
+                    return [];
+                }
+            }, [key]);
+
+            useEffect(() => {
+                let cancelled = false;
+                loadFromSupabase();
 
                 const handleWindowFocus = () => {
-                    refreshFromAllSources();
+                    loadFromSupabase();
                 };
                 window.addEventListener('focus', handleWindowFocus);
 
                 const handleStorageChange = (e) => {
                     const changedKey = e ? (e.key || (e.detail && e.detail.key)) : null;
                     if (changedKey && changedKey !== key && changedKey !== 'deleted-designs') return;
-                    refreshFromAllSources();
+                    loadFromSupabase();
                 };
 
                 window.addEventListener('storage', handleStorageChange);
@@ -2636,21 +2650,13 @@
                     window.removeEventListener('supabase-sync', handleStorageChange);
                     window.removeEventListener('supabase-ready', handleStorageChange);
                 };
-            }, [key]);
+            }, [key, loadFromSupabase]);
 
             const setValue = useCallback((value) => {
                 setStoredValue(prev => {
                     const valueToStore = value instanceof Function ? value(prev) : value;
-                    try {
-                        window.localStorage.setItem(key, JSON.stringify(valueToStore));
-                    } catch (err) {}
                     
-                    if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
-                        try {
-                            window.VishwaSupabase.set(key, valueToStore, true);
-                        } catch(e) {}
-                    }
-                    
+                    // Backup locally
                     try {
                         const request = indexedDB.open('VishwaFashionsDB', 1);
                         request.onsuccess = (e) => {
@@ -2660,12 +2666,12 @@
                             store.put(valueToStore, key);
                         };
                     } catch (e) {}
-                    
+
                     return valueToStore;
                 });
             }, [key]);
 
-            return [storedValue, setValue, ready];
+            return [storedValue, setValue, ready, loadFromSupabase];
         }
 
         // --- Standard SVG Icons ---
@@ -3211,7 +3217,7 @@
         // --- Main App Component ---
         const App = () => {
             // State
-            const [designs, setDesigns, designsReady] = useIndexedDB('loom-designs', window.INITIAL_DESIGNS || []);
+            const [designs, setDesigns, designsReady, loadFromSupabase] = useIndexedDB('loom-designs', window.INITIAL_DESIGNS || []);
             const [undoStack, setUndoStack] = useState([]);
 
             const updateDesignsWithHistory = (newDesigns) => {
@@ -3328,112 +3334,7 @@
                 return () => window.removeEventListener('themeChanged', handleThemeChange);
             }, []);
             
-                        // Load and force sync pre-parsed designs from designs.json or embedded fallback on mount
-            useEffect(() => {
-                if (!designsReady) return; // Wait for IndexedDB to load saved data first
-
-                if (localStorage.getItem('vishwa_fashions_factory_reset_active') === 'true') {
-                    return;
-                }
-
-                const syncData = (data) => {
-                    let deletedIds = [];
-                    try {
-                        deletedIds = JSON.parse(localStorage.getItem('deleted-designs') || '[]');
-                    } catch (e) {
-                        console.error("Error reading deleted-designs from localStorage:", e);
-                    }
-
-                    setDesigns(prev => {
-                        const designMap = {};
-                        prev.forEach(d => {
-                            designMap[d.id] = d;
-                        });
-                        let updatedCount = 0;
-                        let addedCount = 0;
-                        data.forEach(d => {
-                            // If the design has been explicitly deleted, do not restore/sync it
-                            if (deletedIds.includes(d.id)) {
-                                return;
-                            }
-
-                            if (designMap[d.id]) {
-                                // Overwrite and force update if properties differ (such as pettiCount, pettiDetails, variants)
-                                const existing = designMap[d.id];
-                                if (existing.userEdited) {
-                                    return; // Preserve user's custom edits!
-                                }
-                                const hasChanged = JSON.stringify(existing.pettiDetails) !== JSON.stringify(d.pettiDetails) ||
-                                                    JSON.stringify(existing.variants) !== JSON.stringify(d.variants) ||
-                                                    existing.pettiCount !== d.pettiCount ||
-                                                    existing.code !== d.code;
-                                if (hasChanged) {
-                                    designMap[d.id] = d;
-                                    updatedCount++;
-                                }
-                            } else {
-                                designMap[d.id] = d;
-                                addedCount++;
-                            }
-                        });
-                        // Clean up any deleted designs and legacy demo designs
-                        const dataIds = data.map(d => d.id);
-                        const finalDesigns = Object.values(designMap).filter(d => {
-                            if (deletedIds.includes(d.id)) {
-                                return false;
-                            }
-                            if (d.id.startsWith('parsed-') && !dataIds.includes(d.id)) {
-                                return false;
-                            }
-                            if (d.id.startsWith('demo-')) {
-                                return false;
-                            }
-                            return true;
-                        });
-
-                        const prevIds = prev.map(d => d.id).sort().join(',');
-                        const finalIds = finalDesigns.map(d => d.id).sort().join(',');
-                        if (prevIds !== finalIds || addedCount > 0 || updatedCount > 0) {
-                            if (addedCount > 0 || updatedCount > 0) {
-                                setTimeout(() => {
-                                    triggerToast(`Sync complete: Loaded ${addedCount} new and updated ${updatedCount} design specs!`, "success");
-                                }, 500);
-                            }
-                            return finalDesigns;
-                        }
-                        return prev;
-                    });
-                };
-
-                // Try fetching first, fallback to localStorage or embedded designs if CORS/file protocol blocks it
-                const lsLoomDesigns = localStorage.getItem('loom-designs') || localStorage.getItem('loom_designs');
-                let parsedLsDesigns = null;
-                try {
-                    if (lsLoomDesigns) parsedLsDesigns = JSON.parse(lsLoomDesigns);
-                } catch(e) {}
-
-                const fallbackSource = (parsedLsDesigns && parsedLsDesigns.length > 0) ? parsedLsDesigns : (window.INITIAL_DESIGNS || []);
-
-                if (window.location.protocol !== 'file:') {
-                    fetch('designs.json')
-                        .then(response => {
-                            if (!response.ok) throw new Error('No designs.json found');
-                            return response.json();
-                        })
-                        .then(data => {
-                            syncData(data && data.length > 0 ? data : fallbackSource);
-                        })
-                        .catch(err => {
-                            if (fallbackSource.length > 0) {
-                                syncData(fallbackSource);
-                            }
-                        });
-                } else {
-                    if (fallbackSource.length > 0) {
-                        syncData(fallbackSource);
-                    }
-                }
-            }, [designsReady]);
+            // Supabase is the single source of truth for Design Library (legacy designs.json sync retired)
 
             // Migration: Convert legacy bmpFile to epFile on startup
             useEffect(() => {
@@ -4608,19 +4509,24 @@
                         }
                     }
 
+                    let savedDesignObj = null;
                     const updatedDesigns = designs.map(d => {
                         if (d.id === editDesignId) {
-                            return {
+                            savedDesignObj = {
                                 ...d,
                                 ...updatedFormData,
                                 createdDate: yyyymmddToDdmmyyyy(formData.createdDate),
                                 userEdited: true,
                                 lastUpdated: new Date().toLocaleDateString('en-GB').replace(/\//g, '-')
                             };
+                            return savedDesignObj;
                         }
                         return d;
                     });
                     updateDesignsWithHistory(updatedDesigns);
+                    if (savedDesignObj && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.saveDesign === 'function') {
+                        window.VF_DB.weaving.saveDesign(savedDesignObj).catch(err => console.error("Error saving design to Supabase:", err));
+                    }
                     closeAddModal();
                     triggerToast(`Design ${formData.code} successfully updated!`, "success");
                 } else {
@@ -4638,6 +4544,9 @@
                     };
 
                     updateDesignsWithHistory([newDesign, ...designs]);
+                    if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.saveDesign === 'function') {
+                        window.VF_DB.weaving.saveDesign(newDesign).catch(err => console.error("Error saving design to Supabase:", err));
+                    }
                     closeAddModal();
                     triggerToast(`Design ${newDesign.code} successfully saved to library!`, "success");
                 }
@@ -4657,6 +4566,11 @@
                         }
                     } catch (e) {
                         console.error("Error updating deleted-designs in localStorage:", e);
+                    }
+
+                    // Soft delete on Supabase
+                    if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.deleteDesign === 'function') {
+                        window.VF_DB.weaving.deleteDesign(id).catch(err => console.error("Error deleting design from Supabase:", err));
                     }
 
                     triggerToast(`Deleted Design ${code}`, "success");
@@ -4699,46 +4613,23 @@
                                 type="button"
                                 className="btn btn-outline"
                                 onClick={async () => {
-                                    if (typeof triggerToast === 'function') triggerToast("Syncing Design Library with Supabase Cloud...", "info");
+                                    if (typeof triggerToast === 'function') triggerToast("Syncing Design Library directly from Supabase Cloud...", "info");
                                     try {
-                                        if (window.VishwaSupabase) {
-                                            if (typeof window.VishwaSupabase.loadAll === 'function') {
-                                                await window.VishwaSupabase.loadAll(true);
+                                        if (typeof loadFromSupabase === 'function') {
+                                            const fresh = await loadFromSupabase(true);
+                                            if (typeof triggerToast === 'function') {
+                                                triggerToast(`Cloud sync complete! ${fresh?.length || 0} designs hydrated from Supabase.`, "success");
                                             }
-                                            if (typeof window.VishwaSupabase.get === 'function') {
-                                                const remoteDesigns = await window.VishwaSupabase.get('loom-designs');
-                                                if (Array.isArray(remoteDesigns) && remoteDesigns.length > 0) {
-                                                    const deletedIds = JSON.parse(localStorage.getItem('deleted-designs') || '[]');
-                                                    const cleanRemote = remoteDesigns.filter(d => d && !deletedIds.includes(d.id));
-                                                    
-                                                    setDesigns(prev => {
-                                                        const mergedMap = {};
-                                                        (prev || []).forEach(d => { if (d && d.id && !deletedIds.includes(d.id)) mergedMap[d.id] = d; });
-                                                        cleanRemote.forEach(d => { if (d && d.id && !deletedIds.includes(d.id)) mergedMap[d.id] = d; });
-                                                        const finalResult = Object.values(mergedMap);
-                                                        
-                                                        // Persist to IDB and cloud
-                                                        try {
-                                                            const req = indexedDB.open('VishwaFashionsDB', 1);
-                                                            req.onsuccess = (ev) => {
-                                                                const db = ev.target.result;
-                                                                const updateTx = db.transaction('designs', 'readwrite');
-                                                                updateTx.objectStore('designs').put(finalResult, 'loom-designs');
-                                                            };
-                                                        } catch(e) {}
-                                                        return finalResult;
-                                                    });
-                                                }
-                                            }
-                                            // Also push current local designs if cloud didn't have all of them
-                                            if (designs && designs.length > 0 && typeof window.VishwaSupabase.set === 'function') {
-                                                window.VishwaSupabase.set('loom-designs', designs, true);
+                                        } else if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesigns === 'function') {
+                                            const fresh = await window.VF_DB.weaving.getDesigns();
+                                            setDesigns(fresh || []);
+                                            if (typeof triggerToast === 'function') {
+                                                triggerToast(`Cloud sync complete! ${fresh?.length || 0} designs hydrated from Supabase.`, "success");
                                             }
                                         }
-                                        if (typeof triggerToast === 'function') triggerToast("Cloud sync complete! Library up to date.", "success");
                                     } catch(e) {
                                         console.error("Manual cloud sync error:", e);
-                                        if (typeof triggerToast === 'function') triggerToast("Cloud sync completed.", "success");
+                                        if (typeof triggerToast === 'function') triggerToast("Cloud sync failed. Please check network connection.", "error");
                                     }
                                 }}
                                 style={{
