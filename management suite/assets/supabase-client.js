@@ -6953,15 +6953,26 @@
     if (typeof configCheckTimer?.unref === 'function') configCheckTimer.unref();
   }
 
-  // Smart polling interval & Visibility Throttling (2s fast polling for instant cross-PC updates without refresh)
+  // Smart polling interval & Visibility Throttling (calm 30s background fallback; WebSocket delivers <20ms instant push)
   let syncIntervalId = null;
-  const POLL_INTERVAL_MS = 2000;
+  const POLL_INTERVAL_MS = (window.APP_CONFIG && window.APP_CONFIG.SYNC_POLL_INTERVAL_MS) || 30000;
+  let isSyncInProgress = false;
+  let consecutiveSyncErrors = 0;
 
   function startSmartSync() {
     if (!syncIntervalId) {
-      syncIntervalId = setInterval(() => {
-        if (!document.hidden) {
-          supabaseApi.loadAll(false);
+      syncIntervalId = setInterval(async () => {
+        if (document.hidden || isSyncInProgress) return;
+        // If consecutive errors occurred (e.g. 504 gateway timeout), back off to let server drain
+        if (consecutiveSyncErrors >= 2 && Math.random() > 0.25) return;
+        try {
+          isSyncInProgress = true;
+          await supabaseApi.loadAll(false);
+          consecutiveSyncErrors = 0;
+        } catch (e) {
+          consecutiveSyncErrors++;
+        } finally {
+          isSyncInProgress = false;
         }
       }, POLL_INTERVAL_MS);
       if (typeof syncIntervalId?.unref === 'function') syncIntervalId.unref();
@@ -7089,6 +7100,48 @@
     }
   };
 
+  // --- Image Dimension & Quality Optimization Helper for Ultra-Lightweight Sync ---
+  async function ensureCompactImage(dataUrl, maxDim = 1200, quality = 0.82) {
+    if (!dataUrl || typeof dataUrl !== 'string') return '';
+    if (!dataUrl.startsWith('data:image/')) return dataUrl;
+    if (dataUrl.length < 150000) return dataUrl; // Already compact (<150KB)
+    if (typeof document === 'undefined') return dataUrl;
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            let w = img.width;
+            let h = img.height;
+            if (w <= 0 || h <= 0) return resolve(dataUrl);
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const comp = canvas.toDataURL('image/jpeg', quality);
+            resolve(comp && comp.length < dataUrl.length ? comp : dataUrl);
+          } catch(e) {
+            resolve(dataUrl);
+          }
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+      } catch(e) {
+        resolve(dataUrl);
+      }
+    });
+  }
+
   // --- High-Performance Native GZIP Compression for Large EP Base64 Assets ---
   async function compressBase64(base64Str) {
     if (!base64Str || typeof base64Str !== 'string' || base64Str.length < 50000) return base64Str;
@@ -7121,13 +7174,29 @@
         if (done) break;
         chunks.push(value);
       }
-      const compBuf = await new Blob(chunks).arrayBuffer();
-      const compBytes = new Uint8Array(compBuf);
-      let compBin = '';
-      for (let i = 0; i < compBytes.length; i += 8192) {
-        compBin += String.fromCharCode.apply(null, compBytes.subarray(i, i + 8192));
+      const blob = new Blob(chunks, { type: 'application/gzip' });
+      let b64 = '';
+      if (typeof FileReader !== 'undefined') {
+        b64 = await new Promise((res, rej) => {
+          const fr = new FileReader();
+          fr.onload = () => {
+            const resStr = fr.result;
+            const cIdx = resStr.indexOf(',');
+            res(cIdx !== -1 ? resStr.slice(cIdx + 1) : resStr);
+          };
+          fr.onerror = rej;
+          fr.readAsDataURL(blob);
+        });
+      } else {
+        const compBuf = await blob.arrayBuffer();
+        const compBytes = new Uint8Array(compBuf);
+        let compBin = '';
+        for (let i = 0; i < compBytes.length; i += 8192) {
+          compBin += String.fromCharCode.apply(null, compBytes.subarray(i, i + 8192));
+        }
+        b64 = btoa(compBin);
       }
-      return `gz64:${mime}${btoa(compBin)}`;
+      return `gz64:${mime}${b64}`;
     } catch (err) {
       console.warn("EP compression fallback:", err);
       return base64Str;
@@ -7839,10 +7908,13 @@
           let variants = meta.variants || [];
           if (Array.isArray(variants)) {
             variants = await Promise.all(variants.map(async (v, vIdx) => {
-              if (v && typeof v.epFile === 'string' && v.epFile.startsWith('gz64:')) {
-                return { ...v, epFile: await decompressBase64(v.epFile, `${r.id}_var_${vIdx}_${r.updated_at}`) };
+              let vEp = v && v.epFile;
+              if ((!vEp || vEp === 'main') && vIdx === 0) {
+                vEp = rawEp;
+              } else if (v && typeof vEp === 'string' && vEp.startsWith('gz64:')) {
+                vEp = await decompressBase64(vEp, `${r.id}_var_${vIdx}_${r.updated_at}`);
               }
-              return v;
+              return { ...v, epFile: vEp };
             }));
           }
 
@@ -7884,27 +7956,36 @@
         if (!design) return { success: false, error: 'Empty design payload' };
         const id = String(design.id || design.code || `DES-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`).trim();
         const code = String(design.code || design.designNumber || design.design_number || design.name || 'Unnamed').trim();
-        const imageUrl = design.previewImage || design.imageUrl || design.image_url || '';
+        let imageUrl = design.previewImage || design.imageUrl || design.image_url || '';
         let epUrl = design.epFile || design.epFileUrl || design.ep_file_url || '';
+
+        // Compact preview image if large
+        if (imageUrl && typeof imageUrl === 'string' && imageUrl.length > 150000) {
+          imageUrl = await ensureCompactImage(imageUrl, 1200, 0.82);
+        }
 
         // Compress large EP file to avoid Supabase statement timeout
         if (epUrl && typeof epUrl === 'string' && epUrl.length > 50000) {
           epUrl = await compressBase64(epUrl);
         }
 
-        // Compress variant EP files if present
-        const processedVariants = await Promise.all((design.variants || []).map(async v => {
+        // Compress variant EP files only if distinct from main EP file
+        const processedVariants = await Promise.all((design.variants || []).map(async (v, vIdx) => {
           if (!v || typeof v !== 'object') return v;
           let vEp = v.epFile || '';
-          if (vEp && typeof vEp === 'string' && vEp.length > 50000) {
+          if (vEp && (vEp === design.epFile || vEp === epUrl || (vIdx === 0 && epUrl))) {
+            vEp = 'main'; // Do not duplicate multi-megabyte string
+          } else if (vEp && typeof vEp === 'string' && vEp.length > 50000) {
             vEp = await compressBase64(vEp);
           }
           return {
             ...v,
-            epFile: vEp
+            epFile: vEp,
+            epFileName: v.epFileName || (vIdx === 0 ? (design.epFileName || '') : '')
           };
         }));
 
+        // In metadata, do NOT store duplicated multi-megabyte epFile or previewImage!
         const metadata = {
           code: code,
           name: design.name || design.designName || code,
@@ -7916,10 +7997,7 @@
           ends: design.ends || '',
           reed: design.reed || '',
           description: design.description || '',
-          previewImage: imageUrl,
-          specImage: design.specImage || '',
-          originalImage: design.originalImage || '',
-          epFile: epUrl,
+          // Canonical image is stored in row.image_url, canonical EP in row.ep_file_url
           epFileName: design.epFileName || '',
           designer: design.designer || '',
           jacquardType: design.jacquardType || '',

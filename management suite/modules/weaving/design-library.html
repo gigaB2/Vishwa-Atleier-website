@@ -2550,6 +2550,52 @@
             } catch(e) {}
         };
 
+        const queuePendingCloudDesign = (design) => {
+            try {
+                const raw = localStorage.getItem('vf_pending_designs_queue') || '[]';
+                const list = JSON.parse(raw);
+                const filtered = Array.isArray(list) ? list.filter(d => d && d.id !== design.id && d.code !== design.code) : [];
+                filtered.push(design);
+                localStorage.setItem('vf_pending_designs_queue', JSON.stringify(filtered));
+            } catch(e) {}
+        };
+
+        let isSyncingPendingQueue = false;
+        const syncPendingCloudDesigns = async () => {
+            if (isSyncingPendingQueue) return;
+            if (!window.VF_DB || !window.VF_DB.weaving || typeof window.VF_DB.weaving.saveDesign !== 'function') return;
+            try {
+                const raw = localStorage.getItem('vf_pending_designs_queue');
+                if (!raw) return;
+                const queue = JSON.parse(raw);
+                if (!Array.isArray(queue) || queue.length === 0) return;
+                isSyncingPendingQueue = true;
+                const remaining = [];
+                for (const pending of queue) {
+                    try {
+                        const res = await window.VF_DB.weaving.saveDesign(pending);
+                        if (res && res.success) {
+                            if (typeof triggerToast === 'function') {
+                                triggerToast(`Cloud sync complete: Design ${pending.code || ''} uploaded!`, "success");
+                            }
+                        } else {
+                            remaining.push(pending);
+                        }
+                    } catch(err) {
+                        remaining.push(pending);
+                    }
+                }
+                if (remaining.length > 0) {
+                    localStorage.setItem('vf_pending_designs_queue', JSON.stringify(remaining));
+                } else {
+                    localStorage.removeItem('vf_pending_designs_queue');
+                }
+            } catch(e) {
+            } finally {
+                isSyncingPendingQueue = false;
+            }
+        };
+
         // Custom Hook for Supabase Cloud Single Source of Truth & Local Rescue
         function useIndexedDB(key, initialValue) {
             const [storedValue, setStoredValue] = useState(initialValue);
@@ -2808,10 +2854,16 @@
                 window.addEventListener('supabase-sync', handleStorageChange);
                 window.addEventListener('supabase-ready', handleStorageChange);
 
-                // High-frequency responsive stamp polling: Checks 30-byte stamp every 1s for instant fallback sync
+                // Responsive stamp polling (30s background fallback; Realtime WebSocket delivers <20ms push updates)
+                let isStampChecking = false;
                 const pollInterval = setInterval(async () => {
-                    if (document.hidden) return;
+                    if (document.hidden || isStampChecking) return;
                     try {
+                        isStampChecking = true;
+                        // Retry any queued pending cloud designs first
+                        if (typeof syncPendingCloudDesigns === 'function') {
+                            await syncPendingCloudDesigns();
+                        }
                         if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getLatestDesignStamp === 'function') {
                             const currentStamp = await window.VF_DB.weaving.getLatestDesignStamp();
                             if (currentStamp && lastSeenStamp && currentStamp !== lastSeenStamp) {
@@ -2821,13 +2873,19 @@
                                 lastSeenStamp = currentStamp;
                             }
                         }
-                    } catch(e) {}
-                }, 1000);
+                    } catch(e) {
+                    } finally {
+                        isStampChecking = false;
+                    }
+                }, 30000);
+
+                window.addEventListener('online', syncPendingCloudDesigns);
 
                 return () => {
                     cancelled = true;
                     clearInterval(pollInterval);
                     window.removeEventListener('focus', handleWindowFocus);
+                    window.removeEventListener('online', syncPendingCloudDesigns);
                     window.removeEventListener('storage', handleStorageChange);
                     window.removeEventListener('supabase-sync', handleStorageChange);
                     window.removeEventListener('supabase-ready', handleStorageChange);
@@ -4708,11 +4766,14 @@
                             if (saveRes && saveRes.success) {
                                 triggerToast(`Design ${formData.code} successfully updated in Cloud!`, "success");
                             } else {
+                                queuePendingCloudDesign(savedDesignObj);
                                 console.warn("saveDesign returned notice:", saveRes);
-                                triggerToast(`Design updated locally. Cloud sync pending.`, "warning");
+                                triggerToast(`Design updated locally. Cloud sync pending (auto-retrying in background).`, "warning");
                             }
                         } catch (err) {
+                            queuePendingCloudDesign(savedDesignObj);
                             console.error("Error saving design to Supabase:", err);
+                            triggerToast(`Design saved locally. Cloud sync queued.`, "warning");
                         }
                     }
                 } else {
@@ -4739,11 +4800,14 @@
                             if (saveRes && saveRes.success) {
                                 triggerToast(`Design ${newDesign.code} successfully saved to Cloud!`, "success");
                             } else {
+                                queuePendingCloudDesign(newDesign);
                                 console.warn("saveDesign returned notice:", saveRes);
-                                triggerToast(`Design saved locally. Cloud sync pending.`, "warning");
+                                triggerToast(`Design saved locally. Cloud sync pending (auto-retrying in background).`, "warning");
                             }
                         } catch (err) {
+                            queuePendingCloudDesign(newDesign);
                             console.error("Error saving design to Supabase:", err);
+                            triggerToast(`Design saved locally. Cloud sync queued.`, "warning");
                         }
                     }
                 }
