@@ -2659,8 +2659,9 @@
 
     while (hasMore) {
       try {
-        const cleanExtra = extraParams ? String(extraParams).replace(/^&/, '') : '';
-        const url = `${SUPABASE_URL}/rest/v1/${tableOrPath}${separator}select=${select}&limit=${pageSize}&offset=${offset}${cleanExtra ? ('&' + cleanExtra) : ''}`;
+        const sep = tableOrPath.includes('?') ? '&' : '?';
+        const cleanExtra = extraParams ? String(extraParams).replace(/^&+|&+$/g, '').trim() : '';
+        const url = `${SUPABASE_URL}/rest/v1/${tableOrPath}${sep}select=${select}&limit=${pageSize}&offset=${offset}${cleanExtra ? ('&' + cleanExtra) : ''}`;
         const res = await fetch(url, {
           headers: {
             'apikey': SUPABASE_ANON_KEY,

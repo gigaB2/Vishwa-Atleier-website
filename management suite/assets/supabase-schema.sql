@@ -144,6 +144,7 @@ CREATE OR REPLACE FUNCTION public.vf_issue_yarn_boxes(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_updated_count INT := 0;
@@ -223,6 +224,7 @@ CREATE OR REPLACE FUNCTION public.vf_ping()
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
     RETURN jsonb_build_object(
@@ -239,6 +241,7 @@ CREATE OR REPLACE FUNCTION public.vf_is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = public, auth
 AS $$
     SELECT coalesce(
         (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
@@ -336,6 +339,7 @@ CREATE OR REPLACE FUNCTION public.vf_record_weft_issues(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     issue_record JSONB;
@@ -884,6 +888,11 @@ BEGIN
     -- 5. vf_costing_covering_products
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_covering_products' AND policyname = 'Allow public access to vf_costing_covering_products') THEN
         CREATE POLICY "Allow public access to vf_costing_covering_products" ON public.vf_costing_covering_products FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 5b. vf_costing_links
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_links' AND policyname = 'Allow public access to vf_costing_links') THEN
+        CREATE POLICY "Allow public access to vf_costing_links" ON public.vf_costing_links FOR ALL USING (true) WITH CHECK (true);
     END IF;
 
     -- 6. vf_audit_logs (Public insert, read for all authenticated clients)
