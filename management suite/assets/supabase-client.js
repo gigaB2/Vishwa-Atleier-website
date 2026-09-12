@@ -2790,6 +2790,48 @@
               }
             }
 
+            // Dedicated Relational Synchronization for Loom Designs (Design Library)
+            if ((key === 'loom-designs' || key === 'loom_designs') && Array.isArray(value)) {
+              try {
+                const cleanValue = filterDeletedEntities(value);
+                const dRows = cleanValue.filter(d => d && (d.id || d.code)).map(d => {
+                  const dId = String(d.id || d.code);
+                  return {
+                    id: dId,
+                    design_name: String(d.name || d.designName || d.code || 'Unnamed Design'),
+                    design_number: d.code ? String(d.code) : null,
+                    quality: d.item || d.quality || null,
+                    image_url: d.previewImage || d.imageUrl || null,
+                    ep_file_url: d.epFile || d.epFileUrl || null,
+                    picks: parseInt(d.picksCount || d.picks, 10) || 0,
+                    repeats: parseInt(d.repeats, 10) || 1,
+                    total_hooks: parseInt(d.hooksCount || d.totalHooks, 10) || 0,
+                    deleted: Boolean(d.deleted),
+                    metadata: d,
+                    updated_at: nowIso
+                  };
+                });
+
+                if (dRows.length > 0) {
+                  for (let i = 0; i < dRows.length; i += 100) {
+                    const chunk = dRows.slice(i, i + 100);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?on_conflict=id`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(dErr) {
+                console.warn('Loom designs relational sync notice:', dErr);
+              }
+            }
+
             // Dedicated Relational Synchronization for RM Qualities
             if (key === 'yarn-qualities' && Array.isArray(value)) {
               try {
@@ -5656,6 +5698,67 @@
               }
             } catch (cutErr) {
               console.warn('Fabric Cut Relations relational reconciliation notice:', cutErr);
+            }
+
+            // Reconcile Dedicated Fabric Designs Relational Table (Loom Design Library)
+            try {
+              const dbDesigns = await fetchAllRowsPaginated('vf_fabric_designs', '*', 'order=created_at.desc');
+              if (Array.isArray(dbDesigns) && dbDesigns.length > 0) {
+                const tombstones = getDeletedTombstones();
+                const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()).filter(Boolean));
+                
+                const reconstructedDesigns = dbDesigns
+                  .filter(d => !d.deleted && !tombstoneSet.has(String(d.id).trim().toLowerCase()) && !tombstoneSet.has(String(d.design_number || '').trim().toLowerCase()))
+                  .map(d => {
+                    const meta = (d.metadata && typeof d.metadata === 'object') ? d.metadata : {};
+                    return {
+                      id: d.id,
+                      code: d.design_number || meta.code || d.design_name,
+                      item: d.quality || meta.item || 'Jacquard',
+                      loomType: meta.loomType || 'Jacquard',
+                      hooksCount: d.total_hooks || meta.hooksCount || 0,
+                      picksCount: d.picks || meta.picksCount || 0,
+                      cardCount: meta.cardCount || '',
+                      ends: meta.ends || '',
+                      reed: meta.reed || '',
+                      description: meta.description || '',
+                      previewImage: d.image_url || meta.previewImage || '',
+                      specImage: meta.specImage || '',
+                      originalImage: meta.originalImage || '',
+                      epFile: d.ep_file_url || meta.epFile || '',
+                      epFileName: meta.epFileName || '',
+                      designer: meta.designer || '',
+                      jacquardType: meta.jacquardType || '',
+                      productionFace: meta.productionFace || 'Front',
+                      pettiCount: meta.pettiCount || 1,
+                      pettiDetails: meta.pettiDetails || [{ name: '', cards: '' }],
+                      variants: meta.variants || [],
+                      createdDate: meta.createdDate || (d.created_at ? new Date(d.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
+                      lastUpdated: meta.lastUpdated || (d.updated_at ? new Date(d.updated_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
+                      ...meta
+                    };
+                  });
+
+                const dKey = 'loom-designs';
+                let localDesigns = [];
+                try {
+                  const locStr = cache[dKey] || nativeLocalStorage.getItem(dKey);
+                  if (locStr) localDesigns = JSON.parse(locStr);
+                } catch(e) {}
+
+                const mergedDesigns = mergeDatasets(dKey, localDesigns, reconstructedDesigns);
+                const dStr = JSON.stringify(mergedDesigns);
+                const lastDWrite = lastLocalWrites[dKey] || 0;
+                if (Date.now() - lastDWrite >= 3000) {
+                  cache[dKey] = dStr;
+                  lastSavedHashes[dKey] = computeHash(dStr);
+                  safeLocalStorageSet(dKey, dStr);
+                  if (!updatedKeys.includes(dKey)) updatedKeys.push(dKey);
+                  hasChanges = true;
+                }
+              }
+            } catch (dErr) {
+              console.warn('Fabric Designs relational reconciliation notice:', dErr);
             }
 
             // Reconcile Dedicated Salary Sheet & Staff Attendance Tables
