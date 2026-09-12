@@ -7087,6 +7087,96 @@
     }
   };
 
+  // --- High-Performance Native GZIP Compression for Large EP Base64 Assets ---
+  async function compressBase64(base64Str) {
+    if (!base64Str || typeof base64Str !== 'string' || base64Str.length < 50000) return base64Str;
+    if (base64Str.startsWith('gz64:')) return base64Str;
+    if (typeof CompressionStream === 'undefined') return base64Str;
+    try {
+      let rawStr = base64Str;
+      let mime = '';
+      if (base64Str.startsWith('data:')) {
+        const commaIdx = base64Str.indexOf(',');
+        if (commaIdx !== -1) {
+          mime = base64Str.slice(0, commaIdx + 1);
+          rawStr = base64Str.slice(commaIdx + 1);
+        }
+      }
+      const binaryStr = atob(rawStr);
+      const len = binaryStr.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      const cs = new CompressionStream('gzip');
+      const writer = cs.writable.getWriter();
+      writer.write(bytes);
+      writer.close();
+      const chunks = [];
+      const reader = cs.readable.getReader();
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+      const compBuf = await new Blob(chunks).arrayBuffer();
+      const compBytes = new Uint8Array(compBuf);
+      let compBin = '';
+      for (let i = 0; i < compBytes.length; i += 8192) {
+        compBin += String.fromCharCode.apply(null, compBytes.subarray(i, i + 8192));
+      }
+      return `gz64:${mime}${btoa(compBin)}`;
+    } catch (err) {
+      console.warn("EP compression fallback:", err);
+      return base64Str;
+    }
+  }
+
+  async function decompressBase64(compressedStr) {
+    if (!compressedStr || typeof compressedStr !== 'string') return compressedStr;
+    if (!compressedStr.startsWith('gz64:')) return compressedStr;
+    if (typeof DecompressionStream === 'undefined') return compressedStr;
+    try {
+      const rawContent = compressedStr.slice(5);
+      let mime = 'data:application/octet-stream;base64,';
+      let b64Data = rawContent;
+      if (rawContent.startsWith('data:')) {
+        const commaIdx = rawContent.indexOf(',');
+        if (commaIdx !== -1) {
+          mime = rawContent.slice(0, commaIdx + 1);
+          b64Data = rawContent.slice(commaIdx + 1);
+        }
+      }
+      const binaryStr = atob(b64Data);
+      const len = binaryStr.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      const ds = new DecompressionStream('gzip');
+      const writer = ds.writable.getWriter();
+      writer.write(bytes);
+      writer.close();
+      const chunks = [];
+      const reader = ds.readable.getReader();
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+      const decompBuf = await new Blob(chunks).arrayBuffer();
+      const decompBytes = new Uint8Array(decompBuf);
+      let decompBin = '';
+      for (let i = 0; i < decompBytes.length; i += 8192) {
+        decompBin += String.fromCharCode.apply(null, decompBytes.subarray(i, i + 8192));
+      }
+      return `${mime}${btoa(decompBin)}`;
+    } catch (err) {
+      console.warn("EP decompression fallback:", err);
+      return compressedStr;
+    }
+  }
+
   // ==============================================================================
   // Modern Asynchronous Relational Service Layer (window.VF_DB)
   // Direct async CRUD operations against Supabase Postgres with auto-pagination & offline resilience
@@ -7657,8 +7747,25 @@
       async getDesigns(options = {}) {
         const rows = await VF_DB.fetchTable('vf_fabric_designs', { order: 'created_at.desc', ...options });
         if (!Array.isArray(rows)) return [];
-        return rows.filter(r => !r.deleted).map(r => {
+        const activeRows = rows.filter(r => !r.deleted);
+        return await Promise.all(activeRows.map(async r => {
           const meta = (r.metadata && typeof r.metadata === 'object') ? r.metadata : {};
+          
+          let rawEp = r.ep_file_url || meta.epFile || '';
+          if (rawEp && typeof rawEp === 'string' && rawEp.startsWith('gz64:')) {
+            rawEp = await decompressBase64(rawEp);
+          }
+
+          let variants = meta.variants || [];
+          if (Array.isArray(variants)) {
+            variants = await Promise.all(variants.map(async v => {
+              if (v && typeof v.epFile === 'string' && v.epFile.startsWith('gz64:')) {
+                return { ...v, epFile: await decompressBase64(v.epFile) };
+              }
+              return v;
+            }));
+          }
+
           return {
             ...meta,
             id: r.id,
@@ -7675,31 +7782,51 @@
             previewImage: r.image_url || meta.previewImage || '',
             specImage: meta.specImage || '',
             originalImage: meta.originalImage || '',
-            epFile: r.ep_file_url || meta.epFile || '',
+            epFile: rawEp,
             epFileName: meta.epFileName || '',
             designer: meta.designer || '',
             jacquardType: meta.jacquardType || '',
             productionFace: meta.productionFace || 'Front',
             pettiCount: meta.pettiCount || 1,
             pettiDetails: meta.pettiDetails || [{ name: '', cards: '' }],
-            variants: meta.variants || [],
+            variants: variants,
             createdDate: meta.createdDate || (r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
             lastUpdated: meta.lastUpdated || (r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
             cropBox: meta.cropBox || null,
             ocrBinarizeThreshold: meta.ocrBinarizeThreshold || 140,
             deleted: Boolean(r.deleted)
           };
-        });
+        }));
       },
       async saveDesign(design) {
         if (!design) return { success: false, error: 'Empty design payload' };
         const id = String(design.id || design.code || `DES-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`).trim();
         const code = String(design.code || design.designNumber || design.design_number || design.name || 'Unnamed').trim();
         const imageUrl = design.previewImage || design.imageUrl || design.image_url || '';
-        const epUrl = design.epFile || design.epFileUrl || design.ep_file_url || '';
+        let epUrl = design.epFile || design.epFileUrl || design.ep_file_url || '';
 
-        // Extract metadata without duplicating large top-level attachments that have dedicated columns
-        const { previewImage, imageUrl: _img, image_url: _img2, epFile, epFileUrl: _ep, ep_file_url: _ep2, ...restMeta } = (design.metadata || design);
+        // Compress large EP file to avoid Supabase statement timeout
+        if (epUrl && typeof epUrl === 'string' && epUrl.length > 50000) {
+          epUrl = await compressBase64(epUrl);
+        }
+
+        // Compress variant EP files if present
+        const processedVariants = await Promise.all((design.variants || []).map(async v => {
+          if (!v || typeof v !== 'object') return v;
+          let vEp = v.epFile || '';
+          if (vEp && typeof vEp === 'string' && vEp.length > 50000) {
+            vEp = await compressBase64(vEp);
+          }
+          return {
+            ...v,
+            epFile: vEp,
+            epFileName: v.epFileName || ''
+          };
+        }));
+
+        const metaSource = (design.metadata || design);
+        const { previewImage: _pImg, imageUrl: _img, image_url: _img2, epFile: _ep, epFileUrl: _epU, ep_file_url: _epU2, ...restMeta } = metaSource;
+
         const metadata = {
           ...restMeta,
           code: code,
@@ -7716,8 +7843,10 @@
           productionFace: design.productionFace || 'Front',
           pettiCount: design.pettiCount || 1,
           pettiDetails: design.pettiDetails || [{ name: '', cards: '' }],
-          variants: design.variants || [],
+          variants: processedVariants,
           epFileName: design.epFileName || '',
+          specImage: design.specImage || restMeta.specImage || '',
+          originalImage: design.originalImage || restMeta.originalImage || '',
           cropBox: design.cropBox || null,
           ocrBinarizeThreshold: design.ocrBinarizeThreshold || 140,
           createdDate: design.createdDate || new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
