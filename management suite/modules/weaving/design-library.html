@@ -1870,12 +1870,12 @@
                         let W = img.naturalWidth;
                         let H = img.naturalHeight;
                         
-                        // Safety scaling for extremely tall/wide images (limit height to 16384px)
-                        const maxCanvasDim = 16384;
+                        // Safety scaling for preview images: cap maximum dimension to 1600px to keep payload under 150KB
+                        const maxCanvasDim = 1600;
                         let scale = 1;
-                        if (H > maxCanvasDim) {
-                            scale = maxCanvasDim / H;
-                            H = maxCanvasDim;
+                        if (Math.max(W, H) > maxCanvasDim) {
+                            scale = maxCanvasDim / Math.max(W, H);
+                            H = Math.floor(H * scale);
                             W = Math.floor(W * scale);
                         }
                         
@@ -1898,7 +1898,10 @@
                         ctx.imageSmoothingEnabled = true;
                         ctx.imageSmoothingQuality = 'high';
                         
-                        // Scale inputs for drawImage if original was scaled down
+                        // Fill white background in case source had alpha
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, targetWidth, H);
+                        
                         const origImg = img;
                         const srcScale = 1 / scale;
                         
@@ -1917,7 +1920,8 @@
                             );
                         }
                         
-                        resolve(canvas.toDataURL('image/png'));
+                        // Export as high-quality compact JPEG (80-120KB) instead of bloated 6MB uncompressed PNG
+                        resolve(canvas.toDataURL('image/jpeg', 0.82));
                     } catch (e) {
                         reject(e);
                     }
@@ -2553,26 +2557,27 @@
 
             const loadFromSupabase = useCallback(async (isManualRefresh = false) => {
                 try {
-                    // 1. Primary Source of Truth: Fetch active designs directly from Supabase vf_fabric_designs
-                    let cloudDesigns = null;
-                    if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesigns === 'function') {
-                        cloudDesigns = await window.VF_DB.weaving.getDesigns();
-                    } else if (window.VF_DB && typeof window.VF_DB.fetchTable === 'function') {
-                        const relRows = await window.VF_DB.fetchTable('vf_fabric_designs', { order: 'created_at.desc' });
-                        if (Array.isArray(relRows)) {
-                            cloudDesigns = relRows.filter(d => !d.deleted);
-                        }
-                    }
+                    // Single-pass high-speed fetch: active designs, cloud tombstones, and local IDB in parallel
+                    const [cloudResult, rawIDBDesigns] = await Promise.all([
+                        (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignsWithTombstones === 'function')
+                            ? window.VF_DB.weaving.getDesignsWithTombstones()
+                            : (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesigns === 'function')
+                                ? window.VF_DB.weaving.getDesigns().then(d => ({ designs: d, tombstones: [] }))
+                                : (window.VF_DB && typeof window.VF_DB.fetchTable === 'function'
+                                    ? window.VF_DB.fetchTable('vf_fabric_designs', { order: 'created_at.desc' }).then(rows => {
+                                        if (!Array.isArray(rows)) return { designs: [], tombstones: [] };
+                                        return {
+                                            designs: rows.filter(d => !d.deleted),
+                                            tombstones: rows.filter(d => Boolean(d.deleted)).map(d => ({ id: d.id, code: d.design_number }))
+                                        };
+                                    })
+                                    : Promise.resolve({ designs: [], tombstones: [] })),
+                        getDesignsFromIDB()
+                    ]);
+                    const cloudDesigns = cloudResult?.designs || [];
+                    const cloudTombstones = cloudResult?.tombstones || [];
 
-                    // 2. Query Cloud Tombstones (soft-deleted rows)
-                    let cloudTombstones = [];
-                    if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDeletedDesignIds === 'function') {
-                        try {
-                            cloudTombstones = await window.VF_DB.weaving.getDeletedDesignIds();
-                        } catch(e) {}
-                    }
-
-                    // 3. Build unified Tombstone set
+                    // Build unified Tombstone set
                     const tombstoneSet = new Set();
                     const registerTombstone = (val) => {
                         if (!val) return;
@@ -2625,8 +2630,7 @@
                         })
                         : [];
 
-                    // 4. Read local backup from IDB and purge tombstoned items
-                    const rawIDBDesigns = await getDesignsFromIDB();
+                    // Read local backup from IDB and purge tombstoned items
                     const validLocalIDB = (Array.isArray(rawIDBDesigns) ? rawIDBDesigns : []).filter(d => {
                         if (!d || (!d.id && !d.code) || d.deleted) return false;
                         const idStr = String(d.id || '').trim().toLowerCase();
@@ -2696,6 +2700,17 @@
 
             useEffect(() => {
                 let cancelled = false;
+
+                // 1. Instant local render from IDB cache (0ms instant display!)
+                getDesignsFromIDB().then(local => {
+                    if (cancelled) return;
+                    if (Array.isArray(local) && local.length > 0) {
+                        setStoredValue(local);
+                        setReady(true);
+                    }
+                });
+
+                // 2. Immediate cloud hydration in background
                 loadFromSupabase();
 
                 let lastSeenStamp = null;
@@ -2720,8 +2735,37 @@
                     const changedKey = e ? (e.key || (e.detail && e.detail.key)) : null;
                     if (changedKey !== key && changedKey !== 'loom-designs' && changedKey !== 'loom-designs-signal' && changedKey !== 'deleted-designs') return;
 
-                    // Instant tombstone prune from event details if it's a deletion broadcast
                     const info = e && e.detail && (e.detail.info || e.detail.payload || e.detail);
+
+                    // 1. Instant addition / edit from realtime broadcast (0ms UI update across PCs)
+                    if (info && info.action === 'design_saved') {
+                        if (info.design) {
+                            const incoming = info.design;
+                            setStoredValue(prev => {
+                                const list = Array.isArray(prev) ? prev : [];
+                                const filtered = list.filter(d => String(d.id).trim() !== String(incoming.id).trim() && String(d.code || '').trim().toUpperCase() !== String(incoming.code || '').trim().toUpperCase());
+                                const updated = [incoming, ...filtered];
+                                saveDesignsToIDB(updated);
+                                return updated;
+                            });
+                            return; // Done instantly without waiting for full network roundtrip!
+                        } else if (info.id && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignById === 'function') {
+                            window.VF_DB.weaving.getDesignById(info.id).then(single => {
+                                if (single) {
+                                    setStoredValue(prev => {
+                                        const list = Array.isArray(prev) ? prev : [];
+                                        const filtered = list.filter(d => String(d.id).trim() !== String(single.id).trim() && String(d.code || '').trim().toUpperCase() !== String(single.code || '').trim().toUpperCase());
+                                        const updated = [single, ...filtered];
+                                        saveDesignsToIDB(updated);
+                                        return updated;
+                                    });
+                                }
+                            });
+                            return;
+                        }
+                    }
+
+                    // 2. Instant deletion from realtime broadcast (0ms UI removal across PCs)
                     if (info && (info.action === 'design_deleted' || info.deletedId || (e.detail && e.detail.deletedId))) {
                         const targetId = String(info.id || info.deletedId || (e.detail && e.detail.deletedId) || '').trim();
                         const targetCode = String(info.code || info.deletedCode || (e.detail && e.detail.deletedCode) || '').trim().toUpperCase();
@@ -2754,6 +2798,7 @@
                                 }
                             } catch(err) {}
                         }
+                        return; // Done instantly!
                     }
 
                     loadFromSupabase();
@@ -2763,7 +2808,7 @@
                 window.addEventListener('supabase-sync', handleStorageChange);
                 window.addEventListener('supabase-ready', handleStorageChange);
 
-                // Continuous background stamp polling: Checks 30-byte timestamp every 3 seconds to sync even if WebSocket is sleeping or disconnected
+                // High-frequency responsive stamp polling: Checks 30-byte stamp every 1s for instant fallback sync
                 const pollInterval = setInterval(async () => {
                     if (document.hidden) return;
                     try {
@@ -2777,7 +2822,7 @@
                             }
                         }
                     } catch(e) {}
-                }, 3000);
+                }, 1000);
 
                 return () => {
                     cancelled = true;

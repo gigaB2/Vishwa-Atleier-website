@@ -7134,9 +7134,14 @@
     }
   }
 
-  async function decompressBase64(compressedStr) {
+  const epDecompressCache = new Map();
+
+  async function decompressBase64(compressedStr, cacheKey = null) {
     if (!compressedStr || typeof compressedStr !== 'string') return compressedStr;
     if (!compressedStr.startsWith('gz64:')) return compressedStr;
+    if (cacheKey && epDecompressCache.has(cacheKey)) {
+      return epDecompressCache.get(cacheKey);
+    }
     if (typeof DecompressionStream === 'undefined') return compressedStr;
     try {
       const rawContent = compressedStr.slice(5);
@@ -7172,7 +7177,11 @@
       for (let i = 0; i < decompBytes.length; i += 8192) {
         decompBin += String.fromCharCode.apply(null, decompBytes.subarray(i, i + 8192));
       }
-      return `${mime}${btoa(decompBin)}`;
+      const result = `${mime}${btoa(decompBin)}`;
+      if (cacheKey) {
+        epDecompressCache.set(cacheKey, result);
+      }
+      return result;
     } catch (err) {
       console.warn("EP decompression fallback:", err);
       return compressedStr;
@@ -7747,22 +7756,91 @@
         return await VF_DB.upsert('vf_fabric_cut_relations', row);
       },
       async getDesigns(options = {}) {
-        const rows = await VF_DB.fetchTable('vf_fabric_designs', { order: 'created_at.desc', ...options });
-        if (!Array.isArray(rows)) return [];
+        const res = await this.getDesignsWithTombstones(options);
+        return res.designs || [];
+      },
+      async getDesignById(id) {
+        if (!VF_DB.isConfigured() || !id) return null;
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?id=eq.${encodeURIComponent(id)}&limit=1`, {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          });
+          if (!res.ok) return null;
+          const rows = await res.json();
+          if (!Array.isArray(rows) || rows.length === 0) return null;
+          const r = rows[0];
+          const meta = (r.metadata && typeof r.metadata === 'object') ? r.metadata : {};
+          let rawEp = r.ep_file_url || meta.epFile || '';
+          if (rawEp && typeof rawEp === 'string' && rawEp.startsWith('gz64:')) {
+            rawEp = await decompressBase64(rawEp, `${r.id}_${r.updated_at}`);
+          }
+          let variants = meta.variants || [];
+          if (Array.isArray(variants)) {
+            variants = await Promise.all(variants.map(async (v, vIdx) => {
+              if (v && typeof v.epFile === 'string' && v.epFile.startsWith('gz64:')) {
+                return { ...v, epFile: await decompressBase64(v.epFile, `${r.id}_var_${vIdx}_${r.updated_at}`) };
+              }
+              return v;
+            }));
+          }
+          return {
+            ...meta,
+            id: r.id,
+            code: r.design_number || meta.code || r.design_name,
+            name: r.design_name || meta.name || r.design_number,
+            item: r.quality || meta.item || 'Jacquard',
+            loomType: meta.loomType || 'Jacquard',
+            hooksCount: r.total_hooks || meta.hooksCount || 0,
+            picksCount: r.picks || meta.picksCount || 0,
+            cardCount: meta.cardCount || '',
+            ends: meta.ends || '',
+            reed: meta.reed || '',
+            description: meta.description || '',
+            previewImage: r.image_url || meta.previewImage || '',
+            specImage: meta.specImage || '',
+            originalImage: meta.originalImage || '',
+            epFile: rawEp,
+            epFileName: meta.epFileName || '',
+            designer: meta.designer || '',
+            jacquardType: meta.jacquardType || '',
+            productionFace: meta.productionFace || 'Front',
+            pettiCount: meta.pettiCount || 1,
+            pettiDetails: meta.pettiDetails || [{ name: '', cards: '' }],
+            variants: variants,
+            createdDate: meta.createdDate || (r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
+            lastUpdated: meta.lastUpdated || (r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
+            cropBox: meta.cropBox || null,
+            ocrBinarizeThreshold: meta.ocrBinarizeThreshold || 140,
+            deleted: Boolean(r.deleted)
+          };
+        } catch(e) {
+          return null;
+        }
+      },
+      async getDesignsWithTombstones(options = {}) {
+        const select = options.select || 'id,design_name,design_number,quality,image_url,picks,repeats,total_hooks,width,avg_weight,deleted,metadata,created_at,updated_at';
+        const rows = await VF_DB.fetchTable('vf_fabric_designs', { order: 'created_at.desc', select: select, ...options });
+        if (!Array.isArray(rows)) return { designs: [], tombstones: [] };
+
+        const tombstones = rows.filter(r => Boolean(r.deleted)).map(r => ({ id: String(r.id), code: String(r.design_number || '').trim() }));
         const activeRows = rows.filter(r => !r.deleted);
-        return await Promise.all(activeRows.map(async r => {
+
+        const designs = await Promise.all(activeRows.map(async r => {
           const meta = (r.metadata && typeof r.metadata === 'object') ? r.metadata : {};
           
           let rawEp = r.ep_file_url || meta.epFile || '';
           if (rawEp && typeof rawEp === 'string' && rawEp.startsWith('gz64:')) {
-            rawEp = await decompressBase64(rawEp);
+            rawEp = await decompressBase64(rawEp, `${r.id}_${r.updated_at}`);
           }
 
           let variants = meta.variants || [];
           if (Array.isArray(variants)) {
-            variants = await Promise.all(variants.map(async v => {
+            variants = await Promise.all(variants.map(async (v, vIdx) => {
               if (v && typeof v.epFile === 'string' && v.epFile.startsWith('gz64:')) {
-                return { ...v, epFile: await decompressBase64(v.epFile) };
+                return { ...v, epFile: await decompressBase64(v.epFile, `${r.id}_var_${vIdx}_${r.updated_at}`) };
               }
               return v;
             }));
@@ -7799,6 +7877,8 @@
             deleted: Boolean(r.deleted)
           };
         }));
+
+        return { designs, tombstones };
       },
       async saveDesign(design) {
         if (!design) return { success: false, error: 'Empty design payload' };
@@ -7821,17 +7901,13 @@
           }
           return {
             ...v,
-            epFile: vEp,
-            epFileName: v.epFileName || ''
+            epFile: vEp
           };
         }));
 
-        const metaSource = (design.metadata || design);
-        const { previewImage: _pImg, imageUrl: _img, image_url: _img2, epFile: _ep, epFileUrl: _epU, ep_file_url: _epU2, ...restMeta } = metaSource;
-
         const metadata = {
-          ...restMeta,
           code: code,
+          name: design.name || design.designName || code,
           item: design.item || design.quality || 'Jacquard',
           loomType: design.loomType || 'Jacquard',
           hooksCount: Number(design.hooksCount || design.total_hooks) || 0,
@@ -7840,34 +7916,33 @@
           ends: design.ends || '',
           reed: design.reed || '',
           description: design.description || '',
+          previewImage: imageUrl,
+          specImage: design.specImage || '',
+          originalImage: design.originalImage || '',
+          epFile: epUrl,
+          epFileName: design.epFileName || '',
           designer: design.designer || '',
           jacquardType: design.jacquardType || '',
           productionFace: design.productionFace || 'Front',
           pettiCount: design.pettiCount || 1,
           pettiDetails: design.pettiDetails || [{ name: '', cards: '' }],
           variants: processedVariants,
-          epFileName: design.epFileName || '',
-          specImage: design.specImage || restMeta.specImage || '',
-          originalImage: design.originalImage || restMeta.originalImage || '',
+          createdDate: design.createdDate || new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
+          lastUpdated: new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
           cropBox: design.cropBox || null,
           ocrBinarizeThreshold: design.ocrBinarizeThreshold || 140,
-          createdDate: design.createdDate || new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
-          lastUpdated: new Date().toLocaleDateString('en-GB').replace(/\//g, '-')
+          userEdited: Boolean(design.userEdited)
         };
 
         const row = {
           id: id,
-          design_name: design.name || design.designName || code,
+          design_name: metadata.name,
           design_number: code,
-          quality: design.item || design.quality || 'Jacquard',
-          image_url: imageUrl || null,
-          ep_file_url: epUrl || null,
-          picks: Number(design.picksCount || design.picks) || 0,
-          repeats: Number(design.repeats) || 1,
-          total_hooks: Number(design.hooksCount || design.total_hooks) || 0,
-          width: Number(design.width) || null,
-          avg_weight: Number(design.avgWeight || design.avg_weight) || null,
-          costing_id: design.costingId || null,
+          quality: metadata.item,
+          image_url: imageUrl,
+          ep_file_url: epUrl,
+          picks: metadata.picksCount,
+          total_hooks: metadata.hooksCount,
           deleted: Boolean(design.deleted),
           metadata: metadata,
           updated_at: new Date().toISOString()
@@ -7876,13 +7951,42 @@
         const res = await VF_DB.upsert('vf_fabric_designs', [row]);
         if (res.success) {
           try {
-            broadcastRealtimeUpdate('loom-designs-signal', {
+            // Keep broadcast payload strictly lightweight (<100KB) for instant <20ms WebSocket fanout
+            const isPreviewCompact = imageUrl && typeof imageUrl === 'string' && imageUrl.length < 180000;
+            const broadcastDesign = {
+              id: id,
+              code: code,
+              name: metadata.name,
+              item: metadata.item,
+              loomType: metadata.loomType,
+              hooksCount: metadata.hooksCount,
+              picksCount: metadata.picksCount,
+              cardCount: metadata.cardCount,
+              ends: metadata.ends,
+              reed: metadata.reed,
+              description: metadata.description,
+              previewImage: isPreviewCompact ? imageUrl : '',
+              designer: metadata.designer,
+              jacquardType: metadata.jacquardType,
+              productionFace: metadata.productionFace,
+              pettiCount: metadata.pettiCount,
+              pettiDetails: metadata.pettiDetails,
+              variants: (metadata.variants || []).map(v => ({ code: v.code || '', name: v.name || '' })),
+              createdDate: metadata.createdDate,
+              lastUpdated: metadata.lastUpdated,
+              cropBox: metadata.cropBox,
+              deleted: false
+            };
+
+            const broadcastPayload = {
               action: 'design_saved',
               id: id,
               code: code,
+              design: broadcastDesign,
               timestamp: Date.now()
-            });
-            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', designId: id } }));
+            };
+            broadcastRealtimeUpdate('loom-designs-signal', broadcastPayload);
+            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', designId: id, info: broadcastPayload } }));
           } catch(e) {}
         }
         return res;
