@@ -2635,7 +2635,7 @@
 
                 const handleStorageChange = (e) => {
                     const changedKey = e ? (e.key || (e.detail && e.detail.key)) : null;
-                    if (changedKey && changedKey !== key && changedKey !== 'deleted-designs') return;
+                    if (changedKey && changedKey !== key && changedKey !== 'loom-designs' && changedKey !== 'loom-designs-signal' && changedKey !== 'deleted-designs') return;
                     loadFromSupabase();
                 };
 
@@ -2643,8 +2643,26 @@
                 window.addEventListener('supabase-sync', handleStorageChange);
                 window.addEventListener('supabase-ready', handleStorageChange);
 
+                // Continuous background stamp polling: Checks 30-byte timestamp every 3 seconds to sync even if WebSocket is sleeping or disconnected
+                let lastSeenStamp = null;
+                const pollInterval = setInterval(async () => {
+                    if (document.hidden) return;
+                    try {
+                        if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getLatestDesignStamp === 'function') {
+                            const currentStamp = await window.VF_DB.weaving.getLatestDesignStamp();
+                            if (currentStamp && lastSeenStamp && currentStamp !== lastSeenStamp) {
+                                loadFromSupabase();
+                            }
+                            if (currentStamp) {
+                                lastSeenStamp = currentStamp;
+                            }
+                        }
+                    } catch(e) {}
+                }, 3000);
+
                 return () => {
                     cancelled = true;
+                    clearInterval(pollInterval);
                     window.removeEventListener('focus', handleWindowFocus);
                     window.removeEventListener('storage', handleStorageChange);
                     window.removeEventListener('supabase-sync', handleStorageChange);

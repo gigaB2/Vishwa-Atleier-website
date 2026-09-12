@@ -2451,7 +2451,14 @@
         } else if (type === 'item_deleted' && payload) {
           handleIncomingItemDeleted(payload);
         } else if (key) {
-          if (type === 'removeItem') {
+          if (key === 'loom-designs-signal' || key === 'loom-designs') {
+            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', isRemote: true } }));
+            try {
+              window.dispatchEvent(new StorageEvent('storage', { key: 'loom-designs' }));
+            } catch(e) {
+              window.dispatchEvent(new Event('storage'));
+            }
+          } else if (type === 'removeItem') {
             handleIncomingRemoteUpdate(key, null, true);
           } else {
             handleIncomingRemoteUpdate(key, value, false);
@@ -2530,9 +2537,18 @@
               handleIncomingItemDeleted(inner);
             } else if (inner.key || rawPayload.key) {
               const targetKey = inner.key || rawPayload.key;
-              const targetVal = inner.value !== undefined ? inner.value : rawPayload.value;
-              const valStr = typeof targetVal === 'string' ? targetVal : JSON.stringify(targetVal);
-              handleIncomingRemoteUpdate(targetKey, valStr, false);
+              if (targetKey === 'loom-designs-signal' || targetKey === 'loom-designs') {
+                window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', isRemote: true, info: inner.value || inner } }));
+                try {
+                  window.dispatchEvent(new StorageEvent('storage', { key: 'loom-designs' }));
+                } catch(e) {
+                  window.dispatchEvent(new Event('storage'));
+                }
+              } else {
+                const targetVal = inner.value !== undefined ? inner.value : rawPayload.value;
+                const valStr = typeof targetVal === 'string' ? targetVal : JSON.stringify(targetVal);
+                handleIncomingRemoteUpdate(targetKey, valStr, false);
+              }
             }
           }
         } catch (err) {}
@@ -7729,7 +7745,12 @@
         const res = await VF_DB.upsert('vf_fabric_designs', [row]);
         if (res.success) {
           try {
-            broadcastRealtimeUpdate('loom-designs', [design]);
+            broadcastRealtimeUpdate('loom-designs-signal', {
+              action: 'design_saved',
+              id: id,
+              code: code,
+              timestamp: Date.now()
+            });
             window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', designId: id } }));
           } catch(e) {}
         }
@@ -7744,11 +7765,34 @@
         }]);
         if (res.success) {
           try {
-            broadcastRealtimeUpdate('loom-designs', { deletedId: id });
+            broadcastRealtimeUpdate('loom-designs-signal', {
+              action: 'design_deleted',
+              id: String(id),
+              timestamp: Date.now()
+            });
             window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', deletedId: id } }));
           } catch(e) {}
         }
         return res;
+      },
+      async getLatestDesignStamp() {
+        if (!VF_DB.isConfigured()) return null;
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?select=id,updated_at,deleted&order=updated_at.desc&limit=1`, {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          });
+          if (!res.ok) return null;
+          const rows = await res.json();
+          if (Array.isArray(rows) && rows.length > 0) {
+            return `${rows[0].id}_${rows[0].updated_at}_${rows[0].deleted}`;
+          }
+          return null;
+        } catch(e) {
+          return null;
+        }
       },
       async getMachinery(assetType = null) {
         const filter = assetType ? `asset_type=eq.${encodeURIComponent(assetType)}` : '';
