@@ -2553,7 +2553,7 @@
 
             const loadFromSupabase = useCallback(async (isManualRefresh = false) => {
                 try {
-                    // 1. Primary Source of Truth: Fetch directly from Supabase vf_fabric_designs
+                    // 1. Primary Source of Truth: Fetch active designs directly from Supabase vf_fabric_designs
                     let cloudDesigns = null;
                     if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesigns === 'function') {
                         cloudDesigns = await window.VF_DB.weaving.getDesigns();
@@ -2564,45 +2564,102 @@
                         }
                     }
 
-                    // Active cloud rows
-                    const cleanCloud = Array.isArray(cloudDesigns)
-                        ? cloudDesigns.filter(d => d && (d.id || d.code) && !d.deleted)
-                        : [];
+                    // 2. Query Cloud Tombstones (soft-deleted rows)
+                    let cloudTombstones = [];
+                    if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDeletedDesignIds === 'function') {
+                        try {
+                            cloudTombstones = await window.VF_DB.weaving.getDeletedDesignIds();
+                        } catch(e) {}
+                    }
 
-                    // Clean any false blacklist entries from localStorage
-                    try {
-                        const delRaw = localStorage.getItem('deleted-designs');
-                        if (delRaw) {
-                            const delList = JSON.parse(delRaw);
-                            if (Array.isArray(delList)) {
-                                const cloudIds = new Set(cleanCloud.map(d => String(d.id)));
-                                const cleanDel = delList.filter(id => !cloudIds.has(String(id)));
-                                if (cleanDel.length !== delList.length) {
-                                    localStorage.setItem('deleted-designs', JSON.stringify(cleanDel));
-                                }
+                    // 3. Build unified Tombstone set
+                    const tombstoneSet = new Set();
+                    const registerTombstone = (val) => {
+                        if (!val) return;
+                        const s = String(val).trim().toLowerCase();
+                        if (s && !/^\d{1,4}$/.test(s)) {
+                            tombstoneSet.add(s);
+                        }
+                    };
+
+                    if (Array.isArray(cloudTombstones)) {
+                        cloudTombstones.forEach(t => {
+                            if (t && typeof t === 'object') {
+                                registerTombstone(t.id);
+                                registerTombstone(t.code);
+                            } else {
+                                registerTombstone(t);
                             }
+                        });
+                    }
+
+                    // Also fetch from global VishwaSupabase tombstones if available
+                    if (window.VishwaSupabase && typeof window.VishwaSupabase.getDeletedTombstones === 'function') {
+                        const globalTombs = window.VishwaSupabase.getDeletedTombstones();
+                        if (Array.isArray(globalTombs)) globalTombs.forEach(registerTombstone);
+                    }
+
+                    // Also merge local deleted-designs
+                    try {
+                        const localDelRaw = localStorage.getItem('deleted-designs');
+                        if (localDelRaw) {
+                            const localDel = JSON.parse(localDelRaw);
+                            if (Array.isArray(localDel)) localDel.forEach(registerTombstone);
                         }
                     } catch(e) {}
 
-                    // 2. Read local backup from IDB
-                    const localIDBDesigns = await getDesignsFromIDB();
+                    // Persist merged tombstones to localStorage
+                    try {
+                        localStorage.setItem('deleted-designs', JSON.stringify(Array.from(tombstoneSet)));
+                    } catch(e) {}
+
+                    // Active cloud rows (strictly exclude anything in tombstoneSet)
+                    const cleanCloud = Array.isArray(cloudDesigns)
+                        ? cloudDesigns.filter(d => {
+                            if (!d || (!d.id && !d.code) || d.deleted) return false;
+                            const idStr = String(d.id || '').trim().toLowerCase();
+                            const codeStr = String(d.code || '').trim().toLowerCase();
+                            if (idStr && tombstoneSet.has(idStr)) return false;
+                            if (codeStr && tombstoneSet.has(codeStr)) return false;
+                            return true;
+                        })
+                        : [];
+
+                    // 4. Read local backup from IDB and purge tombstoned items
+                    const rawIDBDesigns = await getDesignsFromIDB();
+                    const validLocalIDB = (Array.isArray(rawIDBDesigns) ? rawIDBDesigns : []).filter(d => {
+                        if (!d || (!d.id && !d.code) || d.deleted) return false;
+                        const idStr = String(d.id || '').trim().toLowerCase();
+                        const codeStr = String(d.code || '').trim().toLowerCase();
+                        if (idStr && tombstoneSet.has(idStr)) return false;
+                        if (codeStr && tombstoneSet.has(codeStr)) return false;
+                        return true;
+                    });
 
                     setStoredValue(prev => {
                         const currentList = Array.isArray(prev) ? prev : [];
                         const cloudIds = new Set(cleanCloud.map(d => String(d.id || '')));
                         const cloudCodes = new Set(cleanCloud.map(d => String(d.code || '').trim().toUpperCase()));
 
-                        // Preserve pending local designs from in-memory state that haven't landed in cloud yet
+                        // Preserve pending local designs from in-memory state that haven't landed in cloud yet (strictly non-tombstoned)
                         const pendingInMemory = currentList.filter(d => {
-                            if (!d || !d.id || d.deleted) return false;
+                            if (!d || (!d.id && !d.code) || d.deleted) return false;
+                            const idStr = String(d.id || '').trim().toLowerCase();
+                            const codeStr = String(d.code || '').trim().toLowerCase();
+                            if (idStr && tombstoneSet.has(idStr)) return false;
+                            if (codeStr && tombstoneSet.has(codeStr)) return false;
                             if (cloudIds.has(String(d.id))) return false;
                             if (d.code && cloudCodes.has(String(d.code).trim().toUpperCase())) return false;
                             return true;
                         });
 
-                        // Preserve any local designs from IDB that haven't landed in cloud yet
-                        const pendingFromIDB = (Array.isArray(localIDBDesigns) ? localIDBDesigns : []).filter(d => {
-                            if (!d || !d.id || d.deleted) return false;
+                        // Preserve any local designs from IDB that haven't landed in cloud yet (strictly non-tombstoned)
+                        const pendingFromIDB = validLocalIDB.filter(d => {
+                            if (!d || (!d.id && !d.code) || d.deleted) return false;
+                            const idStr = String(d.id || '').trim().toLowerCase();
+                            const codeStr = String(d.code || '').trim().toLowerCase();
+                            if (idStr && tombstoneSet.has(idStr)) return false;
+                            if (codeStr && tombstoneSet.has(codeStr)) return false;
                             if (cloudIds.has(String(d.id))) return false;
                             if (d.code && cloudCodes.has(String(d.code).trim().toUpperCase())) return false;
                             if (pendingInMemory.some(p => String(p.id) === String(d.id) || (p.code && String(p.code).trim().toUpperCase() === String(d.code).trim().toUpperCase()))) return false;
@@ -2611,10 +2668,10 @@
 
                         const combined = [...pendingInMemory, ...pendingFromIDB, ...cleanCloud];
 
-                        // Cache back to IDB
+                        // Cache clean combined set back to IDB
                         saveDesignsToIDB(combined);
 
-                        // If there are pending designs from IDB that cloud never received, rescue them in background
+                        // If there are genuine offline designs from IDB that cloud never received, rescue them in background
                         if (pendingFromIDB.length > 0 && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.saveDesign === 'function') {
                             setTimeout(async () => {
                                 for (const des of pendingFromIDB) {
@@ -2662,6 +2719,43 @@
                 const handleStorageChange = (e) => {
                     const changedKey = e ? (e.key || (e.detail && e.detail.key)) : null;
                     if (changedKey !== key && changedKey !== 'loom-designs' && changedKey !== 'loom-designs-signal' && changedKey !== 'deleted-designs') return;
+
+                    // Instant tombstone prune from event details if it's a deletion broadcast
+                    const info = e && e.detail && (e.detail.info || e.detail.payload || e.detail);
+                    if (info && (info.action === 'design_deleted' || info.deletedId || (e.detail && e.detail.deletedId))) {
+                        const targetId = String(info.id || info.deletedId || (e.detail && e.detail.deletedId) || '').trim();
+                        const targetCode = String(info.code || info.deletedCode || (e.detail && e.detail.deletedCode) || '').trim().toUpperCase();
+
+                        if (targetId || targetCode) {
+                            try {
+                                const delList = JSON.parse(localStorage.getItem('deleted-designs') || '[]');
+                                let ch = false;
+                                [targetId, targetCode].filter(Boolean).forEach(s => {
+                                    if (!delList.includes(s)) { delList.push(s); ch = true; }
+                                });
+                                if (ch) localStorage.setItem('deleted-designs', JSON.stringify(delList));
+                            } catch(err) {}
+
+                            setStoredValue(prev => {
+                                const list = Array.isArray(prev) ? prev : [];
+                                const filtered = list.filter(d => {
+                                    if (targetId && String(d.id).trim() === targetId) return false;
+                                    if (targetCode && String(d.code || '').trim().toUpperCase() === targetCode) return false;
+                                    return true;
+                                });
+                                saveDesignsToIDB(filtered);
+                                return filtered;
+                            });
+
+                            try {
+                                const curSelected = window.__vf_selected_design;
+                                if (curSelected && (String(curSelected.id).trim() === targetId || (targetCode && String(curSelected.code || '').trim().toUpperCase() === targetCode))) {
+                                    if (typeof window.__vf_close_inspect === 'function') window.__vf_close_inspect();
+                                }
+                            } catch(err) {}
+                        }
+                    }
+
                     loadFromSupabase();
                 };
 
@@ -3386,6 +3480,10 @@
             
             // Modals
             const [selectedDesign, setSelectedDesign] = useState(null);
+            React.useEffect(() => {
+                window.__vf_selected_design = selectedDesign;
+                window.__vf_close_inspect = () => setSelectedDesign(null);
+            }, [selectedDesign]);
             const [showAddModal, setShowAddModal] = useState(false);
             const [editDesignId, setEditDesignId] = useState(null);
             // Stores EP-parsed data per variant index: { hooksCount, picksCount, weftCounts }
@@ -4606,28 +4704,68 @@
                 }
             };
 
-            // Delete Design
+            // Delete Design (Tombstone Delete)
             const handleDelete = (id, code) => {
-                const deleteAction = () => {
-                    updateDesignsWithHistory(designs.filter(d => d.id !== id));
-                    
-                    // Track deleted pre-seeded design IDs so syncData doesn't restore them
+                const deleteAction = async () => {
+                    const idStr = String(id).trim();
+                    const codeStr = String(code || '').trim();
+                    const cleanCode = codeStr.toUpperCase();
+
+                    // 1. Immediately prune from React state
+                    const remaining = designs.filter(d => {
+                        if (String(d.id).trim() === idStr) return false;
+                        if (cleanCode && String(d.code || '').trim().toUpperCase() === cleanCode) return false;
+                        return true;
+                    });
+                    updateDesignsWithHistory(remaining);
+
+                    // 2. Immediately close inspector/modal if open
+                    if (selectedDesign && (String(selectedDesign.id).trim() === idStr || (cleanCode && String(selectedDesign.code || '').trim().toUpperCase() === cleanCode))) {
+                        setSelectedDesign(null);
+                    }
+
+                    // 3. Immediately purge from local IndexedDB
+                    saveDesignsToIDB(remaining);
+
+                    // 4. Record tombstone in local deleted-designs
                     try {
                         const deletedIds = JSON.parse(localStorage.getItem('deleted-designs') || '[]');
-                        if (!deletedIds.includes(id)) {
-                            deletedIds.push(id);
+                        let changed = false;
+                        [idStr, codeStr].filter(Boolean).forEach(s => {
+                            if (!deletedIds.includes(s)) {
+                                deletedIds.push(s);
+                                changed = true;
+                            }
+                        });
+                        if (changed) {
                             localStorage.setItem('deleted-designs', JSON.stringify(deletedIds));
                         }
                     } catch (e) {
                         console.error("Error updating deleted-designs in localStorage:", e);
                     }
 
-                    // Soft delete on Supabase
-                    if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.deleteDesign === 'function') {
-                        window.VF_DB.weaving.deleteDesign(id).catch(err => console.error("Error deleting design from Supabase:", err));
-                    }
+                    // 5. Register in global VishwaSupabase tombstone registry
+                    try {
+                        if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+                            window.VishwaSupabase.recordDeletion('loom-designs', [idStr, codeStr].filter(Boolean));
+                        }
+                    } catch(e) {}
 
-                    triggerToast(`Deleted Design ${code}`, "success");
+                    // 6. Soft delete / Tombstone in Supabase relational table & broadcast to all PCs
+                    if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.deleteDesign === 'function') {
+                        try {
+                            const delRes = await window.VF_DB.weaving.deleteDesign(idStr, codeStr);
+                            if (delRes && delRes.success) {
+                                triggerToast(`Deleted Design ${codeStr || idStr} from all devices`, "success");
+                            } else {
+                                triggerToast(`Design removed locally. Cloud sync pending.`, "info");
+                            }
+                        } catch(err) {
+                            console.error("Error deleting design from Supabase:", err);
+                        }
+                    } else {
+                        triggerToast(`Deleted Design ${codeStr || idStr}`, "success");
+                    }
                 };
 
                 if (typeof window.showConfirmToast === 'function') {

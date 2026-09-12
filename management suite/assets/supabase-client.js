@@ -2452,7 +2452,9 @@
           handleIncomingItemDeleted(payload);
         } else if (key) {
           if (key === 'loom-designs-signal' || key === 'loom-designs') {
-            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', isRemote: true } }));
+            let parsedInfo = value;
+            try { if (typeof value === 'string' && value.trim().startsWith('{')) parsedInfo = JSON.parse(value); } catch(e) {}
+            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', isRemote: true, info: parsedInfo } }));
             try {
               window.dispatchEvent(new StorageEvent('storage', { key: 'loom-designs' }));
             } catch(e) {
@@ -7885,24 +7887,47 @@
         }
         return res;
       },
-      async deleteDesign(id) {
+      async deleteDesign(id, code = '') {
         if (!id) return { success: false };
+        const idStr = String(id).trim();
+        const codeStr = String(code || '').trim();
+        const targetIds = [idStr, codeStr].filter(Boolean);
+
         const res = await VF_DB.upsert('vf_fabric_designs', [{
-          id: String(id),
+          id: idStr,
           deleted: true,
+          metadata: { deleted: true, code: codeStr },
           updated_at: new Date().toISOString()
         }]);
+
+        try {
+          if (typeof supabaseLocalStorage !== 'undefined' && typeof supabaseLocalStorage.recordDeletion === 'function') {
+            await supabaseLocalStorage.recordDeletion('loom-designs', targetIds);
+          }
+        } catch(e) {}
+
         if (res.success) {
           try {
             broadcastRealtimeUpdate('loom-designs-signal', {
               action: 'design_deleted',
-              id: String(id),
+              id: idStr,
+              code: codeStr,
               timestamp: Date.now()
             });
-            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', deletedId: id } }));
+            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', deletedId: idStr, deletedCode: codeStr } }));
           } catch(e) {}
         }
         return res;
+      },
+      async getDeletedDesignIds() {
+        if (!VF_DB.isConfigured()) return [];
+        try {
+          const rows = await VF_DB.fetchTable('vf_fabric_designs', { select: 'id,design_number,deleted,updated_at', order: 'updated_at.desc' });
+          if (!Array.isArray(rows)) return [];
+          return rows.filter(r => Boolean(r.deleted)).map(r => ({ id: String(r.id), code: String(r.design_number || '').trim() }));
+        } catch(e) {
+          return [];
+        }
       },
       async getLatestDesignStamp() {
         if (!VF_DB.isConfigured()) return null;
@@ -8419,7 +8444,13 @@
     mergeYarnLedgerDatasets: mergeYarnLedgerDatasets,
     mergeYarnStockDatasets: mergeYarnStockDatasets,
     mergeYarnOrdersDatasets: mergeYarnOrdersDatasets,
-    mergeDatasets: mergeDatasets
+    mergeDatasets: mergeDatasets,
+    recordDeletion: (key, itemId) => supabaseLocalStorage.recordDeletion(key, itemId),
+    recordCostingDeletion: (key, itemId) => supabaseLocalStorage.recordCostingDeletion(key, itemId),
+    unrecordDeletion: (key, itemId, itemData) => supabaseLocalStorage.unrecordDeletion(key, itemId, itemData),
+    unrecordCostingDeletion: (key, itemId, itemData) => supabaseLocalStorage.unrecordCostingDeletion(key, itemId, itemData),
+    getDeletedTombstones: getDeletedTombstones,
+    filterDeletedEntities: filterDeletedEntities
   };
 
   // Expose VF_DB globally
