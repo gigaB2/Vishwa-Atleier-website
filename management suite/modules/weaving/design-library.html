@@ -2614,91 +2614,117 @@
 
         // Custom Hook for Supabase Cloud Single Source of Truth & Local Rescue
         function useIndexedDB(key, initialValue) {
-            const [storedValue, setStoredValue] = useState(initialValue);
-            const [ready, setReady] = useState(false);
+            const [storedValue, setStoredValue] = useState(() => {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            let localDel = [];
+                            try {
+                                const rawDel = localStorage.getItem('deleted-designs');
+                                if (rawDel) localDel = JSON.parse(rawDel);
+                            } catch(e) {}
+                            const tombSet = new Set((Array.isArray(localDel) ? localDel : []).map(s => String(s).trim().toLowerCase()).filter(Boolean));
+                            return parsed.filter(d => {
+                                if (!d || (!d.id && !d.code) || d.deleted) return false;
+                                const dId = String(d.id || '').trim().toLowerCase();
+                                if (dId && tombSet.has(dId)) return false;
+                                return true;
+                            });
+                        }
+                    }
+                } catch(e) {}
+                return initialValue;
+            });
+            const [ready, setReady] = useState(true);
 
             const loadFromSupabase = useCallback(async (isManualRefresh = false) => {
                 try {
-                    // Single-pass high-speed fetch: active designs, cloud tombstones, and local IDB in parallel
+                    // Race cloud fetch against a 6-second timeout so slow/stalled Supabase never freezes UI
+                    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ designs: null, tombstones: null, timedOut: true }), 6000));
                     const [cloudResult, rawIDBDesigns] = await Promise.all([
-                        (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignsWithTombstones === 'function')
-                            ? window.VF_DB.weaving.getDesignsWithTombstones()
-                            : (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesigns === 'function')
-                                ? window.VF_DB.weaving.getDesigns().then(d => ({ designs: d, tombstones: [] }))
-                                : (window.VF_DB && typeof window.VF_DB.fetchTable === 'function'
-                                    ? window.VF_DB.fetchTable('vf_fabric_designs', { order: 'created_at.desc' }).then(rows => {
-                                        if (!Array.isArray(rows)) return { designs: [], tombstones: [] };
-                                        return {
-                                            designs: rows.filter(d => !d.deleted),
-                                            tombstones: rows.filter(d => Boolean(d.deleted)).map(d => ({ id: d.id, code: d.design_number }))
-                                        };
-                                    })
-                                    : Promise.resolve({ designs: [], tombstones: [] })),
+                        Promise.race([
+                            (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignsWithTombstones === 'function')
+                                ? window.VF_DB.weaving.getDesignsWithTombstones()
+                                : (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesigns === 'function')
+                                    ? window.VF_DB.weaving.getDesigns().then(d => ({ designs: d, tombstones: [] }))
+                                    : (window.VF_DB && typeof window.VF_DB.fetchTable === 'function'
+                                        ? window.VF_DB.fetchTable('vf_fabric_designs', { order: 'updated_at.desc', filter: 'deleted=is.false' }).then(rows => {
+                                            if (!Array.isArray(rows)) return { designs: [], tombstones: [] };
+                                            return {
+                                                designs: rows.filter(d => !d.deleted),
+                                                tombstones: []
+                                            };
+                                        })
+                                        : Promise.resolve({ designs: [], tombstones: [] })),
+                            timeoutPromise
+                        ]),
                         getDesignsFromIDB()
                     ]);
+
+                    if (cloudResult && cloudResult.timedOut) {
+                        console.warn("Supabase hydration took >6s - maintaining instant local cache");
+                        setReady(true);
+                        return;
+                    }
                     const cloudDesigns = cloudResult?.designs || [];
                     const cloudTombstones = cloudResult?.tombstones || [];
 
-                    // Build unified Tombstone set
+                    // Build unified Tombstone set (STRICTLY by unique record ID to prevent poisoning reusable design codes)
                     const tombstoneSet = new Set();
                     const registerTombstone = (val) => {
                         if (!val) return;
                         const s = String(val).trim().toLowerCase();
-                        if (s) {
-                            tombstoneSet.add(s);
-                        }
+                        if (s) tombstoneSet.add(s);
                     };
 
                     if (Array.isArray(cloudTombstones)) {
                         cloudTombstones.forEach(t => {
                             if (t && typeof t === 'object') {
                                 registerTombstone(t.id);
-                                registerTombstone(t.code);
                             } else {
                                 registerTombstone(t);
                             }
                         });
                     }
 
-                    // Also fetch from global VishwaSupabase tombstones if available
-                    if (window.VishwaSupabase && typeof window.VishwaSupabase.getDeletedTombstones === 'function') {
-                        const globalTombs = window.VishwaSupabase.getDeletedTombstones();
-                        if (Array.isArray(globalTombs)) globalTombs.forEach(registerTombstone);
-                    }
-
-                    // Also merge local deleted-designs
-                    try {
-                        const localDelRaw = localStorage.getItem('deleted-designs');
-                        if (localDelRaw) {
-                            const localDel = JSON.parse(localDelRaw);
-                            if (Array.isArray(localDel)) localDel.forEach(registerTombstone);
-                        }
-                    } catch(e) {}
-
-                    // Persist merged tombstones to localStorage
-                    try {
-                        localStorage.setItem('deleted-designs', JSON.stringify(Array.from(tombstoneSet)));
-                    } catch(e) {}
-
-                    // Active cloud rows (Supabase is single source of truth for active designs)
+                    // Active cloud rows: Supabase is single source of truth for active designs (deleted === false)
                     const cleanCloud = Array.isArray(cloudDesigns)
                         ? cloudDesigns.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
                             const idStr = String(d.id || '').trim().toLowerCase();
-                            const codeStr = String(d.code || '').trim().toLowerCase();
-                            if (idStr && tombstoneSet.has(idStr)) return false;
-                            if (codeStr && tombstoneSet.has(codeStr)) return false;
+                            // If marked active in cloud, remove from any stale local tombstones
+                            if (idStr && tombstoneSet.has(idStr)) {
+                                tombstoneSet.delete(idStr);
+                            }
                             return true;
                         })
                         : [];
 
-                    // Read local backup from IDB and purge tombstoned items
+                    // Sanitize local deleted-designs (purge active design codes/IDs that might have poisoned local storage)
+                    try {
+                        const rawDel = localStorage.getItem('deleted-designs');
+                        if (rawDel) {
+                            const localDel = JSON.parse(rawDel);
+                            if (Array.isArray(localDel)) {
+                                const activeCodeSet = new Set(cleanCloud.map(d => String(d.code || '').trim().toLowerCase()));
+                                const activeIdSet = new Set(cleanCloud.map(d => String(d.id || '').trim().toLowerCase()));
+                                const sanitized = localDel.filter(item => {
+                                    const s = String(item || '').trim().toLowerCase();
+                                    return s && !activeCodeSet.has(s) && !activeIdSet.has(s);
+                                });
+                                localStorage.setItem('deleted-designs', JSON.stringify(sanitized));
+                                sanitized.forEach(registerTombstone);
+                            }
+                        }
+                    } catch(e) {}
+
+                    // Read local backup from IDB and purge tombstoned items (by ID only)
                     const validLocalIDB = (Array.isArray(rawIDBDesigns) ? rawIDBDesigns : []).filter(d => {
                         if (!d || (!d.id && !d.code) || d.deleted) return false;
                         const idStr = String(d.id || '').trim().toLowerCase();
-                        const codeStr = String(d.code || '').trim().toLowerCase();
                         if (idStr && tombstoneSet.has(idStr)) return false;
-                        if (codeStr && tombstoneSet.has(codeStr)) return false;
                         return true;
                     });
 
@@ -2707,25 +2733,21 @@
                         const cloudIds = new Set(cleanCloud.map(d => String(d.id || '')));
                         const cloudCodes = new Set(cleanCloud.map(d => String(d.code || '').trim().toUpperCase()));
 
-                        // Preserve pending local designs from in-memory state that haven't landed in cloud yet (strictly non-tombstoned)
+                        // Preserve pending local designs from in-memory state that haven't landed in cloud yet (strictly non-tombstoned by ID)
                         const pendingInMemory = currentList.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
                             const idStr = String(d.id || '').trim().toLowerCase();
-                            const codeStr = String(d.code || '').trim().toLowerCase();
                             if (idStr && tombstoneSet.has(idStr)) return false;
-                            if (codeStr && tombstoneSet.has(codeStr)) return false;
                             if (cloudIds.has(String(d.id))) return false;
                             if (d.code && cloudCodes.has(String(d.code).trim().toUpperCase())) return false;
                             return true;
                         });
 
-                        // Preserve any local designs from IDB that haven't landed in cloud yet (strictly non-tombstoned)
+                        // Preserve any local designs from IDB that haven't landed in cloud yet (strictly non-tombstoned by ID)
                         const pendingFromIDB = validLocalIDB.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
                             const idStr = String(d.id || '').trim().toLowerCase();
-                            const codeStr = String(d.code || '').trim().toLowerCase();
                             if (idStr && tombstoneSet.has(idStr)) return false;
-                            if (codeStr && tombstoneSet.has(codeStr)) return false;
                             if (cloudIds.has(String(d.id))) return false;
                             if (d.code && cloudCodes.has(String(d.code).trim().toUpperCase())) return false;
                             if (pendingInMemory.some(p => String(p.id) === String(d.id) || (p.code && String(p.code).trim().toUpperCase() === String(d.code).trim().toUpperCase()))) return false;
@@ -2734,7 +2756,7 @@
 
                         const combined = [...pendingInMemory, ...pendingFromIDB, ...cleanCloud];
 
-                        // Cache clean combined set back to IDB and cache
+                        // Cache clean combined set back to IDB and cache safely
                         saveDesignsToIDB(combined);
                         try {
                             const dStr = JSON.stringify(combined);
@@ -2784,9 +2806,7 @@
                         const filtered = local.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
                             const dId = String(d.id || '').trim().toLowerCase();
-                            const dCode = String(d.code || '').trim().toLowerCase();
                             if (dId && tombSet.has(dId)) return false;
-                            if (dCode && tombSet.has(dCode)) return false;
                             return true;
                         });
                         setStoredValue(filtered);
@@ -2825,9 +2845,39 @@
                     if (info && info.action === 'design_saved') {
                         if (info.design) {
                             const incoming = info.design;
+
+                            // Clean up from tombstone / deleted-designs so this design is never suppressed on this PC
+                            try {
+                                const rawDel = localStorage.getItem('deleted-designs');
+                                if (rawDel) {
+                                    const delList = JSON.parse(rawDel);
+                                    if (Array.isArray(delList)) {
+                                        const tId = String(incoming.id || '').trim().toLowerCase();
+                                        const tCode = String(incoming.code || '').trim().toLowerCase();
+                                        const cleanDel = delList.filter(s => {
+                                            const sLow = String(s).trim().toLowerCase();
+                                            return sLow !== tId && sLow !== tCode;
+                                        });
+                                        localStorage.setItem('deleted-designs', JSON.stringify(cleanDel));
+                                    }
+                                }
+                                if (window.VishwaSupabase && typeof window.VishwaSupabase.unrecordDeletion === 'function') {
+                                    window.VishwaSupabase.unrecordDeletion('loom-designs', [incoming.id, incoming.code]);
+                                }
+                            } catch(e) {}
+
                             setStoredValue(prev => {
                                 const list = Array.isArray(prev) ? prev : [];
-                                const filtered = list.filter(d => String(d.id).trim() !== String(incoming.id).trim() && String(d.code || '').trim().toUpperCase() !== String(incoming.code || '').trim().toUpperCase());
+                                const inId = String(incoming.id || '').trim().toLowerCase();
+                                const inCode = String(incoming.code || '').trim().toUpperCase();
+                                const filtered = list.filter(d => {
+                                    if (!d) return false;
+                                    const dId = String(d.id || '').trim().toLowerCase();
+                                    const dCode = String(d.code || '').trim().toUpperCase();
+                                    if (inId && dId && dId === inId) return false;
+                                    if (inCode && dCode && dCode === inCode) return false;
+                                    return true;
+                                });
                                 const updated = [incoming, ...filtered];
                                 saveDesignsToIDB(updated);
                                 return updated;
@@ -2839,7 +2889,16 @@
                                     if (full) {
                                         setStoredValue(prev => {
                                             const list = Array.isArray(prev) ? prev : [];
-                                            const filtered = list.filter(d => String(d.id).trim() !== String(full.id).trim() && String(d.code || '').trim().toUpperCase() !== String(full.code || '').trim().toUpperCase());
+                                            const fId = String(full.id || '').trim().toLowerCase();
+                                            const fCode = String(full.code || '').trim().toUpperCase();
+                                            const filtered = list.filter(d => {
+                                                if (!d) return false;
+                                                const dId = String(d.id || '').trim().toLowerCase();
+                                                const dCode = String(d.code || '').trim().toUpperCase();
+                                                if (fId && dId && dId === fId) return false;
+                                                if (fCode && dCode && dCode === fCode) return false;
+                                                return true;
+                                            });
                                             const updated = [full, ...filtered];
                                             saveDesignsToIDB(updated);
                                             return updated;
@@ -2853,7 +2912,16 @@
                                 if (single) {
                                     setStoredValue(prev => {
                                         const list = Array.isArray(prev) ? prev : [];
-                                        const filtered = list.filter(d => String(d.id).trim() !== String(single.id).trim() && String(d.code || '').trim().toUpperCase() !== String(single.code || '').trim().toUpperCase());
+                                        const sId = String(single.id || '').trim().toLowerCase();
+                                        const sCode = String(single.code || '').trim().toUpperCase();
+                                        const filtered = list.filter(d => {
+                                            if (!d) return false;
+                                            const dId = String(d.id || '').trim().toLowerCase();
+                                            const dCode = String(d.code || '').trim().toUpperCase();
+                                            if (sId && dId && dId === sId) return false;
+                                            if (sCode && dCode && dCode === sCode) return false;
+                                            return true;
+                                        });
                                         const updated = [single, ...filtered];
                                         saveDesignsToIDB(updated);
                                         return updated;
@@ -2869,14 +2937,13 @@
                         const targetId = String(info.id || info.deletedId || (e.detail && e.detail.deletedId) || '').trim();
                         const targetCode = String(info.code || info.deletedCode || (e.detail && e.detail.deletedCode) || '').trim().toUpperCase();
 
-                        if (targetId || targetCode) {
+                        if (targetId) {
                             try {
                                 const delList = JSON.parse(localStorage.getItem('deleted-designs') || '[]');
-                                let ch = false;
-                                [targetId, targetCode].filter(Boolean).forEach(s => {
-                                    if (!delList.includes(s)) { delList.push(s); ch = true; }
-                                });
-                                if (ch) localStorage.setItem('deleted-designs', JSON.stringify(delList));
+                                if (!delList.includes(targetId)) {
+                                    delList.push(targetId);
+                                    localStorage.setItem('deleted-designs', JSON.stringify(delList));
+                                }
                             } catch(err) {}
 
                             setStoredValue(prev => {
@@ -3686,6 +3753,19 @@
                 return () => window.removeEventListener('supabase-status', handleStatusChange);
             }, []);
 
+            // Auto-hydrate complete design files (EP binary + full image) on inspection
+            useEffect(() => {
+                if (selectedDesign && selectedDesign.id && (!selectedDesign.epFile && selectedDesign.hasEp)) {
+                    if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignById === 'function') {
+                        window.VF_DB.weaving.getDesignById(selectedDesign.id).then(full => {
+                            if (full && full.epFile) {
+                                setSelectedDesign(prev => (prev && prev.id === full.id) ? { ...prev, ...full } : prev);
+                            }
+                        }).catch(() => {});
+                    }
+                }
+            }, [selectedDesign ? selectedDesign.id : null]);
+
             // 1-Click Backup & Export all Designs (instant zero-network transfer to other PCs)
             const handleExportDesigns = () => {
                 try {
@@ -3778,6 +3858,26 @@
                 setOcrRawText('');
                 setCropBox(design.cropBox || { x: 70, y: 0, w: 30, h: 100 });
                 setOcrBinarizeThreshold(design.ocrBinarizeThreshold || 140);
+
+                // If design was fast-hydrated without heavy EP/images, fetch full record in background
+                if ((!design.epFile && design.hasEp) && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignById === 'function') {
+                    window.VF_DB.weaving.getDesignById(design.id || design.code).then(full => {
+                        if (full) {
+                            if (full.originalImage || full.specImage) {
+                                setRawImageSrc(prev => prev || full.originalImage || full.specImage || '');
+                            }
+                            setFormData(prev => ({
+                                ...prev,
+                                epFile: full.epFile || prev.epFile,
+                                epFileName: full.epFileName || prev.epFileName,
+                                originalImage: full.originalImage || prev.originalImage,
+                                specImage: full.specImage || prev.specImage,
+                                variants: (full.variants && full.variants.length > 0) ? full.variants : prev.variants
+                            }));
+                        }
+                    }).catch(() => {});
+                }
+
                 setFormData({
                     createdDate: design.createdDate ? ddmmyyyyToYyyymmdd(design.createdDate) : new Date().toISOString().split('T')[0],
                     code: design.code || '',
@@ -4106,9 +4206,9 @@
                 }
             }, [isDarkMode]);
 
-            // Reset form details on opening Add Modal
+            // Reset form details on opening Add Modal (only for new design, not when editing)
             useEffect(() => {
-                if (showAddModal) {
+                if (showAddModal && !editDesignId) {
                     setFormData({
                         code: '',
                         item: '',
@@ -4146,7 +4246,7 @@
                         createdDate: new Date().toISOString().split('T')[0]
                     });
                 }
-            }, [showAddModal]);
+            }, [showAddModal, editDesignId]);
 
             const updateVariantField = (idx, field, value) => {
                 setFormData(prev => {
@@ -4469,25 +4569,27 @@
                         setRawImageSrc(previewUrl);
                         setOcrRawText('');
                         setCropBox(existing.cropBox || { x: 70, y: 0, w: 30, h: 100 });
-                        setFormData({
+                        setFormData(prev => ({
+                            ...prev,
                             id: existing.id,
                             code: existing.code || '',
-                            item: existing.item || '',
-                            designer: existing.designer || '',
+                            item: existing.item || prev.item || '',
+                            designer: existing.designer || prev.designer || '',
                             loomType: existing.loomType || 'Jacquard',
                             hooksCount: existing.hooksCount || '',
                             picksCount: existing.picksCount || '',
                             cardCount: existing.cardCount || '',
                             ends: existing.ends || '',
                             reed: existing.reed || '',
-                            description: existing.description || '',
+                            description: existing.description || prev.description || '',
                             previewImage: previewUrl,
                             specImage: previewUrl,
                             epFile: existing.epFile || '',
                             pettiCount: existing.pettiCount || 1,
                             pettiDetails: existing.pettiDetails || [{ name: '', cards: '' }],
-                            variants: existing.variants || []
-                        });
+                            variants: existing.variants || [],
+                            createdDate: existing.createdDate ? ddmmyyyyToYyyymmdd(existing.createdDate) : (prev.createdDate || new Date().toISOString().split('T')[0])
+                        }));
                         triggerToast("Loaded specifications from existing database record.", "success");
                         return;
                     }
@@ -4520,21 +4622,22 @@
                         const defaultCrop = { x: 0, y: 0, w: 100, h: 100 };
                         setCropBox(defaultCrop);
                         
-                        // Reset the form fields to start with a blank sheet
-                        setFormData({
+                        // Prepare form fields with new image, preserving any user-entered fields (createdDate, item, designer, description)
+                        setFormData(prev => ({
+                            ...prev,
                             code: '',
-                            item: '',
+                            item: prev.item || '',
                             loomType: 'Jacquard',
                             hooksCount: '',
                             picksCount: '',
                             cardCount: '',
                             ends: '',
-                            description: '',
+                            description: prev.description || '',
                             previewImage: scaledPreviewUrl,
                             specImage: scaledPreviewUrl,
                             epFile: '',
                             epFileName: '',
-                            designer: '',
+                            designer: prev.designer || '',
                             reed: '',
                             jacquardType: '',
                             productionFace: 'Front',
@@ -4551,8 +4654,9 @@
                                 productionFace: 'Front',
                                 pettiCount: 1,
                                 pettiDetails: [{ name: '', cards: '' }]
-                            }]
-                        });
+                            }],
+                            createdDate: prev.createdDate || new Date().toISOString().split('T')[0]
+                        }));
 
                         triggerToast("Analyzing full sheet and extracting text...", "info");
                         setOcrProgress("Running full sheet OCR...");
@@ -4615,7 +4719,8 @@
                     productionFace: 'Front',
                     pettiCount: 1,
                     pettiDetails: [{ name: '', cards: '' }],
-                    variants: []
+                    variants: [],
+                    createdDate: new Date().toISOString().split('T')[0]
                 });
                 setEpParsed({});
                 setRawImageSrc('');
@@ -5086,11 +5191,11 @@
                         }
                     } catch(e) {}
 
-                    // 4. Record tombstone in local deleted-designs
+                    // 4. Record tombstone in local deleted-designs (ONLY use unique idStr, never codeStr)
                     try {
                         const deletedIds = JSON.parse(localStorage.getItem('deleted-designs') || '[]');
                         let changed = false;
-                        [idStr, codeStr].filter(Boolean).forEach(s => {
+                        [idStr].filter(Boolean).forEach(s => {
                             if (!deletedIds.includes(s)) {
                                 deletedIds.push(s);
                                 changed = true;
@@ -5103,10 +5208,10 @@
                         console.error("Error updating deleted-designs in localStorage:", e);
                     }
 
-                    // 5. Register in global VishwaSupabase tombstone registry
+                    // 5. Register in global VishwaSupabase tombstone registry (by unique ID only)
                     try {
                         if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-                            window.VishwaSupabase.recordDeletion('loom-designs', [idStr, codeStr].filter(Boolean));
+                            window.VishwaSupabase.recordDeletion('loom-designs', [idStr].filter(Boolean));
                         }
                     } catch(e) {}
 
@@ -5141,14 +5246,29 @@
             };
 
             // Download EP Helper
-            const triggerEpDownload = (design) => {
+            const triggerEpDownload = async (design) => {
+                let epData = design.epFile || design.bmpFile;
+                if (!epData && (design.hasEp || design.epFileName) && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignById === 'function') {
+                    if (typeof triggerToast === 'function') triggerToast(`Fetching ${design.code}.ep from Cloud...`, "info");
+                    try {
+                        const full = await window.VF_DB.weaving.getDesignById(design.id || design.code);
+                        if (full && full.epFile) {
+                            epData = full.epFile;
+                            design.epFile = full.epFile;
+                        }
+                    } catch(e) {}
+                }
+                if (!epData) {
+                    if (typeof triggerToast === 'function') triggerToast(`No EP pattern file found for ${design.code}`, "warning");
+                    return;
+                }
                 const link = document.createElement('a');
-                link.href = design.epFile || design.bmpFile;
-                link.download = `${design.code}.ep`;
+                link.href = epData;
+                link.download = design.epFileName || `${design.code}.ep`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                triggerToast(`Downloading ${design.code}.ep to USB pendrive...`, "success");
+                if (typeof triggerToast === 'function') triggerToast(`Downloading ${design.code}.ep to USB pendrive...`, "success");
             };
 
             return (
@@ -5873,7 +5993,7 @@
                                                             type="date" 
                                                             required 
                                                             value={formData.createdDate || ''}
-                                                            onChange={e => setFormData({...formData, createdDate: e.target.value})}
+                                                            onChange={e => setFormData(prev => ({ ...prev, createdDate: e.target.value }))}
                                                         />
                                                     </div>
                                                     <div className="input-group">
@@ -5883,8 +6003,8 @@
                                                             type="text" 
                                                             placeholder="e.g. saree, dress, dupatta" 
                                                             required 
-                                                            value={formData.item}
-                                                            onChange={e => setFormData({...formData, item: e.target.value})}
+                                                            value={formData.item || ''}
+                                                            onChange={e => setFormData(prev => ({ ...prev, item: e.target.value }))}
                                                         />
                                                     </div>
                                                     <div className="input-group">
@@ -5894,7 +6014,7 @@
                                                             type="text" 
                                                             placeholder="e.g. In-house, VF Punching Studio" 
                                                             value={formData.designer || ''}
-                                                            onChange={e => setFormData({...formData, designer: e.target.value})}
+                                                            onChange={e => setFormData(prev => ({ ...prev, designer: e.target.value }))}
                                                         />
                                                     </div>
                                                 </div>
@@ -6460,8 +6580,8 @@
                                                 className="form-control" 
                                                 rows="2" 
                                                 placeholder="Enter technical details, yarn settings, etc."
-                                                value={formData.description}
-                                                onChange={e => setFormData({...formData, description: e.target.value})}
+                                                value={formData.description || ''}
+                                                onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
                                             />
                                         </div>
                                         </div>{/* edit-form-col */}

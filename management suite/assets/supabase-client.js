@@ -2502,11 +2502,18 @@
         wsReconnectAttempts = 0;
         setSyncStatus('connected');
 
-        // Join the Realtime Broadcast channel
+        // Join the Realtime Broadcast channel with PostgreSQL CDC support
         const joinMsg = {
           topic: WS_CHANNEL_TOPIC,
           event: 'phx_join',
-          payload: { config: { broadcast: { ack: false, self: false } } },
+          payload: {
+            config: {
+              broadcast: { ack: false, self: false },
+              postgres_changes: [
+                { event: '*', schema: 'public', table: 'vf_fabric_designs' }
+              ]
+            }
+          },
           ref: 'join_' + Date.now()
         };
         ws.send(JSON.stringify(joinMsg));
@@ -2527,7 +2534,86 @@
       ws.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
-          if (data && data.event === 'broadcast' && data.payload) {
+          if (!data) return;
+
+          // 1. Direct PostgreSQL CDC Events (Server-Pushed Database Changes)
+          if (data.event === 'postgres_changes' && data.payload) {
+            const changeData = data.payload.data || data.payload;
+            if (changeData && changeData.table === 'vf_fabric_designs') {
+              const rec = changeData.record || {};
+              const oldRec = changeData.old_record || {};
+              const isDelete = changeData.type === 'DELETE' || Boolean(rec.deleted);
+              const targetId = String(rec.id || oldRec.id || '').trim();
+              const targetCode = String(rec.design_number || oldRec.design_number || '').trim();
+
+              if (isDelete) {
+                window.dispatchEvent(new CustomEvent('supabase-sync', {
+                  detail: {
+                    key: 'loom-designs',
+                    isRemote: true,
+                    info: {
+                      action: 'design_deleted',
+                      deletedId: targetId,
+                      deletedCode: targetCode,
+                      id: targetId,
+                      code: targetCode,
+                      timestamp: Date.now()
+                    }
+                  }
+                }));
+              } else if (rec.id || rec.design_number) {
+                const meta = rec.metadata || {};
+                const cDesign = {
+                  id: targetId,
+                  code: targetCode || meta.code || 'Unnamed',
+                  name: rec.design_name || meta.name || '',
+                  item: rec.quality || meta.item || 'Jacquard',
+                  loomType: meta.loomType || 'Jacquard',
+                  hooksCount: Number(rec.total_hooks || meta.hooksCount) || 0,
+                  picksCount: Number(rec.picks || meta.picksCount) || 0,
+                  cardCount: meta.cardCount || '',
+                  ends: meta.ends || '',
+                  reed: meta.reed || '',
+                  description: meta.description || '',
+                  previewImage: rec.image_url || meta.previewImage || '',
+                  epFile: rec.ep_file_url || meta.epFile || '',
+                  designer: meta.designer || '',
+                  jacquardType: meta.jacquardType || '',
+                  productionFace: meta.productionFace || 'Front',
+                  pettiCount: meta.pettiCount || 1,
+                  pettiDetails: meta.pettiDetails || [{ name: '', cards: '' }],
+                  variants: meta.variants || [],
+                  createdDate: meta.createdDate || '',
+                  lastUpdated: meta.lastUpdated || '',
+                  cropBox: meta.cropBox || null,
+                  deleted: false
+                };
+
+                window.dispatchEvent(new CustomEvent('supabase-sync', {
+                  detail: {
+                    key: 'loom-designs',
+                    isRemote: true,
+                    info: {
+                      action: 'design_saved',
+                      id: targetId,
+                      code: targetCode,
+                      design: cDesign,
+                      timestamp: Date.now()
+                    }
+                  }
+                }));
+              }
+              try {
+                window.dispatchEvent(new StorageEvent('storage', { key: 'loom-designs' }));
+              } catch(e) {
+                window.dispatchEvent(new Event('storage'));
+              }
+              return;
+            }
+          }
+
+          // 2. Realtime WebSocket Broadcast Events (Peer-to-Peer Fanout)
+          if (data.event === 'broadcast' && data.payload) {
             const rawPayload = data.payload;
             const inner = (rawPayload && rawPayload.payload && typeof rawPayload.payload === 'object') ? rawPayload.payload : rawPayload;
             
@@ -2604,7 +2690,11 @@
 
   function broadcastRealtimeUpdate(key, value) {
     if (isLocalOnlyKey(key)) return;
+    // Bypassed for full loom-designs master array to prevent WebSocket frame overflow termination (code 1000)
+    if (key === 'loom-designs' || key === 'loom_designs') return;
     const valStr = typeof value === 'string' ? value : JSON.stringify(value);
+    // Hard ceiling: never send payloads > 180KB over Phoenix WebSocket broadcast to prevent server termination
+    if (valStr.length > 180000) return;
     if (ws && ws.readyState === WebSocket.OPEN) {
       try {
         const broadcastMsg = {
@@ -2665,13 +2755,32 @@
         const sep = tableOrPath.includes('?') ? '&' : '?';
         const cleanExtra = extraParams ? String(extraParams).replace(/^&+|&+$/g, '').trim() : '';
         const url = `${SUPABASE_URL}/rest/v1/${tableOrPath}${sep}select=${select}&limit=${pageSize}&offset=${offset}${cleanExtra ? ('&' + cleanExtra) : ''}`;
-        const res = await fetch(url, {
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        
+        let res;
+        if (typeof AbortController !== 'undefined') {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 6000);
+          try {
+            res = await fetch(url, {
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              },
+              signal: controller.signal
+            });
+          } finally {
+            clearTimeout(timer);
           }
-        });
-        if (!res.ok) break;
+        } else {
+          res = await fetch(url, {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          });
+        }
+
+        if (!res || !res.ok) break;
         const rows = await res.json();
         if (!Array.isArray(rows) || rows.length === 0) break;
         allRows = allRows.concat(rows);
@@ -2759,7 +2868,10 @@
         safeLocalStorageSet(key, valStr);
 
         // Broadcast immediately over Realtime WebSocket & BroadcastChannel (instant sub-50ms sync, 0 DB queries)
-        broadcastRealtimeUpdate(key, value);
+        // Bypassed for full loom-designs array to avoid multi-megabyte WebSocket termination (synced via loom-designs-signal)
+        if (key !== 'loom-designs' && key !== 'loom_designs') {
+          broadcastRealtimeUpdate(key, value);
+        }
 
         // Always clear pending debounced write timer for this key immediately
         clearTimeout(debouncedWriteTimers[key]);
@@ -5766,18 +5878,22 @@
 
             // Reconcile Dedicated Fabric Designs Relational Table (Loom Design Library)
             try {
-              const dbDesigns = await fetchAllRowsPaginated('vf_fabric_designs', '*', 'order=created_at.desc');
-              if (Array.isArray(dbDesigns) && dbDesigns.length > 0) {
+              const listCols = 'id,design_name,design_number,quality,image_url,picks,repeats,total_hooks,width,avg_weight,deleted,metadata,created_at,updated_at';
+              const dbDesigns = await fetchAllRowsPaginated('vf_fabric_designs', listCols, 'deleted=is.false&order=updated_at.desc');
+              if (Array.isArray(dbDesigns)) {
                 const tombstones = getDeletedTombstones();
                 const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()).filter(Boolean));
                 
                 const reconstructedDesigns = dbDesigns
-                  .filter(d => !d.deleted && !tombstoneSet.has(String(d.id).trim().toLowerCase()) && !tombstoneSet.has(String(d.design_number || '').trim().toLowerCase()))
+                  .filter(d => !d.deleted && !tombstoneSet.has(String(d.id).trim().toLowerCase()))
                   .map(d => {
                     const meta = (d.metadata && typeof d.metadata === 'object') ? d.metadata : {};
+                    const rawEp = meta.epFile || '';
+                    const hasEp = Boolean(rawEp || meta.epFileName);
                     return {
                       id: d.id,
                       code: d.design_number || meta.code || d.design_name,
+                      name: d.design_name || meta.name || d.design_number,
                       item: d.quality || meta.item || 'Jacquard',
                       loomType: meta.loomType || 'Jacquard',
                       hooksCount: d.total_hooks || meta.hooksCount || 0,
@@ -5789,7 +5905,8 @@
                       previewImage: d.image_url || meta.previewImage || '',
                       specImage: meta.specImage || '',
                       originalImage: meta.originalImage || '',
-                      epFile: d.ep_file_url || meta.epFile || '',
+                      hasEp: hasEp,
+                      epFile: (rawEp && typeof rawEp === 'string' && !rawEp.startsWith('gz64:')) ? rawEp : '',
                       epFileName: meta.epFileName || '',
                       designer: meta.designer || '',
                       jacquardType: meta.jacquardType || '',
@@ -5799,7 +5916,8 @@
                       variants: meta.variants || [],
                       createdDate: meta.createdDate || (d.created_at ? new Date(d.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
                       lastUpdated: meta.lastUpdated || (d.updated_at ? new Date(d.updated_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
-                      ...meta
+                      ...meta,
+                      deleted: false
                     };
                   });
 
@@ -5816,13 +5934,12 @@
                   const cloudIds = new Set(reconstructedDesigns.map(d => String(d.id || '').trim().toLowerCase()));
                   const cloudCodes = new Set(reconstructedDesigns.map(d => String(d.code || '').trim().toUpperCase()));
 
-                  // Keep local designs that are not yet in cloud and not tombstoned
+                  // Keep local designs that are not yet in cloud and strictly not tombstoned by ID
                   const pendingLocal = Array.isArray(localDesigns) ? localDesigns.filter(d => {
                     if (!d || (!d.id && !d.code) || d.deleted) return false;
                     const idStr = String(d.id || '').trim().toLowerCase();
                     const codeStr = String(d.code || '').trim().toUpperCase();
                     if (idStr && tombstoneSet.has(idStr)) return false;
-                    if (codeStr && tombstoneSet.has(codeStr.toLowerCase())) return false;
                     if (idStr && cloudIds.has(idStr)) return false;
                     if (codeStr && cloudCodes.has(codeStr)) return false;
                     return true;
@@ -5830,13 +5947,11 @@
 
                   finalDesigns = [...pendingLocal, ...reconstructedDesigns];
                 } else {
-                  // Cloud query returned empty or table not yet created — preserve local designs completely (strictly non-tombstoned)!
+                  // Cloud query returned empty or table not yet created — preserve local designs completely (strictly non-tombstoned by ID)!
                   finalDesigns = Array.isArray(localDesigns) ? localDesigns.filter(d => {
                     if (!d || (!d.id && !d.code) || d.deleted) return false;
                     const idStr = String(d.id || '').trim().toLowerCase();
-                    const codeStr = String(d.code || '').trim().toLowerCase();
                     if (idStr && tombstoneSet.has(idStr)) return false;
-                    if (codeStr && tombstoneSet.has(codeStr)) return false;
                     return true;
                   }) : [];
                 }
@@ -7149,6 +7264,49 @@
     }
   };
 
+  // --- Fast Micro-Thumbnail Generator for Instant Realtime WebSocket Broadcast (<30KB) ---
+  async function createBroadcastThumbnail(dataUrl) {
+    if (!dataUrl || typeof dataUrl !== 'string') return '';
+    if (!dataUrl.startsWith('data:image/')) return dataUrl;
+    if (dataUrl.length < 35000) return dataUrl; // Already tiny (<35KB)
+    if (typeof document === 'undefined') return '';
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            let w = img.width;
+            let h = img.height;
+            if (w <= 0 || h <= 0) return resolve('');
+            const maxDim = 360;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const thumb = canvas.toDataURL('image/jpeg', 0.65);
+            resolve(thumb || '');
+          } catch(e) {
+            resolve('');
+          }
+        };
+        img.onerror = () => resolve('');
+        img.src = dataUrl;
+      } catch(e) {
+        resolve('');
+      }
+    });
+  }
+
   // --- Image Dimension & Quality Optimization Helper for Ultra-Lightweight Sync ---
   async function ensureCompactImage(dataUrl, maxDim = 1200, quality = 0.82) {
     if (!dataUrl || typeof dataUrl !== 'string') return '';
@@ -7880,14 +8038,22 @@
       async getDesignById(id) {
         if (!VF_DB.isConfigured() || !id) return null;
         try {
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?id=eq.${encodeURIComponent(id)}&limit=1`, {
+          let res = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?id=eq.${encodeURIComponent(id)}&limit=1`, {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
               'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
             }
           });
-          if (!res.ok) return null;
-          const rows = await res.json();
+          let rows = res.ok ? await res.json().catch(() => []) : [];
+          if (!Array.isArray(rows) || rows.length === 0) {
+            const fallbackRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?design_number=eq.${encodeURIComponent(id)}&order=updated_at.desc&limit=1`, {
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              }
+            });
+            rows = fallbackRes.ok ? await fallbackRes.json().catch(() => []) : [];
+          }
           if (!Array.isArray(rows) || rows.length === 0) return null;
           const r = rows[0];
           const meta = (r.metadata && typeof r.metadata === 'object') ? r.metadata : {};
@@ -7939,67 +8105,76 @@
         }
       },
       async getDesignsWithTombstones(options = {}) {
-        const select = options.select || 'id,design_name,design_number,quality,image_url,ep_file_url,picks,repeats,total_hooks,width,avg_weight,deleted,metadata,created_at,updated_at';
-        const rows = await VF_DB.fetchTable('vf_fabric_designs', { order: 'created_at.desc', select: select, ...options });
-        if (!Array.isArray(rows)) return { designs: [], tombstones: [] };
-
-        const tombstones = rows.filter(r => Boolean(r.deleted)).map(r => ({ id: String(r.id), code: String(r.design_number || '').trim() }));
-        const activeRows = rows.filter(r => !r.deleted);
-
-        const designs = await Promise.all(activeRows.map(async r => {
-          const meta = (r.metadata && typeof r.metadata === 'object') ? r.metadata : {};
+        if (!VF_DB.isConfigured()) return { designs: [], tombstones: [] };
+        try {
+          const listSelect = options.select || 'id,design_name,design_number,quality,image_url,picks,repeats,total_hooks,width,avg_weight,deleted,metadata,created_at,updated_at';
           
-          let rawEp = r.ep_file_url || meta.epFile || '';
-          if (rawEp && typeof rawEp === 'string' && rawEp.startsWith('gz64:')) {
-            rawEp = await decompressBase64(rawEp, `${r.id}_${r.updated_at}`);
-          }
+          // High-speed parallel fetch: active designs (indexed on deleted + updated_at) and lightweight tombstones
+          const [activeRows, tombstoneRows] = await Promise.all([
+            VF_DB.fetchTable('vf_fabric_designs', {
+              order: 'updated_at.desc',
+              filter: 'deleted=is.false',
+              select: listSelect,
+              ...options
+            }).catch(() => []),
+            VF_DB.fetchTable('vf_fabric_designs', {
+              order: 'updated_at.desc',
+              filter: 'deleted=is.true',
+              select: 'id,design_number,updated_at'
+            }).catch(() => [])
+          ]);
 
-          let variants = meta.variants || [];
-          if (Array.isArray(variants)) {
-            variants = await Promise.all(variants.map(async (v, vIdx) => {
-              let vEp = v && v.epFile;
-              if ((!vEp || vEp === 'main') && vIdx === 0) {
-                vEp = rawEp;
-              } else if (v && typeof vEp === 'string' && vEp.startsWith('gz64:')) {
-                vEp = await decompressBase64(vEp, `${r.id}_var_${vIdx}_${r.updated_at}`);
-              }
-              return { ...v, epFile: vEp };
-            }));
-          }
+          const tombstones = (Array.isArray(tombstoneRows) ? tombstoneRows : []).map(r => ({
+            id: String(r.id),
+            code: String(r.design_number || '').trim()
+          }));
 
-          return {
-            ...meta,
-            id: r.id,
-            code: r.design_number || meta.code || r.design_name,
-            name: r.design_name || meta.name || r.design_number,
-            item: r.quality || meta.item || 'Jacquard',
-            loomType: meta.loomType || 'Jacquard',
-            hooksCount: r.total_hooks || meta.hooksCount || 0,
-            picksCount: r.picks || meta.picksCount || 0,
-            cardCount: meta.cardCount || '',
-            ends: meta.ends || '',
-            reed: meta.reed || '',
-            description: meta.description || '',
-            previewImage: r.image_url || meta.previewImage || '',
-            specImage: meta.specImage || '',
-            originalImage: meta.originalImage || '',
-            epFile: rawEp,
-            epFileName: meta.epFileName || '',
-            designer: meta.designer || '',
-            jacquardType: meta.jacquardType || '',
-            productionFace: meta.productionFace || 'Front',
-            pettiCount: meta.pettiCount || 1,
-            pettiDetails: meta.pettiDetails || [{ name: '', cards: '' }],
-            variants: variants,
-            createdDate: meta.createdDate || (r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
-            lastUpdated: meta.lastUpdated || (r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
-            cropBox: meta.cropBox || null,
-            ocrBinarizeThreshold: meta.ocrBinarizeThreshold || 140,
-            deleted: Boolean(r.deleted)
-          };
-        }));
+          const activeList = Array.isArray(activeRows) ? activeRows.filter(r => !r.deleted) : [];
 
-        return { designs, tombstones };
+          const designs = activeList.map(r => {
+            const meta = (r.metadata && typeof r.metadata === 'object') ? r.metadata : {};
+            const rawEp = r.ep_file_url || meta.epFile || '';
+            const hasEp = Boolean(rawEp || meta.epFileName);
+
+            return {
+              ...meta,
+              id: r.id,
+              code: r.design_number || meta.code || r.design_name,
+              name: r.design_name || meta.name || r.design_number,
+              item: r.quality || meta.item || 'Jacquard',
+              loomType: meta.loomType || 'Jacquard',
+              hooksCount: r.total_hooks || meta.hooksCount || 0,
+              picksCount: r.picks || meta.picksCount || 0,
+              cardCount: meta.cardCount || '',
+              ends: meta.ends || '',
+              reed: meta.reed || '',
+              description: meta.description || '',
+              previewImage: r.image_url || meta.previewImage || '',
+              specImage: meta.specImage || '',
+              originalImage: meta.originalImage || '',
+              hasEp: hasEp,
+              epFile: (rawEp && typeof rawEp === 'string' && !rawEp.startsWith('gz64:')) ? rawEp : '',
+              epFileUrl: rawEp,
+              epFileName: meta.epFileName || '',
+              designer: meta.designer || '',
+              jacquardType: meta.jacquardType || '',
+              productionFace: meta.productionFace || 'Front',
+              pettiCount: meta.pettiCount || 1,
+              pettiDetails: meta.pettiDetails || [{ name: '', cards: '' }],
+              variants: meta.variants || [],
+              createdDate: meta.createdDate || (r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
+              lastUpdated: meta.lastUpdated || (r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
+              cropBox: meta.cropBox || null,
+              ocrBinarizeThreshold: meta.ocrBinarizeThreshold || 140,
+              deleted: false
+            };
+          });
+
+          return { designs, tombstones };
+        } catch(e) {
+          console.error("getDesignsWithTombstones error:", e);
+          return { designs: [], tombstones: [] };
+        }
       },
       async saveDesign(design) {
         if (!design) return { success: false, error: 'Empty design payload' };
@@ -8079,47 +8254,77 @@
           await supabaseLocalStorage.unrecordDeletion('loom-designs', [id, code]);
         }
 
-        const res = await VF_DB.upsert('vf_fabric_designs', [row]);
-        if (res.success) {
-          try {
-            // Keep broadcast payload strictly lightweight (<100KB) for instant <20ms WebSocket fanout
-            const isPreviewCompact = imageUrl && typeof imageUrl === 'string' && imageUrl.length < 180000;
-            const broadcastDesign = {
-              id: id,
-              code: code,
-              name: metadata.name,
-              item: metadata.item,
-              loomType: metadata.loomType,
-              hooksCount: metadata.hooksCount,
-              picksCount: metadata.picksCount,
-              cardCount: metadata.cardCount,
-              ends: metadata.ends,
-              reed: metadata.reed,
-              description: metadata.description,
-              previewImage: isPreviewCompact ? imageUrl : '',
-              designer: metadata.designer,
-              jacquardType: metadata.jacquardType,
-              productionFace: metadata.productionFace,
-              pettiCount: metadata.pettiCount,
-              pettiDetails: metadata.pettiDetails,
-              variants: (metadata.variants || []).map(v => ({ code: v.code || '', name: v.name || '' })),
-              createdDate: metadata.createdDate,
-              lastUpdated: metadata.lastUpdated,
-              cropBox: metadata.cropBox,
-              deleted: false
-            };
+        // Instant optimistic broadcast (<20ms WebSocket fanout to peer PCs)
+        try {
+          let broadcastImage = '';
+          if (imageUrl && typeof imageUrl === 'string') {
+            if (imageUrl.length < 50000) {
+              broadcastImage = imageUrl;
+            } else if (typeof createBroadcastThumbnail === 'function') {
+              broadcastImage = await createBroadcastThumbnail(imageUrl);
+            }
+          }
 
-            const broadcastPayload = {
-              action: 'design_saved',
-              id: id,
-              code: code,
-              design: broadcastDesign,
-              timestamp: Date.now()
-            };
-            broadcastRealtimeUpdate('loom-designs-signal', broadcastPayload);
-            window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', designId: id, info: broadcastPayload } }));
+          const broadcastDesign = {
+            id: id,
+            code: code,
+            name: metadata.name,
+            item: metadata.item,
+            loomType: metadata.loomType,
+            hooksCount: metadata.hooksCount,
+            picksCount: metadata.picksCount,
+            cardCount: metadata.cardCount,
+            ends: metadata.ends,
+            reed: metadata.reed,
+            description: metadata.description,
+            previewImage: broadcastImage,
+            hasEp: Boolean(epUrl || metadata.epFileName),
+            designer: metadata.designer,
+            jacquardType: metadata.jacquardType,
+            productionFace: metadata.productionFace,
+            pettiCount: metadata.pettiCount,
+            pettiDetails: metadata.pettiDetails,
+            variants: (metadata.variants || []).map(v => ({ code: v.code || '', name: v.name || '' })),
+            createdDate: metadata.createdDate,
+            lastUpdated: metadata.lastUpdated,
+            cropBox: metadata.cropBox,
+            deleted: Boolean(design.deleted)
+          };
+
+          const broadcastPayload = {
+            action: design.deleted ? 'design_deleted' : 'design_saved',
+            id: id,
+            code: code,
+            design: broadcastDesign,
+            timestamp: Date.now()
+          };
+
+          // If payload is still too large for WebSocket frame, fall back to lightweight payload
+          const rawBroadcastStr = JSON.stringify(broadcastPayload);
+          if (rawBroadcastStr.length > 150000) {
+            broadcastPayload.design.previewImage = '';
+            broadcastPayload.fetchFull = true;
+          }
+
+          broadcastRealtimeUpdate('loom-designs-signal', broadcastPayload);
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', designId: id, info: broadcastPayload } }));
+        } catch(e) {}
+
+        const res = await VF_DB.upsert('vf_fabric_designs', [row]);
+
+        // Purge any older ghost tombstone rows for this design code from Supabase
+        if (res && res.success && !design.deleted && code && SUPABASE_URL && SUPABASE_ANON_KEY) {
+          try {
+            fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?design_number=eq.${encodeURIComponent(code)}&deleted=eq.true`, {
+              method: 'DELETE',
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              }
+            }).catch(() => {});
           } catch(e) {}
         }
+
         return res;
       },
       async deleteDesign(id, code = '') {
