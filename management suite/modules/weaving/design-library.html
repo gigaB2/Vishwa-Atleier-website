@@ -2747,12 +2747,36 @@
                             const codeKey = d.code ? String(d.code).trim().toUpperCase() : '';
                             const loc = localImageLookup.get(idKey) || localImageLookup.get(codeKey);
                             if (loc) {
+                                let mergedVariants = (Array.isArray(d.variants) && d.variants.length > 0) ? d.variants : (loc.variants || []);
+                                if (Array.isArray(d.variants) && Array.isArray(loc.variants) && loc.variants.length > 0) {
+                                    mergedVariants = d.variants.map((dv, idx) => {
+                                        const lv = loc.variants[idx] || loc.variants.find(v => v.code === dv.code);
+                                        if (!lv) return dv;
+                                        return {
+                                            ...lv,
+                                            ...dv,
+                                            hooksCount: dv.hooksCount || lv.hooksCount,
+                                            picksCount: dv.picksCount || lv.picksCount,
+                                            cardCount: dv.cardCount || lv.cardCount,
+                                            ends: dv.ends || lv.ends,
+                                            reed: dv.reed || lv.reed,
+                                            jacquardType: dv.jacquardType || lv.jacquardType,
+                                            jalaType: dv.jalaType || lv.jalaType,
+                                            productionFace: dv.productionFace || lv.productionFace,
+                                            pettiCount: dv.pettiCount || lv.pettiCount,
+                                            pettiDetails: (dv.pettiDetails && dv.pettiDetails.length > 0 && dv.pettiDetails.some(p => p.name)) ? dv.pettiDetails : (lv.pettiDetails || dv.pettiDetails),
+                                            epFile: (dv.epFile && dv.epFile !== 'main') ? dv.epFile : (lv.epFile || dv.epFile || ''),
+                                            epFileName: dv.epFileName || lv.epFileName || ''
+                                        };
+                                    });
+                                }
                                 return {
                                     ...d,
                                     originalImage: d.originalImage || loc.originalImage || '',
                                     previewImage: d.previewImage || loc.previewImage || '',
                                     specImage: d.specImage || loc.specImage || '',
-                                    cropBox: d.cropBox || loc.cropBox || null
+                                    cropBox: d.cropBox || loc.cropBox || null,
+                                    variants: mergedVariants
                                 };
                             }
                             return d;
@@ -2933,6 +2957,28 @@
                                 const list = Array.isArray(prev) ? prev : [];
                                 const inId = String(incoming.id || '').trim().toLowerCase();
                                 const inCode = String(incoming.code || '').trim().toUpperCase();
+                                const existing = list.find(d => {
+                                    if (!d) return false;
+                                    const dId = String(d.id || '').trim().toLowerCase();
+                                    const dCode = String(d.code || '').trim().toUpperCase();
+                                    return (inId && dId && dId === inId) || (inCode && dCode && dCode === inCode);
+                                });
+
+                                let mergedIncoming = { ...incoming };
+                                if (existing) {
+                                    mergedIncoming = {
+                                        ...existing,
+                                        ...incoming,
+                                        originalImage: incoming.originalImage || existing.originalImage || '',
+                                        previewImage: incoming.previewImage || existing.previewImage || '',
+                                        specImage: incoming.specImage || existing.specImage || '',
+                                        cropBox: incoming.cropBox || existing.cropBox || null,
+                                        variants: (Array.isArray(incoming.variants) && incoming.variants.length > 0 && incoming.variants.some(v => v.hooksCount || v.picksCount))
+                                            ? incoming.variants
+                                            : (existing.variants && existing.variants.length > 0 ? existing.variants : (incoming.variants || []))
+                                    };
+                                }
+
                                 const filtered = list.filter(d => {
                                     if (!d) return false;
                                     const dId = String(d.id || '').trim().toLowerCase();
@@ -2941,7 +2987,7 @@
                                     if (inCode && dCode && dCode === inCode) return false;
                                     return true;
                                 });
-                                const updated = [incoming, ...filtered];
+                                const updated = [mergedIncoming, ...filtered];
                                 saveDesignsToIDB(updated);
                                 return updated;
                             });
@@ -2954,6 +3000,26 @@
                                             const list = Array.isArray(prev) ? prev : [];
                                             const fId = String(full.id || '').trim().toLowerCase();
                                             const fCode = String(full.code || '').trim().toUpperCase();
+                                            const existing = list.find(d => {
+                                                if (!d) return false;
+                                                const dId = String(d.id || '').trim().toLowerCase();
+                                                const dCode = String(d.code || '').trim().toUpperCase();
+                                                return (fId && dId && dId === fId) || (fCode && dCode && dCode === fCode);
+                                            });
+                                            let mergedFull = { ...full };
+                                            if (existing) {
+                                                mergedFull = {
+                                                    ...existing,
+                                                    ...full,
+                                                    originalImage: full.originalImage || existing.originalImage || '',
+                                                    previewImage: full.previewImage || existing.previewImage || '',
+                                                    specImage: full.specImage || existing.specImage || '',
+                                                    cropBox: full.cropBox || existing.cropBox || null,
+                                                    variants: (Array.isArray(full.variants) && full.variants.length > 0)
+                                                        ? full.variants
+                                                        : (existing.variants || [])
+                                                };
+                                            }
                                             const filtered = list.filter(d => {
                                                 if (!d) return false;
                                                 const dId = String(d.id || '').trim().toLowerCase();
@@ -2962,7 +3028,7 @@
                                                 if (fCode && dCode && dCode === fCode) return false;
                                                 return true;
                                             });
-                                            const updated = [full, ...filtered];
+                                            const updated = [mergedFull, ...filtered];
                                             saveDesignsToIDB(updated);
                                             return updated;
                                         });
@@ -2977,6 +3043,26 @@
                                         const list = Array.isArray(prev) ? prev : [];
                                         const sId = String(single.id || '').trim().toLowerCase();
                                         const sCode = String(single.code || '').trim().toUpperCase();
+                                        const existing = list.find(d => {
+                                            if (!d) return false;
+                                            const dId = String(d.id || '').trim().toLowerCase();
+                                            const dCode = String(d.code || '').trim().toUpperCase();
+                                            return (sId && dId && dId === sId) || (sCode && dCode && dCode === sCode);
+                                        });
+                                        let mergedSingle = { ...single };
+                                        if (existing) {
+                                            mergedSingle = {
+                                                ...existing,
+                                                ...single,
+                                                originalImage: single.originalImage || existing.originalImage || '',
+                                                previewImage: single.previewImage || existing.previewImage || '',
+                                                specImage: single.specImage || existing.specImage || '',
+                                                cropBox: single.cropBox || existing.cropBox || null,
+                                                variants: (Array.isArray(single.variants) && single.variants.length > 0)
+                                                    ? single.variants
+                                                    : (existing.variants || [])
+                                            };
+                                        }
                                         const filtered = list.filter(d => {
                                             if (!d) return false;
                                             const dId = String(d.id || '').trim().toLowerCase();
@@ -2985,7 +3071,7 @@
                                             if (sCode && dCode && dCode === sCode) return false;
                                             return true;
                                         });
-                                        const updated = [single, ...filtered];
+                                        const updated = [mergedSingle, ...filtered];
                                         saveDesignsToIDB(updated);
                                         return updated;
                                     });
@@ -3817,13 +3903,19 @@
                 return () => window.removeEventListener('supabase-status', handleStatusChange);
             }, []);
 
-            // Auto-hydrate complete design files (EP binary + full image) on inspection
+            // Auto-hydrate complete design files (EP binary + full image + variants) on inspection
             useEffect(() => {
-                if (selectedDesign && selectedDesign.id && (!selectedDesign.epFile && selectedDesign.hasEp)) {
-                    if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignById === 'function') {
+                if (selectedDesign && selectedDesign.id) {
+                    const needsEp = !selectedDesign.epFile && selectedDesign.hasEp;
+                    const needsVariants = !selectedDesign.variants || selectedDesign.variants.length === 0 || selectedDesign.variants.some(v => !v.hooksCount && !v.picksCount);
+                    if ((needsEp || needsVariants) && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignById === 'function') {
                         window.VF_DB.weaving.getDesignById(selectedDesign.id).then(full => {
-                            if (full && full.epFile) {
-                                setSelectedDesign(prev => (prev && prev.id === full.id) ? { ...prev, ...full } : prev);
+                            if (full) {
+                                setSelectedDesign(prev => (prev && prev.id === full.id) ? {
+                                    ...prev,
+                                    ...full,
+                                    variants: (Array.isArray(full.variants) && full.variants.length > 0) ? full.variants : prev.variants
+                                } : prev);
                             }
                         }).catch(() => {});
                     }

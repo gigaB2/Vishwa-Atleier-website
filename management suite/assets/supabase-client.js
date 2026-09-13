@@ -2965,7 +2965,9 @@
             }
 
             // Dedicated Relational Synchronization for Loom Designs (Design Library - Single Source of Truth)
-            if ((key === 'loom-designs' || key === 'loom_designs') && Array.isArray(value)) {
+            // Note: Loom designs are synced individually via window.VF_DB.weaving.saveDesign.
+            // Bypassed here to avoid infinite feedback loops and duplicate updates.
+            if (false && (key === 'loom-designs' || key === 'loom_designs') && Array.isArray(value)) {
               try {
                 const cleanValue = filterDeletedEntities(value);
                 const dRows = cleanValue.filter(d => d && (d.id || d.code)).map(d => {
@@ -7210,6 +7212,11 @@
         return;
       }
 
+      // Loom designs are managed relationally via window.VF_DB.weaving.saveDesign; bypass kv_store and bulk relational save to prevent infinite Realtime loops
+      if (key === 'loom-designs' || key === 'loom_designs') {
+        return;
+      }
+
       supabaseApi.set(key, parsedVal);
     },
     removeItem: function(key) {
@@ -8056,10 +8063,12 @@
           let variants = meta.variants || [];
           if (Array.isArray(variants)) {
             variants = await Promise.all(variants.map(async (v, vIdx) => {
-              if (v && typeof v.epFile === 'string' && v.epFile.startsWith('gz64:')) {
-                return { ...v, epFile: await decompressBase64(v.epFile, `${r.id}_var_${vIdx}_${r.updated_at}`) };
+              let vEp = v.epFile;
+              if (vEp === 'main') vEp = rawEp;
+              if (vEp && typeof vEp === 'string' && vEp.startsWith('gz64:')) {
+                vEp = await decompressBase64(vEp, `${r.id}_var_${vIdx}_${r.updated_at}`);
               }
-              return v;
+              return { ...v, epFile: vEp };
             }));
           }
           return {
@@ -8153,7 +8162,10 @@
               productionFace: meta.productionFace || 'Front',
               pettiCount: meta.pettiCount || 1,
               pettiDetails: meta.pettiDetails || [{ name: '', cards: '' }],
-              variants: meta.variants || [],
+              variants: (meta.variants || []).map(v => ({
+                ...v,
+                epFile: v.epFile === 'main' ? rawEp : (v.epFile || '')
+              })),
               createdDate: meta.createdDate || (r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
               lastUpdated: meta.lastUpdated || (r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''),
               cropBox: meta.cropBox || null,
@@ -8300,7 +8312,22 @@
             productionFace: metadata.productionFace,
             pettiCount: metadata.pettiCount,
             pettiDetails: metadata.pettiDetails,
-            variants: (metadata.variants || []).map(v => ({ code: v.code || '', name: v.name || '' })),
+            variants: (metadata.variants || []).map(v => ({
+              code: v.code || '',
+              name: v.name || '',
+              hooksCount: v.hooksCount || 0,
+              picksCount: v.picksCount || 0,
+              cardCount: v.cardCount || '',
+              ends: v.ends || '',
+              reed: v.reed || '',
+              jacquardType: v.jacquardType || '',
+              jalaType: v.jalaType || '',
+              productionFace: v.productionFace || 'Front',
+              pettiCount: v.pettiCount || 1,
+              pettiDetails: v.pettiDetails || [{ name: '', cards: '' }],
+              epFileName: v.epFileName || '',
+              epFile: (v.epFile && typeof v.epFile === 'string' && v.epFile.length < 50000 && !v.epFile.startsWith('data:application/octet-stream;base64,')) ? v.epFile : ''
+            })),
             createdDate: metadata.createdDate,
             lastUpdated: metadata.lastUpdated,
             cropBox: metadata.cropBox,
@@ -8324,7 +8351,7 @@
           }
 
           broadcastRealtimeUpdate('loom-designs-signal', broadcastPayload);
-          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'loom-designs', designId: id, info: broadcastPayload } }));
+          // Note: Do not dispatch stripped broadcast payload to local window; local state already holds the uncompressed full design.
         } catch(e) {}
 
         const res = await VF_DB.upsert('vf_fabric_designs', [row]);
