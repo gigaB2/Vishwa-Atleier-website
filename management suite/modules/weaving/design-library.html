@@ -4738,11 +4738,64 @@
 
             // Filters & Stable Sorting
             const filteredDesigns = useMemo(() => {
+                const stripPrefix = (c) => {
+                    if (!c) return '';
+                    const cleaned = String(c).trim();
+                    const match = cleaned.match(/^V\d{2}[A-Za-z](.+)$/i);
+                    return match ? match[1] : cleaned;
+                };
+
+                const rawQuery = (universalSearch || '').trim().toLowerCase();
+
                 const list = designs.filter(design => {
-                    const matchesSearch = 
-                        (design.item || '').toLowerCase().includes(universalSearch.toLowerCase()) ||
-                        (design.code || '').toLowerCase().includes(universalSearch.toLowerCase()) ||
-                        (design.description || '').toLowerCase().includes(universalSearch.toLowerCase());
+                    let matchesSearch = true;
+                    if (rawQuery) {
+                        const codesToSearch = [];
+                        if (design.code) {
+                            codesToSearch.push(String(design.code).toLowerCase());
+                            codesToSearch.push(stripPrefix(design.code).toLowerCase());
+                        }
+                        if (design.secondaryCode) codesToSearch.push(String(design.secondaryCode).toLowerCase());
+                        if (design.secondary_code) codesToSearch.push(String(design.secondary_code).toLowerCase());
+                        if (design.secondary) codesToSearch.push(String(design.secondary).toLowerCase());
+                        if (design.secCode) codesToSearch.push(String(design.secCode).toLowerCase());
+                        if (design.sec_code) codesToSearch.push(String(design.sec_code).toLowerCase());
+
+                        if (Array.isArray(design.variants)) {
+                            design.variants.forEach(v => {
+                                if (!v) return;
+                                if (v.code) {
+                                    codesToSearch.push(String(v.code).toLowerCase());
+                                    codesToSearch.push(stripPrefix(v.code).toLowerCase());
+                                }
+                                if (v.secondaryCode) codesToSearch.push(String(v.secondaryCode).toLowerCase());
+                                if (v.secondary_code) codesToSearch.push(String(v.secondary_code).toLowerCase());
+                                if (v.name) codesToSearch.push(String(v.name).toLowerCase());
+                            });
+
+                            const uniqueStripped = [...new Set(design.variants.map(v => stripPrefix(v && v.code)))].filter(Boolean);
+                            if (uniqueStripped.length > 0) {
+                                codesToSearch.push(uniqueStripped.join(' & ').toLowerCase());
+                                codesToSearch.push(uniqueStripped.join('&').toLowerCase());
+                                codesToSearch.push(uniqueStripped.join(' ').toLowerCase());
+                            }
+                        }
+
+                        const textToSearch = [
+                            String(design.item || '').toLowerCase(),
+                            String(design.description || '').toLowerCase(),
+                            String(design.designer || '').toLowerCase(),
+                            ...codesToSearch
+                        ];
+
+                        const queryTokens = rawQuery.includes(',') 
+                            ? rawQuery.split(',').map(s => s.trim()).filter(Boolean)
+                            : [rawQuery];
+
+                        matchesSearch = queryTokens.some(token => 
+                            textToSearch.some(text => text.includes(token))
+                        );
+                    }
 
                     const matchesItem = itemFilter === 'All' || design.item === itemFilter;
                     let matchesFY = fyFilter === 'All';
@@ -5671,7 +5724,7 @@
                                 <input 
                                     className="input-control" 
                                     type="text" 
-                                    placeholder="Search code, item…" 
+                                    placeholder="Search code, secondary code, item…" 
                                     value={universalSearch}
                                     onChange={(e) => setUniversalSearch(e.target.value)}
                                 />
