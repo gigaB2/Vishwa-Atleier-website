@@ -1793,12 +1793,12 @@
     } catch(e) {}
   }
 
-  // Purge disconnected users who haven't pinged in > 22 seconds (2 missed 10s heartbeats)
+  // Purge disconnected users who haven't pinged in > 70 seconds (2 missed 30s heartbeats)
   const presencePurgeTimer = setInterval(() => {
     const now = Date.now();
     let changed = false;
     Object.keys(presenceStore).forEach(cid => {
-      if (cid !== CLIENT_ID && now - (presenceStore[cid].lastPing || 0) > 22000) {
+      if (cid !== CLIENT_ID && now - (presenceStore[cid].lastPing || 0) > 70000) {
         delete presenceStore[cid];
         changed = true;
       }
@@ -1806,13 +1806,13 @@
     if (changed) {
       notifyPresenceListeners();
     }
-  }, 4000);
+  }, 10000);
   if (typeof presencePurgeTimer?.unref === 'function') presencePurgeTimer.unref();
 
-  // Send periodic presence ping every 10 seconds to keep presence fresh
+  // Send periodic presence ping every 30 seconds to keep presence fresh without overloading Realtime Gateway
   const presencePingTimer = setInterval(() => {
     sendPresencePing();
-  }, 10000);
+  }, 30000);
   if (typeof presencePingTimer?.unref === 'function') presencePingTimer.unref();
 
   // Hook tab visibility & page unload
@@ -2799,6 +2799,30 @@
 
   const fetchAllRows = fetchAllRowsPaginated;
 
+  // Optimized batch deletion helper (Prevents N+1 HTTP request spikes to Supabase API Gateway)
+  async function deleteRowsBatch(tableName, idList, idCol = 'id') {
+    if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+    if (!Array.isArray(idList) || idList.length === 0) return;
+
+    const chunkSize = 100;
+    for (let i = 0; i < idList.length; i += chunkSize) {
+      const chunk = idList.slice(i, i + chunkSize);
+      try {
+        const encoded = chunk.map(id => `"${encodeURIComponent(id)}"`).join(',');
+        await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?${idCol}=in.(${encoded})`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+      } catch (err) {
+        console.warn(`deleteRowsBatch notice for ${tableName}:`, err);
+      }
+    }
+  }
+
+
   // Supabase REST API Client
   const supabaseApi = {
     isHydrated: () => isHydrated,
@@ -3041,14 +3065,10 @@
                     const dbExisting = await fetchAllRowsPaginated('vf_rm_qualities', 'id');
                     if (Array.isArray(dbExisting)) {
                       const validIdSet = new Set(qRows.map(r => String(r.id).toLowerCase()));
-                      const toDelete = dbExisting.filter(d => d && d.id && !validIdSet.has(String(d.id).toLowerCase()));
-                      toDelete.forEach(d => {
-                        const encId = encodeURIComponent(d.id);
-                        fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities?id=eq.${encId}`, {
-                          method: 'DELETE',
-                          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-                        }).catch(() => {});
-                      });
+                      const toDeleteIds = dbExisting.filter(d => d && d.id && !validIdSet.has(String(d.id).toLowerCase())).map(d => d.id);
+                      if (toDeleteIds.length > 0) {
+                        await deleteRowsBatch('vf_rm_qualities', toDeleteIds, 'id');
+                      }
                     }
                   } catch(delErr) {}
                 } else if (cleanValue.length === 0) {
@@ -3098,14 +3118,10 @@
                     const dbExisting = await fetchAllRowsPaginated('vf_fp_qualities', 'id');
                     if (Array.isArray(dbExisting)) {
                       const validIdSet = new Set(fpRows.map(r => String(r.id).toLowerCase()));
-                      const toDelete = dbExisting.filter(d => d && d.id && !validIdSet.has(String(d.id).toLowerCase()));
-                      toDelete.forEach(d => {
-                        const encId = encodeURIComponent(d.id);
-                        fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities?id=eq.${encId}`, {
-                          method: 'DELETE',
-                          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-                        }).catch(() => {});
-                      });
+                      const toDeleteIds = dbExisting.filter(d => d && d.id && !validIdSet.has(String(d.id).toLowerCase())).map(d => d.id);
+                      if (toDeleteIds.length > 0) {
+                        await deleteRowsBatch('vf_fp_qualities', toDeleteIds, 'id');
+                      }
                     }
                   } catch(delErr) {}
                 } else if (cleanValue.length === 0) {
@@ -3152,14 +3168,10 @@
                     const dbExisting = await fetchAllRowsPaginated('vf_rm_suppliers', 'id');
                     if (Array.isArray(dbExisting)) {
                       const validIdSet = new Set(sRows.map(r => String(r.id).toLowerCase()));
-                      const toDelete = dbExisting.filter(d => d && d.id && !validIdSet.has(String(d.id).toLowerCase()));
-                      toDelete.forEach(d => {
-                        const encId = encodeURIComponent(d.id);
-                        fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers?id=eq.${encId}`, {
-                          method: 'DELETE',
-                          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-                        }).catch(() => {});
-                      });
+                      const toDeleteIds = dbExisting.filter(d => d && d.id && !validIdSet.has(String(d.id).toLowerCase())).map(d => d.id);
+                      if (toDeleteIds.length > 0) {
+                        await deleteRowsBatch('vf_rm_suppliers', toDeleteIds, 'id');
+                      }
                     }
                   } catch(delErr) {}
                 } else if (cleanValue.length === 0) {
@@ -4436,60 +4448,51 @@
           window.dispatchEvent(new Event('storage'));
         } catch(e) {}
 
-        // Dispatch REST DELETE to all relevant Supabase tables
-        if (activeConfig.isConfigured && SUPABASE_URL) {
-          const restHeaders = {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-          };
+        // Dispatch REST DELETE to all relevant Supabase tables using batch delete
+        if (activeConfig.isConfigured && SUPABASE_URL && targetIds.length > 0) {
+          // Costing tables
+          if (key === 'costing-products-v4') deleteRowsBatch('vf_costing_products', targetIds);
+          else if (key === 'costing-tfo-products-v1') deleteRowsBatch('vf_costing_tfo_products', targetIds);
+          else if (key === 'costing-doubler-products-v1') deleteRowsBatch('vf_costing_doubler_products', targetIds);
+          else if (key === 'costing-covering-products-v1') deleteRowsBatch('vf_costing_covering_products', targetIds);
+          
+          // Qualities & Suppliers
+          else if (key === 'yarn-qualities') {
+            deleteRowsBatch('vf_rm_qualities', targetIds, 'id');
+            deleteRowsBatch('vf_rm_qualities', targetIds, 'quality');
+          }
+          else if (key === 'yarn-fp-qualities') {
+            deleteRowsBatch('vf_fp_qualities', targetIds, 'id');
+            deleteRowsBatch('vf_fp_qualities', targetIds, 'name');
+          }
+          else if (key === 'yarn-suppliers') {
+            deleteRowsBatch('vf_rm_suppliers', targetIds, 'id');
+            deleteRowsBatch('vf_rm_suppliers', targetIds, 'name');
+          }
+          
+          // Yarn Production & Sales Logs
+          else if (key && key.startsWith('yarn_') && key.endsWith('_production_logs')) {
+            deleteRowsBatch('vf_yarn_production_logs', targetIds, 'id');
+          }
+          else if (key && key.startsWith('yarn_') && key.endsWith('_sales_logs')) {
+            deleteRowsBatch('vf_yarn_sales_logs', targetIds, 'id');
+          }
 
-          targetIds.forEach(idStr => {
-            const encId = encodeURIComponent(idStr);
+          // Beam Loadings
+          else if (key === 'warp-beam-loadings') {
+            deleteRowsBatch('vf_warp_beam_loadings', targetIds, 'id');
+          }
 
-            // Costing tables
-            if (key === 'costing-products-v4') fetch(`${SUPABASE_URL}/rest/v1/vf_costing_products?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-            else if (key === 'costing-tfo-products-v1') fetch(`${SUPABASE_URL}/rest/v1/vf_costing_tfo_products?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-            else if (key === 'costing-doubler-products-v1') fetch(`${SUPABASE_URL}/rest/v1/vf_costing_doubler_products?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-            else if (key === 'costing-covering-products-v1') fetch(`${SUPABASE_URL}/rest/v1/vf_costing_covering_products?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-            
-            // Qualities & Suppliers
-            else if (key === 'yarn-qualities') {
-              fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-              fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities?quality=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-            }
-            else if (key === 'yarn-fp-qualities') {
-              fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-              fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities?name=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-            }
-            else if (key === 'yarn-suppliers') {
-              fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-              fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers?name=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-            }
-            
-            // Yarn Production & Sales Logs
-            else if (key && key.startsWith('yarn_') && key.endsWith('_production_logs')) {
-              fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-            }
-            else if (key && key.startsWith('yarn_') && key.endsWith('_sales_logs')) {
-              fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_sales_logs?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-            }
-
-            // Beam Loadings
-            else if (key === 'warp-beam-loadings') {
-              fetch(`${SUPABASE_URL}/rest/v1/vf_warp_beam_loadings?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-            }
-
-            // Staff & Salary (vf_employees, vf_employee_loans, vf_attendance_records)
-            if (key === 'aethertasks_db_state_v7' || key === 'manage-staff' || key === 'employees' || key === 'staff-salary-state') {
-              fetch(`${SUPABASE_URL}/rest/v1/vf_employees?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-              fetch(`${SUPABASE_URL}/rest/v1/vf_employees?name=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-              fetch(`${SUPABASE_URL}/rest/v1/vf_employee_loans?id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-              fetch(`${SUPABASE_URL}/rest/v1/vf_employee_loans?employee_id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-              fetch(`${SUPABASE_URL}/rest/v1/vf_employee_loans?employee_name=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-              fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records?employee_id=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-              fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records?employee_name=eq.${encId}`, { method: 'DELETE', headers: restHeaders }).catch(() => {});
-            }
-          });
+          // Staff & Salary (vf_employees, vf_employee_loans, vf_attendance_records)
+          if (key === 'aethertasks_db_state_v7' || key === 'manage-staff' || key === 'employees' || key === 'staff-salary-state') {
+            deleteRowsBatch('vf_employees', targetIds, 'id');
+            deleteRowsBatch('vf_employees', targetIds, 'name');
+            deleteRowsBatch('vf_employee_loans', targetIds, 'id');
+            deleteRowsBatch('vf_employee_loans', targetIds, 'employee_id');
+            deleteRowsBatch('vf_employee_loans', targetIds, 'employee_name');
+            deleteRowsBatch('vf_attendance_records', targetIds, 'employee_id');
+            deleteRowsBatch('vf_attendance_records', targetIds, 'employee_name');
+          }
         }
       } catch (e) {}
     },
@@ -5146,15 +5149,9 @@
 
                 // Purge obsolete rows from database table
                 const finalIdSet = new Set(finalQualities.map(q => String(q.id || '').toLowerCase()));
-                const obsoleteDbRows = dbQualities.filter(q => q && q.id && !finalIdSet.has(String(q.id).toLowerCase()));
-                if (obsoleteDbRows.length > 0) {
-                  obsoleteDbRows.forEach(obs => {
-                    const encId = encodeURIComponent(obs.id);
-                    fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities?id=eq.${encId}`, {
-                      method: 'DELETE',
-                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-                    }).catch(() => {});
-                  });
+                const obsoleteIds = dbQualities.filter(q => q && q.id && !finalIdSet.has(String(q.id).toLowerCase())).map(q => q.id);
+                if (obsoleteIds.length > 0) {
+                  deleteRowsBatch('vf_rm_qualities', obsoleteIds, 'id');
                 }
 
                 const lastQWrite = lastLocalWrites[qKey] || 0;
@@ -5737,14 +5734,9 @@
                   const divRows = dbYarnSales.filter(r => (r.division || '').toLowerCase() === div && !tombstoneSet.has(String(r.id)));
 
                   // Background permanent purge of tombstoned records still on DB
-                  const tombstonedInDb = dbYarnSales.filter(r => (r.division || '').toLowerCase() === div && tombstoneSet.has(String(r.id)));
-                  if (tombstonedInDb.length > 0 && activeConfig.isConfigured && SUPABASE_URL) {
-                    tombstonedInDb.forEach(tRow => {
-                      fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_sales_logs?id=eq.${encodeURIComponent(tRow.id)}`, {
-                        method: 'DELETE',
-                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-                      }).catch(() => {});
-                    });
+                  const tombstonedIds = dbYarnSales.filter(r => (r.division || '').toLowerCase() === div && tombstoneSet.has(String(r.id))).map(r => r.id);
+                  if (tombstonedIds.length > 0 && activeConfig.isConfigured && SUPABASE_URL) {
+                    deleteRowsBatch('vf_yarn_sales_logs', tombstonedIds, 'id');
                   }
 
                   const reconstructed = divRows.map(ys => {

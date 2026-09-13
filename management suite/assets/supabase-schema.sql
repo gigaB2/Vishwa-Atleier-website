@@ -251,6 +251,47 @@ AS $$
     );
 $$;
 
+-- Universal Batch Deletion RPC (Prevents N+1 client HTTP requests & reduces Postgres load)
+CREATE OR REPLACE FUNCTION public.vf_bulk_delete_entities(
+    p_table TEXT,
+    p_ids TEXT[],
+    p_id_column TEXT DEFAULT 'id'
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_deleted_count INT := 0;
+    v_sql TEXT;
+BEGIN
+    IF p_table IS NULL OR p_ids IS NULL OR array_length(p_ids, 1) IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'deleted_count', 0, 'error', 'Invalid arguments');
+    END IF;
+
+    -- Whitelist valid table names for security
+    IF p_table NOT IN (
+        'vf_kv_store', 'vf_costing_products', 'vf_costing_tfo_products', 'vf_costing_doubler_products',
+        'vf_costing_covering_products', 'vf_yarn_rm_lots', 'vf_yarn_rm_boxes', 'vf_yarn_orders',
+        'vf_yarn_order_batches', 'vf_yarn_order_boxes', 'vf_weft_issues', 'vf_warp_beams',
+        'vf_warp_issues', 'vf_warp_beam_loadings', 'vf_weaving_production_logs', 'vf_yarn_production_logs',
+        'vf_yarn_sales_logs', 'vf_fabric_dispatches', 'vf_fabric_cut_relations', 'vf_employees',
+        'vf_attendance_records', 'vf_employee_loans', 'vf_salary_settlements', 'vf_rm_qualities',
+        'vf_fp_qualities', 'vf_rm_suppliers', 'vf_fabric_designs', 'vf_machinery_assets', 'vf_companies'
+    ) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Table not permitted for bulk deletion');
+    END IF;
+
+    v_sql := format('DELETE FROM public.%I WHERE %I = ANY($1)', p_table, p_id_column);
+    EXECUTE v_sql USING p_ids;
+    GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
+
+    RETURN jsonb_build_object('success', true, 'deleted_count', v_deleted_count);
+END;
+$$;
+
+
 -- 10. Dedicated Relational Table: Yarn RM Purchase Orders
 CREATE TABLE IF NOT EXISTS public.vf_yarn_orders (
     id TEXT PRIMARY KEY,
@@ -1047,45 +1088,33 @@ END $$;
 -- Supabase Realtime Broadcast Configuration
 -- ==============================================================================
 
--- Enable Realtime publication on all synchronized tables (if supabase_realtime publication exists)
+-- Enable Realtime publication ONLY on essential low-frequency tables
+-- (Dropping high-volume relational tables from Realtime prevents WAL sender CPU exhaustion & 504 timeouts)
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_kv_store;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_costing_products;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_costing_tfo_products;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_costing_doubler_products;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_costing_covering_products;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_audit_logs;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_rm_lots;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_rm_boxes;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_rm_transactions;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_orders;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_order_batches;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_order_boxes;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_weft_issues;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_warp_beams;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_warp_issues;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_warp_beam_loadings;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_weaving_production_logs;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_production_logs;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_yarn_sales_logs;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_dispatches;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_cut_relations;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_employees;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_attendance_records;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_employee_loans;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_salary_settlements;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_rm_qualities;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fp_qualities;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_rm_suppliers;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_designs;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_machinery_assets;
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_companies;
+        -- Safely drop high-frequency logs and heavy relational tables from logical replication
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_rm_boxes; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_order_boxes; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_rm_transactions; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_weaving_production_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_production_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_sales_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_attendance_records; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_audit_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_weft_issues; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_warp_issues; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_warp_beam_loadings; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_fabric_dispatches; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_fabric_cut_relations; EXCEPTION WHEN others THEN NULL; END;
+
+        -- Ensure essential state tables are published for instant sync
+        BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_kv_store; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_designs; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
     END IF;
 EXCEPTION
-    WHEN duplicate_object THEN NULL;
     WHEN others THEN NULL;
 END $$;
+
 
 
