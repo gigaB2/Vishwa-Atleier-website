@@ -8099,14 +8099,14 @@
       async getDesignsWithTombstones(options = {}) {
         if (!VF_DB.isConfigured()) return { designs: [], tombstones: [] };
         try {
-          const listSelect = options.select || 'id,design_name,design_number,quality,image_url,picks,repeats,total_hooks,width,avg_weight,deleted,metadata,created_at,updated_at';
+          const select = options.select || 'id,design_name,design_number,quality,image_url,ep_file_url,picks,repeats,total_hooks,width,avg_weight,deleted,metadata,created_at,updated_at';
           
           // High-speed parallel fetch: active designs (indexed on deleted + updated_at) and lightweight tombstones
           const [activeRows, tombstoneRows] = await Promise.all([
             VF_DB.fetchTable('vf_fabric_designs', {
               order: 'updated_at.desc',
               filter: 'deleted=is.false',
-              select: listSelect,
+              select: select,
               ...options
             }).catch(() => []),
             VF_DB.fetchTable('vf_fabric_designs', {

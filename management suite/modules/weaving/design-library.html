@@ -539,25 +539,27 @@
 
         .card-preview-container {
             aspect-ratio: 4/3;
+            width: 100%;
             background: #e2e8f0;
             position: relative;
             overflow: hidden;
             border-bottom: 1px solid var(--border);
             cursor: pointer;
+            contain: paint;
         }
 
         .card-preview-image {
             width: 100%;
             height: 100%;
+            display: block;
             object-fit: cover;
-            transition: transform var(--transition-slow);
-            backface-visibility: hidden;
-            transform-style: preserve-3d;
+            transition: transform var(--transition-base);
+            will-change: transform;
             image-rendering: auto;
         }
 
         .design-card:hover .card-preview-image {
-            transform: scale(1.05);
+            transform: scale(1.04);
         }
 
         .card-badges {
@@ -1879,7 +1881,9 @@
                 }
 
                 const img = new Image();
-                img.crossOrigin = "anonymous";
+                if (!imageSrc.startsWith('data:') && !imageSrc.startsWith('blob:')) {
+                    img.crossOrigin = "anonymous";
+                }
                 img.onload = () => {
                     try {
                         const canvas = document.createElement('canvas');
@@ -1945,7 +1949,6 @@
                         imageCropCache.set(cacheKey, resultUrl);
                         resolve(resultUrl);
                     } catch (e) {
-                        console.error("removeSpecsColumn error:", e);
                         resolve(imageSrc);
                     }
                 };
@@ -1957,40 +1960,74 @@
         // --- Global Cache & Dynamic Image Cropping React Components ---
         const imageCropCache = new Map();
 
-        const FabricPreviewImage = ({ src, cropBox, className, style, alt }) => {
-            const [displaySrc, setDisplaySrc] = useState(src || '');
+        const getCropCacheKey = (imageSrc, crop) => {
+            if (!imageSrc) return '';
+            let cropStr = '';
+            try {
+                cropStr = typeof crop === 'string' ? crop : JSON.stringify(crop);
+            } catch(e) { cropStr = String(crop); }
+            const srcKey = imageSrc.startsWith('data:') ? (imageSrc.substring(0, 150) + '_' + imageSrc.length) : imageSrc;
+            return srcKey + '_' + cropStr;
+        };
+
+        const FabricPreviewImage = React.memo(({ src, cropBox, className, style, alt }) => {
+            const rawSrc = src || '';
+            const [displaySrc, setDisplaySrc] = useState(() => {
+                if (!rawSrc) return '';
+                if (!cropBox) return rawSrc;
+                const key = getCropCacheKey(rawSrc, cropBox);
+                return imageCropCache.has(key) ? imageCropCache.get(key) : rawSrc;
+            });
 
             useEffect(() => {
-                if (!cropBox || !src) {
-                    setDisplaySrc(src || '');
+                if (!rawSrc) {
+                    setDisplaySrc('');
+                    return;
+                }
+                if (!cropBox) {
+                    setDisplaySrc(rawSrc);
+                    return;
+                }
+
+                const key = getCropCacheKey(rawSrc, cropBox);
+                if (imageCropCache.has(key)) {
+                    setDisplaySrc(imageCropCache.get(key));
                     return;
                 }
 
                 let isMounted = true;
-                removeSpecsColumn(src, cropBox).then(cleanSrc => {
-                    if (isMounted) setDisplaySrc(cleanSrc || src);
+                removeSpecsColumn(rawSrc, cropBox).then(cleanSrc => {
+                    if (isMounted && cleanSrc) {
+                        setDisplaySrc(cleanSrc);
+                    }
                 }).catch(() => {
-                    if (isMounted) setDisplaySrc(src);
+                    if (isMounted) setDisplaySrc(rawSrc);
                 });
 
                 return () => {
                     isMounted = false;
                 };
-            }, [src, cropBox]);
+            }, [rawSrc, JSON.stringify(cropBox)]);
+
+            const activeSrc = displaySrc || rawSrc;
 
             return (
                 <img 
                     className={className} 
-                    src={displaySrc || src || ''} 
+                    src={activeSrc || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'} 
                     alt={alt || 'Design Preview'} 
                     style={style} 
                     loading="lazy" 
                 />
             );
-        };
+        });
 
-        const SpecCardImage = ({ src, specImage, fallbackImage, cropBox, threshold, className, style, alt }) => {
-            const [binarizedSrc, setBinarizedSrc] = useState('');
+        const SpecCardImage = React.memo(({ src, specImage, fallbackImage, cropBox, threshold, className, style, alt }) => {
+            const raw = specImage || src || fallbackImage || '';
+            const [binarizedSrc, setBinarizedSrc] = useState(() => {
+                const directSpec = specImage || (src && src.startsWith('data:image/') && (!cropBox || cropBox.isPreCropped) ? src : '');
+                return directSpec || raw || '';
+            });
 
             useEffect(() => {
                 const directSpec = specImage || (src && src.startsWith('data:image/') && (!cropBox || cropBox.isPreCropped) ? src : '');
@@ -2018,27 +2055,28 @@
 
                 runBinarizedOcr(fullSrc, crop, th, 1.5)
                     .then(({ binarizedDataUrl }) => {
-                        if (isMounted) setBinarizedSrc(binarizedDataUrl);
+                        if (isMounted && binarizedDataUrl) setBinarizedSrc(binarizedDataUrl);
                     })
                     .catch(err => {
-                        console.error("Error generating binarized spec card:", err);
                         if (isMounted) setBinarizedSrc(fullSrc);
                     });
 
                 return () => {
                     isMounted = false;
                 };
-            }, [src, specImage, fallbackImage, cropBox, threshold]);
+            }, [src, specImage, fallbackImage, JSON.stringify(cropBox), threshold]);
+
+            const finalSrc = binarizedSrc || raw;
 
             return (
                 <img 
                     className={className} 
-                    src={binarizedSrc || specImage || src || fallbackImage} 
-                    alt={alt} 
+                    src={finalSrc || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'} 
+                    alt={alt || 'Specification Card'} 
                     style={style} 
                 />
             );
-        };
+        });
 
         // --- Specs OCR Parser & Autocorrect Helpers ---
         const TYPO_MAP = {
@@ -2682,15 +2720,45 @@
                     }
 
                     // Active cloud rows: Supabase is single source of truth for active designs (deleted === false)
+                    // We merge local IDB/in-memory rich images (originalImage, previewImage, specImage) into cleanCloud
+                    // so background hydration never wipes out local high-res or base64 preview assets.
+                    const localImageLookup = new Map();
+                    const registerLocalImg = (item) => {
+                        if (!item) return;
+                        const kId = item.id ? String(item.id).trim().toLowerCase() : '';
+                        const kCode = item.code ? String(item.code).trim().toUpperCase() : '';
+                        if (kId && !localImageLookup.has(kId)) localImageLookup.set(kId, item);
+                        if (kCode && !localImageLookup.has(kCode)) localImageLookup.set(kCode, item);
+                    };
+                    (Array.isArray(rawIDBDesigns) ? rawIDBDesigns : []).forEach(registerLocalImg);
+                    (Array.isArray(storedValue) ? storedValue : []).forEach(registerLocalImg);
+
                     const cleanCloud = Array.isArray(cloudDesigns)
                         ? cloudDesigns.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
                             const idStr = String(d.id || '').trim().toLowerCase();
+                            const codeStr = String(d.code || '').trim().toLowerCase();
+                            if (idStr && tombstoneSet.has(idStr)) return false;
+                            if (codeStr && tombstoneSet.has(codeStr)) return false;
                             // If marked active in cloud, remove from any stale local tombstones
                             if (idStr && tombstoneSet.has(idStr)) {
                                 tombstoneSet.delete(idStr);
                             }
                             return true;
+                        }).map(d => {
+                            const idKey = d.id ? String(d.id).trim().toLowerCase() : '';
+                            const codeKey = d.code ? String(d.code).trim().toUpperCase() : '';
+                            const loc = localImageLookup.get(idKey) || localImageLookup.get(codeKey);
+                            if (loc) {
+                                return {
+                                    ...d,
+                                    originalImage: d.originalImage || loc.originalImage || '',
+                                    previewImage: d.previewImage || loc.previewImage || '',
+                                    specImage: d.specImage || loc.specImage || '',
+                                    cropBox: d.cropBox || loc.cropBox || null
+                                };
+                            }
+                            return d;
                         })
                         : [];
 
@@ -3585,6 +3653,7 @@
             const [universalSearch, setUniversalSearch] = useState('');
             const [itemFilter, setItemFilter] = useState('All');
             const [fyFilter, setFyFilter] = useState('All');
+            const [sortBy, setSortBy] = useState('date-desc');
             const [currentPage, setCurrentPage] = useState(1);
             const [pageSize, setPageSize] = useState(20);
 
@@ -4526,9 +4595,34 @@
                 return [...new Set(list)].sort().reverse();
             }, [designs]);
 
-            // Filters
+            // Stable Date & Code Sorting Helpers
+            const parseDateToTimestamp = (dateStr) => {
+                if (!dateStr) return 0;
+                const str = String(dateStr).trim();
+                const parts = str.split(/[-/]/);
+                if (parts.length === 3) {
+                    if (parts[0].length === 2 && parts[2].length === 4) {
+                        const d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
+                        if (!isNaN(d.getTime())) return d.getTime();
+                    } else if (parts[0].length === 4) {
+                        const d = new Date(`${parts[0]}-${parts[1]}-${parts[2]}T00:00:00`);
+                        if (!isNaN(d.getTime())) return d.getTime();
+                    }
+                }
+                const d = new Date(str);
+                return isNaN(d.getTime()) ? 0 : d.getTime();
+            };
+
+            const getNumericOrAlphaCode = (design) => {
+                const c = String(design.code || design.item || '').trim().toUpperCase();
+                const match = c.match(/\d+/);
+                const num = match ? parseInt(match[0], 10) : 0;
+                return { raw: c, num };
+            };
+
+            // Filters & Stable Sorting
             const filteredDesigns = useMemo(() => {
-                return designs.filter(design => {
+                const list = designs.filter(design => {
                     const matchesSearch = 
                         (design.item || '').toLowerCase().includes(universalSearch.toLowerCase()) ||
                         (design.code || '').toLowerCase().includes(universalSearch.toLowerCase()) ||
@@ -4552,7 +4646,33 @@
 
                     return matchesSearch && matchesItem && matchesFY;
                 });
-            }, [designs, universalSearch, itemFilter, fyFilter]);
+
+                // Deterministic sort to prevent cards dancing or switching places
+                return list.sort((a, b) => {
+                    if (sortBy === 'date-asc') {
+                        const tA = parseDateToTimestamp(a.createdDate || a.lastUpdated);
+                        const tB = parseDateToTimestamp(b.createdDate || b.lastUpdated);
+                        if (tA !== tB) return tA - tB;
+                    } else if (sortBy === 'code-asc') {
+                        const cA = getNumericOrAlphaCode(a);
+                        const cB = getNumericOrAlphaCode(b);
+                        if (cA.num !== cB.num) return cA.num - cB.num;
+                        return cA.raw.localeCompare(cB.raw);
+                    } else if (sortBy === 'code-desc') {
+                        const cA = getNumericOrAlphaCode(a);
+                        const cB = getNumericOrAlphaCode(b);
+                        if (cA.num !== cB.num) return cB.num - cA.num;
+                        return cB.raw.localeCompare(cA.raw);
+                    } else {
+                        // Default: date-desc (latest created or updated first)
+                        const tA = parseDateToTimestamp(a.createdDate || a.lastUpdated);
+                        const tB = parseDateToTimestamp(b.createdDate || b.lastUpdated);
+                        if (tA !== tB) return tB - tA;
+                    }
+                    // Deterministic tie-breaker by id/code
+                    return String(b.id || b.code || '').localeCompare(String(a.id || a.code || ''));
+                });
+            }, [designs, universalSearch, itemFilter, fyFilter, sortBy]);
 
             const itemsPerPage = pageSize;
             const totalPages = Math.ceil(filteredDesigns.length / itemsPerPage) || 1;
@@ -4569,10 +4689,10 @@
                 setCurrentPage(1);
             }, [pageSize]);
 
-            // Reset to page 1 when search/filter changes
+            // Reset to page 1 when search/filter/sort changes
             React.useEffect(() => {
                 setCurrentPage(1);
-            }, [universalSearch, itemFilter, fyFilter]);
+            }, [universalSearch, itemFilter, fyFilter, sortBy]);
 
             const paginatedDesigns = useMemo(() => {
                 const startIndex = (currentPage - 1) * itemsPerPage;
@@ -5443,6 +5563,18 @@
                                     ...itemsList.map(item => ({ value: item, label: item }))
                                 ]}
                             />
+
+                            <FilterSelect
+                                label="Sort"
+                                value={sortBy}
+                                onChange={(val) => { setSortBy(val); setCurrentPage(1); }}
+                                options={[
+                                    { value: 'date-desc', label: 'Newest First' },
+                                    { value: 'date-asc', label: 'Oldest First' },
+                                    { value: 'code-asc', label: 'Code (A → Z)' },
+                                    { value: 'code-desc', label: 'Code (Z → A)' }
+                                ]}
+                            />
                         </div>
                     </section>
 
@@ -5450,11 +5582,11 @@
                     <section className="designs-grid">
                         {filteredDesigns.length > 0 ? (
                             paginatedDesigns.map(design => (
-                                <div key={design.id} className="design-card">
+                                <div key={design.id || design.code} className="design-card">
                                     <div className="card-preview-container" onClick={() => { setSelectedDesign(design); setActiveExplorerTab('preview'); setActiveVariantIdx(0); }}>
                                         <FabricPreviewImage 
                                             className="card-preview-image" 
-                                            src={design.originalImage || design.previewImage} 
+                                            src={design.originalImage || design.previewImage || design.image_url || ''} 
                                             cropBox={design.cropBox}
                                             alt={design.item}
                                         />
@@ -6698,11 +6830,11 @@
 
                                             {activeExplorerTab === 'preview' ? (
                                                 <div className="image-viewer" title="Click to zoom fabric image" style={{ cursor: 'zoom-in' }} onClick={() => setIsImageZoomed(true)}>
-                                                    <FabricPreviewImage src={selectedDesign.originalImage || selectedDesign.previewImage} alt={selectedDesign.item} />
+                                                    <FabricPreviewImage src={selectedDesign.originalImage || selectedDesign.previewImage || selectedDesign.image_url || ''} cropBox={selectedDesign.cropBox} alt={selectedDesign.item} />
                                                 </div>
                                             ) : (
                                                 <div className="image-viewer" title="Click to zoom spec card" style={{ background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-in' }} onClick={() => setIsImageZoomed(true)}>
-                                                    <SpecCardImage specImage={selectedDesign.specImage} fallbackImage={selectedDesign.originalImage || selectedDesign.previewImage} cropBox={selectedDesign.cropBox} threshold={selectedDesign.ocrBinarizeThreshold} alt="Specification Card" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
+                                                    <SpecCardImage specImage={selectedDesign.specImage} fallbackImage={selectedDesign.originalImage || selectedDesign.previewImage || selectedDesign.image_url || ''} cropBox={selectedDesign.cropBox} threshold={selectedDesign.ocrBinarizeThreshold} alt="Specification Card" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
                                                 </div>
                                             )}
                                         </div>
