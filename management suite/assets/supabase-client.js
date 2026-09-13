@@ -8219,7 +8219,19 @@
         }
 
         // Compress variant EP files only if distinct from main EP file
-        const processedVariants = await Promise.all((design.variants || []).map(async (v, vIdx) => {
+        let inputVariants = (Array.isArray(design.variants) && design.variants.length > 0) ? design.variants : [];
+        if (inputVariants.length === 0 && id) {
+          try {
+            const existingRow = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?id=eq.${encodeURIComponent(id)}&select=metadata&limit=1`, {
+              headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+            }).then(r => r.ok ? r.json() : []).catch(() => []);
+            if (existingRow && existingRow.length > 0 && Array.isArray(existingRow[0].metadata?.variants) && existingRow[0].metadata.variants.length > 0) {
+              inputVariants = existingRow[0].metadata.variants;
+            }
+          } catch(e) {}
+        }
+
+        const processedVariants = await Promise.all(inputVariants.map(async (v, vIdx) => {
           if (!v || typeof v !== 'object') return v;
           let vEp = v.epFile || '';
           if (vEp && (vEp === design.epFile || vEp === epUrl || (vIdx === 0 && epUrl))) {

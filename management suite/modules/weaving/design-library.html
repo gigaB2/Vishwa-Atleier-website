@@ -1899,6 +1899,11 @@
                             W = Math.floor(W * scale);
                         }
                         
+                        // If crop covers the entire image (full sheet), treat the right 30% as the spec column to cut off
+                        if (parsedCrop.x === 0 && parsedCrop.w >= 90) {
+                            parsedCrop = { x: 70, y: 0, w: 30, h: 100 };
+                        }
+
                         const cropX = (parsedCrop.x / 100) * W;
                         const cropY = (parsedCrop.y / 100) * H;
                         const cropW = (parsedCrop.w / 100) * W;
@@ -1970,12 +1975,24 @@
             return srcKey + '_' + cropStr;
         };
 
-        const FabricPreviewImage = React.memo(({ src, cropBox, className, style, alt }) => {
+        const FabricPreviewImage = React.memo(({ src, cropBox, hasSpecImage, className, style, alt }) => {
             const rawSrc = src || '';
+
+            // Effective cropBox: If explicit valid cropBox exists, use it.
+            // If cropBox is null or covers the entire image (x=0, w>=90), but design has a spec card (hasSpecImage),
+            // default to removing the right 30% spec column.
+            let effectiveCrop = cropBox;
+            if (typeof effectiveCrop === 'string') {
+                try { effectiveCrop = JSON.parse(effectiveCrop); } catch(e) {}
+            }
+            if ((!effectiveCrop || typeof effectiveCrop !== 'object' || effectiveCrop.x === undefined || (effectiveCrop.x === 0 && effectiveCrop.w >= 90)) && hasSpecImage) {
+                effectiveCrop = { x: 70, y: 0, w: 30, h: 100 };
+            }
+
             const [displaySrc, setDisplaySrc] = useState(() => {
                 if (!rawSrc) return '';
-                if (!cropBox) return rawSrc;
-                const key = getCropCacheKey(rawSrc, cropBox);
+                if (!effectiveCrop) return rawSrc;
+                const key = getCropCacheKey(rawSrc, effectiveCrop);
                 return imageCropCache.has(key) ? imageCropCache.get(key) : rawSrc;
             });
 
@@ -1984,19 +2001,19 @@
                     setDisplaySrc('');
                     return;
                 }
-                if (!cropBox) {
+                if (!effectiveCrop) {
                     setDisplaySrc(rawSrc);
                     return;
                 }
 
-                const key = getCropCacheKey(rawSrc, cropBox);
+                const key = getCropCacheKey(rawSrc, effectiveCrop);
                 if (imageCropCache.has(key)) {
                     setDisplaySrc(imageCropCache.get(key));
                     return;
                 }
 
                 let isMounted = true;
-                removeSpecsColumn(rawSrc, cropBox).then(cleanSrc => {
+                removeSpecsColumn(rawSrc, effectiveCrop).then(cleanSrc => {
                     if (isMounted && cleanSrc) {
                         setDisplaySrc(cleanSrc);
                     }
@@ -2007,7 +2024,7 @@
                 return () => {
                     isMounted = false;
                 };
-            }, [rawSrc, JSON.stringify(cropBox)]);
+            }, [rawSrc, JSON.stringify(effectiveCrop)]);
 
             const activeSrc = displaySrc || rawSrc;
 
@@ -4026,8 +4043,9 @@
                 setCropBox(restoredCrop);
                 setOcrBinarizeThreshold(design.ocrBinarizeThreshold || 140);
 
-                // If design was fast-hydrated without heavy EP/images, fetch full record in background
-                if ((!design.epFile && design.hasEp) && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignById === 'function') {
+                // If design was fast-hydrated without heavy EP/images or missing variants, fetch full record in background
+                const needsHydration = (!design.epFile && design.hasEp) || (!design.variants || design.variants.length <= 1) || !design.originalImage || !design.cropBox;
+                if (needsHydration && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignById === 'function') {
                     window.VF_DB.weaving.getDesignById(design.id || design.code).then(full => {
                         if (full) {
                             const fullSheetBg = (full.originalImage && full.originalImage !== full.specImage)
@@ -4310,6 +4328,9 @@
                                 specImage: binarizedDataUrl,
                                 originalImage: prev.originalImage || src
                             }));
+                            if (typeof handleOcrTextEdit === 'function') {
+                                handleOcrTextEdit(text);
+                            }
                             triggerToast("OCR Highlight Scan Successful!", "success");
                         }).catch(err => {
                             console.error("OCR recognition error:", err);
@@ -4899,7 +4920,7 @@
 
                         setRawImageSrc(scaledPreviewUrl);
                         setOcrRawText('');
-                        const defaultCrop = { x: 0, y: 0, w: 100, h: 100 };
+                        const defaultCrop = { x: 70, y: 0, w: 30, h: 100 };
                         setCropBox(defaultCrop);
                         
                         // Prepare form fields with new image, preserving any user-entered fields (createdDate, item, designer, description)
@@ -4961,6 +4982,9 @@
                                         specImage: binarizedDataUrl,
                                         originalImage: scaledPreviewUrl
                                     }));
+                                    if (typeof handleOcrTextEdit === 'function') {
+                                        handleOcrTextEdit(text);
+                                    }
                                     triggerToast("Full sheet OCR completed. View detected specifications below.", "success");
                                 }).catch(err => {
                                     console.error("Full OCR Error:", err);
@@ -5298,9 +5322,13 @@
                     let savedDesignObj = null;
                     const updatedDesigns = designs.map(d => {
                         if (d.id === editDesignId) {
+                            const preservedVariants = (formData.variants && formData.variants.length > 0)
+                                ? formData.variants
+                                : (d.variants && d.variants.length > 0 ? d.variants : []);
                             savedDesignObj = {
                                 ...d,
                                 ...updatedFormData,
+                                variants: preservedVariants,
                                 createdDate: yyyymmddToDdmmyyyy(formData.createdDate),
                                 userEdited: true,
                                 lastUpdated: new Date().toLocaleDateString('en-GB').replace(/\//g, '-')
@@ -5683,6 +5711,7 @@
                                             className="card-preview-image" 
                                             src={design.originalImage || design.previewImage || design.image_url || ''} 
                                             cropBox={design.cropBox}
+                                            hasSpecImage={Boolean(design.specImage)}
                                             alt={design.item}
                                         />
                                         {(() => {
@@ -5962,6 +5991,8 @@
                             ) : (
                                 <FabricPreviewImage 
                                     src={selectedDesign.originalImage || selectedDesign.previewImage} 
+                                    cropBox={selectedDesign.cropBox}
+                                    hasSpecImage={Boolean(selectedDesign.specImage)}
                                     alt="Zoomed Fabric Preview" 
                                     style={{ 
                                         maxWidth: '95vw', 
@@ -6925,7 +6956,7 @@
 
                                             {activeExplorerTab === 'preview' ? (
                                                 <div className="image-viewer" title="Click to zoom fabric image" style={{ cursor: 'zoom-in' }} onClick={() => setIsImageZoomed(true)}>
-                                                    <FabricPreviewImage src={selectedDesign.originalImage || selectedDesign.previewImage || selectedDesign.image_url || ''} cropBox={selectedDesign.cropBox} alt={selectedDesign.item} />
+                                                    <FabricPreviewImage src={selectedDesign.originalImage || selectedDesign.previewImage || selectedDesign.image_url || ''} cropBox={selectedDesign.cropBox} hasSpecImage={Boolean(selectedDesign.specImage)} alt={selectedDesign.item} />
                                                 </div>
                                             ) : (
                                                 <div className="image-viewer" title="Click to zoom spec card" style={{ background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-in' }} onClick={() => setIsImageZoomed(true)}>
