@@ -8188,6 +8188,27 @@
           imageUrl = await ensureCompactImage(imageUrl, 1200, 0.82);
         }
 
+        // Compact spec image if large
+        let specImg = design.specImage || '';
+        if (specImg && typeof specImg === 'string' && specImg.length > 150000) {
+          specImg = await ensureCompactImage(specImg, 800, 0.82);
+        }
+
+        // Compact original image if distinct and large
+        let origImg = (design.originalImage && design.originalImage !== design.specImage) ? design.originalImage : '';
+        if (origImg && typeof origImg === 'string' && origImg.length > 200000) {
+          origImg = await ensureCompactImage(origImg, 1200, 0.82);
+        }
+
+        // Safely parse cropBox if passed as serialized JSON
+        let parsedCropBox = design.cropBox;
+        if (typeof parsedCropBox === 'string') {
+          try { parsedCropBox = JSON.parse(parsedCropBox); } catch(e) {}
+        }
+        if (!parsedCropBox || typeof parsedCropBox !== 'object' || parsedCropBox.x === undefined) {
+          parsedCropBox = design.cropBox || null;
+        }
+
         // Compress large EP file to avoid Supabase statement timeout
         if (epUrl && typeof epUrl === 'string' && epUrl.length > 50000) {
           epUrl = await compressBase64(epUrl);
@@ -8209,7 +8230,7 @@
           };
         }));
 
-        // In metadata, do NOT store duplicated multi-megabyte epFile or previewImage!
+        // In metadata, store compact specImage and originalImage so OCR crops persist across PCs and cloud hydration
         const metadata = {
           code: code,
           name: design.name || design.designName || code,
@@ -8231,7 +8252,9 @@
           variants: processedVariants,
           createdDate: design.createdDate || new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
           lastUpdated: new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
-          cropBox: design.cropBox || null,
+          cropBox: parsedCropBox,
+          specImage: specImg,
+          originalImage: origImg,
           ocrBinarizeThreshold: design.ocrBinarizeThreshold || 140,
           userEdited: Boolean(design.userEdited)
         };
@@ -8278,6 +8301,7 @@
             reed: metadata.reed,
             description: metadata.description,
             previewImage: broadcastImage,
+            specImage: (specImg && specImg.length < 80000) ? specImg : '',
             hasEp: Boolean(epUrl || metadata.epFileName),
             designer: metadata.designer,
             jacquardType: metadata.jacquardType,
@@ -8288,6 +8312,7 @@
             createdDate: metadata.createdDate,
             lastUpdated: metadata.lastUpdated,
             cropBox: metadata.cropBox,
+            ocrBinarizeThreshold: metadata.ocrBinarizeThreshold,
             deleted: Boolean(design.deleted)
           };
 

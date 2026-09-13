@@ -1934,114 +1934,63 @@
         // --- Global Cache & Dynamic Image Cropping React Components ---
         const imageCropCache = new Map();
 
-        const FabricPreviewImage = ({ src, cropBox, className, style, alt }) => {
-            const [croppedSrc, setCroppedSrc] = useState(() => {
-                if (!src) return '';
-                if (!cropBox || cropBox.w >= 100) return src;
-                const cacheKey = src.substring(0, 150) + "_" + src.length + "_" + JSON.stringify(cropBox);
-                return imageCropCache.get(cacheKey) || src;
-            });
-            const [isIntersecting, setIsIntersecting] = useState(false);
-            const imgRef = useRef(null);
-
-            useEffect(() => {
-                if (!imgRef.current) return;
-                const observer = new IntersectionObserver(([entry]) => {
-                    if (entry.isIntersecting) {
-                        setIsIntersecting(true);
-                        observer.disconnect();
-                    }
-                }, { rootMargin: '200px' });
-                observer.observe(imgRef.current);
-                return () => observer.disconnect();
-            }, [src]);
-
-            useEffect(() => {
-                if (!src) {
-                    setCroppedSrc('');
-                    return;
-                }
-                
-                if (!cropBox || cropBox.w >= 100) {
-                    setCroppedSrc(src);
-                    return;
-                }
-
-                const cacheKey = src.substring(0, 150) + "_" + src.length + "_" + JSON.stringify(cropBox);
-                if (imageCropCache.has(cacheKey)) {
-                    setCroppedSrc(imageCropCache.get(cacheKey));
-                    return;
-                }
-
-                if (!isIntersecting) {
-                    return;
-                }
-
-                let isMounted = true;
-                
-                removeSpecsColumn(src, cropBox)
-                    .then(url => {
-                        imageCropCache.set(cacheKey, url);
-                        if (isMounted) setCroppedSrc(url);
-                    })
-                    .catch(err => {
-                        console.error("Error cropping specs column:", err);
-                        if (isMounted) setCroppedSrc(src);
-                    });
-
-                return () => {
-                    isMounted = false;
-                };
-            }, [src, cropBox, isIntersecting]);
-
+        const FabricPreviewImage = ({ src, className, style, alt }) => {
             return (
                 <img 
-                    ref={imgRef}
                     className={className} 
-                    src={croppedSrc} 
-                    alt={alt} 
+                    src={src || ''} 
+                    alt={alt || 'Design Preview'} 
                     style={style} 
                     loading="lazy" 
                 />
             );
         };
 
-        const SpecCardImage = ({ src, cropBox, threshold, className, style, alt }) => {
-            const [binarizedSrc, setBinarizedSrc] = useState(src);
+        const SpecCardImage = ({ src, specImage, fallbackImage, cropBox, threshold, className, style, alt }) => {
+            const [binarizedSrc, setBinarizedSrc] = useState('');
 
             useEffect(() => {
-                if (!src) {
+                const directSpec = specImage || (src && src.startsWith('data:image/') && (!cropBox || cropBox.isPreCropped) ? src : '');
+                const fullSrc = fallbackImage || src || '';
+
+                if (directSpec) {
+                    setBinarizedSrc(directSpec);
+                    return;
+                }
+
+                if (!fullSrc) {
                     setBinarizedSrc('');
                     return;
                 }
 
-                if (src.startsWith('data:image/')) {
-                    setBinarizedSrc(src);
-                    return;
-                }
-
                 let isMounted = true;
-                const crop = cropBox || { x: 70, y: 0, w: 30, h: 100 };
+                let parsedCrop = cropBox;
+                if (typeof parsedCrop === 'string') {
+                    try { parsedCrop = JSON.parse(parsedCrop); } catch(e) {}
+                }
+                const crop = (parsedCrop && typeof parsedCrop === 'object' && parsedCrop.x !== undefined)
+                    ? parsedCrop
+                    : { x: 70, y: 0, w: 30, h: 100 };
                 const th = threshold || 140;
 
-                runBinarizedOcr(src, crop, th, 1.5)
+                runBinarizedOcr(fullSrc, crop, th, 1.5)
                     .then(({ binarizedDataUrl }) => {
                         if (isMounted) setBinarizedSrc(binarizedDataUrl);
                     })
                     .catch(err => {
                         console.error("Error generating binarized spec card:", err);
-                        if (isMounted) setBinarizedSrc(src);
+                        if (isMounted) setBinarizedSrc(fullSrc);
                     });
 
                 return () => {
                     isMounted = false;
                 };
-            }, [src, cropBox, threshold]);
+            }, [src, specImage, fallbackImage, cropBox, threshold]);
 
             return (
                 <img 
                     className={className} 
-                    src={binarizedSrc} 
+                    src={binarizedSrc || specImage || src || fallbackImage} 
                     alt={alt} 
                     style={style} 
                 />
@@ -3854,23 +3803,49 @@
             const handleStartEdit = (design) => {
                 setSelectedDesign(null);
                 setEditDesignId(design.id);
-                setRawImageSrc(design.originalImage || design.specImage || design.previewImage || '');
+                // FULL SHEET SOURCE: Must be full design sheet, NEVER specImage (which is only the cropped specs part)
+                const fullSheet = (design.originalImage && design.originalImage !== design.specImage)
+                    ? design.originalImage
+                    : (design.previewImage || '');
+                setRawImageSrc(fullSheet);
                 setOcrRawText('');
-                setCropBox(design.cropBox || { x: 70, y: 0, w: 30, h: 100 });
+                let parsedCrop = design.cropBox;
+                if (typeof parsedCrop === 'string') {
+                    try { parsedCrop = JSON.parse(parsedCrop); } catch(e) {}
+                }
+                const restoredCrop = (parsedCrop && typeof parsedCrop === 'object' && parsedCrop.x !== undefined)
+                    ? parsedCrop
+                    : { x: 70, y: 0, w: 30, h: 100 };
+                setCropBox(restoredCrop);
                 setOcrBinarizeThreshold(design.ocrBinarizeThreshold || 140);
 
                 // If design was fast-hydrated without heavy EP/images, fetch full record in background
                 if ((!design.epFile && design.hasEp) && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignById === 'function') {
                     window.VF_DB.weaving.getDesignById(design.id || design.code).then(full => {
                         if (full) {
-                            if (full.originalImage || full.specImage) {
-                                setRawImageSrc(prev => prev || full.originalImage || full.specImage || '');
+                            const fullSheetBg = (full.originalImage && full.originalImage !== full.specImage)
+                                ? full.originalImage
+                                : (full.previewImage || '');
+                            if (fullSheetBg) {
+                                setRawImageSrc(prev => prev || fullSheetBg);
+                            }
+                            if (full.cropBox && (!design.cropBox || design.cropBox.x === undefined)) {
+                                let bgCrop = full.cropBox;
+                                if (typeof bgCrop === 'string') {
+                                    try { bgCrop = JSON.parse(bgCrop); } catch(e) {}
+                                }
+                                if (bgCrop && typeof bgCrop === 'object' && bgCrop.x !== undefined) {
+                                    setCropBox(bgCrop);
+                                }
+                            }
+                            if (full.ocrBinarizeThreshold) {
+                                setOcrBinarizeThreshold(full.ocrBinarizeThreshold);
                             }
                             setFormData(prev => ({
                                 ...prev,
                                 epFile: full.epFile || prev.epFile,
                                 epFileName: full.epFileName || prev.epFileName,
-                                originalImage: full.originalImage || prev.originalImage,
+                                originalImage: fullSheetBg || prev.originalImage,
                                 specImage: full.specImage || prev.specImage,
                                 variants: (full.variants && full.variants.length > 0) ? full.variants : prev.variants
                             }));
@@ -3890,7 +3865,9 @@
                     description: design.description || '',
                     previewImage: design.previewImage || '',
                     specImage: design.specImage || '',
-                    originalImage: design.originalImage || '',
+                    originalImage: fullSheet,
+                    cropBox: restoredCrop,
+                    ocrBinarizeThreshold: design.ocrBinarizeThreshold || 140,
                     epFile: design.epFile || '',
                     epFileName: design.epFileName || '',
                     designer: design.designer || '',
@@ -4011,19 +3988,42 @@
             // Handle live binarized preview rendering
             useEffect(() => {
                 const src = rawImageSrc || formData.previewImage;
-                if (!src || !previewCanvasRef.current) return;
+                if (!previewCanvasRef.current) return;
                 const canvas = previewCanvasRef.current;
+
+                if (!src) {
+                    if (formData.specImage) {
+                        const specImg = new Image();
+                        specImg.onload = () => {
+                            canvas.width = specImg.width || 800;
+                            canvas.height = specImg.height || 400;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(specImg, 0, 0, canvas.width, canvas.height);
+                        };
+                        specImg.src = formData.specImage;
+                    }
+                    return;
+                }
+
+                let parsedCrop = cropBox;
+                if (typeof parsedCrop === 'string') {
+                    try { parsedCrop = JSON.parse(parsedCrop); } catch(e) {}
+                }
+                const activeCrop = (parsedCrop && typeof parsedCrop === 'object' && parsedCrop.x !== undefined)
+                    ? parsedCrop
+                    : { x: 70, y: 0, w: 30, h: 100 };
+
                 const img = new Image();
                 img.crossOrigin = "anonymous";
                 img.onload = () => {
                     try {
-                        const cropX = (cropBox.x / 100) * img.naturalWidth;
-                        const cropY = (cropBox.y / 100) * img.naturalHeight;
-                        const cropW = (cropBox.w / 100) * img.naturalWidth;
-                        const cropH = (cropBox.h / 100) * img.naturalHeight;
+                        const cropX = (activeCrop.x / 100) * img.naturalWidth;
+                        const cropY = (activeCrop.y / 100) * img.naturalHeight;
+                        const cropW = (activeCrop.w / 100) * img.naturalWidth;
+                        const cropH = (activeCrop.h / 100) * img.naturalHeight;
 
                         const previewWidth = 1200;
-                        const previewHeight = Math.max(10, Math.floor(cropH * (previewWidth / cropW)));
+                        const previewHeight = Math.max(10, Math.floor(cropH * (previewWidth / Math.max(1, cropW))));
 
                         canvas.width = previewWidth;
                         canvas.height = previewHeight;
@@ -4050,10 +4050,32 @@
                         ctx.putImageData(imgData, 0, 0);
                     } catch (e) {
                         console.error("Binarized thumbnail preview error:", e);
+                        if (formData.specImage) {
+                            const specImg = new Image();
+                            specImg.onload = () => {
+                                canvas.width = specImg.width || 800;
+                                canvas.height = specImg.height || 400;
+                                const sCtx = canvas.getContext('2d');
+                                sCtx.drawImage(specImg, 0, 0, canvas.width, canvas.height);
+                            };
+                            specImg.src = formData.specImage;
+                        }
+                    }
+                };
+                img.onerror = () => {
+                    if (formData.specImage) {
+                        const specImg = new Image();
+                        specImg.onload = () => {
+                            canvas.width = specImg.width || 800;
+                            canvas.height = specImg.height || 400;
+                            const sCtx = canvas.getContext('2d');
+                            sCtx.drawImage(specImg, 0, 0, canvas.width, canvas.height);
+                        };
+                        specImg.src = formData.specImage;
                     }
                 };
                 img.src = src;
-            }, [rawImageSrc, formData.previewImage, cropBox, ocrBinarizeThreshold]);
+            }, [rawImageSrc, formData.previewImage, formData.specImage, cropBox, ocrBinarizeThreshold]);
 
             const handleOcrRun = () => {
                 const src = rawImageSrc || formData.previewImage;
@@ -4821,28 +4843,27 @@
 
 
 
-                const src = rawImageSrc || formData.previewImage;
+                const src = (rawImageSrc && rawImageSrc !== formData.specImage) ? rawImageSrc : formData.previewImage;
                 let finalSpecImage = formData.specImage;
-                let finalPreviewImage = formData.previewImage;
-                let finalOriginalImage = formData.originalImage || src;
+                let finalPreviewImage = src || formData.previewImage || '';
+                let finalOriginalImage = (formData.originalImage && formData.originalImage !== formData.specImage) ? formData.originalImage : (src || '');
 
-                if (src && cropBox) {
+                let parsedCropBox = cropBox;
+                if (typeof parsedCropBox === 'string') {
+                    try { parsedCropBox = JSON.parse(parsedCropBox); } catch(e) {}
+                }
+                const activeCrop = (parsedCropBox && typeof parsedCropBox === 'object' && parsedCropBox.x !== undefined)
+                    ? parsedCropBox
+                    : { x: 70, y: 0, w: 30, h: 100 };
+
+                if (src && activeCrop) {
                     try {
-                        const { binarizedDataUrl } = await runBinarizedOcr(src, cropBox, ocrBinarizeThreshold, ocrScaleFactor);
+                        const { binarizedDataUrl } = await runBinarizedOcr(src, activeCrop, ocrBinarizeThreshold, ocrScaleFactor);
                         finalSpecImage = binarizedDataUrl;
                     } catch (err) {
                         console.error("Error generating specImage:", err);
                     }
-
-                    try {
-                        if (cropBox.w < 100) {
-                            finalPreviewImage = await removeSpecsColumn(src, cropBox);
-                        } else {
-                            finalPreviewImage = src;
-                        }
-                    } catch (err) {
-                        console.error("Error generating previewImage:", err);
-                    }
+                    finalPreviewImage = src;
                 }
 
                 const mainVariant = formData.variants[0] || {};
@@ -4851,7 +4872,7 @@
                     specImage: finalSpecImage,
                     previewImage: finalPreviewImage,
                     originalImage: finalOriginalImage,
-                    cropBox: cropBox,
+                    cropBox: activeCrop,
                     ocrBinarizeThreshold: ocrBinarizeThreshold,
                     epFile: mainVariant.epFile || formData.epFile || '',
                     epFileName: mainVariant.epFileName || formData.epFileName || ''
@@ -5391,7 +5412,6 @@
                                         <FabricPreviewImage 
                                             className="card-preview-image" 
                                             src={design.originalImage || design.previewImage} 
-                                            cropBox={design.cropBox}
                                             alt={design.item}
                                         />
                                         {(() => {
@@ -5653,7 +5673,8 @@
                         >
                             {activeExplorerTab === 'spec' ? (
                                 <SpecCardImage 
-                                    src={selectedDesign.specImage} 
+                                    specImage={selectedDesign.specImage} 
+                                    fallbackImage={selectedDesign.originalImage || selectedDesign.previewImage}
                                     cropBox={selectedDesign.cropBox} 
                                     threshold={selectedDesign.ocrBinarizeThreshold} 
                                     alt="Zoomed Spec Card" 
@@ -5670,7 +5691,6 @@
                             ) : (
                                 <FabricPreviewImage 
                                     src={selectedDesign.originalImage || selectedDesign.previewImage} 
-                                    cropBox={selectedDesign.cropBox} 
                                     alt="Zoomed Fabric Preview" 
                                     style={{ 
                                         maxWidth: '95vw', 
@@ -6622,7 +6642,7 @@
                                                 >
                                                     Fabric Preview
                                                 </div>
-                                                {selectedDesign.specImage && (
+                                                {(selectedDesign.specImage || selectedDesign.cropBox) && (
                                                     <div 
                                                         className={`detail-tab ${activeExplorerTab === 'spec' ? 'active' : ''}`}
                                                         onClick={() => setActiveExplorerTab('spec')}
@@ -6634,11 +6654,11 @@
 
                                             {activeExplorerTab === 'preview' ? (
                                                 <div className="image-viewer" title="Click to zoom fabric image" style={{ cursor: 'zoom-in' }} onClick={() => setIsImageZoomed(true)}>
-                                                    <FabricPreviewImage src={selectedDesign.originalImage || selectedDesign.previewImage} cropBox={selectedDesign.cropBox} alt={selectedDesign.item} />
+                                                    <FabricPreviewImage src={selectedDesign.originalImage || selectedDesign.previewImage} alt={selectedDesign.item} />
                                                 </div>
                                             ) : (
                                                 <div className="image-viewer" title="Click to zoom spec card" style={{ background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-in' }} onClick={() => setIsImageZoomed(true)}>
-                                                    <SpecCardImage src={selectedDesign.specImage} cropBox={selectedDesign.cropBox} threshold={selectedDesign.ocrBinarizeThreshold} alt="Specification Card" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
+                                                    <SpecCardImage specImage={selectedDesign.specImage} fallbackImage={selectedDesign.originalImage || selectedDesign.previewImage} cropBox={selectedDesign.cropBox} threshold={selectedDesign.ocrBinarizeThreshold} alt="Specification Card" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
                                                 </div>
                                             )}
                                         </div>
