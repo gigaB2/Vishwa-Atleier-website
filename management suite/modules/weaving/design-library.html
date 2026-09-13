@@ -1857,11 +1857,27 @@
         };
 
         const removeSpecsColumn = (imageSrc, crop) => {
-            return new Promise((resolve, reject) => {
+            if (!imageSrc) return Promise.resolve('');
+            const cacheKey = (imageSrc.startsWith('data:') ? imageSrc.substring(0, 150) + '_' + imageSrc.length : imageSrc) + '_' + JSON.stringify(crop);
+            if (imageCropCache.has(cacheKey)) {
+                return Promise.resolve(imageCropCache.get(cacheKey));
+            }
+
+            return new Promise((resolve) => {
                 if (!crop) {
                     resolve(imageSrc);
                     return;
                 }
+
+                let parsedCrop = crop;
+                if (typeof parsedCrop === 'string') {
+                    try { parsedCrop = JSON.parse(parsedCrop); } catch(e) {}
+                }
+                if (!parsedCrop || typeof parsedCrop !== 'object' || parsedCrop.x === undefined) {
+                    resolve(imageSrc);
+                    return;
+                }
+
                 const img = new Image();
                 img.crossOrigin = "anonymous";
                 img.onload = () => {
@@ -1879,8 +1895,10 @@
                             W = Math.floor(W * scale);
                         }
                         
-                        const cropX = (crop.x / 100) * W;
-                        const cropW = (crop.w / 100) * W;
+                        const cropX = (parsedCrop.x / 100) * W;
+                        const cropY = (parsedCrop.y / 100) * H;
+                        const cropW = (parsedCrop.w / 100) * W;
+                        const cropH = (parsedCrop.h / 100) * H;
                         
                         const leftWidth = Math.floor(cropX);
                         const rightX = Math.floor(cropX + cropW);
@@ -1905,6 +1923,7 @@
                         const origImg = img;
                         const srcScale = 1 / scale;
                         
+                        // Draw left fabric area (from top to bottom of sheet)
                         if (leftWidth > 0) {
                             ctx.drawImage(
                                 origImg,
@@ -1912,21 +1931,25 @@
                                 0, 0, leftWidth, H
                             );
                         }
-                        if (rightWidth > 0) {
+                        // Draw right area only ABOVE the spec crop box (cutting off the spec card and area below it)
+                        const topAboveSpecHeight = Math.floor(cropY);
+                        if (rightWidth > 0 && topAboveSpecHeight > 0) {
                             ctx.drawImage(
                                 origImg,
-                                rightX * srcScale, 0, rightWidth * srcScale, origImg.naturalHeight,
-                                leftWidth, 0, rightWidth, H
+                                rightX * srcScale, 0, rightWidth * srcScale, topAboveSpecHeight * srcScale,
+                                leftWidth, 0, rightWidth, topAboveSpecHeight
                             );
                         }
                         
-                        // Export as high-quality compact JPEG (80-120KB) instead of bloated 6MB uncompressed PNG
-                        resolve(canvas.toDataURL('image/jpeg', 0.82));
+                        const resultUrl = canvas.toDataURL('image/jpeg', 0.82);
+                        imageCropCache.set(cacheKey, resultUrl);
+                        resolve(resultUrl);
                     } catch (e) {
-                        reject(e);
+                        console.error("removeSpecsColumn error:", e);
+                        resolve(imageSrc);
                     }
                 };
-                img.onerror = (e) => reject(e);
+                img.onerror = () => resolve(imageSrc);
                 img.src = imageSrc;
             });
         };
@@ -1934,11 +1957,31 @@
         // --- Global Cache & Dynamic Image Cropping React Components ---
         const imageCropCache = new Map();
 
-        const FabricPreviewImage = ({ src, className, style, alt }) => {
+        const FabricPreviewImage = ({ src, cropBox, className, style, alt }) => {
+            const [displaySrc, setDisplaySrc] = useState(src || '');
+
+            useEffect(() => {
+                if (!cropBox || !src) {
+                    setDisplaySrc(src || '');
+                    return;
+                }
+
+                let isMounted = true;
+                removeSpecsColumn(src, cropBox).then(cleanSrc => {
+                    if (isMounted) setDisplaySrc(cleanSrc || src);
+                }).catch(() => {
+                    if (isMounted) setDisplaySrc(src);
+                });
+
+                return () => {
+                    isMounted = false;
+                };
+            }, [src, cropBox]);
+
             return (
                 <img 
                     className={className} 
-                    src={src || ''} 
+                    src={displaySrc || src || ''} 
                     alt={alt || 'Design Preview'} 
                     style={style} 
                     loading="lazy" 
@@ -5412,6 +5455,7 @@
                                         <FabricPreviewImage 
                                             className="card-preview-image" 
                                             src={design.originalImage || design.previewImage} 
+                                            cropBox={design.cropBox}
                                             alt={design.item}
                                         />
                                         {(() => {
