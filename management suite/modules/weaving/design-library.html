@@ -2713,6 +2713,7 @@
                         cloudTombstones.forEach(t => {
                             if (t && typeof t === 'object') {
                                 registerTombstone(t.id);
+                                registerTombstone(t.code);
                             } else {
                                 registerTombstone(t);
                             }
@@ -2740,10 +2741,6 @@
                             const codeStr = String(d.code || '').trim().toLowerCase();
                             if (idStr && tombstoneSet.has(idStr)) return false;
                             if (codeStr && tombstoneSet.has(codeStr)) return false;
-                            // If marked active in cloud, remove from any stale local tombstones
-                            if (idStr && tombstoneSet.has(idStr)) {
-                                tombstoneSet.delete(idStr);
-                            }
                             return true;
                         }).map(d => {
                             const idKey = d.id ? String(d.id).trim().toLowerCase() : '';
@@ -2780,11 +2777,13 @@
                         }
                     } catch(e) {}
 
-                    // Read local backup from IDB and purge tombstoned items (by ID only)
+                    // Read local backup from IDB and purge tombstoned items (by ID or code)
                     const validLocalIDB = (Array.isArray(rawIDBDesigns) ? rawIDBDesigns : []).filter(d => {
                         if (!d || (!d.id && !d.code) || d.deleted) return false;
                         const idStr = String(d.id || '').trim().toLowerCase();
+                        const codeStr = String(d.code || '').trim().toLowerCase();
                         if (idStr && tombstoneSet.has(idStr)) return false;
+                        if (codeStr && tombstoneSet.has(codeStr)) return false;
                         return true;
                     });
 
@@ -2793,21 +2792,25 @@
                         const cloudIds = new Set(cleanCloud.map(d => String(d.id || '')));
                         const cloudCodes = new Set(cleanCloud.map(d => String(d.code || '').trim().toUpperCase()));
 
-                        // Preserve pending local designs from in-memory state that haven't landed in cloud yet (strictly non-tombstoned by ID)
+                        // Preserve pending local designs from in-memory state that haven't landed in cloud yet (strictly non-tombstoned)
                         const pendingInMemory = currentList.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
                             const idStr = String(d.id || '').trim().toLowerCase();
+                            const codeStr = String(d.code || '').trim().toLowerCase();
                             if (idStr && tombstoneSet.has(idStr)) return false;
+                            if (codeStr && tombstoneSet.has(codeStr)) return false;
                             if (cloudIds.has(String(d.id))) return false;
                             if (d.code && cloudCodes.has(String(d.code).trim().toUpperCase())) return false;
                             return true;
                         });
 
-                        // Preserve any local designs from IDB that haven't landed in cloud yet (strictly non-tombstoned by ID)
+                        // Preserve any local designs from IDB that haven't landed in cloud yet (strictly non-tombstoned)
                         const pendingFromIDB = validLocalIDB.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
                             const idStr = String(d.id || '').trim().toLowerCase();
+                            const codeStr = String(d.code || '').trim().toLowerCase();
                             if (idStr && tombstoneSet.has(idStr)) return false;
+                            if (codeStr && tombstoneSet.has(codeStr)) return false;
                             if (cloudIds.has(String(d.id))) return false;
                             if (d.code && cloudCodes.has(String(d.code).trim().toUpperCase())) return false;
                             if (pendingInMemory.some(p => String(p.id) === String(d.id) || (p.code && String(p.code).trim().toUpperCase() === String(d.code).trim().toUpperCase()))) return false;
@@ -5375,11 +5378,11 @@
                         }
                     } catch(e) {}
 
-                    // 4. Record tombstone in local deleted-designs (ONLY use unique idStr, never codeStr)
+                    // 4. Record tombstone in local deleted-designs (use both idStr and codeStr)
                     try {
                         const deletedIds = JSON.parse(localStorage.getItem('deleted-designs') || '[]');
                         let changed = false;
-                        [idStr].filter(Boolean).forEach(s => {
+                        [idStr, codeStr].filter(Boolean).forEach(s => {
                             if (!deletedIds.includes(s)) {
                                 deletedIds.push(s);
                                 changed = true;
@@ -5392,10 +5395,10 @@
                         console.error("Error updating deleted-designs in localStorage:", e);
                     }
 
-                    // 5. Register in global VishwaSupabase tombstone registry (by unique ID only)
+                    // 5. Register in global VishwaSupabase tombstone registry
                     try {
                         if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
-                            window.VishwaSupabase.recordDeletion('loom-designs', [idStr].filter(Boolean));
+                            window.VishwaSupabase.recordDeletion('loom-designs', [idStr, codeStr].filter(Boolean));
                         }
                     } catch(e) {}
 
