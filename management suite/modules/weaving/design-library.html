@@ -2738,6 +2738,7 @@
                     (Array.isArray(storedValue) ? storedValue : []).forEach(registerLocalImg);
 
                     // Active cloud rows (deleted: false) are always valid and active
+                    const cloudMap = new Map();
                     const cleanCloud = Array.isArray(cloudDesigns)
                         ? cloudDesigns.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
@@ -2750,6 +2751,7 @@
                             const idKey = d.id ? String(d.id).trim().toLowerCase() : '';
                             const codeKey = d.code ? String(d.code).trim().toUpperCase() : '';
                             const loc = localImageLookup.get(idKey) || localImageLookup.get(codeKey);
+                            let resolved = d;
                             if (loc) {
                                 let mergedVariants = (Array.isArray(d.variants) && d.variants.length > 0) ? d.variants : (loc.variants || []);
                                 if (Array.isArray(d.variants) && Array.isArray(loc.variants) && loc.variants.length > 0) {
@@ -2774,7 +2776,7 @@
                                         };
                                     });
                                 }
-                                return {
+                                resolved = {
                                     ...d,
                                     originalImage: d.originalImage || loc.originalImage || '',
                                     previewImage: d.previewImage || loc.previewImage || '',
@@ -2783,9 +2785,43 @@
                                     variants: mergedVariants
                                 };
                             }
-                            return d;
+                            if (idKey) cloudMap.set(idKey, resolved);
+                            if (codeKey) cloudMap.set(codeKey, resolved);
+                            return resolved;
                         })
                         : [];
+
+                    // Protect and merge recent local uncommitted / pending designs so hydration never causes flickering or disappears
+                    const localPool = [
+                        ...(Array.isArray(storedValue) ? storedValue : []),
+                        ...(Array.isArray(rawIDBDesigns) ? rawIDBDesigns : [])
+                    ];
+                    let pendingQueue = [];
+                    try {
+                        pendingQueue = JSON.parse(localStorage.getItem('vf_pending_designs_queue') || '[]');
+                    } catch(e) {}
+                    if (Array.isArray(pendingQueue)) {
+                        localPool.push(...pendingQueue);
+                    }
+
+                    localPool.forEach(loc => {
+                        if (!loc || (!loc.id && !loc.code) || loc.deleted) return;
+                        const locId = loc.id ? String(loc.id).trim().toLowerCase() : '';
+                        const locCode = loc.code ? String(loc.code).trim().toUpperCase() : '';
+                        if (locId && tombstoneSet.has(locId)) return;
+                        if (locCode && tombstoneSet.has(locCode.toLowerCase())) return;
+
+                        const inCloud = (locId && cloudMap.has(locId)) || (locCode && cloudMap.has(locCode));
+                        // If not yet in cloud or saved locally very recently (within 45s), retain it
+                        const isRecentLocal = loc._savedStamp && (Date.now() - loc._savedStamp < 45000);
+                        if (!inCloud || isRecentLocal) {
+                            if (!inCloud) {
+                                cleanCloud.unshift(loc);
+                                if (locId) cloudMap.set(locId, loc);
+                                if (locCode) cloudMap.set(locCode, loc);
+                            }
+                        }
+                    });
 
                     // Sanitize local deleted-designs (purge active design codes/IDs that might have poisoned local storage)
                     try {
@@ -5334,7 +5370,8 @@
                                 variants: preservedVariants,
                                 createdDate: yyyymmddToDdmmyyyy(formData.createdDate),
                                 userEdited: true,
-                                lastUpdated: new Date().toLocaleDateString('en-GB').replace(/\//g, '-')
+                                lastUpdated: new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
+                                _savedStamp: Date.now()
                             };
                             return savedDesignObj;
                         }
@@ -5410,11 +5447,16 @@
                         ...updatedFormData,
                         id: Date.now().toString() + "-" + Math.random().toString(36).substr(2, 9),
                         createdDate: yyyymmddToDdmmyyyy(formData.createdDate) || new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
-                        lastUpdated: new Date().toLocaleDateString('en-GB').replace(/\//g, '-')
+                        lastUpdated: new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
+                        _savedStamp: Date.now()
                     };
 
                     updateDesignsWithHistory([newDesign, ...designs]);
                     closeAddModal();
+                    // If an item filter was active that is different from the newly added design's item, reset to 'All' so it's not hidden
+                    if (itemFilter !== 'All' && formData.item && itemFilter !== formData.item) {
+                        setItemFilter('All');
+                    }
                     triggerToast(`Saving Design ${newDesign.code} to Cloud...`, "info");
 
                     // Un-tombstone new design
