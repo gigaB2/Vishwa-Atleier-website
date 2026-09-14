@@ -3903,6 +3903,32 @@
             });
             const [linkModalDesign, setLinkModalDesign] = useState(null);
 
+            // Sync costingLinks in realtime when updated on another PC or locally
+            useEffect(() => {
+                const handleSync = (e) => {
+                    if (e && e.detail && (e.detail.key === 'vishwa_fashions_costing_links' || e.detail.key === 'costing-products-v4')) {
+                        try {
+                            const raw = localStorage.getItem('vishwa_fashions_costing_links') || '{}';
+                            setCostingLinks(JSON.parse(raw));
+                        } catch(err) {}
+                    }
+                };
+                const handleStorage = (e) => {
+                    if (e && (e.key === 'vishwa_fashions_costing_links' || e.key === 'costing-products-v4')) {
+                        try {
+                            const raw = localStorage.getItem('vishwa_fashions_costing_links') || '{}';
+                            setCostingLinks(JSON.parse(raw));
+                        } catch(err) {}
+                    }
+                };
+                window.addEventListener('supabase-sync', handleSync);
+                window.addEventListener('storage', handleStorage);
+                return () => {
+                    window.removeEventListener('supabase-sync', handleSync);
+                    window.removeEventListener('storage', handleStorage);
+                };
+            }, []);
+
             // Supabase Cloud Connection & Sync Status State
             const [supabaseStatus, setSupabaseStatus] = useState(() => {
                 return (window.VF_DB && typeof window.VF_DB.getStatus === 'function') ? window.VF_DB.getStatus() : 'connecting';

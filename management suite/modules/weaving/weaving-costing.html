@@ -7359,6 +7359,10 @@ const App = () => {
             skipNextSyncSaveRef.current.covering = true;
             return norm;
           });
+        } else if (key === 'vishwa_fashions_costing_links') {
+          if (parsed && typeof parsed === 'object') {
+            setCostingLinks(parsed);
+          }
         }
       } catch (err) {
         console.error('Remote sync update error:', err);
@@ -7368,7 +7372,7 @@ const App = () => {
     const handleSupabaseReady = () => {
       if (hasHydratedRef.current) return;
       hasHydratedRef.current = true;
-      ['costing-products-v4', 'costing-tfo-products-v1', 'costing-doubler-products-v1', 'costing-covering-products-v1'].forEach(k => {
+      ['costing-products-v4', 'costing-tfo-products-v1', 'costing-doubler-products-v1', 'costing-covering-products-v1', 'vishwa_fashions_costing_links'].forEach(k => {
         const val = localStorage.getItem(k);
         if (val) {
           handleRemoteSync({ detail: { key: k, value: val } });
@@ -7383,7 +7387,7 @@ const App = () => {
     window.addEventListener('supabase-sync', handleRemoteSync);
     window.addEventListener('supabase-ready', handleSupabaseReady);
     window.addEventListener('storage', (e) => {
-      if (e.key && ['costing-products-v4', 'costing-tfo-products-v1', 'costing-doubler-products-v1', 'costing-covering-products-v1'].includes(e.key) && e.newValue) {
+      if (e.key && ['costing-products-v4', 'costing-tfo-products-v1', 'costing-doubler-products-v1', 'costing-covering-products-v1', 'vishwa_fashions_costing_links'].includes(e.key) && e.newValue) {
         handleRemoteSync({ detail: { key: e.key, value: e.newValue } });
       }
     });
