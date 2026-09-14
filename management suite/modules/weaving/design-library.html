@@ -2751,13 +2751,10 @@
                     (Array.isArray(rawIDBDesigns) ? rawIDBDesigns : []).forEach(registerLocalImg);
                     (Array.isArray(storedValue) ? storedValue : []).forEach(registerLocalImg);
 
+                    // Active cloud rows (deleted: false) are always valid and active
                     const cleanCloud = Array.isArray(cloudDesigns)
                         ? cloudDesigns.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
-                            const idStr = String(d.id || '').trim().toLowerCase();
-                            const codeStr = String(d.code || '').trim().toLowerCase();
-                            if (idStr && tombstoneSet.has(idStr)) return false;
-                            if (codeStr && tombstoneSet.has(codeStr)) return false;
                             return true;
                         }).map(d => {
                             const idKey = d.id ? String(d.id).trim().toLowerCase() : '';
@@ -2833,7 +2830,7 @@
                         const cloudIds = new Set(cleanCloud.map(d => String(d.id || '')));
                         const cloudCodes = new Set(cleanCloud.map(d => String(d.code || '').trim().toUpperCase()));
 
-                        // Preserve pending local designs from in-memory state that haven't landed in cloud yet (strictly non-tombstoned)
+                        // Preserve pending local designs from in-memory state that haven't landed in cloud yet
                         const pendingInMemory = currentList.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
                             const idStr = String(d.id || '').trim().toLowerCase();
@@ -2845,7 +2842,7 @@
                             return true;
                         });
 
-                        // Preserve any local designs from IDB that haven't landed in cloud yet (strictly non-tombstoned)
+                        // Preserve any local designs from IDB that haven't landed in cloud yet
                         const pendingFromIDB = validLocalIDB.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
                             const idStr = String(d.id || '').trim().toLowerCase();
@@ -2858,6 +2855,7 @@
                             return true;
                         });
 
+                        // Supabase cloud is authoritative master; combined list includes any genuine local offline drafts
                         const combined = [...pendingInMemory, ...pendingFromIDB, ...cleanCloud];
 
                         // Cache clean combined set back to IDB and cache safely
@@ -5392,7 +5390,25 @@
                     });
                     updateDesignsWithHistory(updatedDesigns);
                     closeAddModal();
+                    // If the item name was changed, ensure the item filter doesn't hide the edited design
+                    if (itemFilter !== 'All' && formData.item && itemFilter !== formData.item) {
+                        setItemFilter('All');
+                    }
                     triggerToast(`Updating Design ${formData.code}...`, "info");
+
+                    // If the design code or ID was changed, purge the old code from Supabase & peer PCs
+                    if (oldDesign && (oldDesign.code !== formData.code || oldDesign.id !== savedDesignObj.id)) {
+                        const oldId = oldDesign.id;
+                        const oldCode = oldDesign.code;
+                        if (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.deleteDesign === 'function') {
+                            window.VF_DB.weaving.deleteDesign(oldId, oldCode).catch(e => console.warn("Old design code purge error:", e));
+                        }
+                        try {
+                            if (window.VishwaSupabase && typeof window.VishwaSupabase.recordDeletion === 'function') {
+                                window.VishwaSupabase.recordDeletion('loom-designs', [oldId, oldCode]);
+                            }
+                        } catch(e) {}
+                    }
 
                     // Un-tombstone updated design
                     try {
