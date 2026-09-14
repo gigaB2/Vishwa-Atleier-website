@@ -2743,9 +2743,11 @@
 
   // --- Infinite Scale Paginated PostgREST Fetcher ---
   // Chunked batch queries bypass default 1,000-row PostgREST limits for arbitrary dataset sizes
-  async function fetchAllRowsPaginated(tableOrPath, select = '*', extraParams = '') {
+  async function fetchAllRowsPaginated(tableOrPath, select = '*', extraParams = '', customPageSize = null) {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
-    const pageSize = 1000;
+    // If querying heavy tables with large metadata/BLOB columns (e.g. vf_fabric_designs), use a conservative page size to prevent Postgres TOAST statement timeouts (57014)
+    const defaultPageSize = (typeof tableOrPath === 'string' && tableOrPath.includes('vf_fabric_designs')) ? 100 : 1000;
+    const pageSize = (typeof customPageSize === 'number' && customPageSize > 0) ? customPageSize : defaultPageSize;
     let offset = 0;
     let allRows = [];
     let hasMore = true;
@@ -2759,7 +2761,7 @@
         let res;
         if (typeof AbortController !== 'undefined') {
           const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 6000);
+          const timer = setTimeout(() => controller.abort(), 8000);
           try {
             res = await fetch(url, {
               headers: {
@@ -2780,7 +2782,12 @@
           });
         }
 
-        if (!res || !res.ok) break;
+        if (!res || !res.ok) {
+          if (res && res.status >= 500) {
+            console.warn(`Supabase fetchTable notice (${res.status}) on ${tableOrPath}: server/statement timeout or busy`);
+          }
+          break;
+        }
         const rows = await res.json();
         if (!Array.isArray(rows) || rows.length === 0) break;
         allRows = allRows.concat(rows);
@@ -7478,7 +7485,7 @@
       const order = options.order ? `&order=${encodeURIComponent(options.order)}` : '';
       const filter = options.filter ? `&${options.filter}` : '';
       const extra = `${order}${filter}`;
-      return await fetchAllRowsPaginated(tableName, select, extra);
+      return await fetchAllRowsPaginated(tableName, select, extra, options.pageSize);
     },
 
     // Generic Batch Upsert Helper (Chunks of 50 for Network Safety)
