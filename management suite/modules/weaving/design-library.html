@@ -2659,32 +2659,12 @@
             }
         };
 
-        // Custom Hook for Supabase Cloud Single Source of Truth & Local Rescue
+        // Custom Hook for Supabase Cloud Single Source of Truth
         function useIndexedDB(key, initialValue) {
-            const [storedValue, setStoredValue] = useState(() => {
-                try {
-                    const raw = localStorage.getItem(key);
-                    if (raw) {
-                        const parsed = JSON.parse(raw);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            let localDel = [];
-                            try {
-                                const rawDel = localStorage.getItem('deleted-designs');
-                                if (rawDel) localDel = JSON.parse(rawDel);
-                            } catch(e) {}
-                            const tombSet = new Set((Array.isArray(localDel) ? localDel : []).map(s => String(s).trim().toLowerCase()).filter(Boolean));
-                            return parsed.filter(d => {
-                                if (!d || (!d.id && !d.code) || d.deleted) return false;
-                                const dId = String(d.id || '').trim().toLowerCase();
-                                if (dId && tombSet.has(dId)) return false;
-                                return true;
-                            });
-                        }
-                    }
-                } catch(e) {}
-                return initialValue;
-            });
-            const [ready, setReady] = useState(true);
+            // Strict Supabase Hydration on Open: Initial state starts empty
+            // and unhydrated so hydration occurs strictly from Supabase on open.
+            const [storedValue, setStoredValue] = useState([]);
+            const [ready, setReady] = useState(false);
 
             const loadFromSupabase = useCallback(async (isManualRefresh = false) => {
                 try {
@@ -2711,7 +2691,13 @@
                     ]);
 
                     if (cloudResult && cloudResult.timedOut) {
-                        console.warn("Supabase hydration took >6s - maintaining instant local cache");
+                        console.warn("Supabase hydration took >6s - falling back to local cache");
+                        try {
+                            const local = await getDesignsFromIDB();
+                            if (Array.isArray(local) && local.length > 0) {
+                                setStoredValue(local);
+                            }
+                        } catch(e) {}
                         setReady(true);
                         return;
                     }
@@ -2755,6 +2741,10 @@
                     const cleanCloud = Array.isArray(cloudDesigns)
                         ? cloudDesigns.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
+                            const idStr = String(d.id || '').trim().toLowerCase();
+                            const codeStr = String(d.code || '').trim().toLowerCase();
+                            if (idStr && tombstoneSet.has(idStr)) return false;
+                            if (codeStr && tombstoneSet.has(codeStr)) return false;
                             return true;
                         }).map(d => {
                             const idKey = d.id ? String(d.id).trim().toLowerCase() : '';
@@ -2815,78 +2805,33 @@
                         }
                     } catch(e) {}
 
-                    // Read local backup from IDB and purge tombstoned items (by ID or code)
-                    const validLocalIDB = (Array.isArray(rawIDBDesigns) ? rawIDBDesigns : []).filter(d => {
-                        if (!d || (!d.id && !d.code) || d.deleted) return false;
-                        const idStr = String(d.id || '').trim().toLowerCase();
-                        const codeStr = String(d.code || '').trim().toLowerCase();
-                        if (idStr && tombstoneSet.has(idStr)) return false;
-                        if (codeStr && tombstoneSet.has(codeStr)) return false;
-                        return true;
-                    });
-
-                    setStoredValue(prev => {
-                        const currentList = Array.isArray(prev) ? prev : [];
-                        const cloudIds = new Set(cleanCloud.map(d => String(d.id || '')));
-                        const cloudCodes = new Set(cleanCloud.map(d => String(d.code || '').trim().toUpperCase()));
-
-                        // Preserve pending local designs from in-memory state that haven't landed in cloud yet
-                        const pendingInMemory = currentList.filter(d => {
-                            if (!d || (!d.id && !d.code) || d.deleted) return false;
-                            const idStr = String(d.id || '').trim().toLowerCase();
-                            const codeStr = String(d.code || '').trim().toLowerCase();
-                            if (idStr && tombstoneSet.has(idStr)) return false;
-                            if (codeStr && tombstoneSet.has(codeStr)) return false;
-                            if (cloudIds.has(String(d.id))) return false;
-                            if (d.code && cloudCodes.has(String(d.code).trim().toUpperCase())) return false;
-                            return true;
-                        });
-
-                        // Preserve any local designs from IDB that haven't landed in cloud yet
-                        const pendingFromIDB = validLocalIDB.filter(d => {
-                            if (!d || (!d.id && !d.code) || d.deleted) return false;
-                            const idStr = String(d.id || '').trim().toLowerCase();
-                            const codeStr = String(d.code || '').trim().toLowerCase();
-                            if (idStr && tombstoneSet.has(idStr)) return false;
-                            if (codeStr && tombstoneSet.has(codeStr)) return false;
-                            if (cloudIds.has(String(d.id))) return false;
-                            if (d.code && cloudCodes.has(String(d.code).trim().toUpperCase())) return false;
-                            if (pendingInMemory.some(p => String(p.id) === String(d.id) || (p.code && String(p.code).trim().toUpperCase() === String(d.code).trim().toUpperCase()))) return false;
-                            return true;
-                        });
-
-                        // Supabase cloud is authoritative master; combined list includes any genuine local offline drafts
-                        const combined = [...pendingInMemory, ...pendingFromIDB, ...cleanCloud];
-
-                        // Cache clean combined set back to IDB and cache safely
-                        saveDesignsToIDB(combined);
+                    // Supabase cloud is the STRICT single source of truth on open
+                    setStoredValue(() => {
+                        saveDesignsToIDB(cleanCloud);
                         try {
-                            const dStr = JSON.stringify(combined);
+                            const dStr = JSON.stringify(cleanCloud);
                             localStorage.setItem('loom-designs', dStr);
                             if (window.VishwaSupabase) {
                                 if (window.VishwaSupabase.cache) window.VishwaSupabase.cache['loom-designs'] = dStr;
                                 if (window.VishwaSupabase.lastLocalWrites) window.VishwaSupabase.lastLocalWrites['loom-designs'] = Date.now();
                             }
                         } catch(e) {}
-
-                        // If there are genuine offline designs from IDB that cloud never received, rescue them in background
-                        if (pendingFromIDB.length > 0 && window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.saveDesign === 'function') {
-                            setTimeout(async () => {
-                                for (const des of pendingFromIDB) {
-                                    try {
-                                        await window.VF_DB.weaving.saveDesign(des);
-                                    } catch(e) {}
-                                }
-                            }, 500);
-                        }
-
-                        return combined;
+                        return cleanCloud;
                     });
                     setReady(true);
                     return cleanCloud;
                 } catch(err) {
                     console.error("Hydration error:", err);
-                    setStoredValue(prev => (Array.isArray(prev) && prev.length > 0 ? prev : []));
+                    try {
+                        const local = await getDesignsFromIDB();
+                        if (Array.isArray(local) && local.length > 0) {
+                            setStoredValue(local);
+                        } else {
+                            setStoredValue([]);
+                        }
+                    } catch(e) {
+                        setStoredValue([]);
+                    }
                     setReady(true);
                     return [];
                 }
@@ -2895,28 +2840,9 @@
             useEffect(() => {
                 let cancelled = false;
 
-                // 1. Instant local render from IDB cache (0ms instant display!)
-                getDesignsFromIDB().then(local => {
-                    if (cancelled) return;
-                    if (Array.isArray(local) && local.length > 0) {
-                        let localDel = [];
-                        try {
-                            const rawDel = localStorage.getItem('deleted-designs');
-                            if (rawDel) localDel = JSON.parse(rawDel);
-                        } catch(e) {}
-                        const tombSet = new Set((Array.isArray(localDel) ? localDel : []).map(s => String(s).trim().toLowerCase()).filter(Boolean));
-                        const filtered = local.filter(d => {
-                            if (!d || (!d.id && !d.code) || d.deleted) return false;
-                            const dId = String(d.id || '').trim().toLowerCase();
-                            if (dId && tombSet.has(dId)) return false;
-                            return true;
-                        });
-                        setStoredValue(filtered);
-                        setReady(true);
-                    }
-                });
-
-                // 2. Immediate cloud hydration in background
+                // Strict Supabase Hydration on Open:
+                // Do not pre-populate from local storage or IDB cache on mount.
+                // Trigger cloud hydration strictly from Supabase.
                 loadFromSupabase();
 
                 let lastSeenStamp = null;
@@ -5730,7 +5656,7 @@
                                     boxShadow: `0 0 8px ${supabaseStatus === 'connected' ? '#10b981' : (supabaseStatus === 'connecting' ? '#3b82f6' : '#f59e0b')}`,
                                     display: 'inline-block'
                                 }}></span>
-                                {supabaseStatus === 'connected' ? '☁️ Supabase Synced' : (supabaseStatus === 'connecting' ? '🔄 Connecting...' : '⚠️ Cloud Offline (Local Only)')}
+                                {!designsReady ? '🔄 Hydrating from Supabase...' : (supabaseStatus === 'connected' ? '☁️ Supabase Synced' : (supabaseStatus === 'connecting' ? '🔄 Connecting...' : '⚠️ Cloud Offline (Local Only)'))}
                             </button>
                             <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
                                 <Icons.Plus /> Add Design
@@ -5742,17 +5668,17 @@
                     <section className="stats-bar">
                         <div className="stat-card">
                             <span className="stat-label">Total Designs</span>
-                            <span className="stat-value">{stats.total}</span>
+                            <span className="stat-value">{!designsReady ? '...' : stats.total}</span>
                         </div>
                         <div className="stat-card">
                             <span className="stat-label">Average Hooks</span>
-                            <span className="stat-value">{stats.avgHooks} H</span>
+                            <span className="stat-value">{!designsReady ? '...' : `${stats.avgHooks} H`}</span>
                         </div>
                         <div className="stat-card">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span className="stat-label">Database</span>
                                 <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--muted)' }}>
-                                    {storageStats.label}
+                                    {!designsReady ? 'Hydrating Cloud...' : storageStats.label}
                                 </span>
                             </div>
                         </div>
@@ -5798,7 +5724,36 @@
 
                     {/* Grid Layout */}
                     <section className="designs-grid">
-                        {filteredDesigns.length > 0 ? (
+                        {!designsReady ? (
+                            <div className="dl-loading-state" style={{
+                                gridColumn: '1 / -1',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '4rem 2rem',
+                                minHeight: '320px',
+                                textAlign: 'center',
+                                background: 'var(--card-bg, rgba(255, 255, 255, 0.03))',
+                                borderRadius: '16px',
+                                border: '1px dashed var(--border, rgba(255, 255, 255, 0.1))'
+                            }}>
+                                <div className="spinner" style={{
+                                    width: '38px',
+                                    height: '38px',
+                                    borderWidth: '3px',
+                                    borderColor: 'rgba(59, 130, 246, 0.2)',
+                                    borderTopColor: '#3b82f6',
+                                    marginBottom: '1.25rem'
+                                }}></div>
+                                <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--fg, #f8fafc)', margin: '0 0 0.5rem 0' }}>
+                                    Hydrating Design Library strictly from Supabase
+                                </h3>
+                                <p style={{ fontSize: '0.875rem', color: 'var(--muted, #94a3b8)', margin: 0, maxWidth: '440px', lineHeight: '1.5' }}>
+                                    Connecting directly to Supabase Cloud to fetch your master patterns, specifications, and variants...
+                                </p>
+                            </div>
+                        ) : filteredDesigns.length > 0 ? (
                             paginatedDesigns.map(design => (
                                 <div key={design.id || design.code} className="design-card">
                                     <div className="card-preview-container" onClick={() => { setSelectedDesign(design); setActiveExplorerTab('preview'); setActiveVariantIdx(0); }}>

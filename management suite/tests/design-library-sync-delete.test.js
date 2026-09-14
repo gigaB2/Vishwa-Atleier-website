@@ -112,5 +112,58 @@ describe('Design Library — Sync & Deletion Engine Tests', () => {
         assert.ok(htmlCode.includes("if ((pId && tombSet.has(pId)) || (pCode && tombSet.has(pCode)))"),
             "syncPendingCloudDesigns must skip items found in tombstones");
     });
+
+    it('9. useIndexedDB in design-library.html initializes with empty state and ready: false for strict Supabase hydration on open', () => {
+        const htmlCode = fs.readFileSync(
+            path.resolve(__dirname, '../modules/weaving/design-library.html'),
+            'utf-8'
+        );
+
+        assert.ok(htmlCode.includes("const [storedValue, setStoredValue] = useState([]);"),
+            "useIndexedDB must initialize storedValue to [] so stale local storage is not pre-rendered on open");
+        assert.ok(htmlCode.includes("const [ready, setReady] = useState(false);"),
+            "useIndexedDB must initialize ready to false so hydration state is active on open");
+        assert.ok(!htmlCode.includes("getDesignsFromIDB().then(local => {"),
+            "useIndexedDB must not trigger mount-time local IDB pre-render before Supabase hydrates");
+    });
+
+    it('10. loadFromSupabase in design-library.html strictly sets state to cleanCloud without merging pendingInMemory or pendingFromIDB', () => {
+        const htmlCode = fs.readFileSync(
+            path.resolve(__dirname, '../modules/weaving/design-library.html'),
+            'utf-8'
+        );
+
+        assert.ok(!htmlCode.includes("const combined = [...pendingInMemory, ...pendingFromIDB, ...cleanCloud];"),
+            "loadFromSupabase must not merge local drafts into cloud dataset");
+        assert.ok(!htmlCode.includes("window.VF_DB.weaving.saveDesign(des)"),
+            "loadFromSupabase must not rescue orphaned local IDB designs back to Supabase");
+        assert.ok(htmlCode.includes("return cleanCloud;"),
+            "loadFromSupabase must return cleanCloud as the single source of truth");
+    });
+
+    it('11. Design Library HTML renders hydration loading indicator when !designsReady', () => {
+        const htmlCode = fs.readFileSync(
+            path.resolve(__dirname, '../modules/weaving/design-library.html'),
+            'utf-8'
+        );
+
+        assert.ok(htmlCode.includes("Hydrating Design Library strictly from Supabase"),
+            "Grid layout must render dedicated hydration indicator when designsReady is false");
+        assert.ok(htmlCode.includes("!designsReady ? '🔄 Hydrating from Supabase...'"),
+            "Header cloud button must indicate active hydration state on open");
+    });
+
+    it('12. supabase-client.js fabric designs reconciliation sets finalDesigns strictly to reconstructedDesigns without appending pendingLocal', () => {
+        const clientCode = fs.readFileSync(
+            path.resolve(__dirname, '../assets/supabase-client.js'),
+            'utf-8'
+        );
+
+        assert.ok(!clientCode.includes("finalDesigns = [...pendingLocal, ...reconstructedDesigns];"),
+            "supabase-client.js must not append pendingLocal into finalDesigns when cloud rows are returned");
+        assert.ok(/if\s*\(\s*Array\.isArray\(\s*dbDesigns\s*\)\s*\)\s*\{\s*finalDesigns\s*=\s*reconstructedDesigns;/m.test(clientCode),
+            "finalDesigns must be strictly set to reconstructedDesigns when dbDesigns is an array");
+    });
 });
+
 

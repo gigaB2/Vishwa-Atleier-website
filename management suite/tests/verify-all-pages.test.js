@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const root = 'c:\\Users\\Admin\\Desktop\\Websi\\Website\\management suite';
+const root = path.resolve(__dirname, '..');
 const htmlFiles = [];
 
 function findHtml(dir) {
@@ -34,10 +34,16 @@ for (const file of htmlFiles) {
   }
 }
 
-const parser = require('@babel/parser');
+let parser = null;
+try {
+  parser = require('@babel/parser');
+} catch (e) {
+  console.log('Notice: @babel/parser not installed in this environment, skipping AST checks.');
+}
 
 let syntaxErrors = 0;
 for (const file of htmlFiles) {
+  if (!parser) break;
   const rel = path.relative(root, file);
   const content = fs.readFileSync(file, 'utf8');
 

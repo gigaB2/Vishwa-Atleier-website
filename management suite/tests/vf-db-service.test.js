@@ -1,10 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
+const path = require('path');
 
 console.log('Testing VF_DB interface completeness...');
 
 // Read supabase-client.js
-const code = fs.readFileSync('c:\\Users\\Admin\\Desktop\\Websi\\Website\\management suite\\assets\\supabase-client.js', 'utf8');
+const code = fs.readFileSync(path.resolve(__dirname, '../assets/supabase-client.js'), 'utf8');
 
 // Check that all required VF_DB methods exist in the file
 const requiredMethods = [

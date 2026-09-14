@@ -5929,26 +5929,12 @@
                   if (locStr) localDesigns = JSON.parse(locStr);
                 } catch(e) {}
 
-                // Merge reconstructed designs from cloud with any local designs that have not landed in cloud yet
+                // Supabase is single source of truth for Design Library
                 let finalDesigns = [];
-                if (Array.isArray(reconstructedDesigns) && reconstructedDesigns.length > 0) {
-                  const cloudIds = new Set(reconstructedDesigns.map(d => String(d.id || '').trim().toLowerCase()));
-                  const cloudCodes = new Set(reconstructedDesigns.map(d => String(d.code || '').trim().toUpperCase()));
-
-                  // Keep local designs that are not yet in cloud and strictly not tombstoned by ID
-                  const pendingLocal = Array.isArray(localDesigns) ? localDesigns.filter(d => {
-                    if (!d || (!d.id && !d.code) || d.deleted) return false;
-                    const idStr = String(d.id || '').trim().toLowerCase();
-                    const codeStr = String(d.code || '').trim().toUpperCase();
-                    if (idStr && tombstoneSet.has(idStr)) return false;
-                    if (idStr && cloudIds.has(idStr)) return false;
-                    if (codeStr && cloudCodes.has(codeStr)) return false;
-                    return true;
-                  }) : [];
-
-                  finalDesigns = [...pendingLocal, ...reconstructedDesigns];
+                if (Array.isArray(dbDesigns)) {
+                  finalDesigns = reconstructedDesigns;
                 } else {
-                  // Cloud query returned empty or table not yet created — preserve local designs completely (strictly non-tombstoned by ID)!
+                  // Cloud query failed or offline — fallback to local cache
                   finalDesigns = Array.isArray(localDesigns) ? localDesigns.filter(d => {
                     if (!d || (!d.id && !d.code) || d.deleted) return false;
                     const idStr = String(d.id || '').trim().toLowerCase();
