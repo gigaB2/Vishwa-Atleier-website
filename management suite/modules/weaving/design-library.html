@@ -2716,7 +2716,6 @@
                         cloudTombstones.forEach(t => {
                             if (t && typeof t === 'object') {
                                 registerTombstone(t.id);
-                                registerTombstone(t.code);
                             } else {
                                 registerTombstone(t);
                             }
@@ -2743,9 +2742,7 @@
                         ? cloudDesigns.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
                             const idStr = String(d.id || '').trim().toLowerCase();
-                            const codeStr = String(d.code || '').trim().toLowerCase();
                             if (idStr && tombstoneSet.has(idStr)) return false;
-                            if (codeStr && tombstoneSet.has(codeStr)) return false;
                             return true;
                         }).map(d => {
                             const idKey = d.id ? String(d.id).trim().toLowerCase() : '';
@@ -2809,7 +2806,6 @@
                         const locId = loc.id ? String(loc.id).trim().toLowerCase() : '';
                         const locCode = loc.code ? String(loc.code).trim().toUpperCase() : '';
                         if (locId && tombstoneSet.has(locId)) return;
-                        if (locCode && tombstoneSet.has(locCode.toLowerCase())) return;
 
                         const inCloud = (locId && cloudMap.has(locId)) || (locCode && cloudMap.has(locCode));
                         // If not yet in cloud or saved locally very recently (within 45s), retain it
@@ -2836,7 +2832,11 @@
                                     return s && !activeCodeSet.has(s) && !activeIdSet.has(s);
                                 });
                                 localStorage.setItem('deleted-designs', JSON.stringify(sanitized));
-                                sanitized.forEach(registerTombstone);
+                                sanitized.forEach(item => {
+                                    if (item && !activeCodeSet.has(String(item).trim().toLowerCase())) {
+                                        registerTombstone(item);
+                                    }
+                                });
                             }
                         }
                     } catch(e) {}
