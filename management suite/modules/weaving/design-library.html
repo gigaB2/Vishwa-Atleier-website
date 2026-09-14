@@ -2597,6 +2597,40 @@
             } catch(e) {}
         };
 
+        const saveDesignsSafely = (designsList) => {
+            // 1. Primary rich storage: IndexedDB (stores complete designs with previews and spec data without 5MB quota cap)
+            saveDesignsToIDB(designsList);
+
+            // 2. Secondary lightweight index in localStorage for synchronous cross-module lookups
+            try {
+                if (Array.isArray(designsList)) {
+                    const lightCatalog = designsList.slice(0, 150).map(d => ({
+                        id: d.id,
+                        code: d.code,
+                        name: d.name,
+                        item: d.item,
+                        hooksCount: d.hooksCount,
+                        picksCount: d.picksCount,
+                        ends: d.ends,
+                        reed: d.reed,
+                        variants: (d.variants || []).map(v => ({
+                            code: v.code,
+                            name: v.name,
+                            hooksCount: v.hooksCount,
+                            picksCount: v.picksCount
+                        }))
+                    }));
+                    const lightStr = JSON.stringify(lightCatalog);
+                    localStorage.setItem('loom-designs', lightStr);
+                    if (window.VishwaSupabase && window.VishwaSupabase.cache) {
+                        window.VishwaSupabase.cache['loom-designs'] = lightStr;
+                    }
+                }
+            } catch(err) {
+                try { localStorage.removeItem('loom-designs'); } catch(e) {}
+            }
+        };
+
         const queuePendingCloudDesign = (design) => {
             try {
                 const raw = localStorage.getItem('vf_pending_designs_queue') || '[]';
@@ -2668,8 +2702,8 @@
 
             const loadFromSupabase = useCallback(async (isManualRefresh = false) => {
                 try {
-                    // Race cloud fetch against a 6-second timeout so slow/stalled Supabase never freezes UI
-                    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ designs: null, tombstones: null, timedOut: true }), 6000));
+                    // Race cloud fetch against a 15-second timeout so slow/stalled Supabase never freezes UI, but allows large catalogs to complete
+                    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ designs: null, tombstones: null, timedOut: true }), 15000));
                     const [cloudResult, rawIDBDesigns] = await Promise.all([
                         Promise.race([
                             (window.VF_DB && window.VF_DB.weaving && typeof window.VF_DB.weaving.getDesignsWithTombstones === 'function')
@@ -2691,7 +2725,7 @@
                     ]);
 
                     if (cloudResult && cloudResult.timedOut) {
-                        console.warn("Supabase hydration took >6s - falling back to local cache");
+                        console.warn("Supabase hydration took >15s - falling back to local cache");
                         try {
                             const local = await getDesignsFromIDB();
                             if (Array.isArray(local) && local.length > 0) {
@@ -2742,7 +2776,9 @@
                         ? cloudDesigns.filter(d => {
                             if (!d || (!d.id && !d.code) || d.deleted) return false;
                             const idStr = String(d.id || '').trim().toLowerCase();
+                            const codeStr = String(d.code || '').trim().toLowerCase();
                             if (idStr && tombstoneSet.has(idStr)) return false;
+                            if (codeStr && tombstoneSet.has(codeStr)) return false;
                             return true;
                         }).map(d => {
                             const idKey = d.id ? String(d.id).trim().toLowerCase() : '';
@@ -2843,15 +2879,7 @@
 
                     // Supabase cloud is the STRICT single source of truth on open
                     setStoredValue(() => {
-                        saveDesignsToIDB(cleanCloud);
-                        try {
-                            const dStr = JSON.stringify(cleanCloud);
-                            localStorage.setItem('loom-designs', dStr);
-                            if (window.VishwaSupabase) {
-                                if (window.VishwaSupabase.cache) window.VishwaSupabase.cache['loom-designs'] = dStr;
-                                if (window.VishwaSupabase.lastLocalWrites) window.VishwaSupabase.lastLocalWrites['loom-designs'] = Date.now();
-                            }
-                        } catch(e) {}
+                        saveDesignsSafely(cleanCloud);
                         return cleanCloud;
                     });
                     setReady(true);
@@ -2965,7 +2993,7 @@
                                     return true;
                                 });
                                 const updated = [mergedIncoming, ...filtered];
-                                saveDesignsToIDB(updated);
+                                saveDesignsSafely(updated);
                                 return updated;
                             });
                             // Hydrate complete design (including heavy EP / raw image) in background
@@ -3006,7 +3034,7 @@
                                                 return true;
                                             });
                                             const updated = [mergedFull, ...filtered];
-                                            saveDesignsToIDB(updated);
+                                            saveDesignsSafely(updated);
                                             return updated;
                                         });
                                     }
@@ -3049,7 +3077,7 @@
                                             return true;
                                         });
                                         const updated = [mergedSingle, ...filtered];
-                                        saveDesignsToIDB(updated);
+                                        saveDesignsSafely(updated);
                                         return updated;
                                     });
                                 }
@@ -3079,7 +3107,7 @@
                                     if (targetCode && String(d.code || '').trim().toUpperCase() === targetCode) return false;
                                     return true;
                                 });
-                                saveDesignsToIDB(filtered);
+                                saveDesignsSafely(filtered);
                                 return filtered;
                             });
 
@@ -3141,15 +3169,7 @@
             const setValue = useCallback((value) => {
                 setStoredValue(prev => {
                     const valueToStore = value instanceof Function ? value(prev) : value;
-                    saveDesignsToIDB(valueToStore);
-                    try {
-                        const dStr = JSON.stringify(valueToStore);
-                        localStorage.setItem('loom-designs', dStr);
-                        if (window.VishwaSupabase) {
-                            if (window.VishwaSupabase.cache) window.VishwaSupabase.cache['loom-designs'] = dStr;
-                            if (window.VishwaSupabase.lastLocalWrites) window.VishwaSupabase.lastLocalWrites['loom-designs'] = Date.now();
-                        }
-                    } catch(e) {}
+                    saveDesignsSafely(valueToStore);
                     return valueToStore;
                 });
             }, [key]);

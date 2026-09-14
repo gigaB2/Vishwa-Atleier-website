@@ -2746,7 +2746,7 @@
   async function fetchAllRowsPaginated(tableOrPath, select = '*', extraParams = '', customPageSize = null) {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
     // If querying heavy tables with large metadata/BLOB columns (e.g. vf_fabric_designs), use a conservative page size to prevent Postgres TOAST statement timeouts (57014)
-    const defaultPageSize = (typeof tableOrPath === 'string' && tableOrPath.includes('vf_fabric_designs')) ? 100 : 1000;
+    const defaultPageSize = (typeof tableOrPath === 'string' && tableOrPath.includes('vf_fabric_designs')) ? 250 : 1000;
     const pageSize = (typeof customPageSize === 'number' && customPageSize > 0) ? customPageSize : defaultPageSize;
     let offset = 0;
     let allRows = [];
@@ -2761,7 +2761,7 @@
         let res;
         if (typeof AbortController !== 'undefined') {
           const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 8000);
+          const timer = setTimeout(() => controller.abort(), 12000);
           try {
             res = await fetch(url, {
               headers: {
