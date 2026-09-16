@@ -195,6 +195,24 @@
   const syncChannel = (typeof window !== 'undefined' && typeof window.BroadcastChannel !== 'undefined') ? new window.BroadcastChannel('vf_supabase_sync') : null;
   if (typeof syncChannel?.unref === 'function') syncChannel.unref();
 
+  // --- Universal Deduplication Helper (Eliminates Postgres Error 21000 ON CONFLICT Cardinality Violations) ---
+  function dedupeByConflictKey(items, keyField = 'id') {
+    if (!Array.isArray(items) || items.length === 0) return [];
+    const map = new Map();
+    for (const item of items) {
+      if (!item) continue;
+      const keyVal = item[keyField];
+      if (keyVal === undefined || keyVal === null || keyVal === '') continue;
+      const k = String(keyVal).trim();
+      if (map.has(k)) {
+        map.set(k, Object.assign({}, map.get(k), item));
+      } else {
+        map.set(k, Object.assign({}, item));
+      }
+    }
+    return Array.from(map.values());
+  }
+
   // --- Universal Intelligent Merge Engine (Eliminates Concurrent Multi-User Overwrites) ---
   function getItemIdentifier(item) {
     if (!item) return null;
@@ -2946,11 +2964,11 @@
             else if (key === 'costing-covering-products-v1') table = 'vf_costing_covering_products';
 
             if (table && Array.isArray(value) && value.length > 0) {
-              const rows = value.filter(item => item && item.id).map(item => ({
+              const rows = dedupeByConflictKey(value.filter(item => item && item.id).map(item => ({
                 id: String(item.id),
                 data: item,
                 updated_at: nowIso
-              }));
+              })), 'id');
 
               if (rows.length > 0) {
                 // Batch in chunks of 500 for safety against large payloads
@@ -3045,7 +3063,7 @@
             if (key === 'yarn-qualities' && Array.isArray(value)) {
               try {
                 const cleanValue = filterDeletedEntities(value);
-                const qRows = cleanValue.filter(q => q && q.id).map(q => ({
+                const qRows = dedupeByConflictKey(cleanValue.filter(q => q && q.id).map(q => ({
                   id: String(q.id),
                   quality: String(q.quality || ''),
                   code: String(q.code || ''),
@@ -3054,7 +3072,7 @@
                   supplier: String(q.supplier || ''),
                   created_at: q.createdAt || nowIso,
                   updated_at: nowIso
-                }));
+                })), 'id');
 
                 if (qRows.length > 0) {
                   for (let i = 0; i < qRows.length; i += 300) {
@@ -3095,7 +3113,7 @@
             if (key === 'yarn-fp-qualities' && Array.isArray(value)) {
               try {
                 const cleanValue = filterDeletedEntities(value);
-                const fpRows = cleanValue.filter(q => q && q.id).map(q => ({
+                const fpRows = dedupeByConflictKey(cleanValue.filter(q => q && q.id).map(q => ({
                   id: String(q.id),
                   division: String(q.division || 'covering'),
                   name: String(q.name || ''),
@@ -3107,7 +3125,7 @@
                   color: q.color || '',
                   created_at: q.createdAt || nowIso,
                   updated_at: nowIso
-                }));
+                })), 'id');
 
                 if (fpRows.length > 0) {
                   for (let i = 0; i < fpRows.length; i += 300) {
@@ -3148,7 +3166,7 @@
             if (key === 'yarn-suppliers' && Array.isArray(value)) {
               try {
                 const cleanValue = filterDeletedEntities(value);
-                const sRows = cleanValue.filter(s => s && s.id).map(s => ({
+                const sRows = dedupeByConflictKey(cleanValue.filter(s => s && s.id).map(s => ({
                   id: String(s.id),
                   name: String(s.name || ''),
                   phone: s.phone || '',
@@ -3157,7 +3175,7 @@
                   notes: s.notes || '',
                   created_at: s.createdAt || nowIso,
                   updated_at: nowIso
-                }));
+                })), 'id');
 
                 if (sRows.length > 0) {
                   for (let i = 0; i < sRows.length; i += 300) {
@@ -3252,10 +3270,15 @@
                   });
                 });
 
-                if (lotRows.length > 0) {
-                  for (let i = 0; i < lotRows.length; i += 200) {
-                    const chunk = lotRows.slice(i, i + 200);
-                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_lots?on_conflict=id`, {
+                const dedupedLots = dedupeByConflictKey(lotRows, 'id');
+                const activeLotIdSet = new Set(dedupedLots.map(l => l.id));
+                const validBoxRows = dedupeByConflictKey(boxRows.filter(b => b && b.lot_id && activeLotIdSet.has(b.lot_id)), 'id');
+
+                let lotsSucceeded = true;
+                if (dedupedLots.length > 0) {
+                  for (let i = 0; i < dedupedLots.length; i += 200) {
+                    const chunk = dedupedLots.slice(i, i + 200);
+                    const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_lots?on_conflict=id`, {
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
@@ -3264,13 +3287,18 @@
                         'Prefer': 'resolution=merge-duplicates'
                       },
                       body: JSON.stringify(chunk)
-                    }).catch(() => {});
+                    }).catch(() => null);
+                    if (!res || !res.ok) {
+                      lotsSucceeded = false;
+                      console.warn('Yarn RM Lots upsert error:', res ? await res.text() : 'network error');
+                    }
                   }
                 }
 
-                if (boxRows.length > 0) {
-                  for (let i = 0; i < boxRows.length; i += 500) {
-                    const chunk = boxRows.slice(i, i + 500);
+                // Strictly guard child box upsert: only insert if parent lots succeeded in PostgreSQL
+                if (lotsSucceeded && validBoxRows.length > 0) {
+                  for (let i = 0; i < validBoxRows.length; i += 500) {
+                    const chunk = validBoxRows.slice(i, i + 500);
                     await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_boxes?on_conflict=id`, {
                       method: 'POST',
                       headers: {
@@ -3285,9 +3313,9 @@
                 }
 
                 // Clean up removed boxes and lots from Supabase
-                const activeLotIds = lotRows.map(l => l.id);
+                const activeLotIds = dedupedLots.map(l => l.id);
                 for (const lId of activeLotIds) {
-                  const currentBoxIdsForLot = boxRows.filter(b => b.lot_id === lId).map(b => b.id);
+                  const currentBoxIdsForLot = validBoxRows.filter(b => b.lot_id === lId).map(b => b.id);
                   if (currentBoxIdsForLot.length > 0) {
                     const bIdsList = currentBoxIdsForLot.map(id => `"${id}"`).join(',');
                     await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_boxes?lot_id=eq.${encodeURIComponent(lId)}&id=not.in.(${bIdsList})`, {
@@ -3399,10 +3427,17 @@
                   });
                 });
 
-                if (orderRows.length > 0) {
-                  for (let i = 0; i < orderRows.length; i += 200) {
-                    const chunk = orderRows.slice(i, i + 200);
-                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_orders?on_conflict=id`, {
+                const dedupedOrders = dedupeByConflictKey(orderRows, 'id');
+                const activeOrderIdSet = new Set(dedupedOrders.map(o => o.id));
+                const validBatchRows = dedupeByConflictKey(batchRows.filter(b => b && b.order_id && activeOrderIdSet.has(b.order_id)), 'id');
+                const activeBatchIdSet = new Set(validBatchRows.map(b => b.id));
+                const validOrderBoxRows = dedupeByConflictKey(boxRows.filter(bx => bx && bx.batch_id && activeBatchIdSet.has(bx.batch_id) && activeOrderIdSet.has(bx.order_id)), 'id');
+
+                let ordersSucceeded = true;
+                if (dedupedOrders.length > 0) {
+                  for (let i = 0; i < dedupedOrders.length; i += 200) {
+                    const chunk = dedupedOrders.slice(i, i + 200);
+                    const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_orders?on_conflict=id`, {
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
@@ -3411,14 +3446,19 @@
                         'Prefer': 'resolution=merge-duplicates'
                       },
                       body: JSON.stringify(chunk)
-                    }).catch(() => {});
+                    }).catch(() => null);
+                    if (!res || !res.ok) {
+                      ordersSucceeded = false;
+                      console.warn('Yarn Orders upsert error:', res ? await res.text() : 'network error');
+                    }
                   }
                 }
 
-                if (batchRows.length > 0) {
-                  for (let i = 0; i < batchRows.length; i += 300) {
-                    const chunk = batchRows.slice(i, i + 300);
-                    await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_order_batches?on_conflict=id`, {
+                let batchesSucceeded = ordersSucceeded;
+                if (ordersSucceeded && validBatchRows.length > 0) {
+                  for (let i = 0; i < validBatchRows.length; i += 300) {
+                    const chunk = validBatchRows.slice(i, i + 300);
+                    const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_order_batches?on_conflict=id`, {
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
@@ -3427,13 +3467,17 @@
                         'Prefer': 'resolution=merge-duplicates'
                       },
                       body: JSON.stringify(chunk)
-                    }).catch(() => {});
+                    }).catch(() => null);
+                    if (!res || !res.ok) {
+                      batchesSucceeded = false;
+                      console.warn('Yarn Order Batches upsert error:', res ? await res.text() : 'network error');
+                    }
                   }
                 }
 
-                if (boxRows.length > 0) {
-                  for (let i = 0; i < boxRows.length; i += 500) {
-                    const chunk = boxRows.slice(i, i + 500);
+                if (batchesSucceeded && validOrderBoxRows.length > 0) {
+                  for (let i = 0; i < validOrderBoxRows.length; i += 500) {
+                    const chunk = validOrderBoxRows.slice(i, i + 500);
                     await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_order_boxes?on_conflict=id`, {
                       method: 'POST',
                       headers: {
@@ -3448,9 +3492,9 @@
                 }
 
                 // Clean up removed boxes, batches, and orders from Supabase
-                const activeBatchIds = batchRows.map(b => b.id);
+                const activeBatchIds = validBatchRows.map(b => b.id);
                 for (const bId of activeBatchIds) {
-                  const currentBoxIdsForBatch = boxRows.filter(bx => bx.batch_id === bId).map(bx => bx.id);
+                  const currentBoxIdsForBatch = validOrderBoxRows.filter(bx => bx.batch_id === bId).map(bx => bx.id);
                   if (currentBoxIdsForBatch.length > 0) {
                     const idsList = currentBoxIdsForBatch.map(id => `"${id}"`).join(',');
                     await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_order_boxes?batch_id=eq.${encodeURIComponent(bId)}&id=not.in.(${idsList})`, {
@@ -3525,7 +3569,7 @@
             // Dedicated Relational Synchronization for Weft Yarn Issues
             if (key === 'yarn-issues' && Array.isArray(value) && value.length > 0) {
               try {
-                const issueRows = value.map(iss => {
+                const issueRows = dedupeByConflictKey(value.map(iss => {
                   if (!iss) return null;
                   const issId = String(iss.id || `ISS-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
                   const issDate = (iss.date || new Date().toISOString().split('T')[0]).split('T')[0];
@@ -3544,7 +3588,7 @@
                     details: iss.details || null,
                     updated_at: nowIso
                   };
-                }).filter(Boolean);
+                }).filter(Boolean), 'id');
 
                 if (issueRows.length > 0) {
                   for (let i = 0; i < issueRows.length; i += 500) {
@@ -3569,7 +3613,7 @@
             // Dedicated Relational Synchronization for Warp Beams
             if (key === 'warp-beams' && Array.isArray(value) && value.length > 0) {
               try {
-                const beamRows = value.map(b => {
+                const beamRows = dedupeByConflictKey(value.map(b => {
                   if (!b || !b.beamNumber) return null;
                   const bId = String(b.id || `BEAM-${b.beamNumber}`);
                   const bCreated = (b.createdAt || new Date().toISOString().split('T')[0]).split('T')[0];
@@ -3588,7 +3632,7 @@
                     history: Array.isArray(b.history) ? b.history : [],
                     updated_at: nowIso
                   };
-                }).filter(Boolean);
+                }).filter(Boolean), 'id');
 
                 if (beamRows.length > 0) {
                   for (let i = 0; i < beamRows.length; i += 300) {
@@ -3613,7 +3657,7 @@
             // Dedicated Relational Synchronization for Warp Yarn Issues
             if (key === 'warp-issues' && Array.isArray(value) && value.length > 0) {
               try {
-                const warpIssRows = value.map(iss => {
+                const warpIssRows = dedupeByConflictKey(value.map(iss => {
                   if (!iss) return null;
                   const issId = String(iss.id || `WARP-ISS-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
                   const issDate = (iss.date || new Date().toISOString().split('T')[0]).split('T')[0];
@@ -3628,7 +3672,7 @@
                     supplier: iss.supplier ? String(iss.supplier) : null,
                     updated_at: nowIso
                   };
-                }).filter(Boolean);
+                }).filter(Boolean), 'id');
 
                 if (warpIssRows.length > 0) {
                   for (let i = 0; i < warpIssRows.length; i += 500) {
@@ -3653,7 +3697,7 @@
             // Dedicated Relational Synchronization for Warp Beam Loadings
             if (key === 'warp-beam-loadings' && Array.isArray(value) && value.length > 0) {
               try {
-                const loadingRows = value.map(bl => {
+                const loadingRows = dedupeByConflictKey(value.map(bl => {
                   if (!bl) return null;
                   const blId = String(bl.id || `BL-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
                   const blDate = (bl.date || new Date().toISOString().split('T')[0]).split('T')[0];
@@ -3673,7 +3717,7 @@
                     payment_amount: parseFloat(bl.paymentAmount) || 0,
                     updated_at: nowIso
                   };
-                }).filter(Boolean);
+                }).filter(Boolean), 'id');
 
                 if (loadingRows.length > 0) {
                   for (let i = 0; i < loadingRows.length; i += 500) {
@@ -3698,7 +3742,7 @@
             // Dedicated Relational Synchronization for Weaving Loom Production Logs
             if (key === 'productionLogs' && Array.isArray(value) && value.length > 0) {
               try {
-                const prodRows = value.map(l => {
+                const prodRows = dedupeByConflictKey(value.map(l => {
                   if (!l || !l.productionDate || !l.machineNumber) return null;
                   const logId = String(l.id || `PROD-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
                   const prodDate = (l.productionDate || new Date().toISOString().split('T')[0]).split('T')[0];
@@ -3729,7 +3773,7 @@
                     tp_source_serials: Array.isArray(l.tpSourceSerials) ? l.tpSourceSerials : [],
                     updated_at: nowIso
                   };
-                }).filter(Boolean);
+                }).filter(Boolean), 'id');
 
                 if (prodRows.length > 0) {
                   for (let i = 0; i < prodRows.length; i += 300) {
@@ -3755,7 +3799,7 @@
             if (key.startsWith('yarn_') && key.endsWith('_production_logs') && Array.isArray(value) && value.length > 0) {
               try {
                 const division = key.replace('yarn_', '').replace('_production_logs', '');
-                const yarnProdRows = value.map(yp => {
+                const yarnProdRows = dedupeByConflictKey(value.map(yp => {
                   if (!yp || !yp.boriNo) return null;
                   const ypId = String(yp.id || `YP-${division}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
                   const ypDate = (yp.date || new Date().toISOString().split('T')[0]).split('T')[0];
@@ -3780,7 +3824,7 @@
                     yarns: Array.isArray(yp.yarns) ? yp.yarns : [],
                     updated_at: nowIso
                   };
-                }).filter(Boolean);
+                }).filter(Boolean), 'id');
 
                 if (yarnProdRows.length > 0) {
                   for (let i = 0; i < yarnProdRows.length; i += 300) {
@@ -3867,7 +3911,7 @@
             if (key.startsWith('yarn_') && key.endsWith('_sales_logs') && Array.isArray(value) && value.length > 0) {
               try {
                 const division = key.replace('yarn_', '').replace('_sales_logs', '');
-                const yarnSaleRows = value.map(ys => {
+                const yarnSaleRows = dedupeByConflictKey(value.map(ys => {
                   if (!ys) return null;
                   const ysId = String(ys.id || `YS-${division}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
                   const ysDate = (ys.date || ys.saleDate || new Date().toISOString().split('T')[0]).split('T')[0];
@@ -3895,7 +3939,7 @@
                     raw_data: ys,
                     updated_at: nowIso
                   };
-                }).filter(Boolean);
+                }).filter(Boolean), 'id');
 
                 if (yarnSaleRows.length > 0) {
                   for (let i = 0; i < yarnSaleRows.length; i += 300) {
@@ -3947,7 +3991,7 @@
             if (key === 'takaDispatchStates' && typeof value === 'object' && value !== null) {
               try {
                 const dispatchEntries = Object.entries(value);
-                const dispatchRows = dispatchEntries.map(([serial, data]) => {
+                const dispatchRows = dedupeByConflictKey(dispatchEntries.map(([serial, data]) => {
                   if (!serial || !data) return null;
                   const s = String(serial).trim();
                   return {
@@ -3965,7 +4009,7 @@
                     history: Array.isArray(data.history) ? data.history : [],
                     updated_at: nowIso
                   };
-                }).filter(Boolean);
+                }).filter(Boolean), 'taka_serial');
 
                 if (dispatchRows.length > 0) {
                   for (let i = 0; i < dispatchRows.length; i += 300) {
@@ -3991,7 +4035,7 @@
             if (key === 'takaCutRelations' && typeof value === 'object' && value !== null) {
               try {
                 const cutEntries = Object.entries(value);
-                const cutRows = cutEntries.map(([parentSerial, cutData]) => {
+                const cutRows = dedupeByConflictKey(cutEntries.map(([parentSerial, cutData]) => {
                   if (!parentSerial || !cutData) return null;
                   const ps = String(parentSerial).trim();
                   const children = Array.isArray(cutData) ? cutData : (Array.isArray(cutData.children) ? cutData.children : []);
@@ -4002,7 +4046,7 @@
                     metadata: typeof cutData === 'object' && !Array.isArray(cutData) ? cutData : {},
                     updated_at: nowIso
                   };
-                }).filter(Boolean);
+                }).filter(Boolean), 'id');
 
                 if (cutRows.length > 0) {
                   for (let i = 0; i < cutRows.length; i += 300) {
@@ -4027,9 +4071,12 @@
             // Dedicated Relational Synchronization for Salary Sheet & Staff Attendance
             if ((key === 'aethertasks_db_state_v7' || key === 'staff-salary-state') && typeof value === 'object' && value !== null) {
               try {
+                let empSuccess = true;
+                const activeEmpIdSet = new Set();
+
                 // 1. Sync Employees Master
                 if (Array.isArray(value.employees) && value.employees.length > 0) {
-                  const empRows = value.employees.map(emp => {
+                  let empRows = value.employees.map(emp => {
                     if (!emp || !emp.id) return null;
                     const salAmount = parseFloat(emp.salaryAmount !== undefined ? emp.salaryAmount : (emp.baseSalary !== undefined ? emp.baseSalary : emp.salaryRate)) || 0;
                     const rawJoinDate = emp.joinDate || emp.joiningDate || '';
@@ -4079,10 +4126,13 @@
                     };
                   }).filter(Boolean);
 
+                  empRows = dedupeByConflictKey(empRows, 'id');
+                  empRows.forEach(e => activeEmpIdSet.add(e.id));
+
                   if (empRows.length > 0) {
                     for (let i = 0; i < empRows.length; i += 300) {
                       const chunk = empRows.slice(i, i + 300);
-                      await fetch(`${SUPABASE_URL}/rest/v1/vf_employees?on_conflict=id`, {
+                      const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_employees?on_conflict=id`, {
                         method: 'POST',
                         headers: {
                           'apikey': SUPABASE_ANON_KEY,
@@ -4091,13 +4141,14 @@
                           'Prefer': 'resolution=merge-duplicates'
                         },
                         body: JSON.stringify(chunk)
-                      }).catch(() => {});
+                      }).catch(() => null);
+                      if (!res || !res.ok) empSuccess = false;
                     }
                   }
                 }
 
-                // 2. Sync Attendance Records
-                if (value.attendance && typeof value.attendance === 'object') {
+                // 2. Sync Attendance Records (only if parent employee sync did not fail)
+                if (value.attendance && typeof value.attendance === 'object' && empSuccess) {
                   const empList = Array.isArray(value.employees) ? value.employees : [];
                   const empMap = new Map();
                   empList.forEach(e => {
@@ -4107,7 +4158,7 @@
                     }
                   });
 
-                  const attRows = [];
+                  let attRows = [];
                   Object.entries(value.attendance).forEach(([dateStr, empAttMap]) => {
                     if (!dateStr || typeof empAttMap !== 'object' || empAttMap === null) return;
                     const cleanDate = String(dateStr).split('T')[0];
@@ -4116,6 +4167,12 @@
                       const trimmedKey = String(empKey).trim();
                       const matchedEmp = empMap.get(trimmedKey) || empMap.get(trimmedKey.toLowerCase());
                       const targetEmpId = (matchedEmp && matchedEmp.id) ? String(matchedEmp.id).trim() : trimmedKey;
+
+                      // Prevent foreign key violation if activeEmpIdSet is populated and does not contain this ID
+                      if (activeEmpIdSet.size > 0 && !activeEmpIdSet.has(targetEmpId)) {
+                        return;
+                      }
+
                       const attId = `${cleanDate}_${targetEmpId}`;
 
                       const attStatus = String(att.status || 'present').trim();
@@ -4155,6 +4212,8 @@
                     });
                   });
 
+                  attRows = dedupeByConflictKey(attRows, 'id');
+
                   if (attRows.length > 0) {
                     for (let i = 0; i < attRows.length; i += 300) {
                       const chunk = attRows.slice(i, i + 300);
@@ -4182,14 +4241,17 @@
                   }
                 }
 
-                // 3. Sync Employee Loans & Advances
-                if (Array.isArray(value.loans) && value.loans.length > 0) {
-                  const loanRows = value.loans.map(ln => {
+                // 3. Sync Employee Loans & Advances (only if parent employee sync did not fail)
+                if (Array.isArray(value.loans) && value.loans.length > 0 && empSuccess) {
+                  let loanRows = value.loans.map(ln => {
                     if (!ln || !ln.empId) return null;
+                    const targetEmpId = String(ln.empId).trim();
+                    if (activeEmpIdSet.size > 0 && !activeEmpIdSet.has(targetEmpId)) return null;
+
                     const lnId = String(ln.id || `LN-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
                     return {
                       id: lnId,
-                      employee_id: String(ln.empId).trim(),
+                      employee_id: targetEmpId,
                       loan_date: (ln.date || new Date().toISOString().split('T')[0]).split('T')[0],
                       amount: parseFloat(ln.amount) || 0,
                       type: String(ln.type || 'Advance').trim(),
@@ -4198,6 +4260,8 @@
                       updated_at: nowIso
                     };
                   }).filter(Boolean);
+
+                  loanRows = dedupeByConflictKey(loanRows, 'id');
 
                   if (loanRows.length > 0) {
                     for (let i = 0; i < loanRows.length; i += 300) {
@@ -4216,18 +4280,21 @@
                   }
                 }
 
-                // 4. Sync Salary Settlements
-                if (value.salaryPayments && typeof value.salaryPayments === 'object') {
-                  const settlementRows = [];
+                // 4. Sync Salary Settlements (only if parent employee sync did not fail)
+                if (value.salaryPayments && typeof value.salaryPayments === 'object' && empSuccess) {
+                  let settlementRows = [];
                   Object.entries(value.salaryPayments).forEach(([monthYear, empPayMap]) => {
                     if (!monthYear || typeof empPayMap !== 'object' || empPayMap === null) return;
                     Object.entries(empPayMap).forEach(([empId, pay]) => {
                       if (!empId || !pay) return;
-                      const setlId = `${monthYear}_${empId}`;
+                      const cleanEmpId = String(empId).trim();
+                      if (activeEmpIdSet.size > 0 && !activeEmpIdSet.has(cleanEmpId)) return;
+
+                      const setlId = `${monthYear}_${cleanEmpId}`;
                       settlementRows.push({
                         id: setlId,
                         month_year: String(monthYear).trim(),
-                        employee_id: String(empId).trim(),
+                        employee_id: cleanEmpId,
                         paid_amount: parseFloat(pay.paidAmount || pay.paid) || 0,
                         net_payable: parseFloat(pay.netPayable || pay.payable) || 0,
                         paid_date: pay.paidDate ? String(pay.paidDate).split('T')[0] : null,
@@ -4238,6 +4305,8 @@
                       });
                     });
                   });
+
+                  settlementRows = dedupeByConflictKey(settlementRows, 'id');
 
                   if (settlementRows.length > 0) {
                     for (let i = 0; i < settlementRows.length; i += 300) {
@@ -7637,15 +7706,27 @@
           });
           if (res.ok) return await res.json();
         } catch(e) {}
-        // Fallback manual update if RPC is missing
-        const boxRows = bList.map(bId => ({
-          id: bId,
-          status: 'issued',
-          issued_to: issuedTo,
-          issue_date: dateStr,
-          updated_at: new Date().toISOString()
-        }));
-        return await VF_DB.upsert('vf_yarn_rm_boxes', boxRows);
+        // Fallback manual update if RPC is missing: use PATCH to update fields in-place without triggering NOT NULL violation on lot_id
+        try {
+          const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_boxes?id=in.(${bList.map(encodeURIComponent).join(',')})`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              status: 'issued',
+              issued_to: issuedTo,
+              issue_date: dateStr,
+              updated_at: new Date().toISOString()
+            })
+          });
+          return { success: patchRes.ok };
+        } catch(err) {
+          return { success: false, error: err.message };
+        }
       },
       async getOrders(options = {}) {
         const orders = await VF_DB.fetchTable('vf_yarn_orders', { order: 'order_date.desc,updated_at.desc', ...options });

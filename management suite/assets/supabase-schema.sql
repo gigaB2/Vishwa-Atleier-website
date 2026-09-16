@@ -48,6 +48,19 @@ CREATE TABLE IF NOT EXISTS public.vf_costing_covering_products (
 );
 CREATE INDEX IF NOT EXISTS idx_vf_costing_covering_products_updated_at ON public.vf_costing_covering_products(updated_at DESC);
 
+-- 5b. Dedicated Table: Costing Dependency Links
+CREATE TABLE IF NOT EXISTS public.vf_costing_links (
+    id TEXT PRIMARY KEY,
+    source_id TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    link_type TEXT DEFAULT 'costing',
+    data JSONB DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vf_costing_links_source ON public.vf_costing_links(source_id);
+CREATE INDEX IF NOT EXISTS idx_vf_costing_links_target ON public.vf_costing_links(target_id);
+CREATE INDEX IF NOT EXISTS idx_vf_costing_links_updated_at ON public.vf_costing_links(updated_at DESC);
+
 -- 6. Dedicated Table: Enterprise Audit Logs (Tracking all modifications & security events)
 CREATE TABLE IF NOT EXISTS public.vf_audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -255,7 +268,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.vf_bulk_delete_entities(
     p_table TEXT,
     p_ids TEXT[],
-    p_id_column TEXT DEFAULT 'id'
+    p_id_column TEXT DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -265,6 +278,7 @@ AS $$
 DECLARE
     v_deleted_count INT := 0;
     v_sql TEXT;
+    v_col TEXT;
 BEGIN
     IF p_table IS NULL OR p_ids IS NULL OR array_length(p_ids, 1) IS NULL THEN
         RETURN jsonb_build_object('success', false, 'deleted_count', 0, 'error', 'Invalid arguments');
@@ -273,7 +287,7 @@ BEGIN
     -- Whitelist valid table names for security
     IF p_table NOT IN (
         'vf_kv_store', 'vf_costing_products', 'vf_costing_tfo_products', 'vf_costing_doubler_products',
-        'vf_costing_covering_products', 'vf_yarn_rm_lots', 'vf_yarn_rm_boxes', 'vf_yarn_orders',
+        'vf_costing_covering_products', 'vf_costing_links', 'vf_yarn_rm_lots', 'vf_yarn_rm_boxes', 'vf_yarn_orders',
         'vf_yarn_order_batches', 'vf_yarn_order_boxes', 'vf_weft_issues', 'vf_warp_beams',
         'vf_warp_issues', 'vf_warp_beam_loadings', 'vf_weaving_production_logs', 'vf_yarn_production_logs',
         'vf_yarn_sales_logs', 'vf_fabric_dispatches', 'vf_fabric_cut_relations', 'vf_employees',
@@ -283,7 +297,20 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Table not permitted for bulk deletion');
     END IF;
 
-    v_sql := format('DELETE FROM public.%I WHERE %I = ANY($1)', p_table, p_id_column);
+    -- Automatically determine primary key column if not specified or default 'id'
+    IF p_id_column IS NULL OR p_id_column = '' OR p_id_column = 'id' THEN
+        IF p_table = 'vf_kv_store' THEN
+            v_col := 'key';
+        ELSIF p_table = 'vf_fabric_dispatches' THEN
+            v_col := 'taka_serial';
+        ELSE
+            v_col := 'id';
+        END IF;
+    ELSE
+        v_col := p_id_column;
+    END IF;
+
+    v_sql := format('DELETE FROM public.%I WHERE %I = ANY($1)', p_table, v_col);
     EXECUTE v_sql USING p_ids;
     GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
 
@@ -875,6 +902,7 @@ ALTER TABLE public.vf_costing_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_costing_tfo_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_costing_doubler_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_costing_covering_products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_costing_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_rm_lots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vf_yarn_rm_boxes ENABLE ROW LEVEL SECURITY;
