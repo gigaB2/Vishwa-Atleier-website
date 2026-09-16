@@ -2339,12 +2339,14 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
       return d.toISOString().split('T')[0];
     }
 
-    function computeRowFinancials(row, defaultRateMonthly = 1.5, defaultCreditDays = 30, calculateInterest = true) {
+    function computeRowFinancials(row, defaultRateMonthly = 1.5, defaultCreditDays = 30, calculateInterest = true, todayParam = '2026-09-08') {
       const grandTotal = Number(row.grandTotal) || 0;
       const paid = Number(row.paidAmount) || 0;
-      const creditDays = Number(row.creditDays) || defaultCreditDays;
+      const creditDays = (row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '' && Number(row.creditDays) > 0)
+        ? Number(row.creditDays)
+        : defaultCreditDays;
       const dueDate = addDays(row.date, creditDays);
-      const today = '2026-09-08';
+      const today = todayParam;
       const isFullyReturned = (Number(row.qty) === 0 && Number(row.grQty) > 0);
 
       const refDate = (row.paymentDate && row.paymentDate.trim()) ? row.paymentDate : today;
@@ -2355,6 +2357,8 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
         rateMonthly = Number(row.rateMonthly);
       } else if (row.discountPercent !== undefined && row.discountPercent !== null && row.discountPercent !== '') {
         rateMonthly = Number(row.discountPercent);
+      } else if (row.interestRate !== undefined && row.interestRate !== null && row.interestRate !== '') {
+        rateMonthly = Number(row.interestRate) / 12;
       }
 
       let earlyDays = 0;
@@ -2582,6 +2586,37 @@ test('Yarn Ledger — Goods Return (GR) Calculation & Deduction Engine', async (
     assert.strictEqual(floatPrecisionResult.roundOff, -0.67);
     assert.strictEqual(floatPrecisionResult.netBalance, 0);
     assert.strictEqual(floatPrecisionResult.status, 'paid');
+
+    // Case 9: Sales Ledger row with creditDays = 0 and missing rateMonthly -> falls back to default 30 days and 1.5% rate
+    const salesSyncedResult = computeRowFinancials({
+      date: billDate,
+      grandTotal: 100000,
+      creditDays: 0,
+      paymentDate: '2026-09-16',
+      paidAmount: 99250
+    });
+    assert.strictEqual(salesSyncedResult.daysTaken, 15);
+    assert.strictEqual(salesSyncedResult.earlyDays, 15);
+    assert.strictEqual(salesSyncedResult.adjType, 'discount');
+    assert.strictEqual(salesSyncedResult.calcAdjPct, 0.75);
+    assert.strictEqual(salesSyncedResult.calcAdjAmount, -750);
+    assert.strictEqual(salesSyncedResult.finalBill, 99250);
+    assert.strictEqual(salesSyncedResult.netBalance, 0);
+    assert.strictEqual(salesSyncedResult.status, 'paid');
+
+    // Case 10: Sales Ledger pending unpaid row evaluated against today ('2026-09-16')
+    const salesPendingResult = computeRowFinancials({
+      date: billDate, // '2026-09-01'
+      grandTotal: 100000,
+      creditDays: 0,
+      paymentDate: '',
+      paidAmount: 0
+    }, 1.5, 30, true, '2026-09-16');
+    assert.strictEqual(salesPendingResult.earlyDays, 15);
+    assert.strictEqual(salesPendingResult.calcAdjAmount, -750);
+    assert.strictEqual(salesPendingResult.finalBill, 99250);
+    assert.strictEqual(salesPendingResult.netBalance, 99250);
+    assert.strictEqual(salesPendingResult.status, 'pending');
   });
 });
 

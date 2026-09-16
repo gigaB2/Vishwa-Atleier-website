@@ -3716,6 +3716,8 @@
     let calculateInterest = true;
     let defaultRateMonthly = 1.5; // 1.5% per month (18% per annum)
     let defaultCreditDays = 30; // 30 days
+    let defaultDiscountPercent = 1.5; // 1.5% default discount
+    let defaultInterestRate = 18; // 18% default p.a.
     let frozenColumnsCount = 4; // Default freeze up to Party Name (Cols 0, 1, 2, 3)
     let contextMenuTargetColIndex = -1;
     let liveSaveTimer = null;
@@ -3777,23 +3779,46 @@
         .trim();
     }
 
-    // Date math: add days to a date string YYYY-MM-DD
+    // Date math: add days to a date string YYYY-MM-DD (Timezone & DST safe)
     function addDays(dateStr, days) {
       if (!dateStr) return '';
+      try {
+        const cleanDate = String(dateStr).split('T')[0].trim();
+        const parts = cleanDate.split('-');
+        if (parts.length === 3 && parts[0].length === 4) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[2], 10);
+          const dt = new Date(y, m, d);
+          dt.setDate(dt.getDate() + Number(days || 0));
+          const resY = dt.getFullYear();
+          const resM = String(dt.getMonth() + 1).padStart(2, '0');
+          const resD = String(dt.getDate()).padStart(2, '0');
+          return `${resY}-${resM}-${resD}`;
+        }
+      } catch (e) {}
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return '';
       d.setDate(d.getDate() + Number(days || 0));
       return d.toISOString().split('T')[0];
     }
 
-    // Calculate Days Between two dates
+    // Calculate Days Between two dates (Timezone & DST safe UTC computation)
     function daysBetween(fromStr, toStr) {
       if (!fromStr || !toStr) return 0;
+      try {
+        const p1 = String(fromStr).split('T')[0].trim().split('-');
+        const p2 = String(toStr).split('T')[0].trim().split('-');
+        if (p1.length === 3 && p2.length === 3 && p1[0].length === 4 && p2[0].length === 4) {
+          const utc1 = Date.UTC(parseInt(p1[0], 10), parseInt(p1[1], 10) - 1, parseInt(p1[2], 10));
+          const utc2 = Date.UTC(parseInt(p2[0], 10), parseInt(p2[1], 10) - 1, parseInt(p2[2], 10));
+          return Math.round((utc2 - utc1) / (1000 * 60 * 60 * 24));
+        }
+      } catch (e) {}
       const d1 = new Date(fromStr);
       const d2 = new Date(toStr);
       if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
-      const diffTime = d2.getTime() - d1.getTime();
-      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
     }
 
     // Data Storage for Ledgers
@@ -4601,11 +4626,19 @@
         ledgerData.sales = mergeLedgerDatasets(ledgerData.sales, Array.isArray(cloudSales) ? cloudSales : []);
         ledgerData.purchase = mergeLedgerDatasets(ledgerData.purchase, Array.isArray(cloudPurchase) ? cloudPurchase : []);
 
-        // Clear auto-synced details from remarks / cheque number so it remains clean and empty for user entry
+        // Clear auto-synced details from remarks / cheque number so it remains clean and empty for user entry, and heal missing/zero credit terms
         ['sales', 'purchase'].forEach(tab => {
           (ledgerData[tab] || []).forEach(r => {
-            if (r && r.remarks && (r.remarks.startsWith('Auto-synced') || r.remarks.includes('Auto-synced'))) {
-              r.remarks = '';
+            if (r) {
+              if (r.remarks && (r.remarks.startsWith('Auto-synced') || r.remarks.includes('Auto-synced'))) {
+                r.remarks = '';
+              }
+              if (r.creditDays === undefined || r.creditDays === null || r.creditDays === '' || Number(r.creditDays) <= 0) {
+                r.creditDays = defaultCreditDays;
+              }
+              if (r.rateMonthly === undefined || r.rateMonthly === null || r.rateMonthly === '' || Number(r.rateMonthly) <= 0) {
+                r.rateMonthly = (r.discountPercent !== undefined && Number(r.discountPercent) > 0) ? Number(r.discountPercent) : defaultRateMonthly;
+              }
             }
           });
         });
@@ -4882,8 +4915,9 @@
                   grandTotal: grandTotal,
                   paidAmount: Number(sale.receivedAmount) || 0,
                   paymentDate: sale.paymentDate || '',
-                  creditDays: (sale.creditDays !== undefined && sale.creditDays !== null && sale.creditDays !== '') ? Number(sale.creditDays) : defaultCreditDays,
-                  discountPercent: (sale.discountValue !== undefined && sale.discountType === 'percent') ? Number(sale.discountValue) : defaultDiscountPercent,
+                  creditDays: (sale.creditDays !== undefined && sale.creditDays !== null && sale.creditDays !== '' && Number(sale.creditDays) > 0) ? Number(sale.creditDays) : defaultCreditDays,
+                  rateMonthly: (sale.rateMonthly !== undefined && sale.rateMonthly !== null && sale.rateMonthly !== '' && Number(sale.rateMonthly) > 0) ? Number(sale.rateMonthly) : ((sale.discountValue !== undefined && sale.discountType === 'percent' && Number(sale.discountValue) > 0) ? Number(sale.discountValue) : defaultRateMonthly),
+                  discountPercent: (sale.discountValue !== undefined && sale.discountType === 'percent' && Number(sale.discountValue) > 0) ? Number(sale.discountValue) : defaultDiscountPercent,
                   interestRate: defaultInterestRate,
                   interestPaid: 0,
                   remarks: '',
@@ -4895,6 +4929,12 @@
               } else if (existingRow) {
                 if (existingRow.remarks && (existingRow.remarks.startsWith('Auto-synced') || existingRow.remarks.includes('Auto-synced'))) {
                   existingRow.remarks = '';
+                }
+                if (!existingRow.creditDays || Number(existingRow.creditDays) <= 0) {
+                  existingRow.creditDays = (sale.creditDays && Number(sale.creditDays) > 0) ? Number(sale.creditDays) : defaultCreditDays;
+                }
+                if (!existingRow.rateMonthly || Number(existingRow.rateMonthly) <= 0) {
+                  existingRow.rateMonthly = (sale.rateMonthly && Number(sale.rateMonthly) > 0) ? Number(sale.rateMonthly) : ((sale.discountValue && sale.discountType === 'percent' && Number(sale.discountValue) > 0) ? Number(sale.discountValue) : defaultRateMonthly);
                 }
                 const oldRate = existingRow.rate;
                 const oldQty = existingRow.qty;
@@ -5545,8 +5585,8 @@
       updateFieldInput('qty', row.qty !== undefined && row.qty !== null ? Number(row.qty).toFixed(2) : '0.00');
       updateFieldInput('rate', row.rate !== undefined && row.rate !== null ? Number(row.rate).toFixed(2) : '0.00');
       updateFieldInput('gstPercent', row.gstPercent !== undefined ? row.gstPercent : 5.0);
-      updateFieldInput('creditDays', (row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '') ? row.creditDays : defaultCreditDays);
-      updateFieldInput('rateMonthly', row.rateMonthly !== undefined ? row.rateMonthly : defaultRateMonthly);
+      updateFieldInput('creditDays', (row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '' && Number(row.creditDays) > 0) ? row.creditDays : defaultCreditDays);
+      updateFieldInput('rateMonthly', (row.rateMonthly !== undefined && row.rateMonthly !== null && row.rateMonthly !== '' && Number(row.rateMonthly) > 0) ? row.rateMonthly : defaultRateMonthly);
       updateFieldInput('actualAdjustment', (row.actualAdjustment !== undefined && row.actualAdjustment !== null) ? Number(row.actualAdjustment).toFixed(2) : (row.actualDiscount !== undefined && row.actualDiscount !== null ? (-Math.abs(row.actualDiscount)).toFixed(2) : ''), comp.calcAdjAmount !== 0 ? comp.calcAdjAmount.toFixed(2) : '0.00');
       updateFieldInput('roundOff', (row.roundOff !== undefined && row.roundOff !== null && row.roundOff !== '') ? Number(row.roundOff).toFixed(2) : '', '0.00');
       updateFieldInput('paidAmount', row.paidAmount !== undefined && row.paidAmount !== null ? Number(row.paidAmount).toFixed(2) : '0.00');
@@ -5830,22 +5870,24 @@
         : Number((subtotal + gstAmount).toFixed(2));
 
       const paid = Number(row.paidAmount) || 0;
-      const creditDays = (row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '') ? Number(row.creditDays) : defaultCreditDays;
+      const creditDays = (row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '' && Number(row.creditDays) > 0)
+        ? Number(row.creditDays)
+        : defaultCreditDays;
       const dueDate = addDays(row.date, creditDays);
       const today = new Date().toISOString().split('T')[0];
       const isFullyReturned = (Number(row.qty) === 0 && Number(row.grQty) > 0);
 
-      // Effective reference date for settlement (paymentDate if recorded, else current date if outstanding)
-      const refDate = (row.paymentDate && row.paymentDate.trim()) ? row.paymentDate : today;
+      // Effective reference date for settlement (paymentDate if recorded, else current evaluation date today)
+      const refDate = (row.paymentDate && String(row.paymentDate).trim() !== '') ? String(row.paymentDate).trim().split('T')[0] : today;
       const daysTaken = (row.date && refDate) ? daysBetween(row.date, refDate) : 0;
 
       // Rate per month: user can specify rateMonthly or legacy discountPercent/interestRate
       let rateMonthly = defaultRateMonthly;
-      if (row.rateMonthly !== undefined && row.rateMonthly !== null && row.rateMonthly !== '') {
+      if (row.rateMonthly !== undefined && row.rateMonthly !== null && row.rateMonthly !== '' && Number(row.rateMonthly) > 0) {
         rateMonthly = Number(row.rateMonthly);
-      } else if (row.discountPercent !== undefined && row.discountPercent !== null && row.discountPercent !== '') {
+      } else if (row.discountPercent !== undefined && row.discountPercent !== null && row.discountPercent !== '' && Number(row.discountPercent) > 0) {
         rateMonthly = Number(row.discountPercent);
-      } else if (row.interestRate !== undefined && row.interestRate !== null && row.interestRate !== '') {
+      } else if (row.interestRate !== undefined && row.interestRate !== null && row.interestRate !== '' && Number(row.interestRate) > 0) {
         rateMonthly = Number(row.interestRate) / 12;
       }
 
@@ -5861,30 +5903,39 @@
         overdueDays = 0;
         calcAdjAmount = 0;
         calcAdjPct = 0;
-      } else if (daysTaken <= creditDays && creditDays > 0 && rateMonthly > 0) {
-        // Paid / settled on or before credit term: Early Payment Discount applies
-        earlyDays = Math.max(0, creditDays - Math.max(0, daysTaken));
-        overdueDays = 0;
-        adjType = 'discount';
-        // Pro-rata early discount based on monthly rate:
-        // rateMonthly % for 30 days -> (earlyDays / 30) * rateMonthly %
-        calcAdjPct = Number(((earlyDays / 30) * rateMonthly).toFixed(4));
-        const discValue = Number(((grandTotal * calcAdjPct) / 100).toFixed(2));
-        calcAdjAmount = discValue === 0 ? 0 : -discValue; // Negative adjustment (deduction)
-      } else if (daysTaken > creditDays) {
-        // Paid / settling after credit term: Late Payment Interest applies
-        earlyDays = 0;
-        if (dueDate) {
-          overdueDays = Math.max(0, daysBetween(dueDate, refDate));
-        }
-        if (calculateInterest && overdueDays > 0 && rateMonthly > 0) {
-          adjType = 'interest';
-          // Late interest based on monthly rate:
-          // Daily interest = (rateMonthly / 30) %, over overdueDays
-          calcAdjPct = Number(((overdueDays / 30) * rateMonthly).toFixed(4));
-          const intValue = Number(((grandTotal * calcAdjPct) / 100).toFixed(2));
-          calcAdjAmount = intValue; // Positive adjustment (charge)
+      } else {
+        const diffFromDue = (refDate && dueDate) ? daysBetween(refDate, dueDate) : 0;
+
+        if (diffFromDue > 0 && rateMonthly > 0) {
+          // Evaluated/paid before due date: Early Payment Discount applies
+          earlyDays = diffFromDue;
+          overdueDays = 0;
+          adjType = 'discount';
+          // Pro-rata early discount based on monthly rate:
+          // rateMonthly % for 30 days -> (earlyDays / 30) * rateMonthly %
+          calcAdjPct = Number(((earlyDays / 30) * rateMonthly).toFixed(4));
+          const discValue = Number(((grandTotal * calcAdjPct) / 100).toFixed(2));
+          calcAdjAmount = discValue === 0 ? 0 : -discValue; // Negative adjustment (deduction)
+        } else if (diffFromDue < 0) {
+          // Evaluated/paid after due date: Late Payment Interest applies
+          earlyDays = 0;
+          overdueDays = Math.abs(diffFromDue);
+          if (calculateInterest && overdueDays > 0 && rateMonthly > 0) {
+            adjType = 'interest';
+            // Late interest based on monthly rate:
+            // Daily interest = (rateMonthly / 30) %, over overdueDays
+            calcAdjPct = Number(((overdueDays / 30) * rateMonthly).toFixed(4));
+            const intValue = Number(((grandTotal * calcAdjPct) / 100).toFixed(2));
+            calcAdjAmount = intValue; // Positive adjustment (charge)
+          } else {
+            adjType = 'none';
+            calcAdjAmount = 0;
+            calcAdjPct = 0;
+          }
         } else {
+          // Paid/evaluated exactly on due date
+          earlyDays = 0;
+          overdueDays = 0;
           adjType = 'none';
           calcAdjAmount = 0;
           calcAdjPct = 0;
@@ -6325,12 +6376,12 @@
 
             <!-- 12: Editable Credit Days -->
             <td data-col-index="12" class="num-col">
-              <input type="number" step="1" min="0" data-field="creditDays" class="cell-input num-font" style="width: 80px;" value="${(row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '') ? row.creditDays : defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
+              <input type="number" step="1" min="0" data-field="creditDays" class="cell-input num-font" style="width: 80px;" value="${(row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '' && Number(row.creditDays) > 0) ? row.creditDays : defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
             </td>
 
             <!-- 13: Editable Monthly Interest / Discount Rate % -->
             <td data-col-index="13" class="num-col">
-              <input type="number" step="0.01" data-field="rateMonthly" class="cell-input num-font" style="width: 85px; color: var(--accent); font-weight: 700;" value="${row.rateMonthly !== undefined && row.rateMonthly !== null && row.rateMonthly !== '' ? row.rateMonthly : defaultRateMonthly}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'rateMonthly', this.value, false)" onchange="handleCellChange('${row.id}', 'rateMonthly', this.value, true)" title="Monthly Int/Disc Rate % (e.g. 1.5%/mo = 18% p.a.)">
+              <input type="number" step="0.01" data-field="rateMonthly" class="cell-input num-font" style="width: 85px; color: var(--accent); font-weight: 700;" value="${(row.rateMonthly !== undefined && row.rateMonthly !== null && row.rateMonthly !== '' && Number(row.rateMonthly) > 0) ? row.rateMonthly : defaultRateMonthly}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'rateMonthly', this.value, false)" onchange="handleCellChange('${row.id}', 'rateMonthly', this.value, true)" title="Monthly Int/Disc Rate % (e.g. 1.5%/mo = 18% p.a.)">
             </td>
 
             <!-- 14: Due Date -->
