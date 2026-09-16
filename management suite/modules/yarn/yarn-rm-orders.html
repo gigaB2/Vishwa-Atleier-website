@@ -3884,10 +3884,18 @@
 
     // Component: Order Details Modal (Exact replica of order-book.html with editable specifications & rate)
     const OrderDetailsModal = ({ order, onClose, onUpdate, onComplete, onRevertActive, qualities, suppliers, geminiApiKey, selectedGeminiModel, onOpenSettings }) => {
-      const [showBatchForm, setShowBatchForm] = useState(false);
+      if (!order) return null;
+      const [showBatchForm, setShowBatchForm] = useState(true);
       const [editingBatch, setEditingBatch] = useState(null);
       const [orderSavedToast, setOrderSavedToast] = useState(false);
-      const stockBoxMap = useMemo(() => getStockBoxLookupMap(), [order.id, order.batches]);
+      const stockBoxMap = useMemo(() => getStockBoxLookupMap(), [order?.id, order?.batches]);
+      const batchFormRef = useRef(null);
+
+      useEffect(() => {
+        if (showBatchForm && batchFormRef.current) {
+          batchFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, [showBatchForm, editingBatch]);
 
       // Order editing form state
       const [orderForm, setOrderForm] = useState({
@@ -3903,6 +3911,7 @@
 
       // Keep form in sync when order changes
       useEffect(() => {
+        if (!order) return;
         setOrderForm({
           orderDate: (order.orderDate || order.createdAt || new Date().toISOString().split('T')[0]).split('T')[0],
           supplier: order.supplier || '',
@@ -3924,7 +3933,7 @@
         const openBatchParam = params.get('openBatch') === '1' || params.get('newBatch') === '1';
 
         if (batchIdParam || challanParam || lotParam) {
-          const targetBatch = (order.batches || []).find(b => 
+          const targetBatch = (order.batches || []).filter(Boolean).find(b => 
             (batchIdParam && String(b.id) === String(batchIdParam)) ||
             (challanParam && lotParam && String(b.challanNumber).trim() === String(challanParam).trim() && String(b.lotNumber).trim() === String(lotParam).trim()) ||
             (challanParam && String(b.challanNumber).trim() === String(challanParam).trim()) ||
@@ -4628,16 +4637,18 @@
               </div>
 
               {showBatchForm && (
-                <BatchForm 
-                  order={order} 
-                  onCancel={() => setShowBatchForm(false)} 
-                  onSubmit={handleBatchSubmit} 
-                  initialData={editingBatch} 
-                  geminiApiKey={geminiApiKey}
-                  selectedGeminiModel={selectedGeminiModel}
-                  onOpenSettings={onOpenSettings}
-                  stockBoxMap={stockBoxMap}
-                />
+                <div ref={batchFormRef}>
+                  <BatchForm 
+                    order={order} 
+                    onCancel={() => setShowBatchForm(false)} 
+                    onSubmit={handleBatchSubmit} 
+                    initialData={editingBatch} 
+                    geminiApiKey={geminiApiKey}
+                    selectedGeminiModel={selectedGeminiModel}
+                    onOpenSettings={onOpenSettings}
+                    stockBoxMap={stockBoxMap}
+                  />
+                </div>
               )}
 
               {/* Batches Mobile Cards for Mobile / Tablet */}
