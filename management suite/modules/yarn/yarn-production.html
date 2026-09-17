@@ -3311,7 +3311,7 @@
       }
     };
 
-    // Save logs to localStorage for current active division
+    // Save logs to localStorage and Supabase Cloud for current active division
     function saveLogs(target = 'both') {
       recordStateSnapshot();
       if (target === 'production' || target === 'both') {
@@ -3320,7 +3320,11 @@
           prod = window.VishwaSupabase.filterDeletedEntities(prod);
           dataStore[activeDivision].production = prod;
         }
-        localStorage.setItem(`yarn_${activeDivision}_production_logs`, JSON.stringify(prod));
+        const ypKey = `yarn_${activeDivision}_production_logs`;
+        localStorage.setItem(ypKey, JSON.stringify(prod));
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+          window.VishwaSupabase.set(ypKey, prod, true);
+        }
       }
       if (target === 'sales' || target === 'both') {
         let sales = dataStore[activeDivision].sales;
@@ -3328,7 +3332,11 @@
           sales = window.VishwaSupabase.filterDeletedEntities(sales);
           dataStore[activeDivision].sales = sales;
         }
-        localStorage.setItem(`yarn_${activeDivision}_sales_logs`, JSON.stringify(sales));
+        const ysKey = `yarn_${activeDivision}_sales_logs`;
+        localStorage.setItem(ysKey, JSON.stringify(sales));
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+          window.VishwaSupabase.set(ysKey, sales, true);
+        }
       }
       refreshAllViews();
     }
@@ -3762,8 +3770,10 @@
       const netVal = !isNaN(parseFloat(document.getElementById('prod-qty').value)) ? parseFloat(parseFloat(document.getElementById('prod-qty').value).toFixed(2)) : 0;
 
       const costingProd = window._currentSelectedCostingProduct;
+      const nowIso = new Date().toISOString();
+      const nowTs = Date.now();
       const data = {
-        id: editId || 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        id: editId || 'p_' + nowTs + '_' + Math.random().toString(36).substr(2, 9),
         date: document.getElementById('prod-date').value,
         boriNo: boriNo,
         productName: document.getElementById('prod-name').value.trim(),
@@ -3779,7 +3789,9 @@
         qty: netVal,
         configType: costingProd ? costingProd.configType : '',
         ply: costingProd ? costingProd.ply : '',
-        yarns: costingProd && costingProd.yarns ? costingProd.yarns : []
+        yarns: costingProd && costingProd.yarns ? costingProd.yarns : [],
+        updated_at: nowIso,
+        timestamp: nowTs
       };
 
       // Check duplicate bori no inside current division
@@ -10267,6 +10279,35 @@
       initProdTwistCustomSelect();
       initFromUrl();
       initExcelCellSelection();
+      broadcastYarnPresence();
+      setInterval(updateClock, 1000);
+      updateClock();
+
+      // Realtime Multi-PC and Cross-Tab Synchronization Listeners
+      window.addEventListener('storage', (e) => {
+        handleRemoteDataSync(e.key);
+      });
+      window.addEventListener('supabase-sync', (e) => {
+        handleRemoteDataSync(e?.detail?.key);
+      });
+      window.addEventListener('supabase-ready', () => {
+        handleRemoteDataSync();
+      });
+      window.addEventListener('focus', () => {
+        if (!document.querySelector('.action-menu-dropdown.show')) {
+          refreshAllViews();
+        }
+        broadcastYarnPresence();
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          if (!document.querySelector('.action-menu-dropdown.show')) {
+            refreshAllViews();
+          }
+          broadcastYarnPresence();
+        }
+      });
+
       // Global Paste Listener for Production Challan Scan
       window.addEventListener('paste', (e) => {
         const clipboardData = e.clipboardData || window.clipboardData;
@@ -11739,8 +11780,10 @@ Return STRICT JSON matching:
         const tareVal = parseFloat(r.tareWeight) || 0;
         const netVal = parseFloat((parseFloat(r.netWeight) || Math.max(0, grossVal - tareVal)).toFixed(2));
 
+        const uploadTs = Date.now();
+        const uploadIso = new Date().toISOString();
         newLogs.push({
-          id: 'p_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substr(2, 6),
+          id: 'p_' + uploadTs + '_' + idx + '_' + Math.random().toString(36).substr(2, 6),
           date: dateVal,
           boriNo: boriNo,
           productName: productName,
@@ -11756,7 +11799,9 @@ Return STRICT JSON matching:
           qty: netVal,
           configType: fpProd ? fpProd.configType : '',
           ply: fpProd ? fpProd.ply : '',
-          yarns: fpProd && fpProd.yarns ? fpProd.yarns : []
+          yarns: fpProd && fpProd.yarns ? fpProd.yarns : [],
+          updated_at: uploadIso,
+          timestamp: uploadTs
         });
       });
 
