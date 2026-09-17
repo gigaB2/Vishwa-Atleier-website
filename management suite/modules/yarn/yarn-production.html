@@ -3212,11 +3212,13 @@
       doubler: { production: [], sales: [] }
     };
 
-    // Load logs for all divisions from localStorage
+    // Load logs for all divisions from localStorage and in-memory cache
     function loadLogs() {
       ['covering', 'tfo', 'doubler'].forEach((div) => {
-        let prod = JSON.parse(localStorage.getItem(`yarn_${div}_production_logs`) || '[]');
-        let sales = JSON.parse(localStorage.getItem(`yarn_${div}_sales_logs`) || '[]');
+        const ypKey = `yarn_${div}_production_logs`;
+        const ysKey = `yarn_${div}_sales_logs`;
+        let prod = JSON.parse(localStorage.getItem(ypKey) || '[]');
+        let sales = JSON.parse(localStorage.getItem(ysKey) || '[]');
         if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
           prod = window.VishwaSupabase.filterDeletedEntities(prod);
           sales = window.VishwaSupabase.filterDeletedEntities(sales);
@@ -3224,6 +3226,77 @@
         dataStore[div].production = Array.isArray(prod) ? prod : [];
         dataStore[div].sales = Array.isArray(sales) ? sales : [];
       });
+    }
+
+    // Direct cloud-first hydration helper to ensure fresh/empty workstations immediately fetch all logs from Supabase
+    async function hydrateLogsFromCloud() {
+      if (!window.VishwaSupabase) return;
+      let hasNewData = false;
+      const divisions = ['covering', 'tfo', 'doubler'];
+      for (const div of divisions) {
+        const ypKey = `yarn_${div}_production_logs`;
+        const ysKey = `yarn_${div}_sales_logs`;
+
+        // 1. Check if Supabase relational API has production logs
+        if (typeof window.VishwaSupabase.fetchYarnProductionRelational === 'function') {
+          try {
+            const remoteProd = await window.VishwaSupabase.fetchYarnProductionRelational(div);
+            if (Array.isArray(remoteProd) && remoteProd.length > 0) {
+              const currentLocal = dataStore[div]?.production || [];
+              const merged = window.VishwaSupabase.mergeYarnProductionDatasets ? 
+                window.VishwaSupabase.mergeYarnProductionDatasets(currentLocal, remoteProd, div) : remoteProd;
+              if (merged.length !== currentLocal.length || JSON.stringify(merged) !== JSON.stringify(currentLocal)) {
+                dataStore[div].production = merged;
+                localStorage.setItem(ypKey, JSON.stringify(merged));
+                hasNewData = true;
+              }
+            }
+          } catch(e) {}
+        }
+
+        // 2. Check if Supabase relational API has sales logs
+        if (typeof window.VishwaSupabase.fetchYarnSalesRelational === 'function') {
+          try {
+            const remoteSales = await window.VishwaSupabase.fetchYarnSalesRelational(div);
+            if (Array.isArray(remoteSales) && remoteSales.length > 0) {
+              const currentLocalSales = dataStore[div]?.sales || [];
+              const mergedSales = window.VishwaSupabase.mergeYarnSalesDatasets ?
+                window.VishwaSupabase.mergeYarnSalesDatasets(currentLocalSales, remoteSales, div) : remoteSales;
+              if (mergedSales.length !== currentLocalSales.length || JSON.stringify(mergedSales) !== JSON.stringify(currentLocalSales)) {
+                dataStore[div].sales = mergedSales;
+                localStorage.setItem(ysKey, JSON.stringify(mergedSales));
+                hasNewData = true;
+              }
+            }
+          } catch(e) {}
+        }
+
+        // 3. Fallback check from KV Store
+        if ((!dataStore[div].production || dataStore[div].production.length === 0) && typeof window.VishwaSupabase.get === 'function') {
+          try {
+            const kvProd = await window.VishwaSupabase.get(ypKey);
+            if (Array.isArray(kvProd) && kvProd.length > 0) {
+              dataStore[div].production = kvProd;
+              localStorage.setItem(ypKey, JSON.stringify(kvProd));
+              hasNewData = true;
+            }
+          } catch(e) {}
+        }
+        if ((!dataStore[div].sales || dataStore[div].sales.length === 0) && typeof window.VishwaSupabase.get === 'function') {
+          try {
+            const kvSales = await window.VishwaSupabase.get(ysKey);
+            if (Array.isArray(kvSales) && kvSales.length > 0) {
+              dataStore[div].sales = kvSales;
+              localStorage.setItem(ysKey, JSON.stringify(kvSales));
+              hasNewData = true;
+            }
+          } catch(e) {}
+        }
+      }
+
+      if (hasNewData) {
+        refreshAllViews();
+      }
     }
 
     // Refresh all tables, dropdowns, KPIs, and dashboard views with latest data
@@ -10276,6 +10349,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       loadLogs();
+      hydrateLogsFromCloud();
       initProdTwistCustomSelect();
       initFromUrl();
       initExcelCellSelection();
@@ -10291,6 +10365,7 @@
         handleRemoteDataSync(e?.detail?.key);
       });
       window.addEventListener('supabase-ready', () => {
+        hydrateLogsFromCloud();
         handleRemoteDataSync();
       });
       window.addEventListener('focus', () => {
