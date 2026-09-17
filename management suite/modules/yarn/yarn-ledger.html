@@ -4424,7 +4424,7 @@
             const chKey = String(remRow.challanNo).trim().toLowerCase();
             const src = remRow.source || 'manual';
             const party = remRow.partyName ? String(remRow.partyName).trim().toLowerCase() : '';
-            keyMap.set(`src_${src}__ch_${chKey}`, rId);
+            if (!party) keyMap.set(`src_${src}__ch_${chKey}__`, rId);
             if (party) {
               keyMap.set(`src_${src}__ch_${chKey}__${party}`, rId);
               keyMap.set(`party_${party}__ch_${chKey}`, rId);
@@ -4445,8 +4445,8 @@
           if (!matchedId && chKey) {
             if (party && keyMap.has(`src_${src}__ch_${chKey}__${party}`)) {
               matchedId = keyMap.get(`src_${src}__ch_${chKey}__${party}`);
-            } else if (keyMap.has(`src_${src}__ch_${chKey}`)) {
-              matchedId = keyMap.get(`src_${src}__ch_${chKey}`);
+            } else if (!party && keyMap.has(`src_${src}__ch_${chKey}__`)) {
+              matchedId = keyMap.get(`src_${src}__ch_${chKey}__`);
             } else if (party && keyMap.has(`party_${party}__ch_${chKey}`)) {
               matchedId = keyMap.get(`party_${party}__ch_${chKey}`);
             }
@@ -4459,16 +4459,43 @@
             const remRow = rowMap.get(matchedId);
             const locTime = locRow.updated_at ? new Date(locRow.updated_at).getTime() : 0;
             const remTime = remRow.updated_at ? new Date(remRow.updated_at).getTime() : 0;
+            const isLocCreditCustom = Boolean(locRow.creditDaysUserEdited);
+            const isRemCreditCustom = Boolean(remRow.creditDaysUserEdited);
+
+            let chosenCreditDays = locRow.creditDays;
+            if (isLocCreditCustom && !isRemCreditCustom) {
+              chosenCreditDays = locRow.creditDays;
+            } else if (!isLocCreditCustom && isRemCreditCustom) {
+              chosenCreditDays = remRow.creditDays;
+            } else if (locTime > remTime) {
+              chosenCreditDays = (locRow.creditDays !== undefined && locRow.creditDays !== null && locRow.creditDays !== '') ? locRow.creditDays : remRow.creditDays;
+            } else {
+              chosenCreditDays = (remRow.creditDays !== undefined && remRow.creditDays !== null && remRow.creditDays !== '') ? remRow.creditDays : locRow.creditDays;
+            }
+
             if (locTime > remTime) {
-              rowMap.set(matchedId, { ...remRow, ...locRow, id: locRow.id || matchedId });
+              rowMap.set(matchedId, {
+                ...remRow,
+                ...locRow,
+                id: locRow.id || matchedId,
+                creditDays: chosenCreditDays,
+                creditDaysUserEdited: isLocCreditCustom || isRemCreditCustom
+              });
             } else {
               rowMap.set(matchedId, {
                 ...locRow,
                 ...remRow,
                 id: remRow.id || matchedId,
+                creditDays: chosenCreditDays,
+                creditDaysUserEdited: isLocCreditCustom || isRemCreditCustom,
+                rateMonthly: (remRow.rateMonthly !== undefined && remRow.rateMonthly !== null && remRow.rateMonthly !== '') ? remRow.rateMonthly : locRow.rateMonthly,
+                discountPercent: (remRow.discountPercent !== undefined && remRow.discountPercent !== null && remRow.discountPercent !== '') ? remRow.discountPercent : locRow.discountPercent,
+                gstPercent: (remRow.gstPercent !== undefined && remRow.gstPercent !== null) ? remRow.gstPercent : locRow.gstPercent,
                 paidAmount: remRow.paidAmount !== undefined ? remRow.paidAmount : locRow.paidAmount,
                 paymentDate: remRow.paymentDate !== undefined ? remRow.paymentDate : locRow.paymentDate,
                 interestPaid: remRow.interestPaid !== undefined ? remRow.interestPaid : locRow.interestPaid,
+                actualAdjustment: remRow.actualAdjustment !== undefined ? remRow.actualAdjustment : locRow.actualAdjustment,
+                roundOff: remRow.roundOff !== undefined ? remRow.roundOff : locRow.roundOff,
                 grQty: remRow.grQty !== undefined ? remRow.grQty : locRow.grQty,
                 grBoxes: remRow.grBoxes || locRow.grBoxes,
                 grDate: remRow.grDate || locRow.grDate,
@@ -4480,6 +4507,82 @@
 
         return Array.from(rowMap.values());
       }
+
+    // Helper to sync modified credit terms back to source sales log or RM order in background
+    function syncCreditDaysToSource(row, newDays) {
+      try {
+        if (!row) return;
+        const daysNum = Math.max(0, parseInt(newDays, 10) || 0);
+        // 1. If from Yarn Sales (Covering, TFO, Doubler)
+        if (row.source && row.source.startsWith('yarn_') && row.source.endsWith('_sales')) {
+          const divMatch = row.source.match(/^yarn_(covering|tfo|doubler)_sales$/);
+          if (divMatch) {
+            const div = divMatch[1];
+            const key = `yarn_${div}_sales_logs`;
+            let rawSales = (cachedCloudDataMap && cachedCloudDataMap[key]) || [];
+            if (!Array.isArray(rawSales) || rawSales.length === 0) {
+              try { rawSales = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+            }
+            if (Array.isArray(rawSales)) {
+              let changed = false;
+              // Stable source keys take precedence; legacy fallback must be unique.
+              const matches = rawSales.filter(s => {
+                if (!s) return false;
+                const sourceId = s.id || s.challanNo || s.challanNumber || s.invoiceNo || s.billNo;
+                if (row.syncKey) return sourceId != null && row.syncKey === `sales_${div}_${sourceId}`;
+                return row.challanNo != null && String(row.challanNo).trim() !== '' &&
+                  s.challanNo != null && String(s.challanNo).trim() === String(row.challanNo).trim() &&
+                  (!row.partyName || String(s.customerName || s.customer || '').trim() === String(row.partyName).trim());
+              });
+              matches.forEach(s => {
+                if (matches.length === 1) {
+                  s.creditDays = daysNum;
+                  s.updated_at = new Date().toISOString();
+                  changed = true;
+                }
+              });
+              if (changed) {
+                try { localStorage.setItem(key, JSON.stringify(rawSales)); } catch(e) {}
+                if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+                  window.VishwaSupabase.set(key, rawSales, false);
+                }
+              }
+            }
+          }
+        }
+        // 2. If from Yarn RM Orders
+        if (row.source === 'yarn-rm-orders' || row.orderId || row.orderNumber) {
+          const key = 'yarn-rm-orders';
+          let rawOrders = (cachedCloudDataMap && cachedCloudDataMap[key]) || [];
+          if (!Array.isArray(rawOrders) || rawOrders.length === 0) {
+            try { rawOrders = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+          }
+          if (Array.isArray(rawOrders)) {
+            let changed = false;
+            const hasOrderId = row.orderId != null && String(row.orderId).trim() !== '';
+            const hasOrderNumber = row.orderNumber != null && String(row.orderNumber).trim() !== '';
+            const matches = rawOrders.filter(o => o && (hasOrderId
+              ? o.id != null && String(o.id) === String(row.orderId)
+              : hasOrderNumber && o.orderNumber != null && String(o.orderNumber) === String(row.orderNumber)));
+            matches.forEach(o => {
+              if (matches.length === 1) {
+                o.creditDays = daysNum;
+                o.updated_at = new Date().toISOString();
+                changed = true;
+              }
+            });
+            if (changed) {
+              try { localStorage.setItem(key, JSON.stringify(rawOrders)); } catch(e) {}
+              if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
+                window.VishwaSupabase.set(key, rawOrders, false);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Sync credit terms to source warning:', err);
+      }
+    }
 
     // All required Cloud Keys for Ledger operation
     const CLOUD_LEDGER_KEYS = [
@@ -4505,26 +4608,72 @@
       'vf_deleted_entity_ids'
     ];
 
-    // High-speed Pure Cloud Batch Loader (Zero LocalStorage dependency)
+    // Read cloud state, falling back to cached data only when a value is unavailable.
     async function fetchAllCloudLedgerData() {
-      if (window.VishwaSupabase && typeof window.VishwaSupabase.getMultiple === 'function') {
-        return await window.VishwaSupabase.getMultiple(CLOUD_LEDGER_KEYS);
+      let remoteData = {};
+      let cloudReadSucceeded = false;
+      try {
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.getMultipleResult === 'function') {
+          const result = await window.VishwaSupabase.getMultipleResult(CLOUD_LEDGER_KEYS);
+          if (result && result.ok) {
+            remoteData = result.data || {};
+            cloudReadSucceeded = true;
+          }
+        } else if (window.VishwaSupabase && typeof window.VishwaSupabase.getMultiple === 'function') {
+          remoteData = (await window.VishwaSupabase.getMultiple(CLOUD_LEDGER_KEYS)) || {};
+        } else if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
+          const results = await Promise.all(
+            CLOUD_LEDGER_KEYS.map(async k => {
+              try {
+                const val = await window.VishwaSupabase.get(k);
+                return [k, val];
+              } catch (e) {
+                return [k, null];
+              }
+            })
+          );
+          remoteData = Object.fromEntries(results);
+        }
+      } catch (err) {
+        console.warn('VishwaSupabase fetch warning, falling back to cache/storage:', err);
+        remoteData = {};
       }
-      // Parallel fetch fallback using Promise.all (dispatches all concurrently in ~150ms)
-      if (window.VishwaSupabase && typeof window.VishwaSupabase.get === 'function') {
-        const results = await Promise.all(
-          CLOUD_LEDGER_KEYS.map(async k => {
+
+      // Empty arrays/objects are valid cloud results, not read failures.
+      const mergedData = { ...remoteData };
+      CLOUD_LEDGER_KEYS.forEach(k => {
+        const val = mergedData[k];
+        const isValEmpty = val === null || val === undefined;
+
+        if (isValEmpty) {
+          if (cloudReadSucceeded) {
+            mergedData[k] = k === 'yarn_ledger_settings' ? {} : [];
+            return;
+          }
+          // 1. Check in-memory Supabase Cache
+          if (window.__vf_supabase_cache && window.__vf_supabase_cache[k]) {
             try {
-              const val = await window.VishwaSupabase.get(k);
-              return [k, val];
-            } catch (e) {
-              return [k, null];
+              const cached = typeof window.__vf_supabase_cache[k] === 'string' ? JSON.parse(window.__vf_supabase_cache[k]) : window.__vf_supabase_cache[k];
+              if (cached && (!Array.isArray(cached) || cached.length > 0)) {
+                mergedData[k] = cached;
+                return;
+              }
+            } catch(e) {}
+          }
+          // 2. Check localStorage
+          try {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed && (!Array.isArray(parsed) || parsed.length > 0)) {
+                mergedData[k] = parsed;
+              }
             }
-          })
-        );
-        return Object.fromEntries(results);
-      }
-      return {};
+          } catch(e) {}
+        }
+      });
+
+      return mergedData;
     }
 
     // Global cached cloud data map for dynamic autocomplete and qualities
@@ -4588,7 +4737,7 @@
       return `${(div || 'YARN').toUpperCase()} Yarn`;
     }
 
-    // Unified Pure Cloud Loader & Synchronizer (Zero LocalStorage — runs in ~150ms)
+    // Unified Pure Cloud & Local Synchronizer (Pulls from Orders, RM Stock Challans & Sales Logs)
     async function loadAndSyncFromCloud(showNotification = false) {
       try {
         const dataMap = await fetchAllCloudLedgerData();
@@ -4613,9 +4762,10 @@
           if (discEl) discEl.value = defaultDiscountPercent;
         }
 
-        // 2. Saved Ledgers (strictly from cloud)
+        // 2. Saved Ledgers (from Cloud with LocalStorage fallback)
         let cloudSales = dataMap['yarn_sales_ledger_data'] || [];
         let cloudPurchase = dataMap['yarn_purchase_ledger_data'] || [];
+
 
         // Filter tombstones
         if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
@@ -4626,24 +4776,24 @@
         ledgerData.sales = mergeLedgerDatasets(ledgerData.sales, Array.isArray(cloudSales) ? cloudSales : []);
         ledgerData.purchase = mergeLedgerDatasets(ledgerData.purchase, Array.isArray(cloudPurchase) ? cloudPurchase : []);
 
-        // Clear auto-synced details from remarks / cheque number so it remains clean and empty for user entry, and heal missing/zero credit terms
+        // Clean auto-synced remarks and heal missing credit terms without overwriting zero or custom values
         ['sales', 'purchase'].forEach(tab => {
           (ledgerData[tab] || []).forEach(r => {
             if (r) {
               if (r.remarks && (r.remarks.startsWith('Auto-synced') || r.remarks.includes('Auto-synced'))) {
                 r.remarks = '';
               }
-              if (r.creditDays === undefined || r.creditDays === null || r.creditDays === '' || Number(r.creditDays) <= 0) {
+              if (r.creditDays === undefined || r.creditDays === null || r.creditDays === '' || isNaN(Number(r.creditDays))) {
                 r.creditDays = defaultCreditDays;
               }
-              if (r.rateMonthly === undefined || r.rateMonthly === null || r.rateMonthly === '' || Number(r.rateMonthly) <= 0) {
+              if (r.rateMonthly === undefined || r.rateMonthly === null || r.rateMonthly === '' || isNaN(Number(r.rateMonthly))) {
                 r.rateMonthly = (r.discountPercent !== undefined && Number(r.discountPercent) > 0) ? Number(r.discountPercent) : defaultRateMonthly;
               }
             }
           });
         });
 
-        // 3. Source Sync (Orders & Sales Logs)
+        // 3. Source Sync Counters
         let syncAdded = 0;
         let syncUpdated = 0;
 
@@ -4652,10 +4802,11 @@
           : [];
         const ledgerDeletedKeys = new Set(Array.isArray(rawLedgerDeletedKeys) ? rawLedgerDeletedKeys.map(s => String(s).trim()) : (rawLedgerDeletedKeys instanceof Set ? rawLedgerDeletedKeys : []));
 
-        // Sync Purchase Ledger from fulfilled delivery batches in yarn-rm-orders
+        // Sync Purchase Ledger from yarn-rm-orders and vishwa_yarn_rm_stock_data (incoming challans)
         let rawOrders = dataMap['yarn-rm-orders'] || [];
         let rawStock = dataMap['vishwa_yarn_rm_stock_data'] || [];
         let rawQualities = dataMap['yarn-qualities'] || [];
+
 
         if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
           rawOrders = window.VishwaSupabase.filterDeletedEntities(rawOrders);
@@ -4663,14 +4814,16 @@
         }
 
         const validPurchaseSyncKeys = new Set();
+        const processedChallansMap = new Set();
 
+        // A. Ingest all delivery batches from Yarn RM Orders
         if (Array.isArray(rawOrders)) {
           rawOrders.forEach(order => {
             if (!order) return;
             const orderRate = Number(order.price) || Number(order.rate) || Number(order.yarnRate) || Number(order.unitPrice) || 0;
             const supplierName = (order.supplier || '').trim();
-            const orderDate = (order.orderDate || '').split('T')[0];
-            const orderNumber = order.orderNumber || order.id || '';
+            const orderDate = (order.orderDate || order.date || order.createdAt || '').split('T')[0];
+            const orderNumber = String(order.orderNumber || order.id || '').trim();
             const qualityName = order.quality || order.qualityName || 'Yarn';
             const batches = Array.isArray(order.batches) ? order.batches : [];
 
@@ -4686,7 +4839,8 @@
                   batch.boxes.forEach(b => {
                     const bw = Number(b.grossWeight) || Number(b.weight) || 0;
                     const gw = Number(b.returnedWeight) || Number(b.grWeight) || 0;
-                    totalGrossQty += bw;
+                    const grossCandidate = b.grossWeight ? bw : (bw + gw);
+                    totalGrossQty += grossCandidate;
                     totalGrQty += gw;
                     if (gw > 0) {
                       grBoxes.push({
@@ -4701,39 +4855,52 @@
                   });
                 }
 
-                if (totalGrossQty === 0) {
-                  totalGrossQty = Number(batch.totalWeight) || Number(batch.receivedQty) || 0;
-                }
                 if (totalGrQty === 0) {
                   totalGrQty = Number(batch.returnedWeight) || Number(batch.grWeight) || 0;
                 }
 
+                if (totalGrossQty === 0) {
+                  const bGross = Number(batch.grossWeight) || 0;
+                  const bNet = Number(batch.totalWeight) || Number(batch.receivedQty) || Number(batch.weight) || Number(batch.receivedWeight) || 0;
+                  totalGrossQty = bGross > 0 ? bGross : (bNet + totalGrQty);
+                }
+
                 totalGrossQty = Number(totalGrossQty.toFixed(2));
                 totalGrQty = Number(totalGrQty.toFixed(2));
-                const netQty = Math.max(0, Number((totalGrossQty - totalGrQty).toFixed(2)));
+                let netQty = Math.max(0, Number((totalGrossQty - totalGrQty).toFixed(2)));
 
-                // If no received weight and no GR weight, skip
-                if (totalGrossQty <= 0 && totalGrQty <= 0) return;
+                // If still completely zero weight across all candidates, skip this batch
+                if (totalGrossQty <= 0 && totalGrQty <= 0 && netQty <= 0) return;
 
                 let effectiveRate = Number(batch.rate) || Number(batch.price) || orderRate;
-                const batchChallan = (batch.challanNumber || '').trim();
-                const receiveDate = (batch.receiveDate || orderDate || new Date().toISOString().split('T')[0]).split('T')[0];
-                const uniqueSyncKey = `order_${order.id || orderNumber}_batch_${batch.id || bIdx}_${batchChallan}`;
+                const batchChallan = String(batch.challanNumber || batch.challanNo || batch.challan || batch.invoiceNo || '').trim();
+                const batchLot = String(batch.lotNumber || batch.lotNo || batch.lot || '').trim();
+                const batchId = String(batch.id || `b_${bIdx}`).trim();
+                const receiveDate = (batch.receiveDate || batch.date || orderDate || new Date().toISOString().split('T')[0]).split('T')[0];
+                const uniqueSyncKey = `order_${order.id || orderNumber}_batch_${batchId}_${batchChallan}`;
                 const deterministicId = 'PUR-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
 
                 validPurchaseSyncKeys.add(uniqueSyncKey);
+                validPurchaseSyncKeys.add(deterministicId);
+                if (batchChallan) {
+                  processedChallansMap.add(`${batchChallan}__${supplierName.toLowerCase()}`);
+                }
 
-                if (ledgerDeletedKeys.has(deterministicId) || ledgerDeletedKeys.has(uniqueSyncKey) || (batchChallan && ledgerDeletedKeys.has(batchChallan))) {
+                if (ledgerDeletedKeys.has(deterministicId) || (uniqueSyncKey && ledgerDeletedKeys.has(uniqueSyncKey)) || (batch.id && ledgerDeletedKeys.has(String(batch.id)))) {
                   return;
                 }
 
                 if (effectiveRate === 0 && Array.isArray(rawStock)) {
-                  const matchedLot = rawStock.find(lot => 
-                    (batch.id && String(lot.batchId) === String(batch.id)) ||
-                    (batchChallan && String(lot.challanNo || lot.challanNumber).trim() === batchChallan) ||
-                    (batch.lotNumber && String(lot.lotNumber).trim() === String(batch.lotNumber).trim()) ||
-                    (String(lot.orderRef) === String(orderNumber) || String(lot.orderRef) === String(order.id))
-                  );
+                  const matchedLot = rawStock.find(lot => {
+                    if (!lot) return false;
+                    const sameSupplier = supplierName && String(lot.supplier || lot.partyName || '').trim().toLowerCase() === supplierName.toLowerCase();
+                    const sameOrder = lot.orderRef != null && (
+                      (order.id != null && String(lot.orderRef) === String(order.id)) ||
+                      (orderNumber && String(lot.orderRef) === orderNumber));
+                    return (batch.id && String(lot.batchId) === String(batch.id) && (sameOrder || sameSupplier)) ||
+                      (sameSupplier && ((batchChallan && String(lot.challanNo || lot.challanNumber || '').trim() === batchChallan) ||
+                        (batchLot && String(lot.lotNumber || '').trim() === batchLot) || sameOrder));
+                  });
                   if (matchedLot) {
                     effectiveRate = Number(matchedLot.rate) || Number(matchedLot.price) || 0;
                   }
@@ -4749,13 +4916,14 @@
                 const grossAmount = Number((totalGrossQty * effectiveRate).toFixed(2));
                 const grAmount = Number((totalGrQty * effectiveRate).toFixed(2));
                 const subtotal = Number((netQty * effectiveRate).toFixed(2));
+
                 const existingRow = ledgerData.purchase.find(r => 
                   r.id === deterministicId || 
                   r.syncKey === uniqueSyncKey || 
                   (batch.id && String(r.batchId) === String(batch.id)) ||
                   (r.orderId && order.id && String(r.orderId) === String(order.id) && batchChallan && String(r.challanNo).trim() === batchChallan) ||
                   (r.orderNumber && orderNumber && String(r.orderNumber) === String(orderNumber) && batchChallan && String(r.challanNo).trim() === batchChallan) ||
-                  (r.challanNo === batchChallan && batchChallan !== '' && (r.partyName === supplierName || r.source === 'yarn-rm-orders'))
+                  (batchChallan && String(r.challanNo).trim() === batchChallan && supplierName && String(r.partyName).trim().toLowerCase() === supplierName.toLowerCase())
                 );
 
                 if (!existingRow) {
@@ -4769,13 +4937,13 @@
                     syncKey: uniqueSyncKey,
                     orderId: order.id || '',
                     orderNumber: orderNumber || '',
-                    batchId: batch.id || '',
-                    lotNumber: batch.lotNumber || '',
+                    batchId: batchId,
+                    lotNumber: batchLot,
                     source: 'yarn-rm-orders',
                     date: receiveDate,
                     challanNo: batchChallan || ('ORD-' + orderNumber),
                     partyName: supplierName || 'Unknown Supplier',
-                    quality: qualityName + (batch.lotNumber ? ` (Lot: ${batch.lotNumber})` : ''),
+                    quality: qualityName + (batchLot ? ` (Lot: ${batchLot})` : ''),
                     grossQty: totalGrossQty,
                     grQty: totalGrQty,
                     qty: netQty,
@@ -4807,61 +4975,258 @@
                   const oldGrQty = existingRow.grQty;
                   const oldParty = existingRow.partyName;
                   const oldQuality = existingRow.quality;
-                  if (!existingRow.id || existingRow.id.startsWith('PUR-1') || existingRow.id.length > 30) {
+
+                  if (!existingRow.id || existingRow.id.startsWith('PUR-1') || existingRow.id.length > 40) {
                     existingRow.id = deterministicId;
                   }
                   existingRow.syncKey = uniqueSyncKey;
                   existingRow.orderId = order.id || existingRow.orderId || '';
                   existingRow.orderNumber = orderNumber || existingRow.orderNumber || '';
-                  existingRow.batchId = batch.id || existingRow.batchId || '';
-                  existingRow.lotNumber = batch.lotNumber || existingRow.lotNumber || '';
+                  existingRow.batchId = batchId || existingRow.batchId || '';
+                  existingRow.lotNumber = batchLot || existingRow.lotNumber || '';
                   if (supplierName && supplierName !== 'Unknown Supplier') {
                     existingRow.partyName = supplierName;
                   }
-                  existingRow.quality = qualityName + (batch.lotNumber ? ` (Lot: ${batch.lotNumber})` : '');
+                  existingRow.quality = qualityName + (batchLot ? ` (Lot: ${batchLot})` : '');
                   existingRow.grossQty = totalGrossQty;
                   existingRow.grQty = totalGrQty;
                   existingRow.qty = netQty;
                   existingRow.grAmount = grAmount;
                   existingRow.grossAmount = grossAmount;
-                  existingRow.grBoxes = grBoxes;
-                  existingRow.rate = effectiveRate;
-                  existingRow.subtotal = subtotal;
+                  if (grBoxes.length > 0 || !existingRow.grBoxes) {
+                    existingRow.grBoxes = grBoxes;
+                  }
+                  if (effectiveRate > 0 || !existingRow.rate) {
+                    existingRow.rate = effectiveRate;
+                  }
+                  existingRow.subtotal = Number((existingRow.qty * (existingRow.rate || effectiveRate)).toFixed(2));
                   const gstPct = existingRow.gstPercent !== undefined ? existingRow.gstPercent : 5.0;
                   const gstAmt = Number(((existingRow.subtotal * gstPct) / 100).toFixed(2));
                   existingRow.grandTotal = Number((existingRow.subtotal + gstAmt).toFixed(2));
                   existingRow.source = 'yarn-rm-orders';
                   existingRow.isManual = false;
                   if (existingRow.interestPaid === undefined) existingRow.interestPaid = 0;
-                  if (oldRate !== effectiveRate || oldQty !== netQty || oldGrQty !== totalGrQty || oldParty !== existingRow.partyName || oldQuality !== existingRow.quality) syncUpdated++;
+
+                  // Preserve user customized credit terms
+                  if (existingRow.creditDays === undefined || existingRow.creditDays === null || existingRow.creditDays === '') {
+                    existingRow.creditDays = (order.creditDays !== undefined && order.creditDays !== null && order.creditDays !== '') ? Number(order.creditDays) : defaultCreditDays;
+                  }
+
+                  if (oldRate !== existingRow.rate || oldQty !== netQty || oldGrQty !== totalGrQty || oldParty !== existingRow.partyName || oldQuality !== existingRow.quality) {
+                    syncUpdated++;
+                  }
+                }
+              });
+            } else {
+              // RM Order without explicit batches (Order-level inward record)
+              // A purchase commitment is not a receipt. Zero received quantity is authoritative.
+              const orderWeight = Number(order.receivedWeight ?? order.receivedQty ?? 0);
+              const orderChallan = String(order.challanNumber || order.challanNo || order.challan || order.invoiceNo || ('ORD-' + orderNumber)).trim();
+
+              if (Number.isFinite(orderWeight) && orderWeight > 0) {
+                const uniqueSyncKey = `order_${order.id || orderNumber}_direct_${orderChallan}`;
+                const deterministicId = 'PUR-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+                validPurchaseSyncKeys.add(uniqueSyncKey);
+                validPurchaseSyncKeys.add(deterministicId);
+
+                const existingRow = ledgerData.purchase.find(r =>
+                  r.id === deterministicId ||
+                  r.syncKey === uniqueSyncKey ||
+                  (r.orderId && order.id && String(r.orderId) === String(order.id)) ||
+                  (r.orderNumber && orderNumber && String(r.orderNumber) === String(orderNumber)) ||
+                  (orderChallan && String(r.challanNo).trim() === orderChallan && String(r.partyName).trim().toLowerCase() === supplierName.toLowerCase())
+                );
+
+                const subtotal = Number((orderWeight * orderRate).toFixed(2));
+                const gstPercent = 5.0;
+                const gstAmount = Number(((subtotal * gstPercent) / 100).toFixed(2));
+                const grandTotal = Number((subtotal + gstAmount).toFixed(2));
+                const nowIso = new Date().toISOString();
+
+                if (!existingRow) {
+                  ledgerData.purchase.push({
+                    id: deterministicId,
+                    syncKey: uniqueSyncKey,
+                    orderId: order.id || '',
+                    orderNumber: orderNumber || '',
+                    batchId: '',
+                    lotNumber: order.lotNumber || '',
+                    source: 'yarn-rm-orders',
+                    date: orderDate || new Date().toISOString().split('T')[0],
+                    challanNo: orderChallan,
+                    partyName: supplierName || 'Unknown Supplier',
+                    quality: qualityName,
+                    grossQty: orderWeight,
+                    grQty: 0,
+                    qty: orderWeight,
+                    grAmount: 0,
+                    grossAmount: subtotal,
+                    grBoxes: [],
+                    rate: orderRate,
+                    subtotal: subtotal,
+                    gstPercent: gstPercent,
+                    grandTotal: grandTotal,
+                    paidAmount: 0,
+                    paymentDate: '',
+                    creditDays: (order.creditDays !== undefined && order.creditDays !== null && order.creditDays !== '') ? Number(order.creditDays) : defaultCreditDays,
+                    discountPercent: defaultDiscountPercent,
+                    interestRate: defaultInterestRate,
+                    interestPaid: 0,
+                    remarks: '',
+                    isManual: false,
+                    created_at: nowIso,
+                    updated_at: nowIso
+                  });
+                  syncAdded++;
+                } else {
+                  if (existingRow.creditDays === undefined || existingRow.creditDays === null || existingRow.creditDays === '') {
+                    existingRow.creditDays = (order.creditDays !== undefined && order.creditDays !== null && order.creditDays !== '') ? Number(order.creditDays) : defaultCreditDays;
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // B. Ingest standalone inward challans from Yarn RM Stock Book (vishwa_yarn_rm_stock_data)
+        if (Array.isArray(rawStock)) {
+          rawStock.forEach((lot, lIdx) => {
+            if (!lot) return;
+            const challanNo = String(lot.challanNo || lot.challanNumber || lot.challan || '').trim();
+            const supplier = String(lot.supplier || lot.partyName || '').trim();
+            const quality = String(lot.quality || lot.yarnQuality || 'Yarn').trim();
+            const lotNum = String(lot.lotNumber || '').trim();
+            const receiveDate = (lot.receiveDate || lot.date || new Date().toISOString().split('T')[0]).split('T')[0];
+            const orderRef = String(lot.orderRef || '').trim();
+            const batchId = String(lot.batchId || '').trim();
+
+            let grossQty = 0;
+            let grQty = 0;
+            let grBoxes = [];
+
+            if (Array.isArray(lot.boxes) && lot.boxes.length > 0) {
+              lot.boxes.forEach(b => {
+                const bw = Number(b.grossWeight) || Number(b.weight) || 0;
+                const gw = Number(b.grWeight || b.returnedWeight) || 0;
+                const grossCandidate = b.grossWeight ? bw : (bw + gw);
+                grossQty += grossCandidate;
+                grQty += gw;
+                if (gw > 0) {
+                  grBoxes.push({
+                    boxNumber: b.boxNumber || b.id || '',
+                    cones: Number(b.cones) || 0,
+                    weight: bw,
+                    returnedWeight: gw,
+                    date: (b.grDate || b.returnedDate || receiveDate).split('T')[0],
+                    remarks: b.grRemarks || b.returnedRemarks || ''
+                  });
                 }
               });
             }
-          });
-        }
 
-        if (Array.isArray(rawOrders) && rawOrders.length > 0) {
-          const prevPurchaseCount = ledgerData.purchase.length;
-          ledgerData.purchase = ledgerData.purchase.filter(r => {
-            if (r.source === 'yarn-rm-orders') {
-              return r.syncKey && validPurchaseSyncKeys.has(r.syncKey);
+            if (grossQty === 0) {
+              const lNet = Number(lot.totalWeight) || Number(lot.receivedQty) || Number(lot.weight) || 0;
+              grossQty = lNet + grQty;
             }
-            return true;
+
+            grossQty = Number(grossQty.toFixed(2));
+            grQty = Number(grQty.toFixed(2));
+            const netQty = Math.max(0, Number((grossQty - grQty).toFixed(2)));
+
+            let effectiveRate = Number(lot.rate) || Number(lot.price) || 0;
+            if (effectiveRate === 0 && Array.isArray(rawQualities)) {
+              const matchedQual = rawQualities.find(q => (q.quality || q.name || '').trim().toLowerCase() === quality.trim().toLowerCase());
+              if (matchedQual) {
+                effectiveRate = Number(matchedQual.rate) || Number(matchedQual.price) || 0;
+              }
+            }
+
+            // Check if already synced via RM orders
+            const isAlreadyProcessed = supplier && challanNo &&
+              processedChallansMap.has(`${challanNo}__${supplier.toLowerCase()}`);
+
+            const uniqueSyncKey = `stock_lot_${lot.id || lIdx}_${challanNo}`;
+            const deterministicId = 'PUR-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+            validPurchaseSyncKeys.add(uniqueSyncKey);
+            validPurchaseSyncKeys.add(deterministicId);
+
+            if (ledgerDeletedKeys.has(deterministicId) || (uniqueSyncKey && ledgerDeletedKeys.has(uniqueSyncKey))) {
+              return;
+            }
+
+            const existingRow = ledgerData.purchase.find(r =>
+              r.id === deterministicId ||
+              r.syncKey === uniqueSyncKey ||
+              (batchId && String(r.batchId) === batchId) ||
+              (orderRef && (String(r.orderId) === orderRef || String(r.orderNumber) === orderRef) && challanNo && String(r.challanNo).trim() === challanNo) ||
+              (challanNo && String(r.challanNo).trim() === challanNo && supplier && String(r.partyName).trim().toLowerCase() === supplier.toLowerCase())
+            );
+
+            if (!existingRow && !isAlreadyProcessed && (grossQty > 0 || netQty > 0 || effectiveRate > 0 || challanNo)) {
+              const subtotal = Number((netQty * effectiveRate).toFixed(2));
+              const gstPercent = 5.0;
+              const gstAmount = Number(((subtotal * gstPercent) / 100).toFixed(2));
+              const grandTotal = Number((subtotal + gstAmount).toFixed(2));
+              const nowIso = new Date().toISOString();
+
+              ledgerData.purchase.push({
+                id: deterministicId,
+                syncKey: uniqueSyncKey,
+                orderId: orderRef,
+                orderNumber: orderRef,
+                batchId: batchId,
+                lotNumber: lotNum,
+                source: 'vishwa_yarn_rm_stock_data',
+                date: receiveDate,
+                challanNo: challanNo || `LOT-${lotNum || (lIdx + 1)}`,
+                partyName: supplier || 'Direct RM Inward',
+                quality: quality + (lotNum ? ` (Lot: ${lotNum})` : ''),
+                grossQty: grossQty,
+                grQty: grQty,
+                qty: netQty,
+                grAmount: Number((grQty * effectiveRate).toFixed(2)),
+                grossAmount: Number((grossQty * effectiveRate).toFixed(2)),
+                grBoxes: grBoxes,
+                rate: effectiveRate,
+                subtotal: subtotal,
+                gstPercent: gstPercent,
+                grandTotal: grandTotal,
+                paidAmount: 0,
+                paymentDate: '',
+                creditDays: defaultCreditDays,
+                discountPercent: defaultDiscountPercent,
+                interestRate: defaultInterestRate,
+                interestPaid: 0,
+                remarks: '',
+                isManual: false,
+                created_at: nowIso,
+                updated_at: nowIso
+              });
+              syncAdded++;
+            } else if (existingRow) {
+              if (effectiveRate > 0 && (!existingRow.rate || existingRow.rate === 0)) {
+                existingRow.rate = effectiveRate;
+                existingRow.subtotal = Number((existingRow.qty * effectiveRate).toFixed(2));
+                const gstPct = existingRow.gstPercent !== undefined ? existingRow.gstPercent : 5.0;
+                const gstAmt = Number(((existingRow.subtotal * gstPct) / 100).toFixed(2));
+                existingRow.grandTotal = Number((existingRow.subtotal + gstAmt).toFixed(2));
+                syncUpdated++;
+              }
+              if (grBoxes.length > 0 && (!existingRow.grBoxes || existingRow.grBoxes.length === 0)) {
+                existingRow.grBoxes = grBoxes;
+              }
+              if (existingRow.creditDays === undefined || existingRow.creditDays === null || existingRow.creditDays === '') {
+                existingRow.creditDays = defaultCreditDays;
+              }
+            }
           });
-          if (ledgerData.purchase.length !== prevPurchaseCount) {
-            syncUpdated++;
-          }
         }
 
-        // Sync Sales Ledger directly from yarn_*_sales_logs in Supabase Cloud
-        for (const div of ['covering', 'tfo', 'doubler']) {
+        // 4. Sync Sales Ledger directly from yarn_*_sales_logs
+        const allSalesDivisions = ['covering', 'tfo', 'doubler'];
+        for (const div of allSalesDivisions) {
           let rawSales = dataMap[`yarn_${div}_sales_logs`] || [];
-          if (!rawSales || rawSales.length === 0) {
-            try {
-              const localSales = JSON.parse(localStorage.getItem(`yarn_${div}_sales_logs`) || '[]');
-              if (Array.isArray(localSales) && localSales.length > 0) rawSales = localSales;
-            } catch (e) {}
-          }
 
           if (window.VishwaSupabase && typeof window.VishwaSupabase.filterDeletedEntities === 'function') {
             rawSales = window.VishwaSupabase.filterDeletedEntities(rawSales);
@@ -4870,14 +5235,14 @@
           if (Array.isArray(rawSales)) {
             rawSales.forEach(sale => {
               if (!sale) return;
-              const challanNo = (sale.challanNo || sale.challanNumber || sale.invoiceNo || sale.billNo || sale.id || '').trim();
-              const invoiceNo = (sale.invoiceNo || sale.billNo || sale.challanNo || '').trim();
-              const customerName = (sale.customerName || sale.customer || 'Direct Sale').trim();
+              const challanNo = String(sale.challanNo || sale.challanNumber || sale.invoiceNo || sale.billNo || sale.id || '').trim();
+              const invoiceNo = String(sale.invoiceNo || sale.billNo || sale.challanNo || '').trim();
+              const customerName = String(sale.customerName || sale.customer || 'Direct Sale').trim();
               const saleDate = (sale.date || sale.invoiceDate || sale.saleDate || new Date().toISOString().split('T')[0]).split('T')[0];
               const uniqueSyncKey = `sales_${div}_${sale.id || challanNo || invoiceNo}`;
               const deterministicId = 'SAL-' + uniqueSyncKey.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-              if (ledgerDeletedKeys.has(deterministicId) || ledgerDeletedKeys.has(uniqueSyncKey) || (challanNo && ledgerDeletedKeys.has(challanNo)) || (sale.id && ledgerDeletedKeys.has(sale.id))) {
+              if (ledgerDeletedKeys.has(deterministicId) || (uniqueSyncKey && ledgerDeletedKeys.has(uniqueSyncKey)) || (sale.id && ledgerDeletedKeys.has(String(sale.id)))) {
                 return;
               }
 
@@ -4896,7 +5261,7 @@
               const grandTotal = Number(sale.totalAmount) || Number(sale.grandTotal) || Number(sale.amount) || Number((subtotal + gstAmount).toFixed(2));
               const gstPercent = (sale.gstRate !== undefined && sale.gstRate !== null) ? Number(sale.gstRate) : (subtotal > 0 ? Number(((gstAmount / subtotal) * 100).toFixed(1)) : 0);
 
-              if (!existingRow && challanNo) {
+              if (!existingRow && (challanNo || customerName)) {
                 const nowIso = new Date().toISOString();
 
                 ledgerData.sales.push({
@@ -4904,7 +5269,7 @@
                   syncKey: uniqueSyncKey,
                   source: `yarn_${div}_sales`,
                   date: saleDate,
-                  challanNo: challanNo,
+                  challanNo: challanNo || invoiceNo || 'DIRECT-SALE',
                   partyName: customerName,
                   buyerPhone: sale.buyerPhone || sale.phone || sale.mobile || '',
                   quality: qualityStr,
@@ -4915,7 +5280,7 @@
                   grandTotal: grandTotal,
                   paidAmount: Number(sale.receivedAmount) || 0,
                   paymentDate: sale.paymentDate || '',
-                  creditDays: (sale.creditDays !== undefined && sale.creditDays !== null && sale.creditDays !== '' && Number(sale.creditDays) > 0) ? Number(sale.creditDays) : defaultCreditDays,
+                  creditDays: (sale.creditDays !== undefined && sale.creditDays !== null && sale.creditDays !== '') ? Number(sale.creditDays) : defaultCreditDays,
                   rateMonthly: (sale.rateMonthly !== undefined && sale.rateMonthly !== null && sale.rateMonthly !== '' && Number(sale.rateMonthly) > 0) ? Number(sale.rateMonthly) : ((sale.discountValue !== undefined && sale.discountType === 'percent' && Number(sale.discountValue) > 0) ? Number(sale.discountValue) : defaultRateMonthly),
                   discountPercent: (sale.discountValue !== undefined && sale.discountType === 'percent' && Number(sale.discountValue) > 0) ? Number(sale.discountValue) : defaultDiscountPercent,
                   interestRate: defaultInterestRate,
@@ -4930,8 +5295,9 @@
                 if (existingRow.remarks && (existingRow.remarks.startsWith('Auto-synced') || existingRow.remarks.includes('Auto-synced'))) {
                   existingRow.remarks = '';
                 }
-                if (!existingRow.creditDays || Number(existingRow.creditDays) <= 0) {
-                  existingRow.creditDays = (sale.creditDays && Number(sale.creditDays) > 0) ? Number(sale.creditDays) : defaultCreditDays;
+                // Preserve user-customized credit days; only set from source if never set
+                if (existingRow.creditDays === undefined || existingRow.creditDays === null || existingRow.creditDays === '') {
+                  existingRow.creditDays = (sale.creditDays !== undefined && sale.creditDays !== null && sale.creditDays !== '') ? Number(sale.creditDays) : defaultCreditDays;
                 }
                 if (!existingRow.rateMonthly || Number(existingRow.rateMonthly) <= 0) {
                   existingRow.rateMonthly = (sale.rateMonthly && Number(sale.rateMonthly) > 0) ? Number(sale.rateMonthly) : ((sale.discountValue && sale.discountType === 'percent' && Number(sale.discountValue) > 0) ? Number(sale.discountValue) : defaultRateMonthly);
@@ -4944,7 +5310,7 @@
                 const oldDate = existingRow.date;
                 const oldChallan = existingRow.challanNo;
 
-                if (!existingRow.id || existingRow.id.startsWith('SAL-1') || existingRow.id.length > 30) {
+                if (!existingRow.id || existingRow.id.startsWith('SAL-1') || existingRow.id.length > 40) {
                   existingRow.id = deterministicId;
                 }
                 existingRow.syncKey = uniqueSyncKey;
@@ -4999,20 +5365,21 @@
 
         populateQualityDatalist(dataMap);
         populateQualityFilter();
+        populatePartyFilter();
 
         if (syncAdded > 0 || syncUpdated > 0) {
           saveLedgers(false, false);
           if (showNotification) {
             if (syncAdded > 0 && syncUpdated > 0) {
-              showToast(`Synced ${syncAdded} new and updated rates on ${syncUpdated} orders from cloud!`, 'success');
+              showToast(`Synced ${syncAdded} new records and updated ${syncUpdated} transactions!`, 'success');
             } else if (syncAdded > 0) {
-              showToast(`Synced ${syncAdded} new records from Cloud Orders & Sales!`, 'success');
+              showToast(`Synced ${syncAdded} new records from RM Orders, Stock & Sales!`, 'success');
             } else {
-              showToast(`Updated rates on ${syncUpdated} records from Cloud Orders!`, 'success');
+              showToast(`Updated ${syncUpdated} records from Orders & Sales!`, 'success');
             }
           }
         } else if (showNotification) {
-          showToast('All orders & sales are up to date with cloud.', 'info');
+          showToast('All orders, stock challans & sales are up to date.', 'info');
         }
       } catch (err) {
         console.error("Error in loadAndSyncFromCloud:", err);
@@ -5028,7 +5395,7 @@
       return await loadAndSyncFromCloud(showNotification);
     }
 
-    // Save Ledgers directly and strictly to Supabase Cloud with Realtime Broadcast (Zero LocalStorage)
+    // Save Ledgers directly to Supabase Cloud and LocalStorage with Realtime Broadcast
     function saveLedgers(showToastMsg = false, forceImmediate = false) {
       recordStateSnapshot();
       isLocalSaving = true;
@@ -5041,14 +5408,29 @@
           });
         });
 
+        // 1. LocalStorage update for instant cross-tab access
+        try {
+          localStorage.setItem('yarn_sales_ledger_data', JSON.stringify(ledgerData.sales));
+          localStorage.setItem('yarn_purchase_ledger_data', JSON.stringify(ledgerData.purchase));
+        } catch(e) {}
+
+        // 2. Supabase Cloud Sync
         if (window.VishwaSupabase && typeof window.VishwaSupabase.set === 'function') {
           window.VishwaSupabase.set('yarn_sales_ledger_data', ledgerData.sales, forceImmediate);
           window.VishwaSupabase.set('yarn_purchase_ledger_data', ledgerData.purchase, forceImmediate);
         }
 
-        if (showToastMsg) showToast('Ledger saved to Supabase cloud', 'success');
+        // 3. Dispatch local sync events
+        try {
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn_sales_ledger_data' } }));
+          window.dispatchEvent(new CustomEvent('supabase-sync', { detail: { key: 'yarn_purchase_ledger_data' } }));
+          window.postMessage({ type: 'STORAGE_SYNC', key: 'yarn_sales_ledger_data', value: ledgerData.sales }, '*');
+          window.postMessage({ type: 'STORAGE_SYNC', key: 'yarn_purchase_ledger_data', value: ledgerData.purchase }, '*');
+        } catch(e) {}
+
+        if (showToastMsg) showToast('Ledger saved successfully', 'success');
       } catch (e) {
-        console.error("Error saving ledger data to Supabase:", e);
+        console.error("Error saving ledger data:", e);
       } finally {
         setTimeout(() => {
           isLocalSaving = false;
@@ -5467,9 +5849,12 @@
       if (field === 'creditDays') {
         if (value === '' || value === null || value === undefined) {
           row.creditDays = defaultCreditDays;
+          row.creditDaysUserEdited = false;
         } else {
           row.creditDays = Math.max(0, parseInt(value, 10) || 0);
+          row.creditDaysUserEdited = true;
         }
+        syncCreditDaysToSource(row, row.creditDays);
       } else if (field === 'qty' || field === 'grossQty' || field === 'grQty' || field === 'rate' || field === 'gstPercent' || field === 'rateMonthly' || field === 'discountPercent' || field === 'paidAmount' || field === 'interestRate' || field === 'interestPaid') {
         row[field] = Number(value) || 0;
       } else if (field === 'roundOff') {
@@ -5536,15 +5921,21 @@
       if (isImmediate) {
         clearTimeout(liveSaveTimer);
         saveLedgers(false, true);
-        if (field === 'grQty') {
+        if (field === 'grQty' && typeof syncGRToOrdersAndStock === 'function') {
           syncGRToOrdersAndStock(row, Number(row.grQty) || 0);
+        }
+        if (field === 'creditDays') {
+          syncCreditDaysToSource(row, row.creditDays);
         }
       } else {
         clearTimeout(liveSaveTimer);
         liveSaveTimer = setTimeout(() => {
           saveLedgers(false, false);
-          if (field === 'grQty') {
+          if (field === 'grQty' && typeof syncGRToOrdersAndStock === 'function') {
             syncGRToOrdersAndStock(row, Number(row.grQty) || 0);
+          }
+          if (field === 'creditDays') {
+            syncCreditDaysToSource(row, row.creditDays);
           }
         }, 600);
       }
@@ -5585,7 +5976,7 @@
       updateFieldInput('qty', row.qty !== undefined && row.qty !== null ? Number(row.qty).toFixed(2) : '0.00');
       updateFieldInput('rate', row.rate !== undefined && row.rate !== null ? Number(row.rate).toFixed(2) : '0.00');
       updateFieldInput('gstPercent', row.gstPercent !== undefined ? row.gstPercent : 5.0);
-      updateFieldInput('creditDays', (row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '' && Number(row.creditDays) > 0) ? row.creditDays : defaultCreditDays);
+      updateFieldInput('creditDays', (row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '') ? row.creditDays : defaultCreditDays);
       updateFieldInput('rateMonthly', (row.rateMonthly !== undefined && row.rateMonthly !== null && row.rateMonthly !== '' && Number(row.rateMonthly) > 0) ? row.rateMonthly : defaultRateMonthly);
       updateFieldInput('actualAdjustment', (row.actualAdjustment !== undefined && row.actualAdjustment !== null) ? Number(row.actualAdjustment).toFixed(2) : (row.actualDiscount !== undefined && row.actualDiscount !== null ? (-Math.abs(row.actualDiscount)).toFixed(2) : ''), comp.calcAdjAmount !== 0 ? comp.calcAdjAmount.toFixed(2) : '0.00');
       updateFieldInput('roundOff', (row.roundOff !== undefined && row.roundOff !== null && row.roundOff !== '') ? Number(row.roundOff).toFixed(2) : '', '0.00');
@@ -6376,7 +6767,7 @@
 
             <!-- 12: Editable Credit Days -->
             <td data-col-index="12" class="num-col">
-              <input type="number" step="1" min="0" data-field="creditDays" class="cell-input num-font" style="width: 80px;" value="${(row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '' && Number(row.creditDays) > 0) ? row.creditDays : defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
+              <input type="number" step="1" min="0" data-field="creditDays" class="cell-input num-font" style="width: 80px;" value="${(row.creditDays !== undefined && row.creditDays !== null && row.creditDays !== '') ? row.creditDays : defaultCreditDays}" onfocus="if(this.value==='0'){this.select();}" oninput="handleCellChange('${row.id}', 'creditDays', this.value, false)" onchange="handleCellChange('${row.id}', 'creditDays', this.value, true)" title="Credit terms (Days)">
             </td>
 
             <!-- 13: Editable Monthly Interest / Discount Rate % -->

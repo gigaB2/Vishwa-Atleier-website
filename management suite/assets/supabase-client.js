@@ -2869,18 +2869,22 @@
       }
     },
     async getMultiple(keys) {
-      if (!Array.isArray(keys) || keys.length === 0) return {};
-      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return {};
+      const result = await this.getMultipleResult(keys);
+      return result.ok ? result.data : {};
+    },
+    // Keep transport failure distinct from a successful read with missing/deleted keys.
+    async getMultipleResult(keys) {
+      if (!Array.isArray(keys)) return { ok: false, data: {}, error: 'Invalid keys' };
+      if (keys.length === 0) return { ok: true, data: {}, missingKeys: [] };
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return { ok: false, data: {}, error: 'Not configured' };
       try {
         const encoded = keys.map(k => `"${encodeURIComponent(k)}"`).join(',');
         const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=in.(${encoded})&select=key,value`, {
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-          }
+          headers: this.getAuthHeaders()
         });
-        if (!res.ok) return {};
+        if (!res.ok) return { ok: false, data: {}, error: `HTTP ${res.status}` };
         const rows = await res.json();
+        if (!Array.isArray(rows)) return { ok: false, data: {}, error: 'Invalid response' };
         const map = {};
         if (Array.isArray(rows)) {
           rows.forEach(r => {
@@ -2889,10 +2893,10 @@
             }
           });
         }
-        return map;
+        return { ok: true, data: map, missingKeys: keys.filter(key => !Object.prototype.hasOwnProperty.call(map, key)) };
       } catch (e) {
         console.error('Supabase getMultiple error:', e);
-        return {};
+        return { ok: false, data: {}, error: 'Read failed' };
       }
     },
     saveToSupabase(key, value, isImmediate = true) {
