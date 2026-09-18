@@ -2871,7 +2871,7 @@
       window.VishwaSupabase.saveToSupabase('vf_admin_users', admins, true);
     }
     
-    // Bi-directional sync to vf_auth_users table
+    // Bi-directional sync to vf_auth_users table and Supabase Auth
     if (window.VishwaSupabase && window.VishwaSupabase.authUsers && typeof window.VishwaSupabase.authUsers.saveUser === 'function') {
       admins.forEach(adm => {
         window.VishwaSupabase.authUsers.saveUser({
@@ -2880,6 +2880,7 @@
           name: adm.name || 'Admin',
           role: 'admin',
           passHash: adm.passHash,
+          password: adm.plainPassword || (adm.passHash && adm.passHash.length < 50 ? adm.passHash : ''),
           permissions: '*'
         });
       });
@@ -3005,6 +3006,7 @@
         email: email,
         name: name || 'Admin',
         passHash: await hashPassword(pass),
+        plainPassword: pass,
         role: 'admin',
         created_at: new Date().toISOString()
       });
@@ -3713,6 +3715,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
         name: newUser.name,
         role: 'employee',
         passHash: newUser.passHash,
+        password: pass,
         permissions: newUser.permissions
       });
     }

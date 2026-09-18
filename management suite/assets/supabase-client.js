@@ -4770,22 +4770,24 @@
       }, extraHeaders);
     },
     async signUp(email, password, metadata = {}) {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return { data: null, error: new Error('Supabase not configured') };
       try {
         const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
           method: 'POST',
           headers: {
             'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            email: email,
-            password: password,
+            email: String(email).trim().toLowerCase(),
+            password: String(password),
             data: metadata
           })
         });
         const data = await res.json();
         if (!res.ok) {
-          return { data: null, error: new Error(data.error_description || data.msg || data.message || 'Sign up failed') };
+          return { data: null, error: new Error(data.error_description || data.msg || data.message || JSON.stringify(data)) };
         }
         this.logAuditTrail('signup', 'auth', email, { role: metadata.role || 'employee' });
         return { data: data, error: null };
