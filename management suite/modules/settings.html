@@ -747,10 +747,17 @@
 
     <!-- User Access & Authentication Control Section (Admin) -->
     <div class="settings-card" id="user-access-settings">
-      <div class="settings-section-title">
-        <i class="ri-user-shield-line"></i> <span>Admin &amp; Employee Authentication Settings</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.5rem;">
+        <div class="settings-section-title" style="margin-bottom: 0;">
+          <i class="ri-user-shield-line"></i> <span>Admin &amp; Employee Authentication Settings</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <span style="font-size: 0.75rem; color: #10b981; background: rgba(16,185,129,0.12); padding: 4px 9px; border-radius: 6px; font-weight: 600; border: 1px solid rgba(16,185,129,0.25);">
+            <i class="ri-refresh-line"></i> Bi-directional Supabase Sync Active
+          </span>
+        </div>
       </div>
-      <p class="settings-desc" style="margin: -0.75rem 0 1.15rem;">Set up Admin Email/Password, configure security mode, and create employee accounts with custom tab permissions.</p>
+      <p class="settings-desc" style="margin: 0 0 1.15rem;">Set up Admin Email/Password, configure security mode, and create employee accounts with custom tab permissions. Bi-directionally synchronized with Supabase.</p>
       
       <!-- Security Mode & Registered Admin Accounts (Multiple Admins) -->
       <div style="background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
@@ -2767,12 +2774,17 @@
 
   function saveGeminiSettings() {
     const key = document.getElementById('gemini-api-key').value.trim();
-    const model = document.getElementById('selected-gemini-model').value;
+    const model = (document.getElementById('selected-gemini-model').value || 'gemini-2.0-flash').trim();
     
     localStorage.setItem('gemini-api-key', JSON.stringify(key));
     localStorage.setItem('selected-gemini-model', JSON.stringify(model));
     
-    showToast("Gemini settings saved successfully!", "success");
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+      window.VishwaSupabase.saveToSupabase('gemini-api-key', key, true);
+      window.VishwaSupabase.saveToSupabase('selected-gemini-model', model, true);
+    }
+    
+    showToast("Gemini settings saved and synchronized across all workstations!", "success");
   }
 
   function loadGeminiSettings() {
@@ -2781,22 +2793,24 @@
     
     try {
       const savedKey = localStorage.getItem('gemini-api-key');
-      if (savedKey) keyVal = JSON.parse(savedKey);
-    } catch(e) {
-      const rawKey = localStorage.getItem('gemini-api-key');
-      if (rawKey) keyVal = rawKey;
-    }
-    
+      if (savedKey) {
+        try { keyVal = JSON.parse(savedKey); } catch(e) { keyVal = savedKey; }
+      }
+    } catch(e) {}
+    if (typeof keyVal === 'string') keyVal = keyVal.replace(/^"|"$/g, '').trim();
+
     try {
       const savedModel = localStorage.getItem('selected-gemini-model');
-      if (savedModel) modelVal = JSON.parse(savedModel);
-    } catch(e) {
-      const rawModel = localStorage.getItem('selected-gemini-model');
-      if (rawModel) modelVal = rawModel;
-    }
+      if (savedModel) {
+        try { modelVal = JSON.parse(savedModel); } catch(e) { modelVal = savedModel; }
+      }
+    } catch(e) {}
+    if (typeof modelVal === 'string') modelVal = modelVal.replace(/^"|"$/g, '').trim() || 'gemini-2.0-flash';
     
-    document.getElementById('gemini-api-key').value = keyVal;
-    document.getElementById('selected-gemini-model').value = modelVal;
+    const keyInput = document.getElementById('gemini-api-key');
+    const modelInput = document.getElementById('selected-gemini-model');
+    if (keyInput) keyInput.value = keyVal;
+    if (modelInput) modelInput.value = modelVal;
     activeSelectedModel = modelVal;
   }
 
@@ -2842,15 +2856,35 @@
       passHash: legacyPass,
       role: 'admin',
       isMaster: true,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }];
-    localStorage.setItem('vf_admin_users', JSON.stringify(admins));
+    if (!window.VishwaSupabase || !window.VishwaSupabase.isHydrated || window.VishwaSupabase.isHydrated()) {
+      localStorage.setItem('vf_admin_users', JSON.stringify(admins));
+    }
     return admins;
   }
 
   function saveAdminsToStorage(admins) {
     localStorage.setItem('vf_admin_users', JSON.stringify(admins));
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+      window.VishwaSupabase.saveToSupabase('vf_admin_users', admins, true);
+    }
     
+    // Bi-directional sync to vf_auth_users table
+    if (window.VishwaSupabase && window.VishwaSupabase.authUsers && typeof window.VishwaSupabase.authUsers.saveUser === 'function') {
+      admins.forEach(adm => {
+        window.VishwaSupabase.authUsers.saveUser({
+          id: adm.id,
+          email: adm.email,
+          name: adm.name || 'Admin',
+          role: 'admin',
+          passHash: adm.passHash,
+          permissions: '*'
+        });
+      });
+    }
+
     if (admins.length > 0) {
       let cfg = {};
       try {
@@ -2860,6 +2894,9 @@
       cfg.admin_email = admins[0].email;
       cfg.admin_pass = admins[0].passHash;
       localStorage.setItem('vf_auth_config', JSON.stringify(cfg));
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+        window.VishwaSupabase.saveToSupabase('vf_auth_config', cfg, true);
+      }
     }
   }
 
@@ -3003,10 +3040,27 @@
     saveAdminsToStorage(admins);
 
     try {
+      let del = JSON.parse(localStorage.getItem('vf_deleted_auth_users')) || [];
+      if (!Array.isArray(del)) del = [];
+      if (adm.email && !del.includes(adm.email.toLowerCase())) del.push(adm.email.toLowerCase());
+      if (adminId && !del.includes(adminId)) del.push(adminId);
+      localStorage.setItem('vf_deleted_auth_users', JSON.stringify(del));
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+        window.VishwaSupabase.saveToSupabase('vf_deleted_auth_users', del, true);
+      }
+      if (window.VishwaSupabase && window.VishwaSupabase.authUsers && typeof window.VishwaSupabase.authUsers.deleteUser === 'function') {
+        window.VishwaSupabase.authUsers.deleteUser(adm.email || adminId);
+      }
+    } catch(e) {}
+
+    try {
       let users = JSON.parse(localStorage.getItem('vf_users')) || [];
       const filteredUsers = users.filter(u => (u.email || u.username || '').toLowerCase() !== (adm.email || '').toLowerCase() && u.id !== adminId);
       if (filteredUsers.length !== users.length) {
         localStorage.setItem('vf_users', JSON.stringify(filteredUsers));
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+          window.VishwaSupabase.saveToSupabase('vf_users', filteredUsers, true);
+        }
       }
     } catch(e) {}
 
@@ -3037,7 +3091,10 @@
 
     cfg.access_mode = mode;
     localStorage.setItem('vf_auth_config', JSON.stringify(cfg));
-    showToast("Portal security mode updated!", "success");
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+      window.VishwaSupabase.saveToSupabase('vf_auth_config', cfg, true);
+    }
+    showToast("Portal security mode updated and synced to Supabase!", "success");
   }
 
   function loadAuthSettings() {
@@ -3080,6 +3137,85 @@
     renderAdminsList();
     renderUsersAndInvitesList();
     loadSupabaseSettingsUI();
+    syncAuthFromSupabaseNow(true);
+  }
+
+  async function syncAuthFromSupabaseNow(silent = false) {
+    const btn = document.getElementById('btn-sync-auth-supabase');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Syncing...';
+    }
+
+    if (!silent) {
+      showToast("Fetching latest Admin & Employee accounts from Supabase...", "info");
+    }
+
+    try {
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.loadAll === 'function') {
+        await window.VishwaSupabase.loadAll(true);
+      }
+      
+      // Also query vf_auth_users directly if available
+      if (window.VishwaSupabase && window.VishwaSupabase.authUsers && typeof window.VishwaSupabase.authUsers.getAll === 'function') {
+        const dbUsers = await window.VishwaSupabase.authUsers.getAll();
+        if (Array.isArray(dbUsers) && dbUsers.length > 0) {
+          const empList = [];
+          const admList = [];
+          dbUsers.forEach(u => {
+            if (!u || !u.email) return;
+            if (u.role === 'admin') {
+              admList.push({
+                id: u.id,
+                email: u.email,
+                name: u.name || 'Admin',
+                passHash: u.pass_hash || '',
+                role: 'admin',
+                updated_at: u.updated_at || new Date().toISOString()
+              });
+            } else {
+              empList.push({
+                id: u.id,
+                email: u.email,
+                username: u.email.split('@')[0],
+                name: u.name || u.email.split('@')[0],
+                role: 'employee',
+                passHash: u.pass_hash || '',
+                permissions: (u.permissions && typeof u.permissions === 'object') ? u.permissions : {},
+                updated_at: u.updated_at || new Date().toISOString()
+              });
+            }
+          });
+
+          if (empList.length > 0 && window.VishwaSupabase.mergeDatasets) {
+            const locRaw = localStorage.getItem('vf_users');
+            const merged = window.VishwaSupabase.mergeDatasets('vf_users', locRaw, JSON.stringify(empList));
+            localStorage.setItem('vf_users', JSON.stringify(merged));
+          }
+
+          if (admList.length > 0 && window.VishwaSupabase.mergeDatasets) {
+            const locRaw = localStorage.getItem('vf_admin_users');
+            const merged = window.VishwaSupabase.mergeDatasets('vf_admin_users', locRaw, JSON.stringify(admList));
+            localStorage.setItem('vf_admin_users', JSON.stringify(merged));
+          }
+        }
+      }
+
+      renderAdminsList();
+      renderUsersAndInvitesList();
+      if (!silent) {
+        showToast("Authentication and settings successfully synced with Supabase!", "success");
+      }
+    } catch(e) {
+      if (!silent) {
+        showToast("Sync completed with available cached data.", "info");
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-cloud-line"></i> Pull from Supabase';
+      }
+    }
   }
 
   // --- Supabase Cloud Database Configuration UI Handlers ---
@@ -3540,6 +3676,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
     }
 
     const hashedPass = await hashPassword(pass);
+    const nowIso = new Date().toISOString();
     const newUser = {
       id: 'emp-' + Date.now(),
       email: email,
@@ -3548,11 +3685,37 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
       role: 'employee',
       passHash: hashedPass,
       permissions: perms,
-      created_at: new Date().toISOString()
+      created_at: nowIso,
+      updated_at: nowIso
     };
+
+    // Remove from deletion tombstones if re-creating
+    try {
+      let del = JSON.parse(localStorage.getItem('vf_deleted_auth_users')) || [];
+      if (Array.isArray(del) && del.includes(email.toLowerCase())) {
+        del = del.filter(x => x !== email.toLowerCase());
+        localStorage.setItem('vf_deleted_auth_users', JSON.stringify(del));
+        if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+          window.VishwaSupabase.saveToSupabase('vf_deleted_auth_users', del, true);
+        }
+      }
+    } catch(e) {}
 
     users.push(newUser);
     localStorage.setItem('vf_users', JSON.stringify(users));
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+      window.VishwaSupabase.saveToSupabase('vf_users', users, true);
+    }
+    if (window.VishwaSupabase && window.VishwaSupabase.authUsers && typeof window.VishwaSupabase.authUsers.saveUser === 'function') {
+      window.VishwaSupabase.authUsers.saveUser({
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        role: 'employee',
+        passHash: newUser.passHash,
+        permissions: newUser.permissions
+      });
+    }
 
     document.getElementById('emp-new-email').value = '';
     document.getElementById('emp-new-pass').value = '';
@@ -3675,19 +3838,36 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
       updatedPerms[s.dataset.key] = s.value;
     });
 
+    const nowIso = new Date().toISOString();
     if (userIndex >= 0) {
       users[userIndex].permissions = updatedPerms;
+      users[userIndex].updated_at = nowIso;
     } else if (targetAdmin) {
       users.push({
         id: targetAdmin.id,
         email: targetAdmin.email,
         role: 'admin',
         permissions: updatedPerms,
-        created_at: new Date().toISOString()
+        created_at: nowIso,
+        updated_at: nowIso
       });
     }
 
     localStorage.setItem('vf_users', JSON.stringify(users));
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+      window.VishwaSupabase.saveToSupabase('vf_users', users, true);
+    }
+    const updatedTargetUser = userIndex >= 0 ? users[userIndex] : (targetAdmin ? { ...targetAdmin, permissions: updatedPerms } : null);
+    if (updatedTargetUser && window.VishwaSupabase && window.VishwaSupabase.authUsers && typeof window.VishwaSupabase.authUsers.saveUser === 'function') {
+      window.VishwaSupabase.authUsers.saveUser({
+        id: updatedTargetUser.id,
+        email: updatedTargetUser.email,
+        name: updatedTargetUser.name,
+        role: updatedTargetUser.role,
+        passHash: updatedTargetUser.passHash,
+        permissions: updatedPerms
+      });
+    }
 
     // If editing active user session, update vf_session live
     try {
@@ -3703,7 +3883,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
 
     closeEditPermModal();
     renderUsersAndInvitesList();
-    showToast("Access permissions updated!", "success");
+    showToast("Access permissions updated and synced across all workstations!", "success");
   }
 
   function removeUser(id) {
@@ -3729,18 +3909,32 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
       return;
     }
 
+    // Record tombstone to prevent resurrection across other devices
+    try {
+      let del = JSON.parse(localStorage.getItem('vf_deleted_auth_users')) || [];
+      if (!Array.isArray(del)) del = [];
+      if (targetEmail && !del.includes(targetEmail)) del.push(targetEmail);
+      if (id && !del.includes(id)) del.push(id);
+      localStorage.setItem('vf_deleted_auth_users', JSON.stringify(del));
+      if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+        window.VishwaSupabase.saveToSupabase('vf_deleted_auth_users', del, true);
+      }
+      if (window.VishwaSupabase && window.VishwaSupabase.authUsers && typeof window.VishwaSupabase.authUsers.deleteUser === 'function') {
+        window.VishwaSupabase.authUsers.deleteUser(targetEmail || id);
+      }
+    } catch(e) {}
+
     if (isAdmin) {
       const newAdmins = admins.filter(a => a.id !== id && (a.email || '').toLowerCase() !== targetEmail);
       saveAdminsToStorage(newAdmins);
       renderAdminsList();
-    } else {
-      if (!confirm(`Are you sure you want to delete employee account ${targetEmail}?`)) {
-        return;
-      }
     }
 
     users = users.filter(u => u.id !== id && (u.email || u.username || '').toLowerCase() !== targetEmail);
     localStorage.setItem('vf_users', JSON.stringify(users));
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+      window.VishwaSupabase.saveToSupabase('vf_users', users, true);
+    }
 
     renderUsersAndInvitesList();
     showToast(isAdmin ? "Admin account removed." : "Employee account removed.", "info");
@@ -3815,6 +4009,8 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
 
     window.addEventListener('supabase-ready', () => {
       loadGroupNameSetting();
+      loadGeminiSettings();
+      loadAuthSettings();
       renderCompaniesList();
       renderAdminsList();
       renderUsersAndInvitesList();
@@ -3828,7 +4024,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
       if (!key || key === 'vf_group_name') {
         loadGroupNameSetting();
       }
-      if (!key || key === 'vf_users' || key === 'vf_admin_users') {
+      if (!key || key === 'gemini-api-key' || key === 'selected-gemini-model') {
+        loadGeminiSettings();
+      }
+      if (!key || key === 'vf_users' || key === 'vf_admin_users' || key === 'vf_auth_config') {
+        loadAuthSettings();
         renderAdminsList();
         renderUsersAndInvitesList();
       }
@@ -3840,6 +4040,14 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
       }
       if (!e.key || e.key === 'vf_group_name') {
         loadGroupNameSetting();
+      }
+      if (!e.key || e.key === 'gemini-api-key' || e.key === 'selected-gemini-model') {
+        loadGeminiSettings();
+      }
+      if (!e.key || e.key === 'vf_users' || e.key === 'vf_admin_users' || e.key === 'vf_auth_config') {
+        loadAuthSettings();
+        renderAdminsList();
+        renderUsersAndInvitesList();
       }
     });
   })();

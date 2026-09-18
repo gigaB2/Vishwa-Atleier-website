@@ -1144,5 +1144,42 @@ EXCEPTION
     WHEN others THEN NULL;
 END $$;
 
+-- ==============================================================================
+-- 33. Dedicated Relational Table: Admin & Employee Authentication Registry
+-- (Bi-directional: Allows editing/adding users in Supabase Table Editor or via App)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.vf_auth_users (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    name TEXT,
+    role TEXT NOT NULL DEFAULT 'employee' CHECK (role IN ('admin', 'employee')),
+    pass_hash TEXT,
+    permissions JSONB DEFAULT '{}'::jsonb,
+    is_active BOOLEAN DEFAULT true,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
+CREATE INDEX IF NOT EXISTS idx_vf_auth_users_email ON public.vf_auth_users(lower(email));
+CREATE INDEX IF NOT EXISTS idx_vf_auth_users_role ON public.vf_auth_users(role);
+CREATE INDEX IF NOT EXISTS idx_vf_auth_users_updated_at ON public.vf_auth_users(updated_at DESC);
 
+ALTER TABLE public.vf_auth_users ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_auth_users' AND policyname = 'Allow public access to vf_auth_users') THEN
+        CREATE POLICY "Allow public access to vf_auth_users" ON public.vf_auth_users FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+END $$;
+
+-- Add vf_auth_users to realtime publication if available
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_auth_users; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
+    END IF;
+EXCEPTION
+    WHEN others THEN NULL;
+END $$;

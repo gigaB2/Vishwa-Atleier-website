@@ -218,6 +218,10 @@
     if (!item) return null;
     if (typeof item === 'string' || typeof item === 'number') return String(item).trim();
     if (typeof item !== 'object') return null;
+    // Explicit user account email identifier across workstations
+    if (item.email !== undefined && item.email !== null && String(item.email).trim() !== '') {
+      return 'user_' + String(item.email).trim().toLowerCase();
+    }
     if (item.id !== undefined && item.id !== null && String(item.id).trim() !== '') {
       return String(item.id).trim();
     }
@@ -266,7 +270,7 @@
 
   function getDeletedTombstones() {
     let deleted = [];
-    const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids', 'yarn_ledger_deleted_keys', 'vf_deleted_yarn_orders'];
+    const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids', 'yarn_ledger_deleted_keys', 'vf_deleted_yarn_orders', 'vf_deleted_auth_users'];
     tombstoneKeys.forEach(tKey => {
       try {
         const raw = cache[tKey] || nativeLocalStorage.getItem(tKey);
@@ -314,6 +318,8 @@
         const id = getItemIdentifier(item);
         if (id && tombstoneSet.has(String(id).trim().toLowerCase())) return false;
         if (item.id && tombstoneSet.has(String(item.id).trim().toLowerCase())) return false;
+        if (item.email && tombstoneSet.has(String(item.email).trim().toLowerCase())) return false;
+        if (item.username && tombstoneSet.has(String(item.username).trim().toLowerCase())) return false;
         if (item.syncKey && tombstoneSet.has(String(item.syncKey).trim().toLowerCase())) return false;
         if (item._id && tombstoneSet.has(String(item._id).trim().toLowerCase())) return false;
         if (item.uuid && tombstoneSet.has(String(item.uuid).trim().toLowerCase())) return false;
@@ -1120,7 +1126,8 @@
         'loom-designs', 'loom_designs', 'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
         'manage-jalas', 'manage-fanis', 'machines', 'warp-beams', 'warp-issues',
         'yarn-issues', 'costing-products-v4', 'costing-tfo-products-v1',
-        'costing-doubler-products-v1', 'costing-covering-products-v1'
+        'costing-doubler-products-v1', 'costing-covering-products-v1',
+        'vf_users', 'vf_admin_users', 'vf_auth_config'
       ];
 
       const isMasterKey = MASTER_ENTITY_KEYS.includes(key);
@@ -1307,6 +1314,17 @@
     }
 
     // Case 3: Primitive values -> Prefer remote server value unless locally edited within 3s
+    if (key === 'gemini-api-key' || key === 'selected-gemini-model') {
+      const cleanRemote = typeof remoteVal === 'string' ? remoteVal.replace(/^"|"$/g, '').trim() : '';
+      const cleanLocal = typeof localVal === 'string' ? localVal.replace(/^"|"$/g, '').trim() : '';
+      if (cleanRemote && !cleanLocal) {
+        return remoteVal;
+      }
+      if (!cleanRemote && cleanLocal) {
+        return localVal;
+      }
+    }
+
     const lastWrite = lastLocalWrites[key] || 0;
     if (Date.now() - lastWrite < 3000) {
       return localVal;
@@ -4790,6 +4808,60 @@
         });
         const data = await res.json();
         if (!res.ok) {
+          // Fallback to checking vf_auth_users or synced user accounts
+          const cleanEmail = String(email).trim().toLowerCase();
+          
+          // 1. Check live vf_auth_users table
+          if (activeConfig.isConfigured && SUPABASE_URL) {
+            try {
+              const uRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?email=eq.${encodeURIComponent(cleanEmail)}&is_active=eq.true&limit=1`, {
+                headers: {
+                  'apikey': SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                }
+              });
+              if (uRes.ok) {
+                const uRows = await uRes.json();
+                if (Array.isArray(uRows) && uRows.length > 0) {
+                  const dbUser = uRows[0];
+                  // Verify password hash or plain text
+                  let match = false;
+                  if (dbUser.pass_hash) {
+                    if (dbUser.pass_hash === password) {
+                      match = true;
+                    } else if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+                      const encoder = new TextEncoder();
+                      const d = encoder.encode(password);
+                      const buf = await window.crypto.subtle.digest('SHA-256', d);
+                      const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                      if (hash.toLowerCase() === dbUser.pass_hash.toLowerCase()) match = true;
+                    }
+                  }
+                  if (match) {
+                    const sessionPayload = {
+                      id: dbUser.id || ('usr-' + Date.now()),
+                      email: dbUser.email,
+                      username: dbUser.name || dbUser.email.split('@')[0],
+                      name: dbUser.name || dbUser.email.split('@')[0],
+                      role: dbUser.role || 'employee',
+                      permissions: dbUser.permissions || (dbUser.role === 'admin' ? '*' : {}),
+                      access_token: 'sb_token_' + Date.now(),
+                      source: 'supabase_vf_auth_users'
+                    };
+                    try {
+                      nativeLocalStorage.setItem('vf_session', JSON.stringify(sessionPayload));
+                      nativeLocalStorage.setItem('vf_user_name', sessionPayload.username);
+                    } catch(e) {}
+                    cache['vf_session'] = JSON.stringify(sessionPayload);
+                    cache['vf_user_name'] = sessionPayload.username;
+                    this.logAuditTrail('login', 'auth', dbUser.id || cleanEmail, { email: cleanEmail, role: sessionPayload.role, source: 'vf_auth_users' });
+                    return { data: { user: dbUser, session: sessionPayload }, error: null };
+                  }
+                }
+              }
+            } catch(e) {}
+          }
+
           return { data: null, error: new Error(data.error_description || data.msg || data.message || 'Invalid login credentials') };
         }
         
@@ -5074,7 +5146,7 @@
             const kvMap = {};
 
             // PRIORITY STEP 1: Pre-populate and cache all deleted entity tombstones FIRST
-            const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids', 'yarn_ledger_deleted_keys', 'vf_deleted_yarn_orders', 'deleted-designs'];
+            const tombstoneKeys = ['vf_deleted_entity_ids', 'vf_deleted_costing_ids', 'yarn_ledger_deleted_keys', 'vf_deleted_yarn_orders', 'deleted-designs', 'vf_deleted_auth_users'];
             tombstoneKeys.forEach(tKey => {
               const tRow = rows.find(r => r && r.key === tKey);
               if (tRow && tRow.value) {
@@ -5119,6 +5191,41 @@
                 }
               } catch (e) {
                 cache[row.key] = String(row.value);
+              }
+            });
+
+            // Self-Healing Bootstrapping for Enterprise Accounts & Gemini Configuration
+            const bootstrapKeys = ['vf_users', 'vf_admin_users', 'vf_auth_config', 'gemini-api-key', 'selected-gemini-model'];
+            bootstrapKeys.forEach(bKey => {
+              const remoteVal = kvMap[bKey];
+              const localVal = cache[bKey] || nativeLocalStorage.getItem(bKey);
+              if (!localVal) return;
+              
+              let shouldUpload = false;
+              if (remoteVal === undefined || remoteVal === null) {
+                shouldUpload = true;
+              } else if (bKey === 'gemini-api-key' || bKey === 'selected-gemini-model') {
+                const cleanRemote = String(remoteVal).replace(/^"|"$/g, '').trim();
+                const cleanLocal = String(localVal).replace(/^"|"$/g, '').trim();
+                if (!cleanRemote && cleanLocal) shouldUpload = true;
+              } else {
+                try {
+                  const arrLocal = typeof localVal === 'string' ? JSON.parse(localVal) : localVal;
+                  const arrRemote = typeof remoteVal === 'string' ? JSON.parse(remoteVal) : remoteVal;
+                  if (Array.isArray(arrLocal) && arrLocal.length > 0 && (!Array.isArray(arrRemote) || arrRemote.length === 0)) {
+                    shouldUpload = true;
+                  }
+                } catch(e) {}
+              }
+
+              if (shouldUpload) {
+                let parsed = localVal;
+                try {
+                  if (typeof localVal === 'string' && (localVal.startsWith('{') || localVal.startsWith('['))) {
+                    parsed = JSON.parse(localVal);
+                  }
+                } catch(e) {}
+                supabaseApi.set(bKey, parsed, true);
               }
             });
 
@@ -5950,7 +6057,90 @@
               console.warn('Fabric Cut Relations relational reconciliation notice:', cutErr);
             }
 
+            // Reconcile Dedicated vf_auth_users Relational Table (Bi-directional Admin & Employee Directory)
+            try {
+              const authUsersCols = 'id,email,name,role,pass_hash,permissions,is_active,metadata,created_at,updated_at';
+              const dbAuthUsers = await fetchAllRowsPaginated('vf_auth_users', authUsersCols, 'is_active=is.true&order=updated_at.desc');
+              if (Array.isArray(dbAuthUsers) && dbAuthUsers.length > 0) {
+                const tombstones = getDeletedTombstones();
+                const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()).filter(Boolean));
+
+                // Separate employees and admins from relational table
+                const remoteEmployees = [];
+                const remoteAdmins = [];
+
+                dbAuthUsers.forEach(u => {
+                  if (!u || !u.email) return;
+                  const emailLower = String(u.email).trim().toLowerCase();
+                  if (tombstoneSet.has(emailLower) || (u.id && tombstoneSet.has(String(u.id).toLowerCase()))) return;
+
+                  if (u.role === 'admin') {
+                    remoteAdmins.push({
+                      id: u.id || ('admin-' + Date.now()),
+                      email: u.email,
+                      name: u.name || 'Admin',
+                      passHash: u.pass_hash || '',
+                      role: 'admin',
+                      created_at: u.created_at || new Date().toISOString(),
+                      updated_at: u.updated_at || new Date().toISOString()
+                    });
+                  } else {
+                    remoteEmployees.push({
+                      id: u.id || ('emp-' + Date.now()),
+                      email: u.email,
+                      username: u.email.split('@')[0],
+                      name: u.name || u.email.split('@')[0],
+                      role: 'employee',
+                      passHash: u.pass_hash || '',
+                      permissions: (u.permissions && typeof u.permissions === 'object') ? u.permissions : {},
+                      created_at: u.created_at || new Date().toISOString(),
+                      updated_at: u.updated_at || new Date().toISOString()
+                    });
+                  }
+                });
+
+                // Merge into local vf_users
+                if (remoteEmployees.length > 0) {
+                  const uKey = 'vf_users';
+                  const localRaw = cache[uKey] || nativeLocalStorage.getItem(uKey);
+                  const finalUsers = mergeDatasets(uKey, localRaw, JSON.stringify(remoteEmployees));
+                  const finalStr = JSON.stringify(finalUsers);
+                  const lastWrite = lastLocalWrites[uKey] || 0;
+                  if (Date.now() - lastWrite >= 3000) {
+                    if (cache[uKey] !== finalStr) {
+                      cache[uKey] = finalStr;
+                      lastSavedHashes[uKey] = computeHash(finalStr);
+                      safeLocalStorageSet(uKey, finalStr);
+                      if (!updatedKeys.includes(uKey)) updatedKeys.push(uKey);
+                      hasChanges = true;
+                    }
+                  }
+                }
+
+                // Merge into local vf_admin_users
+                if (remoteAdmins.length > 0) {
+                  const aKey = 'vf_admin_users';
+                  const localRaw = cache[aKey] || nativeLocalStorage.getItem(aKey);
+                  const finalAdmins = mergeDatasets(aKey, localRaw, JSON.stringify(remoteAdmins));
+                  const finalStr = JSON.stringify(finalAdmins);
+                  const lastWrite = lastLocalWrites[aKey] || 0;
+                  if (Date.now() - lastWrite >= 3000) {
+                    if (cache[aKey] !== finalStr) {
+                      cache[aKey] = finalStr;
+                      lastSavedHashes[aKey] = computeHash(finalStr);
+                      safeLocalStorageSet(aKey, finalStr);
+                      if (!updatedKeys.includes(aKey)) updatedKeys.push(aKey);
+                      hasChanges = true;
+                    }
+                  }
+                }
+              }
+            } catch (authErr) {
+              // Graceful fallback if table does not exist yet
+            }
+
             // Reconcile Dedicated Fabric Designs Relational Table (Loom Design Library)
+
             try {
               const listCols = 'id,design_name,design_number,quality,image_url,picks,repeats,total_hooks,width,avg_weight,deleted,metadata,created_at,updated_at';
               const dbDesigns = await fetchAllRowsPaginated('vf_fabric_designs', listCols, 'deleted=is.false&order=updated_at.desc');
@@ -6300,14 +6490,14 @@
             const rows = await valRes.json();
             // Process tombstone keys first so mergeDatasets benefits immediately
             rows.sort((a, b) => {
-              const aT = a && (a.key === 'vf_deleted_entity_ids' || a.key === 'vf_deleted_costing_ids');
-              const bT = b && (b.key === 'vf_deleted_entity_ids' || b.key === 'vf_deleted_costing_ids');
+              const aT = a && (a.key === 'vf_deleted_entity_ids' || a.key === 'vf_deleted_costing_ids' || a.key === 'vf_deleted_auth_users');
+              const bT = b && (b.key === 'vf_deleted_entity_ids' || b.key === 'vf_deleted_costing_ids' || b.key === 'vf_deleted_auth_users');
               return aT ? -1 : (bT ? 1 : 0);
             });
             rows.forEach(row => {
               if (!row || !row.key || isLocalOnlyKey(row.key)) return;
               try {
-                if (row.key === 'vf_deleted_entity_ids' || row.key === 'vf_deleted_costing_ids' || row.key === 'deleted-designs') {
+                if (row.key === 'vf_deleted_entity_ids' || row.key === 'vf_deleted_costing_ids' || row.key === 'deleted-designs' || row.key === 'vf_deleted_auth_users') {
                   try {
                     const remoteTombstones = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
                     if (Array.isArray(remoteTombstones)) {
@@ -6360,6 +6550,58 @@
       } finally {
         isHydrated = true;
         window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: updatedKeys } }));
+      }
+    },
+    // --- Bi-Directional Supabase Auth & Users API ---
+    authUsers: {
+      async getAll() {
+        if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+        try {
+          const rows = await fetchAllRowsPaginated('vf_auth_users', '*', 'order=updated_at.desc');
+          return Array.isArray(rows) ? rows : [];
+        } catch(e) {
+          return [];
+        }
+      },
+      async saveUser(user) {
+        if (!user || !user.email || !activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return { success: false };
+        try {
+          const payload = {
+            id: String(user.id || ('usr-' + Date.now())),
+            email: String(user.email).trim().toLowerCase(),
+            name: user.name || user.username || user.email.split('@')[0],
+            role: user.role === 'admin' ? 'admin' : 'employee',
+            pass_hash: user.passHash || user.pass_hash || '',
+            permissions: (user.permissions && typeof user.permissions === 'object') ? user.permissions : {},
+            is_active: user.is_active !== undefined ? Boolean(user.is_active) : true,
+            metadata: user.metadata || {},
+            updated_at: new Date().toISOString()
+          };
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users`, {
+            method: 'POST',
+            headers: Object.assign({}, supabaseApi.getAuthHeaders(), {
+              'Prefer': 'resolution=merge-duplicates,return=representation'
+            }),
+            body: JSON.stringify(payload)
+          });
+          return { success: res.ok };
+        } catch(e) {
+          return { success: false, error: e };
+        }
+      },
+      async deleteUser(userIdOrEmail) {
+        if (!userIdOrEmail || !activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return { success: false };
+        try {
+          const target = String(userIdOrEmail).trim();
+          const filterCol = target.includes('@') ? 'email' : 'id';
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?${filterCol}=eq.${encodeURIComponent(target)}`, {
+            method: 'DELETE',
+            headers: supabaseApi.getAuthHeaders()
+          });
+          return { success: res.ok };
+        } catch(e) {
+          return { success: false, error: e };
+        }
       }
     },
     // --- Enterprise Warp Beams Relational APIs ---

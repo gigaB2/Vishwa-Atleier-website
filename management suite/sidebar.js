@@ -2369,6 +2369,38 @@
   window.addEventListener('storage', updateSidebarIdentity);
   window.addEventListener('focus', updateSidebarIdentity);
 
+  function syncLiveUserPermissions(e) {
+    const key = e && e.detail ? e.detail.key : (e && e.key ? e.key : null);
+    if (key && key !== 'vf_users') return;
+
+    try {
+      const sessRaw = localStorage.getItem('vf_session');
+      if (!sessRaw) return;
+      const activeSession = JSON.parse(sessRaw);
+      if (!activeSession || activeSession.role === 'admin') return;
+
+      const usersRaw = localStorage.getItem('vf_users');
+      if (!usersRaw) return;
+      const users = JSON.parse(usersRaw);
+      if (!Array.isArray(users)) return;
+
+      const userEmail = (activeSession.email || activeSession.username || '').toLowerCase();
+      const updatedUser = users.find(u => (u.id && u.id === activeSession.id) || ((u.email || u.username || '').toLowerCase() === userEmail));
+
+      if (updatedUser) {
+        if (JSON.stringify(activeSession.permissions || {}) !== JSON.stringify(updatedUser.permissions || {})) {
+          activeSession.permissions = updatedUser.permissions || {};
+          localStorage.setItem('vf_session', JSON.stringify(activeSession));
+          applyViewOnlyEnforcer();
+          if (typeof filterSidebarLinks === 'function') filterSidebarLinks();
+        }
+      }
+    } catch(err) {}
+  }
+
+  window.addEventListener('supabase-sync', syncLiveUserPermissions);
+  window.addEventListener('storage', syncLiveUserPermissions);
+
   function initSidebarLogic() {
     // Populate User Name and Company Name from localStorage
     updateSidebarIdentity();

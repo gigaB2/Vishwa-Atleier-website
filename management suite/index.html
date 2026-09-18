@@ -780,12 +780,32 @@
             setTimeout(() => window.location.href = getFirstAllowedPage(found.permissions), 400);
         });
 
-        // 2. Admin Form Submit (Admin Email + Admin Password)
+        // 2. Admin Form Submit (Supabase Auth & vf_auth_users First, Local Admin Fallback)
         document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const adminEmail = document.getElementById('adminEmailInput').value.trim().toLowerCase();
             const adminPass = document.getElementById('adminPassInput').value;
 
+            showAuthMsg('Verifying admin credentials...', 'info');
+
+            // 1. Try Supabase Auth and live vf_auth_users first
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.signIn === 'function') {
+                try {
+                    const sbRes = await window.VishwaSupabase.signIn(adminEmail, adminPass);
+                    if (sbRes && !sbRes.error && sbRes.data) {
+                        const session = window.VishwaSupabase.getSession() || {};
+                        if (session.role === 'admin' || session.permissions === '*') {
+                            showAuthMsg('Admin Authenticated via Supabase! Redirecting to Settings...', 'success');
+                            setTimeout(() => window.location.href = 'modules/settings.html', 400);
+                            return;
+                        }
+                    }
+                } catch(sbErr) {
+                    console.warn('[Admin Auth] Supabase check error, falling back to local cache:', sbErr);
+                }
+            }
+
+            // 2. Fallback to locally cached vf_admin_users
             let admins = null;
             try {
                 const raw = localStorage.getItem('vf_admin_users');
@@ -843,6 +863,29 @@
                 setTimeout(() => window.location.href = 'modules/settings.html', 400);
             } else {
                 showAuthMsg('Invalid Admin Email or Password.', 'error');
+            }
+        });
+
+        // Trigger background hydration from Supabase if online
+        try {
+            if (window.VishwaSupabase && typeof window.VishwaSupabase.loadAll === 'function') {
+                window.VishwaSupabase.loadAll().catch(() => {});
+            }
+        } catch(e) {}
+
+        // Listen for live updates from Supabase to auto-populate default admin if user hasn't typed yet
+        window.addEventListener('vishwa:supabase-synced', (e) => {
+            const adminInp = document.getElementById('adminEmailInput');
+            if (adminInp && (!adminInp.value || adminInp.value === 'admin@vishwafashions.com')) {
+                try {
+                    const rawAdmins = localStorage.getItem('vf_admin_users');
+                    if (rawAdmins) {
+                        const list = JSON.parse(rawAdmins);
+                        if (Array.isArray(list) && list.length > 0 && list[0].email) {
+                            adminInp.value = list[0].email;
+                        }
+                    }
+                } catch(err) {}
             }
         });
 
