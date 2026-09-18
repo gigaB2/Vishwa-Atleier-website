@@ -1126,8 +1126,7 @@
         'loom-designs', 'loom_designs', 'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
         'manage-jalas', 'manage-fanis', 'machines', 'warp-beams', 'warp-issues',
         'yarn-issues', 'costing-products-v4', 'costing-tfo-products-v1',
-        'costing-doubler-products-v1', 'costing-covering-products-v1',
-        'vf_users', 'vf_admin_users', 'vf_auth_config'
+        'costing-doubler-products-v1', 'costing-covering-products-v1'
       ];
 
       const isMasterKey = MASTER_ENTITY_KEYS.includes(key);
@@ -6573,6 +6572,7 @@
           const role = user.role === 'admin' ? 'admin' : 'employee';
           const name = user.name || user.username || cleanEmail.split('@')[0];
           const permissions = (user.permissions && typeof user.permissions === 'object') ? user.permissions : (role === 'admin' ? '*' : {});
+          const nowIso = new Date().toISOString();
 
           const payload = {
             id: String(user.id || ('usr-' + Date.now())),
@@ -6583,10 +6583,49 @@
             permissions: permissions,
             is_active: user.is_active !== undefined ? Boolean(user.is_active) : true,
             metadata: user.metadata || {},
-            updated_at: new Date().toISOString()
+            updated_at: nowIso
           };
 
-          // 1. Upsert into public.vf_auth_users table
+          // 1. Update local storage caches immediately
+          const storeKey = role === 'admin' ? 'vf_admin_users' : 'vf_users';
+          let localList = [];
+          try {
+            const raw = cache[storeKey] || nativeLocalStorage.getItem(storeKey);
+            if (raw) localList = JSON.parse(raw);
+          } catch(e) {}
+          if (!Array.isArray(localList)) localList = [];
+
+          const existingIdx = localList.findIndex(item => item && item.email && String(item.email).trim().toLowerCase() === cleanEmail);
+          const localObj = role === 'admin' ? {
+            id: payload.id,
+            email: cleanEmail,
+            name: name,
+            passHash: rawPass,
+            role: 'admin',
+            updated_at: nowIso
+          } : {
+            id: payload.id,
+            email: cleanEmail,
+            username: cleanEmail.split('@')[0],
+            name: name,
+            role: 'employee',
+            passHash: rawPass,
+            permissions: permissions,
+            updated_at: nowIso
+          };
+
+          if (existingIdx >= 0) {
+            localList[existingIdx] = Object.assign({}, localList[existingIdx], localObj);
+          } else {
+            localList.push(localObj);
+          }
+
+          const serialized = JSON.stringify(localList);
+          cache[storeKey] = serialized;
+          safeLocalStorageSet(storeKey, serialized);
+          lastSavedHashes[storeKey] = computeHash(serialized);
+
+          // 2. Upsert into public.vf_auth_users table
           const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users`, {
             method: 'POST',
             headers: Object.assign({}, supabaseApi.getAuthHeaders(), {
@@ -6595,7 +6634,7 @@
             body: JSON.stringify(payload)
           });
 
-          // 2. Also register into Supabase Built-in Authentication (auth.users)
+          // 3. Also register into Supabase Built-in Authentication (auth.users)
           if (rawPass && rawPass.length >= 6) {
             try {
               await supabaseApi.signUp(cleanEmail, rawPass, {
@@ -6617,7 +6656,46 @@
         if (!userIdOrEmail || !activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return { success: false };
         try {
           const target = String(userIdOrEmail).trim();
-          const filterCol = target.includes('@') ? 'email' : 'id';
+          const targetLower = target.toLowerCase();
+          const isEmail = target.includes('@');
+          const filterCol = isEmail ? 'email' : 'id';
+
+          // 1. Update local storage caches and record deletion tombstone
+          let tombstones = [];
+          try {
+            const rawDel = cache['vf_deleted_auth_users'] || nativeLocalStorage.getItem('vf_deleted_auth_users');
+            if (rawDel) tombstones = JSON.parse(rawDel);
+          } catch(e) {}
+          if (!Array.isArray(tombstones)) tombstones = [];
+          if (!tombstones.includes(targetLower)) {
+            tombstones.push(targetLower);
+            const delSerialized = JSON.stringify(tombstones);
+            cache['vf_deleted_auth_users'] = delSerialized;
+            safeLocalStorageSet('vf_deleted_auth_users', delSerialized);
+          }
+
+          ['vf_users', 'vf_admin_users'].forEach(sKey => {
+            try {
+              const raw = cache[sKey] || nativeLocalStorage.getItem(sKey);
+              if (raw) {
+                const list = JSON.parse(raw);
+                if (Array.isArray(list)) {
+                  const filtered = list.filter(item => {
+                    if (!item) return false;
+                    const e = String(item.email || '').trim().toLowerCase();
+                    const i = String(item.id || '').trim().toLowerCase();
+                    return e !== targetLower && i !== targetLower;
+                  });
+                  const updatedStr = JSON.stringify(filtered);
+                  cache[sKey] = updatedStr;
+                  safeLocalStorageSet(sKey, updatedStr);
+                  lastSavedHashes[sKey] = computeHash(updatedStr);
+                }
+              }
+            } catch(e) {}
+          });
+
+          // 2. Delete row from database
           const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?${filterCol}=eq.${encodeURIComponent(target)}`, {
             method: 'DELETE',
             headers: supabaseApi.getAuthHeaders()

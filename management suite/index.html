@@ -474,12 +474,6 @@
                     </button>
                 </div>
 
-                <!-- Open Workspace Mode Banner -->
-                <div class="open-mode-banner" id="openModeBanner">
-                    <span class="card-eyebrow" style="margin-bottom:0;"><i class="ph ph-globe"></i> Open Portal Mode Active</span>
-                    <p>Login is currently optional. Click below for instant guest entry.</p>
-                </div>
-
                 <!-- FORM 1: Employee Sign In (Email + Password) -->
                 <div class="auth-panel" id="employeePanel">
                     <div class="card-header">
@@ -638,11 +632,6 @@
         } catch(e) {}
         document.getElementById('adminEmailInput').value = defaultAdminEmail;
 
-        // Check Open Mode Banner
-        if (authData.config.access_mode === 'open_portal') {
-            document.getElementById('openModeBanner').style.display = 'block';
-        }
-
         // Auth Tab Switching
         const tabBtns = document.querySelectorAll('.auth-tab-btn');
         const panels = {
@@ -748,14 +737,6 @@
 
             const foundIndex = users.findIndex(u => u.email && u.email.toLowerCase() === emailInput);
             if (foundIndex === -1) {
-                if (authData.config.access_mode === 'open_portal') {
-                    const sessionUser = { email: emailInput, name: emailInput.split('@')[0], role: 'employee', permissions: {} };
-                    localStorage.setItem(STORAGE_KEY_USER, sessionUser.name);
-                    localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(sessionUser));
-                    showAuthMsg('Welcome! Redirecting...', 'success');
-                    setTimeout(() => window.location.href = 'modules/weaving/order-book.html', 400);
-                    return;
-                }
                 showAuthMsg('Authentication failed. Invalid email or password.', 'error');
                 return;
             }

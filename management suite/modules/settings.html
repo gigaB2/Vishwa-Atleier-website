@@ -766,19 +766,8 @@
           <button type="button" onclick="openAdminModal()" class="save-btn" style="min-height: 36px; padding: 0.35rem 0.85rem; font-size: 0.78rem; background: var(--accent2);"><i class="ri-user-add-line"></i> Add New Admin</button>
         </div>
         
-        <div id="admin-accounts-list" style="display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.25rem;">
+        <div id="admin-accounts-list" style="display: flex; flex-direction: column; gap: 0.65rem;">
           <!-- Dynamically rendered admin accounts -->
-        </div>
-
-        <div class="input-group full-width" style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 0.5rem;">
-          <label for="portal-access-mode" style="font-weight: 700;">Portal Security &amp; Access Mode</label>
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-            <select id="portal-access-mode" style="flex: 1; min-width: 240px; padding: 0.65rem 0.85rem; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface); color: var(--fg); font-family: var(--font-body); font-size: 0.85rem; font-weight: 600;">
-              <option value="require_login">🔒 Strict Authentication Mode (All Users Must Log In)</option>
-              <option value="open_portal">🌐 Open Workspace Mode (Guest Access Enabled)</option>
-            </select>
-            <button type="button" onclick="saveAdminSecurityMode()" class="save-btn" style="min-height: 38px; padding: 0.4rem 1rem; font-size: 0.8rem;"><i class="ri-save-line"></i> Save Mode</button>
-          </div>
         </div>
       </div>
 
@@ -2983,13 +2972,16 @@
 
     let admins = getStoredAdmins();
 
+    const nowIso = new Date().toISOString();
     if (editingAdminId) {
       const idx = admins.findIndex(a => a.id === editingAdminId);
       if (idx !== -1) {
         admins[idx].email = email;
         admins[idx].name = name || 'Admin';
+        admins[idx].updated_at = nowIso;
         if (pass && pass.trim()) {
           admins[idx].passHash = await hashPassword(pass);
+          admins[idx].plainPassword = pass;
         }
       }
     } else {
@@ -3001,6 +2993,19 @@
         alert("An admin account with this email already exists.");
         return;
       }
+
+      // Remove email from deletion tombstones if re-creating
+      try {
+        let del = JSON.parse(localStorage.getItem('vf_deleted_auth_users')) || [];
+        if (Array.isArray(del) && del.includes(email.toLowerCase())) {
+          del = del.filter(x => x !== email.toLowerCase());
+          localStorage.setItem('vf_deleted_auth_users', JSON.stringify(del));
+          if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+            window.VishwaSupabase.saveToSupabase('vf_deleted_auth_users', del, true);
+          }
+        }
+      } catch(e) {}
+
       admins.push({
         id: 'admin-' + Date.now(),
         email: email,
@@ -3008,7 +3013,8 @@
         passHash: await hashPassword(pass),
         plainPassword: pass,
         role: 'admin',
-        created_at: new Date().toISOString()
+        created_at: nowIso,
+        updated_at: nowIso
       });
     }
 
@@ -3083,22 +3089,6 @@
     }
   }
 
-  function saveAdminSecurityMode() {
-    const mode = document.getElementById('portal-access-mode').value;
-    let cfg = {};
-    try {
-      const raw = localStorage.getItem('vf_auth_config');
-      if (raw) cfg = JSON.parse(raw) || {};
-    } catch(e) {}
-
-    cfg.access_mode = mode;
-    localStorage.setItem('vf_auth_config', JSON.stringify(cfg));
-    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
-      window.VishwaSupabase.saveToSupabase('vf_auth_config', cfg, true);
-    }
-    showToast("Portal security mode updated and synced to Supabase!", "success");
-  }
-
   function loadAuthSettings() {
     let activeSession = null;
     try {
@@ -3127,14 +3117,14 @@
       return;
     }
 
-    let cfg = { access_mode: 'require_login' };
+    // Ensure strict authentication mode is permanently active
     try {
+      let cfg = { access_mode: 'require_login' };
       const raw = localStorage.getItem('vf_auth_config');
       if (raw) cfg = Object.assign(cfg, JSON.parse(raw));
+      cfg.access_mode = 'require_login';
+      localStorage.setItem('vf_auth_config', JSON.stringify(cfg));
     } catch(e) {}
-    
-    const sel = document.getElementById('portal-access-mode');
-    if (sel) sel.value = cfg.access_mode || 'require_login';
 
     renderAdminsList();
     renderUsersAndInvitesList();
@@ -3614,27 +3604,6 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
     setAllPermLevel(containerId, isChecked ? 'edit' : 'none');
   }
 
-  async function saveAdminAuthConfig() {
-    const mode = document.getElementById('portal-access-mode').value;
-    const email = document.getElementById('admin-config-email').value.trim();
-    const pass = document.getElementById('admin-config-pass').value;
-
-    if (!email || !pass) {
-      alert("Please enter a valid Admin Email and Password.");
-      return;
-    }
-
-    if (!isValidEmail(email)) {
-      alert("Invalid Admin Email Address! Email must contain '@' (e.g. admin@vishwafashions.com).");
-      return;
-    }
-
-    const hashedPass = await hashPassword(pass);
-    let cfg = { access_mode: mode, admin_email: email, admin_pass: hashedPass };
-    localStorage.setItem('vf_auth_config', JSON.stringify(cfg));
-
-    showToast("Admin credentials & security settings updated securely!", "success");
-  }
 
   async function createNewEmployeeAccount() {
     const email = document.getElementById('emp-new-email').value.trim();
