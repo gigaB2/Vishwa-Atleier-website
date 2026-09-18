@@ -1139,6 +1139,201 @@ BEGIN
         -- Ensure essential state tables are published for instant sync
         BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_kv_store; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
         BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_designs; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
+    -- 3. vf_costing_tfo_products
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_tfo_products' AND policyname = 'Allow public access to vf_costing_tfo_products') THEN
+        CREATE POLICY "Allow public access to vf_costing_tfo_products" ON public.vf_costing_tfo_products FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 4. vf_costing_doubler_products
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_doubler_products' AND policyname = 'Allow public access to vf_costing_doubler_products') THEN
+        CREATE POLICY "Allow public access to vf_costing_doubler_products" ON public.vf_costing_doubler_products FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 5. vf_costing_covering_products
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_covering_products' AND policyname = 'Allow public access to vf_costing_covering_products') THEN
+        CREATE POLICY "Allow public access to vf_costing_covering_products" ON public.vf_costing_covering_products FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 5b. vf_costing_links
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_links' AND policyname = 'Allow public access to vf_costing_links') THEN
+        CREATE POLICY "Allow public access to vf_costing_links" ON public.vf_costing_links FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 6. vf_audit_logs (Public insert, read for all authenticated clients)
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_audit_logs' AND policyname = 'Allow public access to vf_audit_logs') THEN
+        CREATE POLICY "Allow public access to vf_audit_logs" ON public.vf_audit_logs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 7. vf_yarn_rm_lots
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_rm_lots' AND policyname = 'Allow public access to vf_yarn_rm_lots') THEN
+        CREATE POLICY "Allow public access to vf_yarn_rm_lots" ON public.vf_yarn_rm_lots FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 8. vf_yarn_rm_boxes
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_rm_boxes' AND policyname = 'Allow public access to vf_yarn_rm_boxes') THEN
+        CREATE POLICY "Allow public access to vf_yarn_rm_boxes" ON public.vf_yarn_rm_boxes FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 9. vf_yarn_rm_transactions
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_rm_transactions' AND policyname = 'Allow public access to vf_yarn_rm_transactions') THEN
+        CREATE POLICY "Allow public access to vf_yarn_rm_transactions" ON public.vf_yarn_rm_transactions FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 10. vf_yarn_orders
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_orders' AND policyname = 'Allow public access to vf_yarn_orders') THEN
+        CREATE POLICY "Allow public access to vf_yarn_orders" ON public.vf_yarn_orders FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 11. vf_yarn_order_batches
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_order_batches' AND policyname = 'Allow public access to vf_yarn_order_batches') THEN
+        CREATE POLICY "Allow public access to vf_yarn_order_batches" ON public.vf_yarn_order_batches FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 12. vf_yarn_order_boxes
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_order_boxes' AND policyname = 'Allow public access to vf_yarn_order_boxes') THEN
+        CREATE POLICY "Allow public access to vf_yarn_order_boxes" ON public.vf_yarn_order_boxes FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 13. vf_weft_issues
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_weft_issues' AND policyname = 'Allow public access to vf_weft_issues') THEN
+        CREATE POLICY "Allow public access to vf_weft_issues" ON public.vf_weft_issues FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 14. vf_warp_beams
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_warp_beams' AND policyname = 'Allow public access to vf_warp_beams') THEN
+        CREATE POLICY "Allow public access to vf_warp_beams" ON public.vf_warp_beams FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 15. vf_warp_issues
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_warp_issues' AND policyname = 'Allow public access to vf_warp_issues') THEN
+        CREATE POLICY "Allow public access to vf_warp_issues" ON public.vf_warp_issues FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 16. vf_warp_beam_loadings
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_warp_beam_loadings' AND policyname = 'Allow public access to vf_warp_beam_loadings') THEN
+        CREATE POLICY "Allow public access to vf_warp_beam_loadings" ON public.vf_warp_beam_loadings FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 17. vf_weaving_production_logs
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_weaving_production_logs' AND policyname = 'Allow public access to vf_weaving_production_logs') THEN
+        CREATE POLICY "Allow public access to vf_weaving_production_logs" ON public.vf_weaving_production_logs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 18. vf_yarn_production_logs
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_production_logs' AND policyname = 'Allow public access to vf_yarn_production_logs') THEN
+        CREATE POLICY "Allow public access to vf_yarn_production_logs" ON public.vf_yarn_production_logs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 19. vf_yarn_sales_logs
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_sales_logs' AND policyname = 'Allow public access to vf_yarn_sales_logs') THEN
+        CREATE POLICY "Allow public access to vf_yarn_sales_logs" ON public.vf_yarn_sales_logs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 20. vf_fabric_dispatches
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fabric_dispatches' AND policyname = 'Allow public access to vf_fabric_dispatches') THEN
+        CREATE POLICY "Allow public access to vf_fabric_dispatches" ON public.vf_fabric_dispatches FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 21. vf_fabric_cut_relations
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fabric_cut_relations' AND policyname = 'Allow public access to vf_fabric_cut_relations') THEN
+        CREATE POLICY "Allow public access to vf_fabric_cut_relations" ON public.vf_fabric_cut_relations FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 22. vf_employees
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_employees' AND policyname = 'Allow public access to vf_employees') THEN
+        CREATE POLICY "Allow public access to vf_employees" ON public.vf_employees FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 23. vf_attendance_records
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_attendance_records' AND policyname = 'Allow public access to vf_attendance_records') THEN
+        CREATE POLICY "Allow public access to vf_attendance_records" ON public.vf_attendance_records FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 24. vf_employee_loans
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_employee_loans' AND policyname = 'Allow public access to vf_employee_loans') THEN
+        CREATE POLICY "Allow public access to vf_employee_loans" ON public.vf_employee_loans FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 25. vf_salary_settlements
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_salary_settlements' AND policyname = 'Allow public access to vf_salary_settlements') THEN
+        CREATE POLICY "Allow public access to vf_salary_settlements" ON public.vf_salary_settlements FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 26. vf_rm_qualities
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_rm_qualities' AND policyname = 'Allow public access to vf_rm_qualities') THEN
+        CREATE POLICY "Allow public access to vf_rm_qualities" ON public.vf_rm_qualities FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 27. vf_fp_qualities
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fp_qualities' AND policyname = 'Allow public access to vf_fp_qualities') THEN
+        CREATE POLICY "Allow public access to vf_fp_qualities" ON public.vf_fp_qualities FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 28. vf_rm_suppliers
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_rm_suppliers' AND policyname = 'Allow public access to vf_rm_suppliers') THEN
+        CREATE POLICY "Allow public access to vf_rm_suppliers" ON public.vf_rm_suppliers FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 29. vf_fabric_designs
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fabric_designs' AND policyname = 'Allow public access to vf_fabric_designs') THEN
+        CREATE POLICY "Allow public access to vf_fabric_designs" ON public.vf_fabric_designs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 30. vf_machinery_assets
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_machinery_assets' AND policyname = 'Allow public access to vf_machinery_assets') THEN
+        CREATE POLICY "Allow public access to vf_machinery_assets" ON public.vf_machinery_assets FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- 31. vf_companies
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_companies' AND policyname = 'Allow public access to vf_companies') THEN
+        CREATE POLICY "Allow public access to vf_companies" ON public.vf_companies FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+END $$;
+
+-- ==============================================================================
+-- Storage Bucket Provisioning (For Design Cards, Beam Photos & Media Attachments)
+-- ==============================================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('vf_media_assets', 'vf_media_assets', true)
+ON CONFLICT (id) DO NOTHING;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Allow public access to vf_media_assets') THEN
+        CREATE POLICY "Allow public access to vf_media_assets" ON storage.objects
+        FOR ALL USING (bucket_id = 'vf_media_assets') WITH CHECK (bucket_id = 'vf_media_assets');
+    END IF;
+EXCEPTION
+    WHEN others THEN NULL;
+END $$;
+
+-- ==============================================================================
+-- Supabase Realtime Broadcast Configuration
+-- ==============================================================================
+
+-- Enable Realtime publication ONLY on essential low-frequency tables
+-- (Dropping high-volume relational tables from Realtime prevents WAL sender CPU exhaustion & 504 timeouts)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        -- Safely drop high-frequency logs and heavy relational tables from logical replication
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_rm_boxes; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_order_boxes; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_rm_transactions; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_weaving_production_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_production_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_sales_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_attendance_records; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_audit_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_weft_issues; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_warp_issues; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_warp_beam_loadings; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_fabric_dispatches; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_fabric_cut_relations; EXCEPTION WHEN others THEN NULL; END;
+
+        -- Ensure essential state tables are published for instant sync
+        BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_kv_store; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_designs; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
     END IF;
 EXCEPTION
     WHEN others THEN NULL;
@@ -1172,6 +1367,93 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_auth_users' AND policyname = 'Allow public access to vf_auth_users') THEN
         CREATE POLICY "Allow public access to vf_auth_users" ON public.vf_auth_users FOR ALL USING (true) WITH CHECK (true);
     END IF;
+END $$;
+
+-- Automatic Bi-directional Synchronization Trigger: Supabase Auth (auth.users) -> public.vf_auth_users
+CREATE OR REPLACE FUNCTION public.handle_auth_user_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    user_role TEXT;
+    user_name TEXT;
+    user_perms JSONB;
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        DELETE FROM public.vf_auth_users WHERE email = LOWER(OLD.email) OR id = OLD.id::text;
+        RETURN OLD;
+    END IF;
+
+    -- Extract role from metadata or default to employee
+    user_role := COALESCE(NEW.raw_user_meta_data->>'role', 'employee');
+    IF user_role NOT IN ('admin', 'employee') THEN
+        user_role := 'employee';
+    END IF;
+
+    user_name := COALESCE(
+        NEW.raw_user_meta_data->>'name',
+        NEW.raw_user_meta_data->>'full_name',
+        split_part(NEW.email, '@', 1)
+    );
+
+    user_perms := COALESCE(
+        NEW.raw_user_meta_data->'permissions',
+        CASE WHEN user_role = 'admin' THEN '"*"'::jsonb ELSE '{}'::jsonb END
+    );
+
+    INSERT INTO public.vf_auth_users (
+        id,
+        email,
+        name,
+        role,
+        pass_hash,
+        permissions,
+        is_active,
+        metadata,
+        created_at,
+        updated_at
+    )
+    VALUES (
+        NEW.id::text,
+        LOWER(NEW.email),
+        user_name,
+        user_role,
+        NULL,
+        user_perms,
+        true,
+        COALESCE(NEW.raw_user_meta_data, '{}'::jsonb),
+        COALESCE(NEW.created_at, timezone('utc'::text, now())),
+        timezone('utc'::text, now())
+    )
+    ON CONFLICT (email) DO UPDATE SET
+        id = EXCLUDED.id,
+        name = COALESCE(EXCLUDED.name, public.vf_auth_users.name),
+        role = COALESCE(EXCLUDED.role, public.vf_auth_users.role),
+        permissions = CASE 
+            WHEN EXCLUDED.permissions IS NOT NULL AND EXCLUDED.permissions <> '{}'::jsonb 
+            THEN EXCLUDED.permissions 
+            ELSE public.vf_auth_users.permissions 
+        END,
+        is_active = true,
+        metadata = COALESCE(EXCLUDED.metadata, public.vf_auth_users.metadata),
+        updated_at = timezone('utc'::text, now());
+
+    RETURN NEW;
+END;
+$$;
+
+-- Trigger on auth.users for seamless sync from Supabase Authentication Dashboard to App
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'users') THEN
+        DROP TRIGGER IF EXISTS on_auth_user_change ON auth.users;
+        CREATE TRIGGER on_auth_user_change
+            AFTER INSERT OR UPDATE OR DELETE ON auth.users
+            FOR EACH ROW EXECUTE FUNCTION public.handle_auth_user_change();
+    END IF;
+EXCEPTION WHEN others THEN NULL;
 END $$;
 
 -- Add vf_auth_users to realtime publication if available

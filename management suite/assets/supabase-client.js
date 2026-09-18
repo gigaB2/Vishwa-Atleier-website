@@ -4350,6 +4350,50 @@
               }
             }
 
+            // Dedicated Relational Synchronization for Admin & Employee Accounts (vf_auth_users)
+            if ((key === 'vf_users' || key === 'vf_admin_users') && Array.isArray(value) && value.length > 0) {
+              try {
+                const isAdm = (key === 'vf_admin_users');
+                const authRows = value.map(u => {
+                  if (!u || (!u.email && !u.username)) return null;
+                  const cleanEmail = String(u.email || u.username).trim().toLowerCase();
+                  const role = u.role || (isAdm ? 'admin' : 'employee');
+                  const name = u.name || u.username || cleanEmail.split('@')[0];
+                  const permissions = (u.permissions && typeof u.permissions === 'object') ? u.permissions : (role === 'admin' ? '*' : {});
+                  return {
+                    id: String(u.id || (isAdm ? 'admin-' : 'emp-') + Date.now()),
+                    email: cleanEmail,
+                    name: name,
+                    role: role,
+                    pass_hash: u.passHash || u.pass_hash || null,
+                    permissions: permissions,
+                    is_active: u.is_active !== undefined ? Boolean(u.is_active) : true,
+                    metadata: u.metadata || {},
+                    updated_at: u.updated_at || nowIso
+                  };
+                }).filter(Boolean);
+
+                const dedupedAuthRows = dedupeByConflictKey(authRows, 'email');
+                if (dedupedAuthRows.length > 0) {
+                  for (let i = 0; i < dedupedAuthRows.length; i += 300) {
+                    const chunk = dedupedAuthRows.slice(i, i + 300);
+                    await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?on_conflict=email`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                      },
+                      body: JSON.stringify(chunk)
+                    }).catch(() => {});
+                  }
+                }
+              } catch(authSyncErr) {
+                console.warn('Auth Users Relational Sync notice:', authSyncErr);
+              }
+            }
+
             setSyncStatus(ws && ws.readyState === WebSocket.OPEN ? 'connected' : 'offline');
           } catch (err) {
             console.error('Supabase set error:', err);
@@ -4771,6 +4815,7 @@
     async signUp(email, password, metadata = {}) {
       if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return { data: null, error: new Error('Supabase not configured') };
       try {
+        const cleanEmail = String(email).trim().toLowerCase();
         const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
           method: 'POST',
           headers: {
@@ -4779,40 +4824,102 @@
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            email: String(email).trim().toLowerCase(),
+            email: cleanEmail,
             password: String(password),
-            data: metadata
+            data: {
+              name: metadata.name || cleanEmail.split('@')[0],
+              role: metadata.role || 'employee',
+              permissions: metadata.permissions || {},
+              ...metadata
+            }
           })
         });
         const data = await res.json();
         if (!res.ok) {
-          return { data: null, error: new Error(data.error_description || data.msg || data.message || JSON.stringify(data)) };
+          const errMsg = data.error_description || data.msg || data.message || JSON.stringify(data);
+          // If already registered, that's fine
+          if (errMsg.toLowerCase().includes('already registered') || errMsg.toLowerCase().includes('user already exists')) {
+            return { data: { user: { email: cleanEmail } }, error: null, alreadyRegistered: true };
+          }
+          return { data: null, error: new Error(errMsg) };
         }
-        this.logAuditTrail('signup', 'auth', email, { role: metadata.role || 'employee' });
+        this.logAuditTrail('signup', 'auth', cleanEmail, { role: metadata.role || 'employee' });
         return { data: data, error: null };
       } catch (e) {
         return { data: null, error: e };
       }
     },
     async signIn(email, password) {
+      if (!email || !password) return { data: null, error: new Error('Please enter email and password') };
+      const cleanEmail = String(email).trim().toLowerCase();
+
+      // Compute SHA-256 hash helper for legacy hash matches
+      const getSha256 = async (str) => {
+        if (!str) return '';
+        if (/^[a-f0-9]{64}$/i.test(str)) return str.toLowerCase();
+        if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+          try {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(str);
+            const buf = await window.crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+          } catch(e) {}
+        }
+        return str;
+      };
+
+      const passHash = await getSha256(password);
+
       try {
-        const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            email: email,
-            password: password
-          })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          // Fallback to checking vf_auth_users or synced user accounts
-          const cleanEmail = String(email).trim().toLowerCase();
-          
-          // 1. Check live vf_auth_users table
+        let authData = null;
+
+        // 1. Attempt standard Supabase Auth token authentication with plain password
+        if (activeConfig.isConfigured && SUPABASE_URL) {
+          try {
+            const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                email: cleanEmail,
+                password: String(password)
+              })
+            });
+            if (res.ok) {
+              authData = await res.json();
+            } else if (passHash && passHash !== password) {
+              // 1b. Check if user was registered with SHA-256 hash
+              const hashRes = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+                method: 'POST',
+                headers: {
+                  'apikey': SUPABASE_ANON_KEY,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  email: cleanEmail,
+                  password: passHash
+                })
+              });
+              if (hashRes.ok) {
+                authData = await hashRes.json();
+              }
+            }
+          } catch(sbErr) {
+            console.warn('[Supabase Auth] Direct token auth error:', sbErr);
+          }
+        }
+
+        // 2. If direct Supabase Auth token succeeded, load permissions and save session
+        if (authData && authData.access_token) {
+          const user = authData.user || {};
+          const meta = user.user_metadata || {};
+          let userRole = meta.role || (meta.is_admin ? 'admin' : 'employee');
+          let userPerms = meta.permissions || (userRole === 'admin' ? '*' : {});
+          let userName = meta.name || meta.full_name || cleanEmail.split('@')[0];
+
+          // Reconcile with vf_auth_users table to ensure latest permissions
           if (activeConfig.isConfigured && SUPABASE_URL) {
             try {
               const uRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?email=eq.${encodeURIComponent(cleanEmail)}&is_active=eq.true&limit=1`, {
@@ -4824,78 +4931,151 @@
               if (uRes.ok) {
                 const uRows = await uRes.json();
                 if (Array.isArray(uRows) && uRows.length > 0) {
-                  const dbUser = uRows[0];
-                  // Verify password hash or plain text
-                  let match = false;
-                  if (dbUser.pass_hash) {
-                    if (dbUser.pass_hash === password) {
-                      match = true;
-                    } else if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
-                      const encoder = new TextEncoder();
-                      const d = encoder.encode(password);
-                      const buf = await window.crypto.subtle.digest('SHA-256', d);
-                      const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-                      if (hash.toLowerCase() === dbUser.pass_hash.toLowerCase()) match = true;
-                    }
-                  }
-                  if (match) {
-                    const sessionPayload = {
-                      id: dbUser.id || ('usr-' + Date.now()),
-                      email: dbUser.email,
-                      username: dbUser.name || dbUser.email.split('@')[0],
-                      name: dbUser.name || dbUser.email.split('@')[0],
-                      role: dbUser.role || 'employee',
-                      permissions: dbUser.permissions || (dbUser.role === 'admin' ? '*' : {}),
-                      access_token: 'sb_token_' + Date.now(),
-                      source: 'supabase_vf_auth_users'
-                    };
-                    try {
-                      nativeLocalStorage.setItem('vf_session', JSON.stringify(sessionPayload));
-                      nativeLocalStorage.setItem('vf_user_name', sessionPayload.username);
-                    } catch(e) {}
-                    cache['vf_session'] = JSON.stringify(sessionPayload);
-                    cache['vf_user_name'] = sessionPayload.username;
-                    this.logAuditTrail('login', 'auth', dbUser.id || cleanEmail, { email: cleanEmail, role: sessionPayload.role, source: 'vf_auth_users' });
-                    return { data: { user: dbUser, session: sessionPayload }, error: null };
-                  }
+                  const dbU = uRows[0];
+                  if (dbU.role) userRole = dbU.role;
+                  if (dbU.permissions && Object.keys(dbU.permissions).length > 0) userPerms = dbU.permissions;
+                  if (dbU.name) userName = dbU.name;
                 }
               }
             } catch(e) {}
           }
 
-          return { data: null, error: new Error(data.error_description || data.msg || data.message || 'Invalid login credentials') };
-        }
-        
-        // Save session locally
-        if (data.access_token) {
-          const user = data.user || {};
           const sessionPayload = {
             id: user.id || ('sp-' + Date.now()),
-            email: user.email || email,
-            username: (user.user_metadata && user.user_metadata.full_name) || (user.email ? user.email.split('@')[0] : email),
-            name: (user.user_metadata && user.user_metadata.full_name) || (user.email ? user.email.split('@')[0] : 'User'),
-            role: (user.user_metadata && user.user_metadata.role) || 'employee',
-            permissions: (user.user_metadata && user.user_metadata.permissions) || '*',
-            access_token: data.access_token,
-            refresh_token: data.refresh_token,
-            expires_at: data.expires_at || (Math.floor(Date.now() / 1000) + (data.expires_in || 3600)),
+            email: cleanEmail,
+            username: userName,
+            name: userName,
+            role: userRole,
+            permissions: userPerms,
+            access_token: authData.access_token,
+            refresh_token: authData.refresh_token,
+            expires_at: authData.expires_at || (Math.floor(Date.now() / 1000) + (authData.expires_in || 3600)),
             supabase_user: user
           };
-          
+
           try {
             nativeLocalStorage.setItem('vf_session', JSON.stringify(sessionPayload));
             nativeLocalStorage.setItem('vf_user_name', sessionPayload.username);
-            nativeLocalStorage.setItem('vf_supabase_token', data.access_token);
-            nativeLocalStorage.setItem('vf_supabase_session', JSON.stringify(data));
+            nativeLocalStorage.setItem('vf_supabase_token', authData.access_token);
+            nativeLocalStorage.setItem('vf_supabase_session', JSON.stringify(authData));
           } catch(e) {}
-          
+
           cache['vf_session'] = JSON.stringify(sessionPayload);
           cache['vf_user_name'] = sessionPayload.username;
 
-          this.logAuditTrail('login', 'auth', user.id || email, { email, role: sessionPayload.role });
+          this.logAuditTrail('login', 'auth', user.id || cleanEmail, { email: cleanEmail, role: sessionPayload.role, source: 'supabase_auth' });
+          return { data: authData, error: null };
         }
-        
-        return { data: data, error: null };
+
+        // 3. Fallback: Check live public.vf_auth_users relational table
+        if (activeConfig.isConfigured && SUPABASE_URL) {
+          try {
+            const uRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?email=eq.${encodeURIComponent(cleanEmail)}&is_active=eq.true&limit=1`, {
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              }
+            });
+            if (uRes.ok) {
+              const uRows = await uRes.json();
+              if (Array.isArray(uRows) && uRows.length > 0) {
+                const dbUser = uRows[0];
+                let isMatch = false;
+                const dbHash = String(dbUser.pass_hash || '').trim().toLowerCase();
+
+                if (!dbHash) {
+                  isMatch = true; // Password managed purely in Supabase Auth or no restriction
+                } else if (dbHash === password.toLowerCase() || dbHash === passHash.toLowerCase()) {
+                  isMatch = true;
+                }
+
+                if (isMatch) {
+                  const sessionPayload = {
+                    id: dbUser.id || ('usr-' + Date.now()),
+                    email: dbUser.email,
+                    username: dbUser.name || dbUser.email.split('@')[0],
+                    name: dbUser.name || dbUser.email.split('@')[0],
+                    role: dbUser.role || 'employee',
+                    permissions: dbUser.permissions || (dbUser.role === 'admin' ? '*' : {}),
+                    access_token: 'sb_token_' + Date.now(),
+                    source: 'supabase_vf_auth_users'
+                  };
+
+                  try {
+                    nativeLocalStorage.setItem('vf_session', JSON.stringify(sessionPayload));
+                    nativeLocalStorage.setItem('vf_user_name', sessionPayload.username);
+                  } catch(e) {}
+                  cache['vf_session'] = JSON.stringify(sessionPayload);
+                  cache['vf_user_name'] = sessionPayload.username;
+
+                  // Proactively auto-register into Supabase Auth auth.users in background if not registered
+                  if (password && password.length >= 6) {
+                    supabaseApi.signUp(cleanEmail, password, {
+                      name: sessionPayload.name,
+                      role: sessionPayload.role,
+                      permissions: sessionPayload.permissions
+                    }).catch(() => {});
+                  }
+
+                  this.logAuditTrail('login', 'auth', dbUser.id || cleanEmail, { email: cleanEmail, role: sessionPayload.role, source: 'vf_auth_users' });
+                  return { data: { user: dbUser, session: sessionPayload }, error: null };
+                }
+              }
+            }
+          } catch(e) {}
+        }
+
+        // 4. Offline / Local fallback
+        let localAdmins = [];
+        let localUsers = [];
+        try {
+          const rawA = cache['vf_admin_users'] || nativeLocalStorage.getItem('vf_admin_users');
+          if (rawA) localAdmins = JSON.parse(rawA) || [];
+          const rawU = cache['vf_users'] || nativeLocalStorage.getItem('vf_users');
+          if (rawU) localUsers = JSON.parse(rawU) || [];
+        } catch(e) {}
+
+        const matchedAdm = localAdmins.find(a => a && a.email && a.email.toLowerCase() === cleanEmail);
+        if (matchedAdm) {
+          const h = matchedAdm.passHash || matchedAdm.pass_hash || '';
+          if (h === password || h.toLowerCase() === passHash.toLowerCase() || !h) {
+            const sess = {
+              id: matchedAdm.id || ('admin-' + Date.now()),
+              email: matchedAdm.email,
+              username: matchedAdm.name || 'Admin',
+              name: matchedAdm.name || 'Admin',
+              role: 'admin',
+              permissions: '*'
+            };
+            nativeLocalStorage.setItem('vf_session', JSON.stringify(sess));
+            nativeLocalStorage.setItem('vf_user_name', sess.username);
+            cache['vf_session'] = JSON.stringify(sess);
+            cache['vf_user_name'] = sess.username;
+            return { data: { user: matchedAdm, session: sess }, error: null };
+          }
+        }
+
+        const matchedEmp = localUsers.find(u => u && (u.email || u.username) && (u.email || u.username).toLowerCase() === cleanEmail);
+        if (matchedEmp) {
+          const h = matchedEmp.passHash || matchedEmp.pass_hash || '';
+          if (h === password || h.toLowerCase() === passHash.toLowerCase() || !h) {
+            const sess = {
+              id: matchedEmp.id || ('emp-' + Date.now()),
+              email: matchedEmp.email || cleanEmail,
+              username: matchedEmp.username || cleanEmail.split('@')[0],
+              name: matchedEmp.name || matchedEmp.username || cleanEmail.split('@')[0],
+              role: 'employee',
+              permissions: matchedEmp.permissions || {}
+            };
+            nativeLocalStorage.setItem('vf_session', JSON.stringify(sess));
+            nativeLocalStorage.setItem('vf_user_name', sess.username);
+            cache['vf_session'] = JSON.stringify(sess);
+            cache['vf_user_name'] = sess.username;
+            return { data: { user: matchedEmp, session: sess }, error: null };
+          }
+        }
+
+        return { data: null, error: new Error('Invalid email or password.') };
       } catch (e) {
         return { data: null, error: e };
       }
@@ -6565,21 +6745,43 @@
         }
       },
       async saveUser(user) {
-        if (!user || !user.email || !activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return { success: false };
+        if (!user || (!user.email && !user.username) || !activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return { success: false };
         try {
-          const rawPass = user.passHash || user.pass_hash || user.password || '';
-          const cleanEmail = String(user.email).trim().toLowerCase();
+          const cleanEmail = String(user.email || user.username).trim().toLowerCase();
           const role = user.role === 'admin' ? 'admin' : 'employee';
           const name = user.name || user.username || cleanEmail.split('@')[0];
           const permissions = (user.permissions && typeof user.permissions === 'object') ? user.permissions : (role === 'admin' ? '*' : {});
           const nowIso = new Date().toISOString();
 
+          // Extract plain text password if provided
+          const plainPass = user.password || user.plainPassword || ((user.passHash && user.passHash.length < 50) ? user.passHash : ((user.pass_hash && user.pass_hash.length < 50) ? user.pass_hash : ''));
+          
+          // Helper for SHA-256
+          const getSha256 = async (str) => {
+            if (!str) return '';
+            if (/^[a-f0-9]{64}$/i.test(str)) return str.toLowerCase();
+            if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+              try {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(str);
+                const buf = await window.crypto.subtle.digest('SHA-256', data);
+                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+              } catch(e) {}
+            }
+            return str;
+          };
+
+          let calculatedHash = user.passHash || user.pass_hash || '';
+          if (plainPass) {
+            calculatedHash = await getSha256(plainPass);
+          }
+
           const payload = {
-            id: String(user.id || ('usr-' + Date.now())),
+            id: String(user.id || (role === 'admin' ? 'admin-' : 'emp-') + Date.now()),
             email: cleanEmail,
             name: name,
             role: role,
-            pass_hash: rawPass,
+            pass_hash: calculatedHash,
             permissions: permissions,
             is_active: user.is_active !== undefined ? Boolean(user.is_active) : true,
             metadata: user.metadata || {},
@@ -6595,12 +6797,12 @@
           } catch(e) {}
           if (!Array.isArray(localList)) localList = [];
 
-          const existingIdx = localList.findIndex(item => item && item.email && String(item.email).trim().toLowerCase() === cleanEmail);
+          const existingIdx = localList.findIndex(item => item && (item.email || item.username) && String(item.email || item.username).trim().toLowerCase() === cleanEmail);
           const localObj = role === 'admin' ? {
             id: payload.id,
             email: cleanEmail,
             name: name,
-            passHash: rawPass,
+            passHash: calculatedHash,
             role: 'admin',
             updated_at: nowIso
           } : {
@@ -6609,7 +6811,7 @@
             username: cleanEmail.split('@')[0],
             name: name,
             role: 'employee',
-            passHash: rawPass,
+            passHash: calculatedHash,
             permissions: permissions,
             updated_at: nowIso
           };
@@ -6625,8 +6827,11 @@
           safeLocalStorageSet(storeKey, serialized);
           lastSavedHashes[storeKey] = computeHash(serialized);
 
-          // 2. Upsert into public.vf_auth_users table
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users`, {
+          // Sync to vf_kv_store as well
+          supabaseApi.set(storeKey, localList, true);
+
+          // 2. Upsert into public.vf_auth_users relational table
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?on_conflict=email`, {
             method: 'POST',
             headers: Object.assign({}, supabaseApi.getAuthHeaders(), {
               'Prefer': 'resolution=merge-duplicates,return=representation'
@@ -6634,16 +6839,16 @@
             body: JSON.stringify(payload)
           });
 
-          // 3. Also register into Supabase Built-in Authentication (auth.users)
-          if (rawPass && rawPass.length >= 6) {
+          // 3. Register into Supabase Built-in Authentication (auth.users)
+          if (plainPass && plainPass.length >= 6) {
             try {
-              await supabaseApi.signUp(cleanEmail, rawPass, {
+              await supabaseApi.signUp(cleanEmail, plainPass, {
                 name: name,
                 role: role,
                 permissions: permissions
               });
             } catch(authErr) {
-              // Sign-up might error if user already exists in auth.users, which is expected
+              console.warn('[Supabase Auth] signup notice:', authErr);
             }
           }
 
