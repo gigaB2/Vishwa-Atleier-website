@@ -6566,17 +6566,25 @@
       async saveUser(user) {
         if (!user || !user.email || !activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return { success: false };
         try {
+          const rawPass = user.passHash || user.pass_hash || user.password || '';
+          const cleanEmail = String(user.email).trim().toLowerCase();
+          const role = user.role === 'admin' ? 'admin' : 'employee';
+          const name = user.name || user.username || cleanEmail.split('@')[0];
+          const permissions = (user.permissions && typeof user.permissions === 'object') ? user.permissions : (role === 'admin' ? '*' : {});
+
           const payload = {
             id: String(user.id || ('usr-' + Date.now())),
-            email: String(user.email).trim().toLowerCase(),
-            name: user.name || user.username || user.email.split('@')[0],
-            role: user.role === 'admin' ? 'admin' : 'employee',
-            pass_hash: user.passHash || user.pass_hash || '',
-            permissions: (user.permissions && typeof user.permissions === 'object') ? user.permissions : {},
+            email: cleanEmail,
+            name: name,
+            role: role,
+            pass_hash: rawPass,
+            permissions: permissions,
             is_active: user.is_active !== undefined ? Boolean(user.is_active) : true,
             metadata: user.metadata || {},
             updated_at: new Date().toISOString()
           };
+
+          // 1. Upsert into public.vf_auth_users table
           const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users`, {
             method: 'POST',
             headers: Object.assign({}, supabaseApi.getAuthHeaders(), {
@@ -6584,6 +6592,20 @@
             }),
             body: JSON.stringify(payload)
           });
+
+          // 2. Also register into Supabase Built-in Authentication (auth.users)
+          if (rawPass && rawPass.length >= 6) {
+            try {
+              await supabaseApi.signUp(cleanEmail, rawPass, {
+                name: name,
+                role: role,
+                permissions: permissions
+              });
+            } catch(authErr) {
+              // Sign-up might error if user already exists in auth.users, which is expected
+            }
+          }
+
           return { success: res.ok };
         } catch(e) {
           return { success: false, error: e };
