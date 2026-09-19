@@ -36,7 +36,8 @@ const scriptTests = [
   path.join(__dirname, 'backup-restore-safety.test.js'),
   path.join(__dirname, 'public-website-perf.test.js'),
   path.join(__dirname, 'accessibility-seo.test.js'),
-  path.join(__dirname, 'security-headers.test.js')
+  path.join(__dirname, 'security-headers.test.js'),
+  path.join(__dirname, 'gear-math-engine.test.js')
 ];
 
 let failed = 0;
