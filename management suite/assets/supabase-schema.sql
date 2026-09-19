@@ -669,7 +669,8 @@ CREATE INDEX IF NOT EXISTS idx_vf_auth_users_updated_at ON public.vf_auth_users(
 -- ==============================================================================
 -- SECTION 2: SAFE USER PROFILES VIEW (EXCLUDING PASSWORD HASHES)
 -- ==============================================================================
-CREATE OR REPLACE VIEW public.vf_auth_user_profiles AS
+CREATE OR REPLACE VIEW public.vf_auth_user_profiles
+WITH (security_invoker = true) AS
 SELECT 
     id,
     email,
@@ -1597,10 +1598,18 @@ USING (
 -- SECTION 9: ROLE PRIVILEGES & SECURITY GRANTS
 -- ==============================================================================
 
--- Revoke all direct anonymous rights to protect public endpoints
-REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
-REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon;
-REVOKE ALL ON ALL ROUTINES IN SCHEMA public FROM anon;
+-- Grant schema usage to API roles
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+
+-- Grant table & sequence privileges to API roles (access is strictly governed by RLS)
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+
+-- Ensure future tables and functions inherit permissions automatically
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
 
 -- Explicitly allow public health check
 GRANT EXECUTE ON FUNCTION public.vf_ping() TO anon, authenticated;
@@ -1616,9 +1625,5 @@ GRANT EXECUTE ON FUNCTION public.vf_bulk_delete_entities(TEXT, TEXT[], TEXT) TO 
 
 -- Grant safe profile view access to authenticated users
 GRANT SELECT ON public.vf_auth_user_profiles TO authenticated;
-
--- Grant table & sequence privileges to authenticated users (governed by RLS)
-GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
 COMMIT;

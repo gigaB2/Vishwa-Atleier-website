@@ -173,10 +173,11 @@ test('RLS & Access-Control Hardening Suite (Phase 4)', async (t) => {
     );
   });
 
-  await t.test('6. Safe user profile view excludes pass_hash and anonymous privileges are revoked', () => {
+  await t.test('6. Safe user profile view excludes pass_hash and API role grants are configured for RLS', () => {
     assert.ok(
-      schemaSql.includes('CREATE OR REPLACE VIEW public.vf_auth_user_profiles AS'),
-      'Safe profile view must exist'
+      schemaSql.includes('CREATE OR REPLACE VIEW public.vf_auth_user_profiles') &&
+      schemaSql.includes('security_invoker = true'),
+      'Safe profile view must exist and enforce security_invoker = true'
     );
     assert.ok(
       !schemaSql.includes('pass_hash\nFROM public.vf_auth_users') &&
@@ -184,8 +185,9 @@ test('RLS & Access-Control Hardening Suite (Phase 4)', async (t) => {
       'Safe profile view must NEVER include pass_hash'
     );
     assert.ok(
-      schemaSql.includes('REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;'),
-      'All table grants must be revoked from anon'
+      schemaSql.includes('GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;') ||
+      schemaSql.includes('GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;'),
+      'Table grants must be configured for PostgREST API roles'
     );
     assert.ok(
       schemaSql.includes('GRANT EXECUTE ON FUNCTION public.vf_ping() TO anon, authenticated;'),
