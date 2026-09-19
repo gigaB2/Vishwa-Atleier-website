@@ -181,3 +181,53 @@ test('7. VishwaSupabase.authUsers.saveUser saves admin to vf_admin_users and upd
   assert.ok(admins.some(a => a.email === 'bi_admin@vishwafashions.com'));
 });
 
+test('8. Reconciling remote deletion from Supabase authoritatively evicts user locally', () => {
+  const env = setupTestEnvironment({
+    vf_users: JSON.stringify([
+      { id: 'emp-1', email: 'keep@vishwafashions.com', role: 'employee' },
+      { id: 'emp-2', email: 'deleted_in_cloud@vishwafashions.com', role: 'employee' }
+    ])
+  });
+  const mergeFn = env.VishwaSupabase.mergeDatasets;
+
+  // Cloud only has 'keep@vishwafashions.com'
+  const remoteSnapshot = [
+    { id: 'emp-1', email: 'keep@vishwafashions.com', role: 'employee' }
+  ];
+
+  const merged = mergeFn('vf_users', env.localStorage.getItem('vf_users'), JSON.stringify(remoteSnapshot));
+  assert.equal(merged.length, 1, 'Locally cached deleted user must be evicted by cloud authority');
+  assert.equal(merged[0].email, 'keep@vishwafashions.com');
+});
+
+test('9. Re-creating or saving a user clears any previous tombstone from vf_deleted_auth_users', async () => {
+  const env = setupTestEnvironment({
+    vf_deleted_auth_users: JSON.stringify(['reborn@vishwafashions.com'])
+  });
+  const authUsers = env.VishwaSupabase.authUsers;
+
+  await authUsers.saveUser({
+    email: 'reborn@vishwafashions.com',
+    name: 'Reborn Employee',
+    role: 'employee'
+  });
+
+  const tombstones = JSON.parse(env.localStorage.getItem('vf_deleted_auth_users') || '[]');
+  assert.ok(!tombstones.includes('reborn@vishwafashions.com'), 'Tombstone must be cleared upon user re-creation');
+
+  const users = JSON.parse(env.localStorage.getItem('vf_users') || '[]');
+  assert.ok(users.some(u => u.email === 'reborn@vishwafashions.com'));
+});
+
+test('10. authUsers.getAll falls back to local storage when offline or unconfigured', async () => {
+  const env = setupTestEnvironment({
+    vf_admin_users: JSON.stringify([{ id: 'adm-1', email: 'adm@vishwafashions.com', role: 'admin' }]),
+    vf_users: JSON.stringify([{ id: 'emp-1', email: 'emp@vishwafashions.com', role: 'employee' }])
+  });
+
+  const all = await env.VishwaSupabase.authUsers.getAll();
+  assert.equal(all.length, 2);
+  assert.ok(all.some(u => u.email === 'adm@vishwafashions.com'));
+  assert.ok(all.some(u => u.email === 'emp@vishwafashions.com'));
+});
+

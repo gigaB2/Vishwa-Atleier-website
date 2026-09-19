@@ -4014,11 +4014,16 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
       if (!key || key === 'gemini-api-key' || key === 'selected-gemini-model') {
         loadGeminiSettings();
       }
-      if (!key || key === 'vf_users' || key === 'vf_admin_users' || key === 'vf_auth_config') {
+      if (!key || key === 'vf_users' || key === 'vf_admin_users' || key === 'vf_auth_config' || key === 'vf_auth_users' || key === 'vf_deleted_auth_users') {
         loadAuthSettings();
         renderAdminsList();
         renderUsersAndInvitesList();
       }
+    });
+
+    window.addEventListener('supabase-item-deleted', (e) => {
+      renderAdminsList();
+      renderUsersAndInvitesList();
     });
 
     window.addEventListener('storage', (e) => {
@@ -4031,7 +4036,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;
       if (!e.key || e.key === 'gemini-api-key' || e.key === 'selected-gemini-model') {
         loadGeminiSettings();
       }
-      if (!e.key || e.key === 'vf_users' || e.key === 'vf_admin_users' || e.key === 'vf_auth_config') {
+      if (!e.key || e.key === 'vf_users' || e.key === 'vf_admin_users' || e.key === 'vf_auth_config' || e.key === 'vf_auth_users' || e.key === 'vf_deleted_auth_users') {
         loadAuthSettings();
         renderAdminsList();
         renderUsersAndInvitesList();

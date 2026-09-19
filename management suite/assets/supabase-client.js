@@ -1202,7 +1202,8 @@
         'loom-designs', 'loom_designs', 'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
         'manage-jalas', 'manage-fanis', 'machines', 'warp-beams', 'warp-issues',
         'yarn-issues', 'costing-products-v4', 'costing-tfo-products-v1',
-        'costing-doubler-products-v1', 'costing-covering-products-v1'
+        'costing-doubler-products-v1', 'costing-covering-products-v1',
+        'vf_users', 'vf_admin_users', 'vf_auth_users'
       ];
 
       const isMasterKey = MASTER_ENTITY_KEYS.includes(key);
@@ -2621,7 +2622,8 @@
             config: {
               broadcast: { ack: false, self: false },
               postgres_changes: [
-                { event: '*', schema: 'public', table: 'vf_fabric_designs' }
+                { event: '*', schema: 'public', table: 'vf_fabric_designs' },
+                { event: '*', schema: 'public', table: 'vf_auth_users' }
               ]
             }
           },
@@ -2650,6 +2652,138 @@
           // 1. Direct PostgreSQL CDC Events (Server-Pushed Database Changes)
           if (data.event === 'postgres_changes' && data.payload) {
             const changeData = data.payload.data || data.payload;
+            if (changeData && changeData.table === 'vf_auth_users') {
+              const rec = changeData.record || {};
+              const oldRec = changeData.old_record || {};
+              const isDelete = changeData.type === 'DELETE' || rec.is_active === false;
+              const targetEmail = String(rec.email || oldRec.email || '').trim().toLowerCase();
+              const targetId = String(rec.id || oldRec.id || '').trim();
+
+              if (isDelete) {
+                if (targetEmail || targetId) {
+                  let tombstones = [];
+                  try {
+                    const rawDel = cache['vf_deleted_auth_users'] || nativeLocalStorage.getItem('vf_deleted_auth_users');
+                    if (rawDel) tombstones = JSON.parse(rawDel);
+                  } catch(e) {}
+                  if (!Array.isArray(tombstones)) tombstones = [];
+                  if (targetEmail && !tombstones.includes(targetEmail)) tombstones.push(targetEmail);
+                  if (targetId && !tombstones.includes(targetId.toLowerCase())) tombstones.push(targetId.toLowerCase());
+                  const delSerialized = JSON.stringify(tombstones);
+                  cache['vf_deleted_auth_users'] = delSerialized;
+                  safeLocalStorageSet('vf_deleted_auth_users', delSerialized);
+
+                  ['vf_users', 'vf_admin_users'].forEach(sKey => {
+                    try {
+                      const raw = cache[sKey] || nativeLocalStorage.getItem(sKey);
+                      if (raw) {
+                        const list = JSON.parse(raw);
+                        if (Array.isArray(list)) {
+                          const filtered = list.filter(item => {
+                            if (!item) return false;
+                            const e = String(item.email || item.username || '').trim().toLowerCase();
+                            const i = String(item.id || '').trim().toLowerCase();
+                            return e !== targetEmail && i !== targetId.toLowerCase() && (!targetEmail || e !== targetEmail);
+                          });
+                          const updatedStr = JSON.stringify(filtered);
+                          cache[sKey] = updatedStr;
+                          safeLocalStorageSet(sKey, updatedStr);
+                          lastSavedHashes[sKey] = computeHash(updatedStr);
+                        }
+                      }
+                    } catch(e) {}
+                  });
+
+                  window.dispatchEvent(new CustomEvent('supabase-sync', {
+                    detail: {
+                      key: 'vf_users',
+                      isRemote: true,
+                      info: { action: 'user_deleted', email: targetEmail, id: targetId, timestamp: Date.now() }
+                    }
+                  }));
+                  window.dispatchEvent(new CustomEvent('supabase-item-deleted', {
+                    detail: { id: targetId, email: targetEmail, type: 'user' }
+                  }));
+                  try {
+                    window.dispatchEvent(new StorageEvent('storage', { key: 'vf_users' }));
+                    window.dispatchEvent(new StorageEvent('storage', { key: 'vf_admin_users' }));
+                    window.dispatchEvent(new StorageEvent('storage', { key: 'vf_deleted_auth_users' }));
+                  } catch(e) {
+                    window.dispatchEvent(new Event('storage'));
+                  }
+                }
+              } else if (rec.email) {
+                // Remove from tombstones if active
+                try {
+                  const rawDel = cache['vf_deleted_auth_users'] || nativeLocalStorage.getItem('vf_deleted_auth_users');
+                  if (rawDel) {
+                    const tombstones = JSON.parse(rawDel);
+                    if (Array.isArray(tombstones)) {
+                      const filteredTombs = tombstones.filter(t => t && String(t).trim().toLowerCase() !== targetEmail && String(t).trim().toLowerCase() !== targetId.toLowerCase());
+                      const delSerialized = JSON.stringify(filteredTombs);
+                      cache['vf_deleted_auth_users'] = delSerialized;
+                      safeLocalStorageSet('vf_deleted_auth_users', delSerialized);
+                    }
+                  }
+                } catch(e) {}
+
+                const role = rec.role === 'admin' ? 'admin' : 'employee';
+                const storeKey = role === 'admin' ? 'vf_admin_users' : 'vf_users';
+                let localList = [];
+                try {
+                  const raw = cache[storeKey] || nativeLocalStorage.getItem(storeKey);
+                  if (raw) localList = JSON.parse(raw);
+                } catch(e) {}
+                if (!Array.isArray(localList)) localList = [];
+
+                const localObj = role === 'admin' ? {
+                  id: rec.id || ('admin-' + Date.now()),
+                  email: rec.email,
+                  name: rec.name || 'Admin',
+                  passHash: rec.pass_hash || '',
+                  role: 'admin',
+                  created_at: rec.created_at || new Date().toISOString(),
+                  updated_at: rec.updated_at || new Date().toISOString()
+                } : {
+                  id: rec.id || ('emp-' + Date.now()),
+                  email: rec.email,
+                  username: rec.email.split('@')[0],
+                  name: rec.name || rec.email.split('@')[0],
+                  role: 'employee',
+                  passHash: rec.pass_hash || '',
+                  permissions: (rec.permissions && typeof rec.permissions === 'object') ? rec.permissions : {},
+                  created_at: rec.created_at || new Date().toISOString(),
+                  updated_at: rec.updated_at || new Date().toISOString()
+                };
+
+                const existingIdx = localList.findIndex(item => item && (item.email || item.username) && String(item.email || item.username).trim().toLowerCase() === targetEmail);
+                if (existingIdx >= 0) {
+                  localList[existingIdx] = Object.assign({}, localList[existingIdx], localObj);
+                } else {
+                  localList.push(localObj);
+                }
+
+                const serialized = JSON.stringify(localList);
+                cache[storeKey] = serialized;
+                safeLocalStorageSet(storeKey, serialized);
+                lastSavedHashes[storeKey] = computeHash(serialized);
+
+                window.dispatchEvent(new CustomEvent('supabase-sync', {
+                  detail: {
+                    key: storeKey,
+                    isRemote: true,
+                    info: { action: 'user_saved', email: targetEmail, role: role, user: localObj, timestamp: Date.now() }
+                  }
+                }));
+                try {
+                  window.dispatchEvent(new StorageEvent('storage', { key: storeKey }));
+                } catch(e) {
+                  window.dispatchEvent(new Event('storage'));
+                }
+              }
+              return;
+            }
+
             if (changeData && changeData.table === 'vf_fabric_designs') {
               const rec = changeData.record || {};
               const oldRec = changeData.old_record || {};
@@ -2688,11 +2822,11 @@
                   description: meta.description || '',
                   previewImage: rec.image_url || meta.previewImage || '',
                   epFile: rec.ep_file_url || meta.epFile || '',
-                  designer: meta.designer || '',
-                  jacquardType: meta.jacquardType || '',
-                  productionFace: meta.productionFace || 'Front',
-                  pettiCount: meta.pettiCount || 1,
-                  pettiDetails: meta.pettiDetails || [{ name: '', cards: '' }],
+                  designer: rec.designer || '',
+                  jacquardType: rec.jacquardType || '',
+                  productionFace: rec.productionFace || 'Front',
+                  pettiCount: rec.pettiCount || 1,
+                  pettiDetails: rec.pettiDetails || [{ name: '', cards: '' }],
                   variants: meta.variants || [],
                   createdDate: meta.createdDate || '',
                   lastUpdated: meta.lastUpdated || '',
@@ -6525,7 +6659,7 @@
             try {
               const authUsersCols = 'id,email,name,role,pass_hash,permissions,is_active,metadata,created_at,updated_at';
               const dbAuthUsers = await fetchAllRowsPaginated('vf_auth_users', authUsersCols, 'is_active=is.true&order=updated_at.desc');
-              if (Array.isArray(dbAuthUsers) && dbAuthUsers.length > 0) {
+              if (Array.isArray(dbAuthUsers)) {
                 const tombstones = getDeletedTombstones();
                 const tombstoneSet = new Set(tombstones.map(s => String(s).trim().toLowerCase()).filter(Boolean));
 
@@ -6564,38 +6698,34 @@
                 });
 
                 // Merge into local vf_users
-                if (remoteEmployees.length > 0) {
-                  const uKey = 'vf_users';
-                  const localRaw = cache[uKey] || nativeLocalStorage.getItem(uKey);
-                  const finalUsers = mergeDatasets(uKey, localRaw, JSON.stringify(remoteEmployees));
-                  const finalStr = JSON.stringify(finalUsers);
-                  const lastWrite = lastLocalWrites[uKey] || 0;
-                  if (Date.now() - lastWrite >= 3000) {
-                    if (cache[uKey] !== finalStr) {
-                      cache[uKey] = finalStr;
-                      lastSavedHashes[uKey] = computeHash(finalStr);
-                      safeLocalStorageSet(uKey, finalStr);
-                      if (!updatedKeys.includes(uKey)) updatedKeys.push(uKey);
-                      hasChanges = true;
-                    }
+                const uKey = 'vf_users';
+                const localRaw = cache[uKey] || nativeLocalStorage.getItem(uKey);
+                const finalUsers = mergeDatasets(uKey, localRaw, JSON.stringify(remoteEmployees));
+                const finalStr = JSON.stringify(finalUsers);
+                const lastWrite = lastLocalWrites[uKey] || 0;
+                if (Date.now() - lastWrite >= 3000) {
+                  if (cache[uKey] !== finalStr) {
+                    cache[uKey] = finalStr;
+                    lastSavedHashes[uKey] = computeHash(finalStr);
+                    safeLocalStorageSet(uKey, finalStr);
+                    if (!updatedKeys.includes(uKey)) updatedKeys.push(uKey);
+                    hasChanges = true;
                   }
                 }
 
                 // Merge into local vf_admin_users
-                if (remoteAdmins.length > 0) {
-                  const aKey = 'vf_admin_users';
-                  const localRaw = cache[aKey] || nativeLocalStorage.getItem(aKey);
-                  const finalAdmins = mergeDatasets(aKey, localRaw, JSON.stringify(remoteAdmins));
-                  const finalStr = JSON.stringify(finalAdmins);
-                  const lastWrite = lastLocalWrites[aKey] || 0;
-                  if (Date.now() - lastWrite >= 3000) {
-                    if (cache[aKey] !== finalStr) {
-                      cache[aKey] = finalStr;
-                      lastSavedHashes[aKey] = computeHash(finalStr);
-                      safeLocalStorageSet(aKey, finalStr);
-                      if (!updatedKeys.includes(aKey)) updatedKeys.push(aKey);
-                      hasChanges = true;
-                    }
+                const aKey = 'vf_admin_users';
+                const localRawAdm = cache[aKey] || nativeLocalStorage.getItem(aKey);
+                const finalAdmins = mergeDatasets(aKey, localRawAdm, JSON.stringify(remoteAdmins));
+                const finalStrAdm = JSON.stringify(finalAdmins);
+                const lastWriteAdm = lastLocalWrites[aKey] || 0;
+                if (Date.now() - lastWriteAdm >= 3000) {
+                  if (cache[aKey] !== finalStrAdm) {
+                    cache[aKey] = finalStrAdm;
+                    lastSavedHashes[aKey] = computeHash(finalStrAdm);
+                    safeLocalStorageSet(aKey, finalStrAdm);
+                    if (!updatedKeys.includes(aKey)) updatedKeys.push(aKey);
+                    hasChanges = true;
                   }
                 }
               }
@@ -7019,16 +7149,32 @@
     // --- Bi-Directional Supabase Auth & Users API ---
     authUsers: {
       async getAll() {
-        if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
-        try {
-          const rows = await fetchAllRowsPaginated('vf_auth_users', '*', 'order=updated_at.desc');
-          return Array.isArray(rows) ? rows : [];
-        } catch(e) {
-          return [];
+        if (activeConfig.isConfigured && SUPABASE_URL && SUPABASE_ANON_KEY) {
+          try {
+            const rows = await fetchAllRowsPaginated('vf_auth_users', '*', 'order=updated_at.desc');
+            if (Array.isArray(rows) && rows.length > 0) return rows;
+          } catch(e) {}
         }
+        // Fallback to local storage datasets if offline or table uninitialized
+        const localCombined = [];
+        try {
+          const rawAdms = cache['vf_admin_users'] || nativeLocalStorage.getItem('vf_admin_users');
+          if (rawAdms) {
+            const parsedAdms = JSON.parse(rawAdms);
+            if (Array.isArray(parsedAdms)) localCombined.push(...parsedAdms);
+          }
+        } catch(e) {}
+        try {
+          const rawEmps = cache['vf_users'] || nativeLocalStorage.getItem('vf_users');
+          if (rawEmps) {
+            const parsedEmps = JSON.parse(rawEmps);
+            if (Array.isArray(parsedEmps)) localCombined.push(...parsedEmps);
+          }
+        } catch(e) {}
+        return localCombined;
       },
       async saveUser(user) {
-        if (!user || (!user.email && !user.username) || !activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return { success: false };
+        if (!user || (!user.email && !user.username)) return { success: false };
         try {
           const cleanEmail = String(user.email || user.username).trim().toLowerCase();
           const role = user.role === 'admin' ? 'admin' : 'employee';
@@ -7071,7 +7217,24 @@
             updated_at: nowIso
           };
 
-          // 1. Update local storage caches immediately
+          // 1. Remove from deletion tombstones if re-creating or re-enabling
+          try {
+            const rawDel = cache['vf_deleted_auth_users'] || nativeLocalStorage.getItem('vf_deleted_auth_users');
+            if (rawDel) {
+              const tombstones = typeof rawDel === 'string' ? JSON.parse(rawDel) : rawDel;
+              if (Array.isArray(tombstones)) {
+                const filteredTombs = tombstones.filter(t => t && String(t).trim().toLowerCase() !== cleanEmail && String(t).trim().toLowerCase() !== String(user.id || '').trim().toLowerCase());
+                const delSerialized = JSON.stringify(filteredTombs);
+                cache['vf_deleted_auth_users'] = delSerialized;
+                safeLocalStorageSet('vf_deleted_auth_users', delSerialized);
+                if (activeConfig.isConfigured && SUPABASE_URL) {
+                  supabaseApi.set('vf_deleted_auth_users', filteredTombs, true);
+                }
+              }
+            }
+          } catch(e) {}
+
+          // 2. Update local storage caches immediately
           const storeKey = role === 'admin' ? 'vf_admin_users' : 'vf_users';
           let localList = [];
           try {
@@ -7110,38 +7273,57 @@
           safeLocalStorageSet(storeKey, serialized);
           lastSavedHashes[storeKey] = computeHash(serialized);
 
-          // Sync to vf_kv_store as well
-          supabaseApi.set(storeKey, localList, true);
-
-          // 2. Upsert into public.vf_auth_users relational table
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?on_conflict=email`, {
-            method: 'POST',
-            headers: Object.assign({}, supabaseApi.getAuthHeaders(), {
-              'Prefer': 'resolution=merge-duplicates,return=representation'
-            }),
-            body: JSON.stringify(payload)
-          });
-
-          // 3. Register into Supabase Built-in Authentication (auth.users)
-          if (plainPass && plainPass.length >= 6) {
-            try {
-              await supabaseApi.signUp(cleanEmail, plainPass, {
-                name: name,
-                role: role,
-                permissions: permissions
-              });
-            } catch(authErr) {
-              console.warn('[Supabase Auth] signup notice:', authErr);
+          // Dispatch local change event
+          window.dispatchEvent(new CustomEvent('supabase-sync', {
+            detail: {
+              key: storeKey,
+              isRemote: false,
+              info: { action: 'user_saved', email: cleanEmail, role: role, user: localObj, timestamp: Date.now() }
             }
+          }));
+          try {
+            window.dispatchEvent(new StorageEvent('storage', { key: storeKey }));
+          } catch(e) {
+            window.dispatchEvent(new Event('storage'));
           }
 
-          return { success: res.ok };
+          // 3. Push to Supabase Cloud if configured
+          if (activeConfig.isConfigured && SUPABASE_URL && SUPABASE_ANON_KEY) {
+            // Sync to vf_kv_store as well
+            supabaseApi.set(storeKey, localList, true);
+
+            // Upsert into public.vf_auth_users relational table
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?on_conflict=email`, {
+              method: 'POST',
+              headers: Object.assign({}, supabaseApi.getAuthHeaders(), {
+                'Prefer': 'resolution=merge-duplicates,return=representation'
+              }),
+              body: JSON.stringify(payload)
+            });
+
+            // Register into Supabase Built-in Authentication (auth.users)
+            if (plainPass && plainPass.length >= 6) {
+              try {
+                await supabaseApi.signUp(cleanEmail, plainPass, {
+                  name: name,
+                  role: role,
+                  permissions: permissions
+                });
+              } catch(authErr) {
+                console.warn('[Supabase Auth] signup notice:', authErr);
+              }
+            }
+
+            return { success: res.ok };
+          }
+
+          return { success: true };
         } catch(e) {
           return { success: false, error: e };
         }
       },
       async deleteUser(userIdOrEmail) {
-        if (!userIdOrEmail || !activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return { success: false };
+        if (!userIdOrEmail) return { success: false };
         try {
           const target = String(userIdOrEmail).trim();
           const targetLower = target.toLowerCase();
@@ -7160,6 +7342,9 @@
             const delSerialized = JSON.stringify(tombstones);
             cache['vf_deleted_auth_users'] = delSerialized;
             safeLocalStorageSet('vf_deleted_auth_users', delSerialized);
+            if (activeConfig.isConfigured && SUPABASE_URL) {
+              supabaseApi.set('vf_deleted_auth_users', tombstones, true);
+            }
           }
 
           ['vf_users', 'vf_admin_users'].forEach(sKey => {
@@ -7170,7 +7355,7 @@
                 if (Array.isArray(list)) {
                   const filtered = list.filter(item => {
                     if (!item) return false;
-                    const e = String(item.email || '').trim().toLowerCase();
+                    const e = String(item.email || item.username || '').trim().toLowerCase();
                     const i = String(item.id || '').trim().toLowerCase();
                     return e !== targetLower && i !== targetLower;
                   });
@@ -7178,17 +7363,41 @@
                   cache[sKey] = updatedStr;
                   safeLocalStorageSet(sKey, updatedStr);
                   lastSavedHashes[sKey] = computeHash(updatedStr);
+                  if (activeConfig.isConfigured && SUPABASE_URL) {
+                    supabaseApi.set(sKey, filtered, true);
+                  }
                 }
               }
             } catch(e) {}
           });
 
-          // 2. Delete row from database
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?${filterCol}=eq.${encodeURIComponent(target)}`, {
-            method: 'DELETE',
-            headers: supabaseApi.getAuthHeaders()
-          });
-          return { success: res.ok };
+          window.dispatchEvent(new CustomEvent('supabase-sync', {
+            detail: {
+              key: isEmail ? 'vf_users' : 'vf_admin_users',
+              isRemote: false,
+              info: { action: 'user_deleted', email: targetLower, id: target, timestamp: Date.now() }
+            }
+          }));
+          window.dispatchEvent(new CustomEvent('supabase-item-deleted', {
+            detail: { id: target, email: targetLower, type: 'user' }
+          }));
+          try {
+            window.dispatchEvent(new StorageEvent('storage', { key: 'vf_users' }));
+            window.dispatchEvent(new StorageEvent('storage', { key: 'vf_admin_users' }));
+            window.dispatchEvent(new StorageEvent('storage', { key: 'vf_deleted_auth_users' }));
+          } catch(e) {
+            window.dispatchEvent(new Event('storage'));
+          }
+
+          // 2. Delete row from Supabase database if configured
+          if (activeConfig.isConfigured && SUPABASE_URL && SUPABASE_ANON_KEY) {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?${filterCol}=eq.${encodeURIComponent(target)}`, {
+              method: 'DELETE',
+              headers: supabaseApi.getAuthHeaders()
+            });
+            return { success: res.ok };
+          }
+          return { success: true };
         } catch(e) {
           return { success: false, error: e };
         }
