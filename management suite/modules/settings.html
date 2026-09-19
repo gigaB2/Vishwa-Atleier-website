@@ -2838,7 +2838,10 @@
     const raw = localStorage.getItem('vf_admin_users');
     if (raw !== null) {
       try {
-        return JSON.parse(raw) || [];
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       } catch(e) {}
     }
 
@@ -2863,8 +2866,9 @@
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }];
-    if (!window.VishwaSupabase || !window.VishwaSupabase.isHydrated || window.VishwaSupabase.isHydrated()) {
-      localStorage.setItem('vf_admin_users', JSON.stringify(admins));
+    localStorage.setItem('vf_admin_users', JSON.stringify(admins));
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
+      window.VishwaSupabase.saveToSupabase('vf_admin_users', admins, true);
     }
     return admins;
   }
@@ -3198,12 +3202,54 @@
             const locRaw = localStorage.getItem('vf_users');
             const merged = window.VishwaSupabase.mergeDatasets('vf_users', locRaw, JSON.stringify(empList));
             localStorage.setItem('vf_users', JSON.stringify(merged));
+            if (typeof window.VishwaSupabase.saveToSupabase === 'function') {
+              window.VishwaSupabase.saveToSupabase('vf_users', merged, true);
+            }
           }
 
           if (admList.length > 0 && window.VishwaSupabase.mergeDatasets) {
             const locRaw = localStorage.getItem('vf_admin_users');
             const merged = window.VishwaSupabase.mergeDatasets('vf_admin_users', locRaw, JSON.stringify(admList));
             localStorage.setItem('vf_admin_users', JSON.stringify(merged));
+            if (typeof window.VishwaSupabase.saveToSupabase === 'function') {
+              window.VishwaSupabase.saveToSupabase('vf_admin_users', merged, true);
+            }
+          }
+        } else {
+          // If remote dbUsers is empty, upload local accounts to Supabase so cloud is populated
+          let locAdms = [];
+          let locEmps = [];
+          try { locAdms = JSON.parse(localStorage.getItem('vf_admin_users')) || []; } catch(e) {}
+          try { locEmps = JSON.parse(localStorage.getItem('vf_users')) || []; } catch(e) {}
+
+          if (Array.isArray(locAdms) && locAdms.length > 0) {
+            locAdms.forEach(a => {
+              if (a && a.email && window.VishwaSupabase && window.VishwaSupabase.authUsers) {
+                window.VishwaSupabase.authUsers.saveUser({
+                  id: a.id,
+                  email: a.email,
+                  name: a.name || 'Admin',
+                  role: 'admin',
+                  passHash: a.passHash,
+                  permissions: '*'
+                });
+              }
+            });
+          }
+
+          if (Array.isArray(locEmps) && locEmps.length > 0) {
+            locEmps.forEach(e => {
+              if (e && e.email && window.VishwaSupabase && window.VishwaSupabase.authUsers) {
+                window.VishwaSupabase.authUsers.saveUser({
+                  id: e.id,
+                  email: e.email,
+                  name: e.name || e.email.split('@')[0],
+                  role: 'employee',
+                  passHash: e.passHash,
+                  permissions: e.permissions || {}
+                });
+              }
+            });
           }
         }
       }

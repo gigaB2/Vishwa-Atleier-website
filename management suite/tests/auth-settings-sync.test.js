@@ -231,3 +231,38 @@ test('10. authUsers.getAll falls back to local storage when offline or unconfigu
   assert.ok(all.some(u => u.email === 'emp@vishwafashions.com'));
 });
 
+test('11. Empty remote cloud response NEVER wipes local admin or employee accounts', () => {
+  const env = setupTestEnvironment();
+  const mergeFn = env.VishwaSupabase.mergeDatasets;
+
+  const localAdmins = [{ id: 'adm-1', email: 'admin@vishwafashions.com', role: 'admin', name: 'Admin' }];
+  const localEmps = [{ id: 'emp-1', email: 'dhruv@vishwafashions.com', role: 'employee', name: 'Dhruv' }];
+
+  // When remote returns empty array '[]', local accounts must NOT be wiped!
+  const mergedAdmins = mergeFn('vf_admin_users', JSON.stringify(localAdmins), '[]');
+  assert.equal(mergedAdmins.length, 1, 'Local admin accounts must be preserved when remote is empty');
+  assert.equal(mergedAdmins[0].email, 'admin@vishwafashions.com');
+
+  const mergedEmps = mergeFn('vf_users', JSON.stringify(localEmps), '[]');
+  assert.equal(mergedEmps.length, 1, 'Local employee accounts must be preserved when remote is empty');
+  assert.equal(mergedEmps[0].email, 'dhruv@vishwafashions.com');
+});
+
+test('12. General entity tombstones do not accidentally delete auth accounts with name Admin', () => {
+  const env = setupTestEnvironment({
+    vf_deleted_entity_ids: JSON.stringify(['admin', 'Admin', 'employee'])
+  });
+  const filterFn = env.VishwaSupabase.filterDeletedEntities;
+
+  const accounts = [
+    { id: 'admin-master', email: 'admin@vishwafashions.com', name: 'Admin', role: 'admin' },
+    { id: 'emp-1', email: 'staff@vishwafashions.com', name: 'employee', role: 'employee' }
+  ];
+
+  const filtered = filterFn(accounts);
+  assert.equal(filtered.length, 2, 'Auth accounts must not be evicted by generic name match in general entity tombstones');
+  assert.equal(filtered[0].email, 'admin@vishwafashions.com');
+  assert.equal(filtered[1].email, 'staff@vishwafashions.com');
+});
+
+

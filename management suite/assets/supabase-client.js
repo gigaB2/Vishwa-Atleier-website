@@ -392,6 +392,7 @@
           return true;
         }
         const id = getItemIdentifier(item);
+        const isAuthAccount = Boolean(item.email || item.role === 'admin' || item.role === 'employee');
         if (id && tombstoneSet.has(String(id).trim().toLowerCase())) return false;
         if (item.id && tombstoneSet.has(String(item.id).trim().toLowerCase())) return false;
         if (item.email && tombstoneSet.has(String(item.email).trim().toLowerCase())) return false;
@@ -403,7 +404,7 @@
         if (item.empId && tombstoneSet.has(String(item.empId).trim().toLowerCase())) return false;
         if (item.employeeId && tombstoneSet.has(String(item.employeeId).trim().toLowerCase())) return false;
         if (item.employee_id && tombstoneSet.has(String(item.employee_id).trim().toLowerCase())) return false;
-        if (item.name && tombstoneSet.has(String(item.name).trim().toLowerCase())) return false;
+        if (!isAuthAccount && item.name && tombstoneSet.has(String(item.name).trim().toLowerCase())) return false;
         if (item.employeeName && tombstoneSet.has(String(item.employeeName).trim().toLowerCase())) return false;
         if (item.staffName && tombstoneSet.has(String(item.staffName).trim().toLowerCase())) return false;
         if (item.worker && tombstoneSet.has(String(item.worker).trim().toLowerCase())) return false;
@@ -1196,8 +1197,11 @@
       const lastWrite = lastLocalWrites[key] || 0;
       const isLocallyActive = (Date.now() - lastWrite < 3000);
 
-      // Master entity registries (dropdowns/catalogs): when remote arrives and local user is not actively typing,
-      // the remote server snapshot is the single source of truth. Deleted items must NOT be resurrected!
+      // Auth and identity keys require strict bi-directional consolidation so accounts never vanish
+      const AUTH_IDENTITY_KEYS = ['vf_users', 'vf_admin_users', 'vf_auth_users'];
+      const isAuthKey = AUTH_IDENTITY_KEYS.includes(key);
+
+      // Master entity registries (dropdowns/catalogs) + Auth account registries:
       const MASTER_ENTITY_KEYS = [
         'loom-designs', 'loom_designs', 'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
         'manage-jalas', 'manage-fanis', 'machines', 'warp-beams', 'warp-issues',
@@ -1208,12 +1212,17 @@
 
       const isMasterKey = MASTER_ENTITY_KEYS.includes(key);
 
-      // Absolute protection: If remote has master data and local is empty, always adopt remote
+      // If remote has master data and local is empty, adopt remote
       if (isMasterKey && cleanRemote.length > 0 && cleanLocal.length === 0) {
         return cleanRemote;
       }
 
-      if (isMasterKey && !isLocallyActive) {
+      // If remote is empty, but local has data, preserve local data! Never wipe with empty remote
+      if (cleanRemote.length === 0 && cleanLocal.length > 0) {
+        return cleanLocal;
+      }
+
+      if (isMasterKey && cleanRemote.length > 0 && !isLocallyActive) {
         return cleanRemote;
       }
 
@@ -1224,7 +1233,7 @@
         if (id) itemMap.set(String(id), item);
       });
 
-      // Merge local items: keep local edits if newer or if locally active
+      // Merge local items: keep local edits if newer, or preserve un-synced additions (auth accounts)
       cleanLocal.forEach(localItem => {
         const id = getItemIdentifier(localItem);
         if (id) {
@@ -1235,9 +1244,12 @@
             if (localTime >= remoteTime) {
               itemMap.set(String(id), localItem);
             }
-          } else if (isLocallyActive) {
-            // Only preserve un-synced additions if user is actively writing
-            itemMap.set(String(id), localItem);
+          } else {
+            // Local item not in remote yet (e.g. created locally or offline)
+            // Auth accounts and local records must be preserved unless deleted by tombstone
+            if (isAuthKey || !isMasterKey || isLocallyActive || cleanRemote.length === 0) {
+              itemMap.set(String(id), localItem);
+            }
           }
         }
       });
@@ -7272,6 +7284,26 @@
           cache[storeKey] = serialized;
           safeLocalStorageSet(storeKey, serialized);
           lastSavedHashes[storeKey] = computeHash(serialized);
+          lastLocalWrites[storeKey] = Date.now();
+          lastLocalWrites['vf_admin_users'] = Date.now();
+          lastLocalWrites['vf_users'] = Date.now();
+
+          // If saving an admin, ensure legacy vf_auth_config is updated as well
+          if (role === 'admin') {
+            try {
+              let cfg = {};
+              const rawCfg = cache['vf_auth_config'] || nativeLocalStorage.getItem('vf_auth_config');
+              if (rawCfg) cfg = typeof rawCfg === 'string' ? JSON.parse(rawCfg) : rawCfg;
+              cfg.admin_email = cleanEmail;
+              if (calculatedHash) cfg.admin_pass = calculatedHash;
+              const cfgStr = JSON.stringify(cfg);
+              cache['vf_auth_config'] = cfgStr;
+              safeLocalStorageSet('vf_auth_config', cfgStr);
+              if (activeConfig.isConfigured && SUPABASE_URL) {
+                supabaseApi.set('vf_auth_config', cfg, true);
+              }
+            } catch(e) {}
+          }
 
           // Dispatch local change event
           window.dispatchEvent(new CustomEvent('supabase-sync', {
@@ -7331,6 +7363,10 @@
           const filterCol = isEmail ? 'email' : 'id';
 
           // 1. Update local storage caches and record deletion tombstone
+          lastLocalWrites['vf_admin_users'] = Date.now();
+          lastLocalWrites['vf_users'] = Date.now();
+          lastLocalWrites['vf_deleted_auth_users'] = Date.now();
+
           let tombstones = [];
           try {
             const rawDel = cache['vf_deleted_auth_users'] || nativeLocalStorage.getItem('vf_deleted_auth_users');
