@@ -59,6 +59,15 @@
       ]
     },
     {
+      "source": "/(.*)/assets/(config|supabase-client|fy-engine)\\.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
       "source": "/(assets|css|js|lookbooks)/(.*)",
       "headers": [
         {
@@ -67,5 +76,10 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    { "source": "/management-suite", "destination": "/management suite/index.html" },
+    { "source": "/management-suite/", "destination": "/management suite/index.html" },
+    { "source": "/management-suite/:path*", "destination": "/management suite/:path*" }
   ]
 }

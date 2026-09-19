@@ -711,11 +711,36 @@
             return hashed === storedHashOrPlain.toLowerCase();
         }
 
-        // Robust resolver for VishwaAuth client with retry buffer
+        // Robust resolver for VishwaAuth client with retry buffer and multi-path self-healing loader
         async function getAuthClient() {
             let authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
             if (authClient && typeof authClient.signIn === 'function') return authClient;
-            for (let i = 0; i < 15; i++) {
+
+            // If scripts failed to load due to Vercel cleanUrls or trailing slash routing, dynamically load with fallback paths
+            if (!window.VishwaAuth && !document.getElementById('injected-supabase-client')) {
+                const candidates = [
+                    'assets/supabase-client.js',
+                    './assets/supabase-client.js',
+                    'management%20suite/assets/supabase-client.js',
+                    '/management%20suite/assets/supabase-client.js',
+                    '/management-suite/assets/supabase-client.js'
+                ];
+                for (const src of candidates) {
+                    try {
+                        await new Promise((resolve) => {
+                            const s = document.createElement('script');
+                            s.id = 'injected-supabase-client';
+                            s.src = src;
+                            s.onload = () => resolve(true);
+                            s.onerror = () => { s.remove(); resolve(false); };
+                            document.head.appendChild(s);
+                        });
+                        if (window.VishwaAuth) break;
+                    } catch(e) {}
+                }
+            }
+
+            for (let i = 0; i < 20; i++) {
                 await new Promise(r => setTimeout(r, 100));
                 authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
                 if (authClient && typeof authClient.signIn === 'function') return authClient;
