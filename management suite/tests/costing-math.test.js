@@ -1,86 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {
+  calculateWarpWeightGramsPerMeter,
+  calculateWeftWeightGramsPerMeter,
+  calculateTfoProductionKgPerSpindleDay,
+  calculateFabricCosting
+} = require('../assets/textile-costing-engine.js');
 
-// Standard Textile Formulas implemented in Vishwa Atelier Weaving & Yarn Costing Engines
-
-/**
- * Calculates warp yarn weight in grams per linear meter of fabric (Denier system)
- * @param {number} totalEnds Total number of warp threads across fabric width
- * @param {number} denier Yarn Denier (g / 9000m)
- * @param {number} crimpPercent Warp crimp / take-up percentage (e.g. 5 for 5%)
- * @param {number} wastagePercent Sizing/warping wastage percentage (e.g. 2 for 2%)
- */
-function calculateWarpWeightGramsPerMeter(totalEnds, denier, crimpPercent = 5, wastagePercent = 2) {
-  if (!totalEnds || !denier) return 0;
-  const crimpMultiplier = 1 + (crimpPercent / 100);
-  const wastageMultiplier = 1 + (wastagePercent / 100);
-  // (Ends * Denier * CrimpFactor * WastageFactor) / 9000
-  const grams = (totalEnds * denier * crimpMultiplier * wastageMultiplier) / 9000;
-  return Number(grams.toFixed(3));
-}
-
-/**
- * Calculates weft yarn weight in grams per linear meter of fabric (Denier system)
- * @param {number} picksPerInch Picks per inch (PPI) in loom
- * @param {number} reedSpaceInches Width of warp in reed (inches)
- * @param {number} denier Weft Yarn Denier
- * @param {number} crimpPercent Weft crimp / contraction percentage (e.g. 3 for 3%)
- * @param {number} wastagePercent Loom / Pirn / Bobbin wastage percentage (e.g. 2 for 2%)
- */
-function calculateWeftWeightGramsPerMeter(picksPerInch, reedSpaceInches, denier, crimpPercent = 3, wastagePercent = 2) {
-  if (!picksPerInch || !reedSpaceInches || !denier) return 0;
-  // 1 meter = 39.37 inches
-  const picksPerMeter = picksPerInch * 39.37;
-  const weftLengthPerPickMeters = (reedSpaceInches * 0.0254) * (1 + crimpPercent / 100);
-  const totalWeftLengthMeters = picksPerMeter * weftLengthPerPickMeters * (1 + wastagePercent / 100);
-  const grams = (totalWeftLengthMeters * denier) / 9000;
-  return Number(grams.toFixed(3));
-}
-
-/**
- * Calculates TFO / Doubler Yarn Production in KG per spindle per 24 hours
- * @param {number} spindleRpm Spindle Speed (RPM)
- * @param {number} tpm Turns Per Meter (TPM)
- * @param {number} denier Resultant Yarn Denier
- * @param {number} efficiencyPercent Machine efficiency % (e.g. 95)
- */
-function calculateTfoProductionKgPerSpindleDay(spindleRpm, tpm, denier, efficiencyPercent = 95) {
-  if (!spindleRpm || !tpm || !denier) return 0;
-  // Delivery speed (meters/min) = (spindleRpm * 2) / tpm for Two-For-One (TFO produces 2 twists per turn)
-  const deliveryMetersPerMin = (spindleRpm * 2) / tpm;
-  const totalMeters24h = deliveryMetersPerMin * 60 * 24 * (efficiencyPercent / 100);
-  const totalKg = (totalMeters24h * denier) / (9000 * 1000);
-  return Number(totalKg.toFixed(4));
-}
-
-/**
- * Calculates Total Fabric Cost and Selling Price per meter
- */
-function calculateFabricCosting({
-  warpGramsPerMeter,
-  warpRatePerKg,
-  weftGramsPerMeter,
-  weftRatePerKg,
-  weavingCostPerMeter,
-  processingCostPerMeter = 0,
-  overheadCostPerMeter = 0,
-  marginPercent = 10
-}) {
-  const warpCost = (warpGramsPerMeter / 1000) * warpRatePerKg;
-  const weftCost = (weftGramsPerMeter / 1000) * weftRatePerKg;
-  const rawMaterialCost = warpCost + weftCost;
-  const manufacturingCost = rawMaterialCost + weavingCostPerMeter + processingCostPerMeter + overheadCostPerMeter;
-  const profit = (manufacturingCost * marginPercent) / 100;
-  const sellingPrice = manufacturingCost + profit;
-
-  return {
-    rawMaterialCost: Number(rawMaterialCost.toFixed(2)),
-    manufacturingCost: Number(manufacturingCost.toFixed(2)),
-    profit: Number(profit.toFixed(2)),
-    sellingPrice: Number(sellingPrice.toFixed(2)),
-    gsm: Number((warpGramsPerMeter + weftGramsPerMeter).toFixed(2))
-  };
-}
 
 test('CostingMath — Fabric Warp & Weft Calculation', async (t) => {
   await t.test('calculates accurate warp grams per meter for standard 80D Polyester 4800 Ends', () => {
