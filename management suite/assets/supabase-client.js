@@ -1201,13 +1201,49 @@
       const AUTH_IDENTITY_KEYS = ['vf_users', 'vf_admin_users', 'vf_auth_users'];
       const isAuthKey = AUTH_IDENTITY_KEYS.includes(key);
 
-      // Master entity registries (dropdowns/catalogs) + Auth account registries:
+      // Dedicated High-Integrity Merge for Authentication & User Accounts (Multi-PC & Supabase)
+      if (isAuthKey) {
+        if (cleanRemote.length === 0 && cleanLocal.length > 0) {
+          return cleanLocal;
+        }
+        if (cleanRemote.length > 0 && cleanLocal.length === 0) {
+          return cleanRemote;
+        }
+        if (cleanRemote.length > 0 && !isLocallyActive) {
+          return cleanRemote;
+        }
+        const authMap = new Map();
+        cleanRemote.forEach(item => {
+          const id = getItemIdentifier(item);
+          if (id) authMap.set(String(id), item);
+        });
+        cleanLocal.forEach(localItem => {
+          const id = getItemIdentifier(localItem);
+          if (id) {
+            if (authMap.has(String(id))) {
+              const remoteItem = authMap.get(String(id));
+              const remoteTime = remoteItem.updated_at ? new Date(remoteItem.updated_at).getTime() : 0;
+              const localTime = localItem.updated_at ? new Date(localItem.updated_at).getTime() : 0;
+              if (localTime >= remoteTime) {
+                authMap.set(String(id), Object.assign({}, remoteItem, localItem));
+              } else {
+                authMap.set(String(id), Object.assign({}, localItem, remoteItem));
+              }
+            } else {
+              authMap.set(String(id), localItem);
+            }
+          }
+        });
+        return filterDeletedEntities(Array.from(authMap.values()));
+      }
+
+      // Master entity registries (dropdowns/catalogs): when remote arrives and local user is not actively typing,
+      // the remote server snapshot is the single source of truth. Deleted items must NOT be resurrected!
       const MASTER_ENTITY_KEYS = [
         'loom-designs', 'loom_designs', 'yarn-qualities', 'yarn-fp-qualities', 'yarn-suppliers', 'manage-looms', 'manage-jacquards',
         'manage-jalas', 'manage-fanis', 'machines', 'warp-beams', 'warp-issues',
         'yarn-issues', 'costing-products-v4', 'costing-tfo-products-v1',
-        'costing-doubler-products-v1', 'costing-covering-products-v1',
-        'vf_users', 'vf_admin_users', 'vf_auth_users'
+        'costing-doubler-products-v1', 'costing-covering-products-v1'
       ];
 
       const isMasterKey = MASTER_ENTITY_KEYS.includes(key);
@@ -1233,7 +1269,7 @@
         if (id) itemMap.set(String(id), item);
       });
 
-      // Merge local items: keep local edits if newer, or preserve un-synced additions (auth accounts)
+      // Merge local items: keep local edits if newer, or preserve un-synced additions
       cleanLocal.forEach(localItem => {
         const id = getItemIdentifier(localItem);
         if (id) {
@@ -1246,8 +1282,7 @@
             }
           } else {
             // Local item not in remote yet (e.g. created locally or offline)
-            // Auth accounts and local records must be preserved unless deleted by tombstone
-            if (isAuthKey || !isMasterKey || isLocallyActive || cleanRemote.length === 0) {
+            if (!isMasterKey || isLocallyActive || cleanRemote.length === 0) {
               itemMap.set(String(id), localItem);
             }
           }
@@ -7161,29 +7196,37 @@
     // --- Bi-Directional Supabase Auth & Users API ---
     authUsers: {
       async getAll() {
+        let dbRows = [];
         if (activeConfig.isConfigured && SUPABASE_URL && SUPABASE_ANON_KEY) {
           try {
             const rows = await fetchAllRowsPaginated('vf_auth_users', '*', 'order=updated_at.desc');
-            if (Array.isArray(rows) && rows.length > 0) return rows;
+            if (Array.isArray(rows) && rows.length > 0) {
+              dbRows = rows;
+            }
           } catch(e) {}
         }
-        // Fallback to local storage datasets if offline or table uninitialized
+        // Always combine with local storage datasets for complete visibility of all accounts
         const localCombined = [];
         try {
           const rawAdms = cache['vf_admin_users'] || nativeLocalStorage.getItem('vf_admin_users');
           if (rawAdms) {
-            const parsedAdms = JSON.parse(rawAdms);
+            const parsedAdms = typeof rawAdms === 'string' ? JSON.parse(rawAdms) : rawAdms;
             if (Array.isArray(parsedAdms)) localCombined.push(...parsedAdms);
           }
         } catch(e) {}
         try {
           const rawEmps = cache['vf_users'] || nativeLocalStorage.getItem('vf_users');
           if (rawEmps) {
-            const parsedEmps = JSON.parse(rawEmps);
+            const parsedEmps = typeof rawEmps === 'string' ? JSON.parse(rawEmps) : rawEmps;
             if (Array.isArray(parsedEmps)) localCombined.push(...parsedEmps);
           }
         } catch(e) {}
-        return localCombined;
+
+        if (dbRows.length > 0 && localCombined.length > 0) {
+          const merged = mergeDatasets('vf_auth_users', localCombined, dbRows);
+          return Array.isArray(merged) ? merged : dbRows;
+        }
+        return dbRows.length > 0 ? dbRows : localCombined;
       },
       async saveUser(user) {
         if (!user || (!user.email && !user.username)) return { success: false };

@@ -2835,15 +2835,41 @@
   }
 
   function getStoredAdmins() {
+    let admins = [];
     const raw = localStorage.getItem('vf_admin_users');
     if (raw !== null) {
       try {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          admins = [...parsed];
         }
       } catch(e) {}
     }
+
+    // Also check if any admin accounts exist in vf_users
+    try {
+      const uRaw = localStorage.getItem('vf_users');
+      if (uRaw) {
+        const uList = JSON.parse(uRaw);
+        if (Array.isArray(uList)) {
+          uList.forEach(u => {
+            if (u && u.role === 'admin' && u.email) {
+              if (!admins.some(a => (a.email || '').toLowerCase() === u.email.toLowerCase())) {
+                admins.push({
+                  id: u.id || ('admin-' + Date.now()),
+                  email: u.email,
+                  name: u.name || 'Admin',
+                  passHash: u.passHash || u.pass_hash || '',
+                  role: 'admin',
+                  created_at: u.created_at || new Date().toISOString(),
+                  updated_at: u.updated_at || new Date().toISOString()
+                });
+              }
+            }
+          });
+        }
+      }
+    } catch(e) {}
 
     let legacyEmail = 'admin@vishwafashions.com';
     let legacyPass = 'admin123';
@@ -2856,20 +2882,32 @@
       }
     } catch(e) {}
 
-    const admins = [{
-      id: 'admin-master',
-      email: legacyEmail,
-      name: 'Admin',
-      passHash: legacyPass,
-      role: 'admin',
-      isMaster: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }];
-    localStorage.setItem('vf_admin_users', JSON.stringify(admins));
-    if (window.VishwaSupabase && typeof window.VishwaSupabase.saveToSupabase === 'function') {
-      window.VishwaSupabase.saveToSupabase('vf_admin_users', admins, true);
+    // If still empty, supply default master admin
+    if (admins.length === 0) {
+      admins = [{
+        id: 'admin-master',
+        email: legacyEmail,
+        name: 'Admin',
+        passHash: legacyPass,
+        role: 'admin',
+        isMaster: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }];
     }
+
+    // Filter against deletion tombstones
+    try {
+      const tombstonesRaw = localStorage.getItem('vf_deleted_auth_users');
+      if (tombstonesRaw) {
+        const tombs = JSON.parse(tombstonesRaw);
+        if (Array.isArray(tombs) && tombs.length > 0) {
+          const tombSet = new Set(tombs.map(t => String(t).trim().toLowerCase()));
+          admins = admins.filter(a => a && a.email && !tombSet.has(a.email.toLowerCase()) && !tombSet.has(String(a.id || '').toLowerCase()));
+        }
+      }
+    } catch(e) {}
+
     return admins;
   }
 
