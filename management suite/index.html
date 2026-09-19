@@ -748,6 +748,22 @@
             return null;
         }
 
+        // Resolves target module paths safely under any domain root or Vercel routing structure
+        function resolveSuiteUrl(relPath) {
+            const cur = window.location.pathname;
+            let base = '';
+            if (cur.includes('management-suite')) {
+                base = '/management-suite/';
+            } else if (cur.includes('management suite') || cur.includes('management%20suite')) {
+                base = '/management%20suite/';
+            } else {
+                const lastSlash = cur.lastIndexOf('/');
+                base = lastSlash >= 0 ? cur.substring(0, lastSlash + 1) : '/';
+            }
+            const cleanRel = String(relPath || '').replace(/^\/+/, '');
+            return base + cleanRel;
+        }
+
         // 1. Employee Form Submit (Authoritative VishwaAuth Layer)
         document.getElementById('employeeLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -772,7 +788,7 @@
                     if (res && res.data) {
                         const session = (authClient.getSession && authClient.getSession()) || {};
                         showAuthMsg(`Welcome back, ${session.name || emailInput}! Redirecting...`, 'success');
-                        const targetPage = getFirstAllowedPage(session.permissions);
+                        const targetPage = resolveSuiteUrl(getFirstAllowedPage(session.permissions));
                         setTimeout(() => window.location.href = targetPage, 400);
                         return;
                     }
@@ -808,7 +824,8 @@
                         const session = (authClient.getSession && authClient.getSession()) || {};
                         if (session.role === 'admin' || session.permissions === '*') {
                             showAuthMsg('Admin Authenticated! Redirecting to Settings...', 'success');
-                            setTimeout(() => window.location.href = 'modules/settings.html', 400);
+                            const targetPage = resolveSuiteUrl('modules/settings.html');
+                            setTimeout(() => window.location.href = targetPage, 400);
                             return;
                         } else {
                             showAuthMsg('Access denied. Administrator privileges required.', 'error');

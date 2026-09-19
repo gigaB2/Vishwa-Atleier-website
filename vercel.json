@@ -80,6 +80,8 @@
   "rewrites": [
     { "source": "/management-suite", "destination": "/management suite/index.html" },
     { "source": "/management-suite/", "destination": "/management suite/index.html" },
-    { "source": "/management-suite/:path*", "destination": "/management suite/:path*" }
+    { "source": "/management-suite/:path*", "destination": "/management suite/:path*" },
+    { "source": "/modules/:path*", "destination": "/management suite/modules/:path*" },
+    { "source": "/sidebar.js", "destination": "/management suite/sidebar.js" }
   ]
 }
