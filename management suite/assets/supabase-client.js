@@ -115,6 +115,14 @@
   let SUPABASE_URL = activeConfig.url;
   let SUPABASE_ANON_KEY = activeConfig.anonKey;
 
+  function getAuthBearer() {
+    let token = null;
+    try {
+      token = (nativeLocalStorage && nativeLocalStorage.getItem('vf_supabase_token'));
+    } catch(e) {}
+    return token || SUPABASE_ANON_KEY;
+  }
+
   // Local-only keys that must NEVER sync across different computers/users in the cloud database
   const LOCAL_ONLY_KEYS = new Set([
     'vf_session',
@@ -2869,7 +2877,7 @@
             res = await fetch(url, {
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                'Authorization': `Bearer ${getAuthBearer()}`
               },
               signal: controller.signal
             });
@@ -2880,7 +2888,7 @@
           res = await fetch(url, {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              'Authorization': `Bearer ${getAuthBearer()}`
             }
           });
         }
@@ -2923,7 +2931,7 @@
           method: 'DELETE',
           headers: {
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            'Authorization': `Bearer ${getAuthBearer()}`
           }
         });
       } catch (err) {
@@ -3131,18 +3139,18 @@
         }
 
         // Authoritative Rejection when online: Return explicit error
-        if (!isNetworkError && !this.isLocalAuthFallbackEnabled()) {
+        if (!isNetworkError && !VishwaAuth.isLocalAuthFallbackEnabled()) {
           return { data: null, error: new Error(authError || 'Invalid email or password.') };
         }
 
         // Network error when online check failed: only fallback if permitted
-        if (isNetworkError && !this.isLocalAuthFallbackEnabled()) {
+        if (isNetworkError && !VishwaAuth.isLocalAuthFallbackEnabled()) {
           return { data: null, error: new Error(`Authentication server unreachable: ${authError}`) };
         }
       }
 
       // 2. Offline / Local fallback (strictly allowed only when fallback enabled)
-      if (!this.isLocalAuthFallbackEnabled() && activeConfig.isConfigured) {
+      if (!VishwaAuth.isLocalAuthFallbackEnabled() && activeConfig.isConfigured) {
         return { data: null, error: new Error('Invalid email or password.') };
       }
 
@@ -3306,7 +3314,7 @@
           method: 'POST',
           headers: {
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${getAuthBearer()}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -3439,7 +3447,7 @@
         const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=eq.${encodeURIComponent(key)}&select=value`, {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            'Authorization': `Bearer ${getAuthBearer()}`
           }
         });
         if (!res.ok) return null;
@@ -3518,6 +3526,11 @@
 
         const executeDbWrite = async () => {
           if (!activeConfig.isConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+          const isAuth = Boolean(
+            (typeof VishwaAuth !== 'undefined' && VishwaAuth.getSession && VishwaAuth.getSession()) ||
+            (nativeLocalStorage && nativeLocalStorage.getItem('vf_supabase_token'))
+          );
+          if (!isAuth) return;
           try {
             setSyncStatus('syncing');
             lastKnownTimestamps[key] = nowIso;
@@ -3528,12 +3541,7 @@
             if (key !== 'loom-designs' && key !== 'loom_designs') {
               await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?on_conflict=key`, {
                 method: 'POST',
-                headers: {
-                  'apikey': SUPABASE_ANON_KEY,
-                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                  'Content-Type': 'application/json',
-                  'Prefer': 'resolution=merge-duplicates'
-                },
+                headers: this.getAuthHeaders({ 'Prefer': 'resolution=merge-duplicates' }),
                 body: JSON.stringify({
                   key: key,
                   value: value,
@@ -3565,7 +3573,7 @@
                     method: 'POST',
                     headers: {
                       'apikey': SUPABASE_ANON_KEY,
-                      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                      'Authorization': `Bearer ${getAuthBearer()}`,
                       'Content-Type': 'application/json',
                       'Prefer': 'resolution=merge-duplicates'
                     },
@@ -3632,7 +3640,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -3667,7 +3675,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -3687,7 +3695,7 @@
                 } else if (cleanValue.length === 0) {
                   fetch(`${SUPABASE_URL}/rest/v1/vf_rm_qualities`, {
                     method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                   }).catch(() => {});
                 }
               } catch(e) {
@@ -3720,7 +3728,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -3740,7 +3748,7 @@
                 } else if (cleanValue.length === 0) {
                   fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities`, {
                     method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                   }).catch(() => {});
                 }
               } catch(e) {
@@ -3770,7 +3778,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -3790,7 +3798,7 @@
                 } else if (cleanValue.length === 0) {
                   fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers`, {
                     method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                   }).catch(() => {});
                 }
               } catch(e) {
@@ -3868,7 +3876,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -3889,7 +3897,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -3908,7 +3916,7 @@
                       method: 'DELETE',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        'Authorization': `Bearer ${getAuthBearer()}`
                       }
                     }).catch(() => {});
                   } else {
@@ -3916,7 +3924,7 @@
                       method: 'DELETE',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        'Authorization': `Bearer ${getAuthBearer()}`
                       }
                     }).catch(() => {});
                   }
@@ -3927,17 +3935,17 @@
                     method: 'DELETE',
                     headers: {
                       'apikey': SUPABASE_ANON_KEY,
-                      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                      'Authorization': `Bearer ${getAuthBearer()}`
                     }
                   }).catch(() => {});
                 } else if (value.length === 0 && isHydrated) {
                   await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_boxes`, {
                     method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                   }).catch(() => {});
                   await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_rm_lots`, {
                     method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                   }).catch(() => {});
                 }
               } catch(e) {
@@ -4027,7 +4035,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4048,7 +4056,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4068,7 +4076,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4087,7 +4095,7 @@
                       method: 'DELETE',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        'Authorization': `Bearer ${getAuthBearer()}`
                       }
                     }).catch(() => {});
                   } else {
@@ -4095,7 +4103,7 @@
                       method: 'DELETE',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        'Authorization': `Bearer ${getAuthBearer()}`
                       }
                     }).catch(() => {});
                   }
@@ -4110,7 +4118,7 @@
                       method: 'DELETE',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        'Authorization': `Bearer ${getAuthBearer()}`
                       }
                     }).catch(() => {});
                   } else {
@@ -4118,7 +4126,7 @@
                       method: 'DELETE',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        'Authorization': `Bearer ${getAuthBearer()}`
                       }
                     }).catch(() => {});
                   }
@@ -4130,21 +4138,21 @@
                     method: 'DELETE',
                     headers: {
                       'apikey': SUPABASE_ANON_KEY,
-                      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                      'Authorization': `Bearer ${getAuthBearer()}`
                     }
                   }).catch(() => {});
                 } else if (value.length === 0 && isHydrated) {
                   await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_order_boxes`, {
                     method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                   }).catch(() => {});
                   await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_order_batches`, {
                     method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                   }).catch(() => {});
                   await fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_orders`, {
                     method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                   }).catch(() => {});
                 }
               } catch(e) {
@@ -4183,7 +4191,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4227,7 +4235,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4267,7 +4275,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4312,7 +4320,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4368,7 +4376,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4419,7 +4427,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4450,7 +4458,7 @@
                         method: 'POST',
                         headers: {
                           'apikey': SUPABASE_ANON_KEY,
-                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Authorization': `Bearer ${getAuthBearer()}`,
                           'Content-Type': 'application/json',
                           'Prefer': 'resolution=merge-duplicates'
                         },
@@ -4478,7 +4486,7 @@
                           method: 'POST',
                           headers: {
                             'apikey': SUPABASE_ANON_KEY,
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Authorization': `Bearer ${getAuthBearer()}`,
                             'Content-Type': 'application/json',
                             'Prefer': 'resolution=merge-duplicates'
                           },
@@ -4534,7 +4542,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4559,7 +4567,7 @@
                         method: 'POST',
                         headers: {
                           'apikey': SUPABASE_ANON_KEY,
-                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Authorization': `Bearer ${getAuthBearer()}`,
                           'Content-Type': 'application/json',
                           'Prefer': 'resolution=merge-duplicates'
                         },
@@ -4604,7 +4612,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4641,7 +4649,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4722,7 +4730,7 @@
                         method: 'POST',
                         headers: {
                           'apikey': SUPABASE_ANON_KEY,
-                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Authorization': `Bearer ${getAuthBearer()}`,
                           'Content-Type': 'application/json',
                           'Prefer': 'resolution=merge-duplicates'
                         },
@@ -4807,7 +4815,7 @@
                         method: 'POST',
                         headers: {
                           'apikey': SUPABASE_ANON_KEY,
-                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Authorization': `Bearer ${getAuthBearer()}`,
                           'Content-Type': 'application/json',
                           'Prefer': 'resolution=merge-duplicates'
                         },
@@ -4817,12 +4825,12 @@
                     const currentIds = attRows.map(r => `"${r.id}"`).join(',');
                     fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records?id=not.in.(${currentIds})`, {
                       method: 'DELETE',
-                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                     }).catch(() => {});
                   } else {
                     fetch(`${SUPABASE_URL}/rest/v1/vf_attendance_records`, {
                       method: 'DELETE',
-                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                     }).catch(() => {});
                   }
                 }
@@ -4856,7 +4864,7 @@
                         method: 'POST',
                         headers: {
                           'apikey': SUPABASE_ANON_KEY,
-                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Authorization': `Bearer ${getAuthBearer()}`,
                           'Content-Type': 'application/json',
                           'Prefer': 'resolution=merge-duplicates'
                         },
@@ -4901,7 +4909,7 @@
                         method: 'POST',
                         headers: {
                           'apikey': SUPABASE_ANON_KEY,
-                          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                          'Authorization': `Bearer ${getAuthBearer()}`,
                           'Content-Type': 'application/json',
                           'Prefer': 'resolution=merge-duplicates'
                         },
@@ -4946,7 +4954,7 @@
                       method: 'POST',
                       headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Authorization': `Bearer ${getAuthBearer()}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                       },
@@ -4988,7 +4996,7 @@
             method: 'DELETE',
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              'Authorization': `Bearer ${getAuthBearer()}`
             }
           });
         }
@@ -5002,7 +5010,7 @@
           method: 'DELETE',
           headers: {
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            'Authorization': `Bearer ${getAuthBearer()}`
           }
         }).catch(() => {});
       } catch(e) {}
@@ -5255,7 +5263,7 @@
             method: 'POST',
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Authorization': `Bearer ${getAuthBearer()}`,
               'Content-Type': 'application/json',
               'Prefer': 'resolution=merge-duplicates'
             },
@@ -5281,7 +5289,7 @@
             method: 'DELETE',
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              'Authorization': `Bearer ${getAuthBearer()}`
             }
           });
           const tables = ['vf_costing_products', 'vf_costing_tfo_products', 'vf_costing_doubler_products', 'vf_costing_covering_products'];
@@ -5290,7 +5298,7 @@
               method: 'DELETE',
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                'Authorization': `Bearer ${getAuthBearer()}`
               }
             }).catch(() => {});
           }
@@ -5385,7 +5393,7 @@
           method: 'POST',
           headers: {
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${getAuthBearer()}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -5583,6 +5591,14 @@
         isHydrated = true;
         setSyncStatus('unconfigured');
         window.dispatchEvent(new CustomEvent('supabase-ready', { detail: { isReady: true, keys: [] } }));
+        return;
+      }
+      const hasAuth = Boolean(
+        (typeof VishwaAuth !== 'undefined' && VishwaAuth.getSession && VishwaAuth.getSession()) ||
+        (nativeLocalStorage && nativeLocalStorage.getItem('vf_supabase_token'))
+      );
+      if (!hasAuth) {
+        // Return silently if unauthenticated to avoid 401s on login screen
         return;
       }
       let updatedKeys = [];
@@ -5842,7 +5858,7 @@
                     const encId = encodeURIComponent(obs.id);
                     fetch(`${SUPABASE_URL}/rest/v1/vf_fp_qualities?id=eq.${encId}`, {
                       method: 'DELETE',
-                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                     }).catch(() => {});
                   });
                 }
@@ -5894,7 +5910,7 @@
                     const encId = encodeURIComponent(obs.id);
                     fetch(`${SUPABASE_URL}/rest/v1/vf_rm_suppliers?id=eq.${encId}`, {
                       method: 'DELETE',
-                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                     }).catch(() => {});
                   });
                 }
@@ -6305,7 +6321,7 @@
                     tombstonedInDb.forEach(tRow => {
                       fetch(`${SUPABASE_URL}/rest/v1/vf_yarn_production_logs?id=eq.${encodeURIComponent(tRow.id)}`, {
                         method: 'DELETE',
-                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
                       }).catch(() => {});
                     });
                   }
@@ -6696,7 +6712,7 @@
                 if (activeConfig.isConfigured && SUPABASE_URL) {
                   const restHeaders = {
                     'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    'Authorization': `Bearer ${getAuthBearer()}`
                   };
                   if (Array.isArray(dbEmployees)) {
                     const tombstonedEmps = dbEmployees.filter(emp => {
@@ -6931,7 +6947,7 @@
           const valRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=in.(${encodedKeys})&select=key,value,updated_at`, {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              'Authorization': `Bearer ${getAuthBearer()}`
             }
           });
           if (valRes.ok) {
@@ -7228,7 +7244,7 @@
           method: 'POST',
           headers: {
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${getAuthBearer()}`,
             'Content-Type': 'application/json',
             'Prefer': 'resolution=merge-duplicates'
           },
@@ -7958,23 +7974,29 @@
   // Initial local presence announcement across same-browser tabs
   sendPresenceHello();
 
-  // Initial boot: start Realtime WS and initial load
-  if (activeConfig.isConfigured) {
+  // Initial boot: start Realtime WS and initial load ONLY if authenticated session exists
+  const hasActiveSession = Boolean(
+    (typeof VishwaAuth !== 'undefined' && VishwaAuth.getSession && VishwaAuth.getSession()) ||
+    (nativeLocalStorage && nativeLocalStorage.getItem('vf_supabase_token'))
+  );
+
+  if (activeConfig.isConfigured && hasActiveSession) {
     // Purge any accidental local-only keys previously stored in remote vf_kv_store
     if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      const userToken = (nativeLocalStorage && nativeLocalStorage.getItem('vf_supabase_token')) || SUPABASE_ANON_KEY;
       fetch(`${SUPABASE_URL}/rest/v1/vf_kv_store?key=in.("vf_session","vf_user_name","vf_supabase_token","vf_supabase_session","vf_sidebar_open_folders","vf_sidebar_collapsed","vishwa_fashions_sidebar_mode","vishwa_fashions_theme")`, {
         method: 'DELETE',
         headers: {
           'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          'Authorization': `Bearer ${userToken}`
         }
       }).catch(() => {});
     }
     initRealtimeWebSocket();
     supabaseApi.loadAll(true).then(() => {
       console.log("Management Suite — Cloud Sync initialized.");
-    });
-  } else {
+    }).catch(() => {});
+  } else if (!activeConfig.isConfigured) {
     // Self-healing: if APP_CONFIG loads after supabase-client.js, auto-configure
     let checkAttempts = 0;
     const configCheckTimer = setInterval(() => {
@@ -8003,6 +8025,11 @@
     if (!syncIntervalId) {
       syncIntervalId = setInterval(async () => {
         if (document.hidden || isSyncInProgress) return;
+        const isAuth = Boolean(
+          (typeof VishwaAuth !== 'undefined' && VishwaAuth.getSession && VishwaAuth.getSession()) ||
+          (nativeLocalStorage && nativeLocalStorage.getItem('vf_supabase_token'))
+        );
+        if (!isAuth) return;
         // If consecutive errors occurred (e.g. 504 gateway timeout), back off to let server drain
         if (consecutiveSyncErrors >= 2 && Math.random() > 0.25) return;
         try {
@@ -8384,7 +8411,7 @@
             method: 'POST',
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Authorization': `Bearer ${getAuthBearer()}`,
               'Content-Type': 'application/json',
               'Prefer': 'resolution=merge-duplicates'
             },
@@ -8414,7 +8441,7 @@
           method: 'DELETE',
           headers: {
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            'Authorization': `Bearer ${getAuthBearer()}`
           }
         });
         return { success: res.ok, status: res.status };
@@ -8513,7 +8540,7 @@
             method: 'POST',
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Authorization': `Bearer ${getAuthBearer()}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -8532,7 +8559,7 @@
             method: 'PATCH',
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Authorization': `Bearer ${getAuthBearer()}`,
               'Content-Type': 'application/json',
               'Prefer': 'return=minimal'
             },
@@ -8934,7 +8961,7 @@
           let res = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?id=eq.${encodeURIComponent(id)}&limit=1`, {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              'Authorization': `Bearer ${getAuthBearer()}`
             }
           });
           let rows = res.ok ? await res.json().catch(() => []) : [];
@@ -8942,7 +8969,7 @@
             const fallbackRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?design_number=eq.${encodeURIComponent(id)}&order=updated_at.desc&limit=1`, {
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                'Authorization': `Bearer ${getAuthBearer()}`
               }
             });
             rows = fallbackRes.ok ? await fallbackRes.json().catch(() => []) : [];
@@ -9117,7 +9144,7 @@
         if (inputVariants.length === 0 && id) {
           try {
             const existingRow = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?id=eq.${encodeURIComponent(id)}&select=metadata&limit=1`, {
-              headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+              headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthBearer()}` }
             }).then(r => r.ok ? r.json() : []).catch(() => []);
             if (existingRow && existingRow.length > 0 && Array.isArray(existingRow[0].metadata?.variants) && existingRow[0].metadata.variants.length > 0) {
               inputVariants = existingRow[0].metadata.variants;
@@ -9269,7 +9296,7 @@
               method: 'DELETE',
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                'Authorization': `Bearer ${getAuthBearer()}`
               }
             }).catch(() => {});
           } catch(e) {}
@@ -9304,7 +9331,7 @@
               method: 'PATCH',
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Authorization': `Bearer ${getAuthBearer()}`,
                 'Content-Type': 'application/json',
                 'Prefer': 'return=representation'
               },
@@ -9398,7 +9425,7 @@
           const res = await fetch(`${SUPABASE_URL}/rest/v1/vf_fabric_designs?select=id,updated_at,deleted&order=updated_at.desc&limit=1`, {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              'Authorization': `Bearer ${getAuthBearer()}`
             }
           });
           if (!res.ok) return null;
@@ -9610,7 +9637,7 @@
             method: 'POST',
             headers: {
               'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Authorization': `Bearer ${getAuthBearer()}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({

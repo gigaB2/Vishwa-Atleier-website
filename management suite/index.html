@@ -797,12 +797,6 @@
             }
         });
 
-        // Trigger background hydration from Supabase if online
-        try {
-            if (window.VishwaSupabase && typeof window.VishwaSupabase.loadAll === 'function') {
-                window.VishwaSupabase.loadAll().catch(() => {});
-            }
-        } catch(e) {}
 
         // Listen for live updates from Supabase to auto-populate default admin if user hasn't typed yet
         window.addEventListener('vishwa:supabase-synced', (e) => {
