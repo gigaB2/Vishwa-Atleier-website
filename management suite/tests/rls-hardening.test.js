@@ -193,6 +193,13 @@ test('RLS & Access-Control Hardening Suite (Phase 4)', async (t) => {
     );
   });
 
+  await t.test('7. Mutable user_metadata is never referenced in RLS policies or role helpers', () => {
+    assert.ok(
+      !schemaSql.includes('user_metadata'),
+      'Master schema must NEVER reference user_metadata for security or RLS policies (only tamper-proof app_metadata or vf_auth_users table)'
+    );
+  });
+
   // ============================================================================
   // Suite 2: Offline Policy Simulator (Simulating PostgreSQL RLS Rules)
   // ============================================================================

@@ -709,13 +709,7 @@ BEGIN
         RETURN lower(v_role);
     END IF;
 
-    -- 3. Extract from JWT user_metadata
-    v_role := auth.jwt() -> 'user_metadata' ->> 'role';
-    IF v_role IS NOT NULL AND v_role <> '' THEN
-        RETURN lower(v_role);
-    END IF;
-
-    -- 4. Fallback lookup in public.vf_auth_users table
+    -- 3. Fallback lookup in public.vf_auth_users table
     v_uid := auth.uid();
     IF v_uid IS NOT NULL THEN
         SELECT role INTO v_role
@@ -1570,7 +1564,6 @@ FOR SELECT TO authenticated
 USING (
     auth.role() = 'service_role'
     OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
-    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
     OR auth.uid()::text = id
     OR lower(email) = lower(auth.jwt() ->> 'email')
 );
@@ -1580,7 +1573,6 @@ FOR INSERT TO authenticated
 WITH CHECK (
     auth.role() = 'service_role'
     OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
-    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 CREATE POLICY "vf_auth_users_update_admin" ON public.vf_auth_users
@@ -1588,12 +1580,10 @@ FOR UPDATE TO authenticated
 USING (
     auth.role() = 'service_role'
     OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
-    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 )
 WITH CHECK (
     auth.role() = 'service_role'
     OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
-    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 CREATE POLICY "vf_auth_users_delete_admin" ON public.vf_auth_users
@@ -1601,7 +1591,6 @@ FOR DELETE TO authenticated
 USING (
     auth.role() = 'service_role'
     OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
-    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- ==============================================================================
