@@ -14,7 +14,7 @@
   <link rel="canonical" href="https://vishwaatelier.com/" />
 
   <!-- Preload Key Hero & LCP Assets for Performance Optimization -->
-  <link rel="preload" as="image" href="assets/images/Jacquard%20rapier.webp" type="image/webp" />
+  <link rel="preload" as="image" href="assets/images/Jacquard%20rapier.webp" type="image/webp" fetchpriority="high" />
 
   <!-- GEO Location Metadata for Local & Global Brand Authority -->
   <meta name="geo.region" content="IN-GJ" />
@@ -364,6 +364,7 @@
       <!-- Mobile Right Side Button with Dropdown Box (Shown at <= 1024px) -->
       <div class="relative min-[1025px]:hidden mobile-nav-toggle">
         <button
+          type="button"
           class="material-symbols-outlined p-2 text-primary hover:bg-surface-container transition-colors cursor-pointer select-none"
           id="mobile-toggle-btn" aria-label="Toggle Navigation Menu" aria-expanded="false" aria-controls="nav-menu" aria-haspopup="true">menu</button>
 
@@ -426,7 +427,7 @@
     <section class="relative min-h-[100dvh] md:h-screen md:min-h-[750px] w-full overflow-hidden scroll-mt-20" id="hero">
       <div class="absolute inset-0 z-0">
         <video class="w-full h-full object-cover" autoplay loop muted playsinline webkit-playsinline
-          x5-playsinline="true" x5-video-player-type="h5" preload="auto" disablePictureInPicture disableRemotePlayback
+          x5-playsinline="true" x5-video-player-type="h5" preload="metadata" disablePictureInPicture disableRemotePlayback
           poster="assets/images/Jacquard rapier.webp">
           <source src="assets/videos/Final factory movie_sub99.mp4" type="video/mp4" />
         </video>
@@ -519,11 +520,11 @@
           <div class="md:col-span-5 md:col-start-8 relative mt-12 md:mt-0">
             <div class="aspect-[3/4] relative z-10 overflow-hidden shadow-2xl">
               <img class="w-full h-full object-cover" alt="Master Weaving at Vishwa Atelier"
-                src="assets/images/yarn preparatory 3.webp" />
+                src="assets/images/yarn preparatory 3.webp" loading="lazy" decoding="async" width="600" height="800" />
             </div>
             <div
               class="absolute -bottom-10 -left-10 w-56 h-72 z-20 hidden md:block overflow-hidden shadow-2xl border-4 border-white">
-              <img class="w-full h-full object-cover" alt="Jacquard Rapier Loom" src="assets/images/Jacquard rapier.webp" />
+              <img class="w-full h-full object-cover" alt="Jacquard Rapier Loom" src="assets/images/Jacquard rapier.webp" loading="lazy" decoding="async" width="224" height="288" />
             </div>
           </div>
         </div>
@@ -549,24 +550,31 @@
           class="flex flex-nowrap justify-start lg:justify-center items-center gap-3 md:gap-6 mb-12 border-b border-outline-variant pb-6 overflow-x-auto w-full"
           id="stepper-nav-bar">
           <button
+            type="button"
             class="stepper-tab active px-3 md:px-4 py-2 font-label-caps text-xs transition-colors border-b-2 border-primary text-primary text-center"
             data-step="0">01. Raw Fibers</button>
           <button
+            type="button"
             class="stepper-tab px-3 md:px-4 py-2 font-label-caps text-xs transition-colors text-secondary border-b-2 border-transparent hover:text-primary text-center"
             data-step="1">02. Zari Covering</button>
           <button
+            type="button"
             class="stepper-tab px-3 md:px-4 py-2 font-label-caps text-xs transition-colors text-secondary border-b-2 border-transparent hover:text-primary text-center"
             data-step="2">03. Yarn Inspection</button>
           <button
+            type="button"
             class="stepper-tab px-3 md:px-4 py-2 font-label-caps text-xs transition-colors text-secondary border-b-2 border-transparent hover:text-primary text-center"
             data-step="3">04. Sectional Warping</button>
           <button
+            type="button"
             class="stepper-tab px-3 md:px-4 py-2 font-label-caps text-xs transition-colors text-secondary border-b-2 border-transparent hover:text-primary text-center"
             data-step="4">05. Jacquard & Airjet</button>
           <button
+            type="button"
             class="stepper-tab px-3 md:px-4 py-2 font-label-caps text-xs transition-colors text-secondary border-b-2 border-transparent hover:text-primary text-center"
             data-step="5">06. In-House Stitching</button>
           <button
+            type="button"
             class="stepper-tab px-3 md:px-4 py-2 font-label-caps text-xs transition-colors text-secondary border-b-2 border-transparent hover:text-primary text-center"
             data-step="6">07. Quality Control</button>
         </div>
@@ -580,19 +588,19 @@
             <span class="absolute top-4 left-4 bg-primary text-white text-[10px] font-label-caps px-3 py-1 z-10">STAGE
               01 / RAW MATERIALS</span>
             <img class="rolling-img active absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
-              alt="Yarn Package 6" src="assets/images/yarn  6.webp" />
+              alt="Yarn Package 6" src="assets/images/yarn  6.webp" loading="lazy" decoding="async" width="800" height="600" />
             <img
               class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-              alt="Yarn Package 2" src="assets/images/yarn 2.webp" />
+              alt="Yarn Package 2" src="assets/images/yarn 2.webp" loading="lazy" decoding="async" width="800" height="600" />
             <img
               class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-              alt="Yarn Package 4" src="assets/images/Yarn 4.webp" />
+              alt="Yarn Package 4" src="assets/images/Yarn 4.webp" loading="lazy" decoding="async" width="800" height="600" />
             <img
               class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-              alt="Yarn Package 5" src="assets/images/yarn 5.webp" />
+              alt="Yarn Package 5" src="assets/images/yarn 5.webp" loading="lazy" decoding="async" width="800" height="600" />
             <img
               class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-              alt="Viscose Yarn" src="assets/images/Viscose yarn.webp" />
+              alt="Viscose Yarn" src="assets/images/Viscose yarn.webp" loading="lazy" decoding="async" width="800" height="600" />
           </div>
           <div class="md:col-span-6 space-y-6">
             <span class="font-label-caps text-label-caps text-secondary">Step 01 / Procurement</span>
@@ -623,7 +631,7 @@
             <span class="absolute top-4 left-4 bg-primary text-white text-[10px] font-label-caps px-3 py-1 z-10">STAGE
               02 / ZARI COVERING</span>
             <video class="w-full h-full object-cover" autoplay loop muted playsinline webkit-playsinline
-              x5-playsinline="true" x5-video-player-type="h5" preload="auto" disablePictureInPicture
+              x5-playsinline="true" x5-video-player-type="h5" preload="metadata" disablePictureInPicture
               disableRemotePlayback poster="assets/images/yarn perperatory 1.webp">
               <source src="assets/videos/Yarn preparatory movie.mp4" type="video/mp4" />
             </video>
@@ -655,7 +663,7 @@
           <div class="md:col-span-6 relative aspect-[4/3] overflow-hidden bg-surface-container">
             <span class="absolute top-4 left-4 bg-primary text-white text-[10px] font-label-caps px-3 py-1 z-10">STAGE
               03 / YARN INSPECTION</span>
-            <img class="w-full h-full object-cover" alt="Yarn Inspection" src="assets/images/Yarn inspection.webp" />
+            <img class="w-full h-full object-cover" alt="Yarn Inspection" src="assets/images/Yarn inspection.webp" loading="lazy" decoding="async" width="800" height="600" />
           </div>
           <div class="md:col-span-6 space-y-6">
             <span class="font-label-caps text-label-caps text-secondary">Step 03 / Quality Verification</span>
@@ -685,7 +693,7 @@
             <span class="absolute top-4 left-4 bg-primary text-white text-[10px] font-label-caps px-3 py-1 z-10">STAGE
               04 / SECTIONAL WARPING</span>
             <video class="w-full h-full object-cover" autoplay loop muted playsinline webkit-playsinline
-              x5-playsinline="true" x5-video-player-type="h5" preload="auto" disablePictureInPicture
+              x5-playsinline="true" x5-video-player-type="h5" preload="metadata" disablePictureInPicture
               disableRemotePlayback poster="assets/images/yarn preparatory 2.webp">
               <source src="assets/videos/Sectional warping movie.mp4" type="video/mp4" />
             </video>
@@ -717,7 +725,7 @@
           <div class="md:col-span-6 relative aspect-[4/3] overflow-hidden bg-surface-container">
             <span class="absolute top-4 left-4 bg-primary text-white text-[10px] font-label-caps px-3 py-1 z-10">STAGE
               05 / JACQUARD & AIRJET WEAVING</span>
-            <img class="w-full h-full object-cover" alt="Jacquard Rapier" src="assets/images/Jacquard rapier.webp" />
+            <img class="w-full h-full object-cover" alt="Jacquard Rapier" src="assets/images/Jacquard rapier.webp" loading="lazy" decoding="async" width="800" height="600" />
           </div>
           <div class="md:col-span-6 space-y-6">
             <span class="font-label-caps text-label-caps text-secondary">Step 05 / Weaving Shed</span>
@@ -747,7 +755,7 @@
             <span class="absolute top-4 left-4 bg-primary text-white text-[10px] font-label-caps px-3 py-1 z-10">STAGE
               06 / IN-HOUSE STITCHING</span>
             <img class="w-full h-full object-cover" alt="In House Stitching"
-              src="assets/images/In house stitching unit.webp" />
+              src="assets/images/In house stitching unit.webp" loading="lazy" decoding="async" width="800" height="600" />
           </div>
           <div class="md:col-span-6 space-y-6">
             <span class="font-label-caps text-label-caps text-secondary">Step 06 / Tailoring & Finishing</span>
@@ -776,7 +784,7 @@
           <div class="md:col-span-6 relative aspect-[4/3] overflow-hidden bg-surface-container">
             <span class="absolute top-4 left-4 bg-primary text-white text-[10px] font-label-caps px-3 py-1 z-10">STAGE
               07 / QUALITY CONTROL</span>
-            <img class="w-full h-full object-cover" alt="Quality Inspection" src="assets/images/Quality Inspection.webp" />
+            <img class="w-full h-full object-cover" alt="Quality Inspection" src="assets/images/Quality Inspection.webp" loading="lazy" decoding="async" width="800" height="600" />
           </div>
           <div class="md:col-span-6 space-y-6">
             <span class="font-label-caps text-label-caps text-secondary">Step 07 / Inspection & Export</span>
@@ -823,7 +831,7 @@
           <div class="lg:col-span-2 group relative overflow-hidden aspect-square lg:aspect-auto lg:h-[480px]">
             <img
               class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              alt="Vishwa Atelier Factory Location & Premises" src="assets/images/Factory Image.webp" />
+              alt="Vishwa Atelier Factory Location & Premises" src="assets/images/Factory Image.webp" loading="lazy" decoding="async" width="800" height="480" />
             <div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/30 to-transparent opacity-85">
             </div>
             <div class="absolute bottom-0 left-0 p-8 w-full">
@@ -839,7 +847,7 @@
           <div class="group relative overflow-hidden aspect-square lg:aspect-auto lg:h-[480px]">
             <img
               class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              alt="Airjet Weaving Technology" src="assets/images/airjet_weaving_machine.webp" />
+              alt="Airjet Weaving Technology" src="assets/images/airjet_weaving_machine.webp" loading="lazy" decoding="async" width="400" height="480" />
             <div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent opacity-85">
             </div>
             <div class="absolute bottom-0 left-0 p-6 w-full">
@@ -853,7 +861,7 @@
           <div class="group relative overflow-hidden aspect-square lg:aspect-auto lg:h-[480px]">
             <img
               class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              alt="Rapier Jacquard Loom Setup" src="assets/images/Jacquard rapier 2.webp" />
+              alt="Rapier Jacquard Loom Setup" src="assets/images/Jacquard rapier 2.webp" loading="lazy" decoding="async" width="400" height="480" />
             <div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent opacity-85">
             </div>
             <div class="absolute bottom-0 left-0 p-6 w-full">
@@ -869,7 +877,7 @@
           <div class="group relative overflow-hidden aspect-square lg:aspect-auto lg:h-[480px]">
             <img
               class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              alt="Zari Covering Machine Unit" src="assets/images/yarn preparatory 2.webp" />
+              alt="Zari Covering Machine Unit" src="assets/images/yarn preparatory 2.webp" loading="lazy" decoding="async" width="400" height="480" />
             <div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent opacity-85">
             </div>
             <div class="absolute bottom-0 left-0 p-6 w-full">
@@ -884,7 +892,7 @@
           <div class="group relative overflow-hidden aspect-square lg:aspect-auto lg:h-[480px]">
             <img
               class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              alt="High-Tenacity Warp Yarns" src="assets/images/yarn 2.webp" />
+              alt="High-Tenacity Warp Yarns" src="assets/images/yarn 2.webp" loading="lazy" decoding="async" width="400" height="480" />
             <div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent opacity-85">
             </div>
             <div class="absolute bottom-0 left-0 p-6 w-full">
@@ -899,7 +907,7 @@
             <video
               class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
               autoplay loop muted playsinline webkit-playsinline x5-playsinline="true" x5-video-player-type="h5"
-              preload="auto" disablePictureInPicture disableRemotePlayback poster="assets/images/died polyester yarn.webp">
+              preload="metadata" disablePictureInPicture disableRemotePlayback poster="assets/images/died polyester yarn.webp">
               <source src="assets/videos/Final factory movie_sub99.mp4" type="video/mp4" />
             </video>
             <div
@@ -919,7 +927,7 @@
             <video
               class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
               autoplay loop muted playsinline webkit-playsinline x5-playsinline="true" x5-video-player-type="h5"
-              preload="auto" disablePictureInPicture disableRemotePlayback poster="assets/images/yarn preparatory 5.webp">
+              preload="metadata" disablePictureInPicture disableRemotePlayback poster="assets/images/yarn preparatory 5.webp">
               <source src="assets/videos/yarn preparatory movie 2.mp4" type="video/mp4" />
             </video>
             <div
@@ -937,7 +945,7 @@
             <video
               class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
               autoplay loop muted playsinline webkit-playsinline x5-playsinline="true" x5-video-player-type="h5"
-              preload="auto" disablePictureInPicture disableRemotePlayback poster="assets/images/Viscose yarn.webp">
+              preload="metadata" disablePictureInPicture disableRemotePlayback poster="assets/images/Viscose yarn.webp">
               <source src="assets/videos/Cone bank.mp4" type="video/mp4" />
             </video>
             <div
@@ -955,7 +963,7 @@
           <div class="group relative overflow-hidden aspect-square lg:aspect-auto lg:h-[480px]">
             <img
               class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              alt="Table Quality Inspection" src="assets/images/Quality Inspection.webp" />
+              alt="Table Quality Inspection" src="assets/images/Quality Inspection.webp" loading="lazy" decoding="async" width="400" height="480" />
             <div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent opacity-85">
             </div>
             <div class="absolute bottom-0 left-0 p-6 w-full">
@@ -970,7 +978,7 @@
             <video
               class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
               autoplay loop muted playsinline webkit-playsinline x5-playsinline="true" x5-video-player-type="h5"
-              preload="auto" disablePictureInPicture disableRemotePlayback poster="assets/images/Jacquard rapier.webp">
+              preload="metadata" disablePictureInPicture disableRemotePlayback poster="assets/images/Jacquard rapier.webp">
               <source src="assets/videos/Sectional warping movie.mp4" type="video/mp4" />
             </video>
             <div
@@ -1002,12 +1010,15 @@
         <!-- Lookbook Selector Tabs -->
         <div class="flex flex-nowrap sm:flex-wrap justify-start sm:justify-center gap-2 sm:gap-3 mb-8 sm:mb-12 overflow-x-auto pb-2 sm:pb-0 scrollbar-none" id="lb-tabs">
           <button
+            type="button"
             class="lb-tab-btn active px-4 sm:px-6 py-2.5 sm:py-3 font-label-caps text-xs bg-primary text-white border border-primary transition-all flex-shrink-0"
             data-index="0">Lookbook 01 (AVF Collection)</button>
           <button
+            type="button"
             class="lb-tab-btn px-4 sm:px-6 py-2.5 sm:py-3 font-label-caps text-xs bg-white text-primary border border-outline-variant hover:border-primary transition-all flex-shrink-0"
             data-index="1">Lookbook 02 (VK Collection)</button>
           <button
+            type="button"
             class="lb-tab-btn px-4 sm:px-6 py-2.5 sm:py-3 font-label-caps text-xs bg-white text-primary border border-outline-variant hover:border-primary transition-all flex-shrink-0"
             data-index="2">Lookbook 03 (Bloom Collection)</button>
         </div>
@@ -1027,16 +1038,16 @@
                     EXCLUSIVE SAREES</span>
                   <img src="lookbooks/Lookbook 1 (AVF)/collection/Apricot Whisper/10-1011552 v.webp"
                     class="rolling-img active w-full h-full object-cover transition-opacity duration-700"
-                    alt="Apricot Whisper Saree" />
+                    alt="Apricot Whisper Saree" loading="lazy" decoding="async" width="600" height="800" />
                   <img src="lookbooks/Lookbook 1 (AVF)/collection/Aqua Prakasa/10-1012131 Rr.webp"
                     class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-                    alt="Aqua Prakasa Saree" />
+                    alt="Aqua Prakasa Saree" loading="lazy" decoding="async" width="600" height="800" />
                   <img src="lookbooks/Lookbook 1 (AVF)/collection/Aruna Elegance/10-1012194 SK.webp"
                     class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-                    alt="Aruna Elegance Saree" />
+                    alt="Aruna Elegance Saree" loading="lazy" decoding="async" width="600" height="800" />
                   <img src="lookbooks/Lookbook 1 (AVF)/collection/Azure Breeze/10-1011773 SR.webp"
                     class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-                    alt="Azure Breeze Saree" />
+                    alt="Azure Breeze Saree" loading="lazy" decoding="async" width="600" height="800" />
                 </div>
 
                 <div class="md:col-span-6 space-y-6">
@@ -1086,16 +1097,16 @@
                     BROCADE SAREES</span>
                   <img src="lookbooks/Lookbook 2 (VK)/collection/01/0O1A0710 - Copy.webp"
                     class="rolling-img active w-full h-full object-cover transition-opacity duration-700"
-                    alt="VK Saree 01" />
+                    alt="VK Saree 01" loading="lazy" decoding="async" width="600" height="800" />
                   <img src="lookbooks/Lookbook 2 (VK)/collection/02/0O1A0722 - Copy.webp"
                     class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-                    alt="VK Saree 02" />
+                    alt="VK Saree 02" loading="lazy" decoding="async" width="600" height="800" />
                   <img src="lookbooks/Lookbook 2 (VK)/collection/03/0O1A0735 - Copy.webp"
                     class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-                    alt="VK Saree 03" />
+                    alt="VK Saree 03" loading="lazy" decoding="async" width="600" height="800" />
                   <img src="lookbooks/Lookbook 2 (VK)/collection/04n/4-1/0O1A0749 - Copy.webp"
                     class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-                    alt="VK Saree 04" />
+                    alt="VK Saree 04" loading="lazy" decoding="async" width="600" height="800" />
                 </div>
 
                 <div class="md:col-span-6 space-y-6">
@@ -1145,16 +1156,16 @@
                     HIGH-FASHION DESIGNS</span>
                   <img src="lookbooks/Lookbook 3 (Bloom)/collection/AT38/Copy of 2W9A4134.webp"
                     class="rolling-img active w-full h-full object-cover transition-opacity duration-700"
-                    alt="Bloom AT38" />
+                    alt="Bloom AT38" loading="lazy" decoding="async" width="600" height="800" />
                   <img src="lookbooks/Lookbook 3 (Bloom)/collection/MIX - AT38 & V10G2096/Copy of 2W9A4079.webp"
                     class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-                    alt="Bloom MIX 1" />
+                    alt="Bloom MIX 1" loading="lazy" decoding="async" width="600" height="800" />
                   <img src="lookbooks/Lookbook 3 (Bloom)/collection/MIX - V10B1005 & V10D3057/Copy of 2W9A3934.webp"
                     class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-                    alt="Bloom MIX 2" />
+                    alt="Bloom MIX 2" loading="lazy" decoding="async" width="600" height="800" />
                   <img src="lookbooks/Lookbook 3 (Bloom)/collection/MIX - V10E3048 & V10B1095/Copy of 2W9A3446.webp"
                     class="rolling-img absolute inset-0 opacity-0 w-full h-full object-cover transition-opacity duration-700"
-                    alt="Bloom MIX 3" />
+                    alt="Bloom MIX 3" loading="lazy" decoding="async" width="600" height="800" />
                 </div>
 
                 <div class="md:col-span-6 space-y-6">
@@ -1201,6 +1212,7 @@
           <!-- Slide Controls -->
           <div class="flex justify-between items-center mt-8 pt-6 border-t border-outline-variant/40">
             <button
+              type="button"
               class="material-symbols-outlined p-3 border border-outline text-primary hover:bg-primary hover:text-white transition-colors"
               id="lb-prev-btn" aria-label="Previous Lookbook Slide">arrow_back</button>
             <div class="flex gap-2" id="lb-dots" role="tablist" aria-label="Lookbook slide navigation">
@@ -1211,6 +1223,7 @@
                 data-index="2" role="tab" aria-selected="false" aria-label="Go to Lookbook Slide 3"></button>
             </div>
             <button
+              type="button"
               class="material-symbols-outlined p-3 border border-outline text-primary hover:bg-primary hover:text-white transition-colors"
               id="lb-next-btn" aria-label="Next Lookbook Slide">arrow_forward</button>
           </div>
@@ -1245,10 +1258,12 @@
               Divisions</div>
             <div class="flex items-center gap-3">
               <button
+                type="button"
                 class="material-symbols-outlined p-3 border border-outline text-primary hover:bg-primary hover:text-white transition-colors duration-200 select-none"
                 id="gc-prev-btn" aria-label="Previous Group Entity">arrow_back</button>
               <div class="flex items-center gap-2 px-2" id="gc-dots"></div>
               <button
+                type="button"
                 class="material-symbols-outlined p-3 border border-outline text-primary hover:bg-primary hover:text-white transition-colors duration-200 select-none"
                 id="gc-next-btn" aria-label="Next Group Entity">arrow_forward</button>
             </div>
@@ -1303,7 +1318,7 @@
 
               <div class="pt-6 mt-6 border-t border-outline-variant/40">
                 <a href="https://wa.me/919974750009?text=Hello%20Rajiv%20Sheth,%20I%20am%20inquiring%20about%20Vishwa%20Fashions%20Pvt.%20Ltd.%20(Trading%20Division)."
-                  target="_blank"
+                  target="_blank" rel="noopener noreferrer"
                   class="w-full bg-surface-container text-primary hover:bg-primary hover:text-white px-4 py-3 text-xs font-label-caps flex items-center justify-center gap-2 transition-colors border border-outline-variant">
                   <span>Connect via WhatsApp</span>
                   <span class="material-symbols-outlined text-sm text-emerald-600 group-hover:text-white">chat</span>
@@ -1355,7 +1370,7 @@
 
               <div class="pt-6 mt-6 border-t border-outline-variant/40">
                 <a href="https://wa.me/919974750009?text=Hello%20Rajiv%20Sheth,%20I%20am%20inquiring%20about%20Vishwa%20Fab%20Weave%20Pvt%20Ltd%20(Yarn%20Twisting,%202-Ply%20%26%203-Ply%20Processing)."
-                  target="_blank"
+                  target="_blank" rel="noopener noreferrer"
                   class="w-full bg-surface-container text-primary hover:bg-primary hover:text-white px-4 py-3 text-xs font-label-caps flex items-center justify-center gap-2 transition-colors border border-outline-variant">
                   <span>Connect via WhatsApp</span>
                   <span class="material-symbols-outlined text-sm text-emerald-600 group-hover:text-white">chat</span>
@@ -1407,7 +1422,7 @@
 
               <div class="pt-6 mt-6 border-t border-outline-variant/40">
                 <a href="https://wa.me/919313772824?text=Hello%20Vishwa%20Sheth,%20I%20am%20inquiring%20about%20Lucky%20Spintex%20(Zari%20Covering%20Unit)."
-                  target="_blank"
+                  target="_blank" rel="noopener noreferrer"
                   class="w-full bg-surface-container text-primary hover:bg-primary hover:text-white px-4 py-3 text-xs font-label-caps flex items-center justify-center gap-2 transition-colors border border-outline-variant">
                   <span>Connect via WhatsApp</span>
                   <span class="material-symbols-outlined text-sm text-emerald-600 group-hover:text-white">chat</span>
@@ -1458,7 +1473,7 @@
 
               <div class="pt-6 mt-6 border-t border-outline-variant/40">
                 <a href="https://wa.me/919974750009?text=Hello%20Rajiv%20Sheth,%20I%20am%20inquiring%20about%20Mandhruv%20Fab%20Weave%20(Fabric%20Manufacturing%20Unit)."
-                  target="_blank"
+                  target="_blank" rel="noopener noreferrer"
                   class="w-full bg-surface-container text-primary hover:bg-primary hover:text-white px-4 py-3 text-xs font-label-caps flex items-center justify-center gap-2 transition-colors border border-outline-variant">
                   <span>Connect via WhatsApp</span>
                   <span class="material-symbols-outlined text-sm text-emerald-600 group-hover:text-white">chat</span>
@@ -1510,7 +1525,7 @@
 
               <div class="pt-6 mt-6 border-t border-outline-variant/40">
                 <a href="https://wa.me/919712991204?text=Hello%20Manisha%20Sheth,%20I%20am%20inquiring%20about%20Manisha%20Fashion%20(Fashion%20%26%20Apparel%20Unit)."
-                  target="_blank"
+                  target="_blank" rel="noopener noreferrer"
                   class="w-full bg-surface-container text-primary hover:bg-primary hover:text-white px-4 py-3 text-xs font-label-caps flex items-center justify-center gap-2 transition-colors border border-outline-variant">
                   <span>Connect via WhatsApp</span>
                   <span class="material-symbols-outlined text-sm text-emerald-600 group-hover:text-white">chat</span>
@@ -1676,7 +1691,7 @@
   </main>
 
   <!-- Sticky Floating WhatsApp Action Button -->
-  <a class="fixed bottom-8 right-8 z-50 flex flex-col items-end group" href="https://wa.me/919313772824" target="_blank"
+  <a class="fixed bottom-8 right-8 z-50 flex flex-col items-end group" href="https://wa.me/919313772824" target="_blank" rel="noopener noreferrer"
     aria-label="Contact via WhatsApp">
     <div
       class="hidden group-hover:block mb-2 bg-white text-primary px-4 py-2 text-[11px] font-label-caps shadow-xl border border-outline-variant">
@@ -1749,7 +1764,7 @@
               href="mailto:vishwa@vishwafashions.com">vishwa@vishwafashions.com</a>
             <a class="inline-flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors"
               href="https://wa.me/919313772824?text=Hello%20Vishwa%20Sheth,%20I%20would%20like%20to%20inquire%20about%20Vishwa%20Atelier%20textiles."
-              target="_blank" aria-label="WhatsApp Vishwa Sheth">
+              target="_blank" rel="noopener noreferrer" aria-label="WhatsApp Vishwa Sheth">
               <span>Connect via WhatsApp</span>
               <span class="material-symbols-outlined text-sm text-emerald-600">chat</span>
             </a>
@@ -1760,7 +1775,7 @@
               href="mailto:rajiv@vishwafashions.com">rajiv@vishwafashions.com</a>
             <a class="inline-flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors"
               href="https://wa.me/919974750009?text=Hello%20Rajiv%20Sheth,%20I%20would%20like%20to%20inquire%20about%20Vishwa%20Atelier%20textiles."
-              target="_blank" aria-label="WhatsApp Rajiv Sheth">
+              target="_blank" rel="noopener noreferrer" aria-label="WhatsApp Rajiv Sheth">
               <span>Connect via WhatsApp</span>
               <span class="material-symbols-outlined text-sm text-emerald-600">chat</span>
             </a>
@@ -1769,7 +1784,7 @@
             <div class="font-label-caps text-xs text-primary font-bold tracking-wider mb-1">Manisha Sheth — Creative Director (Apparel Wing)</div>
             <a class="inline-flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors"
               href="https://wa.me/919712991204?text=Hello%20Manisha%20Sheth,%20I%20would%20like%20to%20inquire%20about%20Vishwa%20Atelier%20textiles."
-              target="_blank" aria-label="WhatsApp Manisha Sheth">
+              target="_blank" rel="noopener noreferrer" aria-label="WhatsApp Manisha Sheth">
               <span>Connect via WhatsApp</span>
               <span class="material-symbols-outlined text-sm text-emerald-600">chat</span>
             </a>

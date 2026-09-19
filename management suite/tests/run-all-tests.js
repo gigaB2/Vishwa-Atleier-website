@@ -33,7 +33,10 @@ const scriptTests = [
   path.join(__dirname, 'verify-all-pages.test.js'),
   path.join(__dirname, 'dom-hardening.test.js'),
   path.join(__dirname, 'secret-hygiene.test.js'),
-  path.join(__dirname, 'backup-restore-safety.test.js')
+  path.join(__dirname, 'backup-restore-safety.test.js'),
+  path.join(__dirname, 'public-website-perf.test.js'),
+  path.join(__dirname, 'accessibility-seo.test.js'),
+  path.join(__dirname, 'security-headers.test.js')
 ];
 
 let failed = 0;
