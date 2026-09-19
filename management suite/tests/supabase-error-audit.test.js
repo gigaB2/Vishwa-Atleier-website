@@ -136,6 +136,17 @@ describe('Supabase Error Audit & Resilience Test Suite', () => {
     assert.strictEqual(timeoutResult.type, 'STATEMENT_TIMEOUT');
     assert.strictEqual(timeoutResult.reducePageSize, true);
 
+    // Test 544 (Supabase Database Timeout on cold start)
+    const dbTimeoutResult = handleErr({ code: 'DatabaseTimeout', status: 544, message: 'The connection to the database timed out' }, { table: 'vf_media_assets' });
+    assert.strictEqual(dbTimeoutResult.handled, true);
+    assert.strictEqual(dbTimeoutResult.type, 'STATEMENT_TIMEOUT');
+    assert.strictEqual(dbTimeoutResult.fallbackToKv, true);
+
+    // Test 522 (Cloudflare Gateway Timeout)
+    const cfTimeoutResult = handleErr({ status: 522, message: 'Cloudflare connection timeout' }, {});
+    assert.strictEqual(cfTimeoutResult.handled, true);
+    assert.strictEqual(cfTimeoutResult.type, 'STATEMENT_TIMEOUT');
+
     // Test PGRST301 (JWT Expired)
     const jwtResult = handleErr({ code: 'PGRST301', message: 'JWT expired' }, {});
     assert.strictEqual(jwtResult.handled, true);
@@ -143,7 +154,25 @@ describe('Supabase Error Audit & Resilience Test Suite', () => {
     assert.strictEqual(jwtResult.refreshAuth, true);
   });
 
-  test('2. Bi-directional Auth & User consolidation prevents account loss on empty or restricted remote payloads', () => {
+  test('2. Batch deduplication helper eliminates duplicate primary keys before PostgREST mutations', () => {
+    const { window } = createTestEnvironment();
+    const dedupe = window.VishwaSupabase.dedupeByConflictKey;
+    assert.strictEqual(typeof dedupe, 'function', 'dedupeByConflictKey must be exposed');
+
+    const duplicateLots = [
+      { id: 'LOT-100', supplier: 'Old Supplier', updated_at: '2026-09-18T10:00:00Z' },
+      { id: 'LOT-101', supplier: 'Supplier B', updated_at: '2026-09-19T10:00:00Z' },
+      { id: 'LOT-100', supplier: 'Latest Supplier', updated_at: '2026-09-19T12:00:00Z' }
+    ];
+
+    const sanitized = dedupe(duplicateLots, 'id');
+    assert.strictEqual(sanitized.length, 2, 'Must deduplicate to 2 items');
+    assert.strictEqual(sanitized[0].id, 'LOT-100');
+    assert.strictEqual(sanitized[0].supplier, 'Latest Supplier', 'Must preserve latest record');
+    assert.strictEqual(sanitized[1].id, 'LOT-101');
+  });
+
+  test('3. Bi-directional Auth & User consolidation prevents account loss on empty or restricted remote payloads', () => {
     const { window } = createTestEnvironment();
     const mergeDatasets = window.VishwaSupabase.mergeDatasets;
     assert.strictEqual(typeof mergeDatasets, 'function');
@@ -173,7 +202,7 @@ describe('Supabase Error Audit & Resilience Test Suite', () => {
     assert.strictEqual(authoritativeMerged[0].name, 'Master Admin Renamed');
   });
 
-  test('3. Schema defines all 33 relational tables matching client operations and health checks', () => {
+  test('4. Schema defines all 33 relational tables, storage buckets, and replica identities matching client operations', () => {
     const schemaPath = path.join(__dirname, '..', 'assets', 'supabase-schema.sql');
     const schemaContent = fs.readFileSync(schemaPath, 'utf8');
 
@@ -220,9 +249,13 @@ describe('Supabase Error Audit & Resilience Test Suite', () => {
         `Table public.${t} must be declared in supabase-schema.sql`
       );
     });
+
+    // Check storage bucket
+    assert.ok(schemaContent.includes('vf_media_assets'), 'Must configure vf_media_assets bucket');
+    assert.ok(schemaContent.includes('REPLICA IDENTITY FULL'), 'Must configure REPLICA IDENTITY FULL for realtime CDC');
   });
 
-  test('4. Config parser resilience across varied environment configurations', () => {
+  test('5. Config parser resilience across varied environment configurations', () => {
     const configPath = path.join(__dirname, '..', 'assets', 'config.js');
     const content = fs.readFileSync(configPath, 'utf8');
 

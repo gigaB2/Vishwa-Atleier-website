@@ -290,6 +290,23 @@
     return Array.from(map.values());
   }
 
+  // --- Deduplication Sanitizer (Ensures Single Primary Key per Batch Payload) ---
+  function dedupeByConflictKey(items, key = 'id') {
+    if (!Array.isArray(items) || items.length <= 1) return items || [];
+    const seen = new Set();
+    const result = [];
+    for (let i = items.length - 1; i >= 0; i--) {
+      const item = items[i];
+      if (!item || typeof item !== 'object') continue;
+      const idVal = item[key] !== undefined ? String(item[key]) : (item.email ? String(item.email) : JSON.stringify(item));
+      if (!seen.has(idVal)) {
+        seen.add(idVal);
+        result.unshift(item);
+      }
+    }
+    return result;
+  }
+
   // --- Universal PostgreSQL & PostgREST Error Interceptor & Safeguards ---
   function handlePostgresError(error, context = {}) {
     if (!error) return { handled: false, code: null, message: '' };
@@ -350,15 +367,17 @@
       };
     }
 
-    // Detect 57014 (Statement Timeout / Large Payload Query Cancellation)
-    if (code === '57014' || message.includes('statement timeout') || message.includes('canceling statement due to statement timeout') || status === 504) {
-      console.warn('[Supabase Safeguard: 57014 Statement Timeout on ' + (context.table || 'query') + '] Reducing batch page size.');
+    // Detect 57014 (Statement Timeout / Database Timeout / Gateway Timeout)
+    if (code === '57014' || code === 'DatabaseTimeout' || status === 544 || status === 522 || status === 504 || message.includes('statement timeout') || message.includes('canceling statement due to statement timeout') || message.includes('connection to the database timed out') || message.includes('DatabaseTimeout')) {
+      console.warn('[Supabase Safeguard: Timeout (' + (code || status) + ') on ' + (context.table || 'query') + '] Throttling query and falling back to cached state.');
       return {
         handled: true,
         type: 'STATEMENT_TIMEOUT',
-        code: '57014',
-        message: 'Query timeout encountered. Automatically throttling page size.',
+        code: code || String(status),
+        status: status,
+        message: 'Query or database connection timed out. Automatically throttling and using local cache.',
         reducePageSize: true,
+        fallbackToKv: true,
         retry: true
       };
     }
@@ -405,6 +424,28 @@
       message: message,
       status: status
     };
+  }
+
+  // Pre-flight batch deduplication helper to prevent 23505/21000 Postgres collisions
+  function dedupeByConflictKey(items, key = 'id') {
+    if (!Array.isArray(items)) return [];
+    const map = new Map();
+    items.forEach(item => {
+      if (!item) return;
+      const k = String(item[key] !== undefined && item[key] !== null ? item[key] : (getItemIdentifier(item) || ''));
+      if (!k) return;
+      if (!map.has(k)) {
+        map.set(k, { ...item });
+      } else {
+        const existing = map.get(k);
+        const existingTs = existing.updated_at || existing.updatedAt || existing.timestamp || existing.date || 0;
+        const currentTs = item.updated_at || item.updatedAt || item.timestamp || item.date || 0;
+        if (new Date(currentTs).getTime() >= new Date(existingTs).getTime()) {
+          map.set(k, { ...existing, ...item });
+        }
+      }
+    });
+    return Array.from(map.values());
   }
 
   // --- Universal Intelligent Merge Engine (Eliminates Concurrent Multi-User Overwrites) ---
@@ -10556,9 +10597,7 @@
               await VF_DB.staff.saveLoan(l);
             }
             summary.loans = st.loans.length;
-          }
-          if (st.logs && Array.isArray(st.logs)) {
-            for (const lg of st.logs) {
+               for (const lg of st.logs) {
               await VF_DB.staff.saveSalarySettlement(lg);
             }
             summary.settlements = st.logs.length;
@@ -10609,6 +10648,7 @@
     mergeYarnOrdersDatasets: mergeYarnOrdersDatasets,
     mergeDatasets: mergeDatasets,
     handlePostgresError: handlePostgresError,
+    dedupeByConflictKey: dedupeByConflictKey,
     recordDeletion: (key, itemId) => supabaseLocalStorage.recordDeletion(key, itemId),
     recordCostingDeletion: (key, itemId) => supabaseLocalStorage.recordCostingDeletion(key, itemId),
     unrecordDeletion: (key, itemId, itemData) => supabaseLocalStorage.unrecordDeletion(key, itemId, itemData),
@@ -10640,4 +10680,3 @@
     window.localStorage = supabaseLocalStorage;
   }
 })();
-
