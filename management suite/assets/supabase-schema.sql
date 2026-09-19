@@ -12,6 +12,26 @@
 BEGIN;
 
 -- ==============================================================================
+-- SECTION 0: SUPABASE MIGRATION TRACKING INFRASTRUCTURE
+-- ==============================================================================
+CREATE SCHEMA IF NOT EXISTS supabase_migrations;
+CREATE TABLE IF NOT EXISTS supabase_migrations.schema_migrations (
+    version TEXT NOT NULL PRIMARY KEY,
+    statements TEXT[],
+    name TEXT
+);
+ALTER TABLE supabase_migrations.schema_migrations ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    EXECUTE 'REVOKE ALL ON SCHEMA supabase_migrations FROM anon, authenticated';
+    EXECUTE 'REVOKE ALL ON ALL TABLES IN SCHEMA supabase_migrations FROM anon, authenticated';
+    EXECUTE 'GRANT ALL ON SCHEMA supabase_migrations TO postgres, service_role';
+    EXECUTE 'GRANT ALL ON ALL TABLES IN SCHEMA supabase_migrations TO postgres, service_role';
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+-- ==============================================================================
 -- SECTION 1: RELATIONAL & KV DATA TABLES (ALL 33 APPLICATION TABLES)
 -- ==============================================================================
 
