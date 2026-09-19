@@ -6,3 +6,13 @@ __pycache__/
 *.xlsx
 .playwright-mcp/
 node_modules/
+
+# Environment and sensitive credential files
+.env
+.env.local
+.env.development
+.env.production
+!.env.example
+*.pem
+*.key
+credentials.json

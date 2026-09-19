@@ -7723,13 +7723,13 @@
 
         const customerDisplay = s.customerName 
           ? `<div style="line-height: 1.35;">
-              <div style="font-weight: 600; color: var(--fg); white-space: nowrap;">${s.customerName}</div>
-              ${s.agentName ? `<div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px; white-space: nowrap; display: flex; align-items: center; gap: 4px;"><i class="fas fa-user-tie" style="font-size: 0.68rem; color: var(--accent); opacity: 0.9;"></i><span>${s.agentName}</span></div>` : ''}
+              <div style="font-weight: 600; color: var(--fg); white-space: nowrap;">${escapeHtml(s.customerName)}</div>
+              ${s.agentName ? `<div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px; white-space: nowrap; display: flex; align-items: center; gap: 4px;"><i class="fas fa-user-tie" style="font-size: 0.68rem; color: var(--accent); opacity: 0.9;"></i><span>${escapeHtml(s.agentName)}</span></div>` : ''}
             </div>`
           : '-';
 
         tr.innerHTML = `
-          <td style="white-space: nowrap;"><strong>${s.challanNo}</strong></td>
+          <td style="white-space: nowrap;"><strong>${escapeHtml(s.challanNo || '')}</strong></td>
           <td style="white-space: nowrap;">${formatDate(s.date)}</td>
           <td style="white-space: nowrap;">${customerDisplay}</td>
           <td style="min-width: 140px;">${boriDisplay}</td>
@@ -7746,29 +7746,29 @@
           <td style="white-space: nowrap;"><strong style="color: var(--fg);">₹${grandTotalVal.toFixed(2)}</strong></td>
           <td class="actions-cell" style="white-space: nowrap;">
             <div class="action-menu-container">
-              <button type="button" class="action-menu-btn" onclick="event.stopPropagation(); toggleActionMenu(this, 'sale-${s.id}')" title="Actions" aria-label="Actions" aria-expanded="false">
+              <button type="button" class="action-menu-btn" data-target="sale-${escapeHtml(s.id)}" onclick="event.stopPropagation(); toggleActionMenu(this, this.getAttribute('data-target'))" title="Actions" aria-label="Actions" aria-expanded="false">
                 <span></span>
                 <span></span>
                 <span></span>
               </button>
-              <div class="action-menu-dropdown" id="action-dropdown-sale-${s.id}">
-                <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); printSaleBill('${s.id}')">
+              <div class="action-menu-dropdown" id="action-dropdown-sale-${escapeHtml(s.id)}">
+                <button type="button" class="action-dropdown-item" data-id="${escapeHtml(s.id)}" onclick="event.stopPropagation(); closeAllActionMenus(); printSaleBill(this.getAttribute('data-id'))">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                   <span>Print Bill</span>
                 </button>
-                <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); printSaleChallan('${s.id}')">
+                <button type="button" class="action-dropdown-item" data-id="${escapeHtml(s.id)}" onclick="event.stopPropagation(); closeAllActionMenus(); printSaleChallan(this.getAttribute('data-id'))">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 2-2 2v16a2 2 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                   <span>Print Challan</span>
                 </button>
-                <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); printSalePackingSlip('${s.id}')">
+                <button type="button" class="action-dropdown-item" data-id="${escapeHtml(s.id)}" onclick="event.stopPropagation(); closeAllActionMenus(); printSalePackingSlip(this.getAttribute('data-id'))">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                   <span>Packing Slip</span>
                 </button>
-                <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); editSalesLog('${s.id}')">
+                <button type="button" class="action-dropdown-item" data-id="${escapeHtml(s.id)}" onclick="event.stopPropagation(); closeAllActionMenus(); editSalesLog(this.getAttribute('data-id'))">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 1-2 2v14a2 2 0 0 1 2 2h14a2 2 0 0 1 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   <span>Edit</span>
                 </button>
-                <button type="button" class="action-dropdown-item delete" onclick="event.stopPropagation(); closeAllActionMenus(); deleteSalesLog('${s.id}')">
+                <button type="button" class="action-dropdown-item delete" data-id="${escapeHtml(s.id)}" onclick="event.stopPropagation(); closeAllActionMenus(); deleteSalesLog(this.getAttribute('data-id'))">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                   <span>Delete</span>
                 </button>
@@ -8210,7 +8210,7 @@
           s.boriNo;
 
         return `
-          <div class="yarn-mobile-card" id="sales-card-${s.id}">
+          <div class="yarn-mobile-card" id="sales-card-${escapeHtml(s.id)}">
             <!-- Move 1: Header -->
             <div class="mobile-card-header">
               <div class="mobile-card-title-group">
@@ -8264,7 +8264,7 @@
             </div>
 
             <!-- Move 4: Progressive Disclosure Accordion Drawer -->
-            <div class="mobile-card-drawer ${isExpanded ? 'is-expanded' : ''}" id="sales-drawer-${s.id}">
+            <div class="mobile-card-drawer ${isExpanded ? 'is-expanded' : ''}" id="sales-drawer-${escapeHtml(s.id)}">
               <div class="mobile-card-drawer-grid">
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">GST Amount</span>
@@ -8287,21 +8287,21 @@
 
             <!-- Move 6: Mobile Card Actions Bar -->
             <div class="mobile-card-actions">
-              <button type="button" class="mobile-toggle-btn ${isExpanded ? 'is-expanded' : ''}" id="sales-toggle-btn-${s.id}" onclick="toggleSalesCardDetails('${s.id}')">
+              <button type="button" class="mobile-toggle-btn ${isExpanded ? 'is-expanded' : ''}" id="sales-toggle-btn-${escapeHtml(s.id)}" data-id="${escapeHtml(s.id)}" onclick="toggleSalesCardDetails(this.getAttribute('data-id'))">
                 <span>${isExpanded ? 'Hide' : 'Details'}</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
 
               <div class="mobile-action-btn-group">
-                <button type="button" class="mobile-btn-pill" onclick="printSaleBill('${s.id}')" title="Print Bill">
+                <button type="button" class="mobile-btn-pill" data-id="${escapeHtml(s.id)}" onclick="printSaleBill(this.getAttribute('data-id'))" title="Print Bill">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                   <span>Bill</span>
                 </button>
-                <button type="button" class="mobile-btn-pill" onclick="printSaleChallan('${s.id}')" title="Print Challan">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <button type="button" class="mobile-btn-pill" data-id="${escapeHtml(s.id)}" onclick="printSaleChallan(this.getAttribute('data-id'))" title="Print Challan">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                   <span>Challan</span>
                 </button>
-                <button type="button" class="mobile-btn-pill primary" onclick="openSalesMobileActionSheet('${s.id}')" title="More Actions">
+                <button type="button" class="mobile-btn-pill primary" data-id="${escapeHtml(s.id)}" onclick="openSalesMobileActionSheet(this.getAttribute('data-id'))" title="More Actions">
                   <span>•••</span>
                 </button>
               </div>

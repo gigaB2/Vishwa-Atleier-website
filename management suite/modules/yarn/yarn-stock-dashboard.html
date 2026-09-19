@@ -6718,17 +6718,17 @@
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><strong>${groupBy === 'lot' ? '-' : item.productName}</strong></td>
-          <td>${groupBy === 'product' ? '-' : `<span class="badge" style="font-size:0.8rem;">${item.lotNo}</span>`}</td>
-          <td>${groupBy === 'product' || groupBy === 'lot' ? '-' : item.color}</td>
-          <td>${groupBy === 'product' || groupBy === 'lot' ? '-' : `${item.denier}D`}</td>
-          <td>${groupBy === 'product' || groupBy === 'lot' ? '-' : item.tpm}</td>
-          <td>${groupBy === 'product' || groupBy === 'lot' ? '-' : item.twist}</td>
+          <td><strong>${groupBy === 'lot' ? '-' : escapeHtml(item.productName)}</strong></td>
+          <td>${groupBy === 'product' ? '-' : `<span class="badge" style="font-size:0.8rem;">${escapeHtml(item.lotNo)}</span>`}</td>
+          <td>${groupBy === 'product' || groupBy === 'lot' ? '-' : escapeHtml(item.color)}</td>
+          <td>${groupBy === 'product' || groupBy === 'lot' ? '-' : `${escapeHtml(item.denier)}D`}</td>
+          <td>${groupBy === 'product' || groupBy === 'lot' ? '-' : escapeHtml(item.tpm)}</td>
+          <td>${groupBy === 'product' || groupBy === 'lot' ? '-' : escapeHtml(item.twist)}</td>
           <td><strong style="color: var(--accent);">${item.boriCount}</strong> Boris/Boxes</td>
           <td>${item.remainingRolls}</td>
           <td><strong style="color: #22c55e;">${item.remainingQty.toFixed(2)} Kg</strong></td>
           <td style="text-align: center; white-space: nowrap; min-width: 110px;">
-            <button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openStockSellPrompt('${safeKey}')" style="background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; padding: 4px 14px; font-weight: 600;">
+            <button type="button" class="btn btn-primary btn-sm" data-key="${escapeHtml(item.groupKey)}" onclick="event.stopPropagation(); openStockSellPrompt(this.getAttribute('data-key'))" style="background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; padding: 4px 14px; font-weight: 600;">
               Sell
             </button>
           </td>
@@ -7481,7 +7481,7 @@
               </div>
               <div class="mobile-kv-item">
                 <span class="mobile-kv-label">TPM / Twist</span>
-                <span class="mobile-kv-val font-mono">${item.tpm || '-'} / ${item.twist || '-'}</span>
+                <span class="mobile-kv-val font-mono">${escapeHtml(item.tpm || '-')} / ${escapeHtml(item.twist || '-')}</span>
               </div>
               <div class="mobile-kv-item">
                 <span class="mobile-kv-label">Total Boxes Count</span>
@@ -7489,7 +7489,7 @@
               </div>
               <div class="mobile-kv-item">
                 <span class="mobile-kv-label">Group By</span>
-                <span class="mobile-kv-val" style="text-transform: capitalize;">${groupBy}</span>
+                <span class="mobile-kv-val" style="text-transform: capitalize;">${escapeHtml(groupBy)}</span>
               </div>
             </div>
 
@@ -7498,7 +7498,7 @@
               <div class="mobile-card-drawer-grid">
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">Division</span>
-                  <span class="mobile-kv-val" style="text-transform: capitalize;">${activeDivision}</span>
+                  <span class="mobile-kv-val" style="text-transform: capitalize;">${escapeHtml(activeDivision)}</span>
                 </div>
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">Avg Weight / Box</span>
@@ -7515,7 +7515,7 @@
               </button>
 
               <div class="mobile-action-btn-group">
-                <button type="button" class="mobile-btn-pill primary" onclick="openStockSellPrompt('${safeKey}')" style="min-width: 90px;">
+                <button type="button" class="mobile-btn-pill primary" data-key="${escapeHtml(item.groupKey)}" onclick="openStockSellPrompt(this.getAttribute('data-key'))" style="min-width: 90px;">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
                   <span>Sell Batch</span>
                 </button>

@@ -40,7 +40,11 @@ function setupTestEnvironment(initialLocalStorage = {}) {
     localStorage: mockLocalStorage,
     navigator: { onLine: true },
     console: console,
-    setTimeout: (fn) => setTimeout(fn, 0),
+    setTimeout: (fn, delay) => {
+      const t = setTimeout(fn, delay !== undefined ? Math.min(delay, 0) : 0);
+      if (t && typeof t.unref === 'function') t.unref();
+      return t;
+    },
     clearTimeout: () => {},
     setInterval: () => ({ unref: () => {} }),
     clearInterval: () => {},

@@ -7,7 +7,11 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node \"management suite/tests/run-all-tests.js\"",
+    "test:unit": "node --test \"management suite/tests/fy-engine.test.js\" \"management suite/tests/costing-math.test.js\" \"management suite/tests/presence-engine.test.js\" \"management suite/tests/sync-engine.test.js\"",
+    "test:integration": "node --test \"management suite/tests/yarn-ledger-gr.test.js\" \"management suite/tests/yarn-ledger-regression.test.js\" \"management suite/tests/yarn-concurrency.test.js\" \"management suite/tests/weaving-orders-sync.test.js\" \"management suite/tests/design-library-sync-delete.test.js\" \"management suite/tests/test-postgres-error-safeguards.js\" \"management suite/tests/auth-settings-sync.test.js\" \"management suite/tests/relational-migration-e2e.test.js\"",
+    "test:e2e": "node --test \"management suite/tests/characterization-e2e.test.js\"",
+    "test:all": "node \"management suite/tests/run-all-tests.js\" && node \"management suite/tests/vf-db-service.test.js\" && node \"management suite/tests/verify-all-pages.test.js\""
   },
   "repository": {
     "type": "git",

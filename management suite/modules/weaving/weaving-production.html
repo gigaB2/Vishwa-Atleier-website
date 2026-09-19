@@ -2750,6 +2750,15 @@
 
 
     <script>
+        const escapeHtml = window.escapeHtml || (text => (text === null || text === undefined) ? '' : String(text).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])));
+        const sanitizeUrl = window.sanitizeUrl || ((url, allowData) => {
+            if (!url) return '';
+            const trimmed = String(url).trim();
+            if (/^(?:javascript|vbscript):/i.test(trimmed)) return 'about:blank';
+            if (/^data:/i.test(trimmed) && !allowData) return 'about:blank';
+            return trimmed;
+        });
+
         function getTodayDate() {
             const d = new Date();
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -3393,10 +3402,10 @@
             const badgeStyle = 'font-size: 0.78rem; color: var(--muted); background: var(--bg); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 0.3rem;';
             let badgesHtml = '';
             if (design.createdDate) {
-                badgesHtml += `<span style="${badgeStyle}"><span>📅</span><span>Created: ${design.createdDate}</span></span>`;
+                badgesHtml += `<span style="${badgeStyle}"><span>📅</span><span>Created: ${escapeHtml(design.createdDate)}</span></span>`;
             }
             if (design.designer) {
-                badgesHtml += `<span style="${badgeStyle}"><span>✏️</span><span>Designer: ${design.designer}</span></span>`;
+                badgesHtml += `<span style="${badgeStyle}"><span>✏️</span><span>Designer: ${escapeHtml(design.designer)}</span></span>`;
             }
             if (design.variants && design.variants.length > 1) {
                 badgesHtml += `<span style="font-size: 0.78rem; color: var(--accent); background: rgba(139,92,246,0.08); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(139,92,246,0.15); display: inline-flex; align-items: center; gap: 0.3rem;">${design.variants.length} variants</span>`;
@@ -3432,7 +3441,7 @@
                 <th style="padding: 0.75rem 1rem; font-weight: 700; color: var(--fg); background: var(--bg); border-bottom: 1.5px solid var(--border);">Technical Spec</th>
                 ${variants.map(v => `
                     <th style="padding: 0.75rem 1rem; font-weight: 700; color: var(--accent); background: var(--bg); border-bottom: 1.5px solid var(--border); min-width: 100px;">
-                        ${v.code || design.code || ''}
+                        ${escapeHtml(v.code || design.code || '')}
                     </th>
                 `).join('')}
             `;
@@ -3575,11 +3584,13 @@
                     if (tabName === 'preview' && hasPreview) {
                         const previewBtn = document.getElementById('btn-tab-preview');
                         if (previewBtn) previewBtn.classList.add('active');
-                        imgContainer.innerHTML = `<img src="${design.originalImage || design.previewImage}" alt="Fabric Preview">`;
+                        const safeSrc = sanitizeUrl(design.originalImage || design.previewImage, true);
+                        imgContainer.innerHTML = `<img src="${escapeHtml(safeSrc)}" alt="Fabric Preview">`;
                     } else if (tabName === 'spec' && hasSpec) {
                         const specBtn = document.getElementById('btn-tab-spec');
                         if (specBtn) specBtn.classList.add('active');
-                        imgContainer.innerHTML = `<img src="${design.specImage}" alt="Specification Card">`;
+                        const safeSpec = sanitizeUrl(design.specImage, true);
+                        imgContainer.innerHTML = `<img src="${escapeHtml(safeSpec)}" alt="Specification Card">`;
                     }
                 };
 
@@ -3864,11 +3875,11 @@
             if (dupResult.isDuplicate) {
                 if (errorDiv) {
                     if (dupResult.isReserved) {
-                        errorDiv.innerHTML = `⚠️ <strong>RESERVED KEYWORD REJECTED!</strong><br>"${serial}" is a system reserved status and cannot be used as a Taka serial number.`;
+                        errorDiv.innerHTML = `⚠️ <strong>RESERVED KEYWORD REJECTED!</strong><br>"${escapeHtml(serial)}" is a system reserved status and cannot be used as a Taka serial number.`;
                     } else {
-                        const loomInfo = dupResult.machineNumber ? ` on Loom ${dupResult.machineNumber}` : '';
+                        const loomInfo = dupResult.machineNumber ? ` on Loom ${escapeHtml(dupResult.machineNumber)}` : '';
                         const assignedSerial = dupResult.existingSerial || serial;
-                        errorDiv.innerHTML = `⚠️ <strong>DUPLICATE TAKA SERIAL REJECTED!</strong><br>Serial "${serial}" (or "${assignedSerial}") is ALREADY ASSIGNED${loomInfo}. Each Taka serial number must be globally unique across all looms. Creating duplicate rolls or merging into existing Takas is strictly prohibited!`;
+                        errorDiv.innerHTML = `⚠️ <strong>DUPLICATE TAKA SERIAL REJECTED!</strong><br>Serial "${escapeHtml(serial)}" (or "${escapeHtml(assignedSerial)}") is ALREADY ASSIGNED${loomInfo}. Each Taka serial number must be globally unique across all looms. Creating duplicate rolls or merging into existing Takas is strictly prohibited!`;
                     }
                     errorDiv.style.display = 'block';
                 }

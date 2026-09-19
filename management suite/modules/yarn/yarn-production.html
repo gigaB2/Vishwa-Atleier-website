@@ -7974,41 +7974,41 @@
 
         tr.innerHTML = `
           <td style="text-align: center; vertical-align: middle; ${borderStyle}">
-            <input type="checkbox" class="prod-select-checkbox" value="${l.id}" ${isChecked ? 'checked' : ''} onchange="onProdCheckboxChange(this)" style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;">
+            <input type="checkbox" class="prod-select-checkbox" value="${escapeHtml(l.id)}" ${isChecked ? 'checked' : ''} onchange="onProdCheckboxChange(this)" style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;">
           </td>
           <td>${formatDate(l.date)}</td>
-          <td>${isSold ? `<strong style="text-decoration: line-through; color: var(--muted);">${l.boriNo}</strong> <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>` : `<strong>${l.boriNo}</strong>`}</td>
-          <td>${displayProdName}</td>
+          <td>${isSold ? `<strong style="text-decoration: line-through; color: var(--muted);">${escapeHtml(l.boriNo)}</strong> <span style="font-size:0.72rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:1px 5px; border-radius:4px; font-weight:600; margin-left:4px; white-space:nowrap;">Sold</span>` : `<strong>${escapeHtml(l.boriNo)}</strong>`}</td>
+          <td>${escapeHtml(displayProdName)}</td>
           <td style="vertical-align: middle;">${lotDisplay}</td>
-          <td>${dyn.color || l.color}</td>
-          <td>${(dyn.denier || l.denier)}D</td>
-          <td>${dyn.tpm || l.tpm}</td>
-          <td>${dyn.twist || l.twist}</td>
+          <td>${escapeHtml(dyn.color || l.color || '')}</td>
+          <td>${escapeHtml(dyn.denier || l.denier || '')}D</td>
+          <td>${escapeHtml(dyn.tpm || l.tpm || '')}</td>
+          <td>${escapeHtml(dyn.twist || l.twist || '')}</td>
           <td>${rollsDisplay}</td>
           <td>${formattedGross}</td>
           <td>${formattedTare}</td>
           <td>${qtyDisplay}</td>
           <td class="actions-cell">
             <div class="action-menu-container">
-              <button type="button" class="action-menu-btn" onclick="event.stopPropagation(); toggleActionMenu(this, 'prod-${l.id}')" title="Actions" aria-label="Actions" aria-expanded="false">
+              <button type="button" class="action-menu-btn" data-target="prod-${escapeHtml(l.id)}" onclick="event.stopPropagation(); toggleActionMenu(this, this.getAttribute('data-target'))" title="Actions" aria-label="Actions" aria-expanded="false">
                 <span></span>
                 <span></span>
                 <span></span>
               </button>
-              <div class="action-menu-dropdown" id="action-dropdown-prod-${l.id}">
-                <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); printProductionPackingSlip('${l.id}')">
+              <div class="action-menu-dropdown" id="action-dropdown-prod-${escapeHtml(l.id)}">
+                <button type="button" class="action-dropdown-item" data-id="${escapeHtml(l.id)}" onclick="event.stopPropagation(); closeAllActionMenus(); printProductionPackingSlip(this.getAttribute('data-id'))">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                   <span>Packing Slip</span>
                 </button>
-                <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); editProductionLog('${l.id}')">
+                <button type="button" class="action-dropdown-item" data-id="${escapeHtml(l.id)}" onclick="event.stopPropagation(); closeAllActionMenus(); editProductionLog(this.getAttribute('data-id'))">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   <span>Edit</span>
                 </button>
-                <button type="button" class="action-dropdown-item" onclick="event.stopPropagation(); closeAllActionMenus(); repeatProductionLog('${l.id}')">
+                <button type="button" class="action-dropdown-item" data-id="${escapeHtml(l.id)}" onclick="event.stopPropagation(); closeAllActionMenus(); repeatProductionLog(this.getAttribute('data-id'))">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
                   <span>Repeat</span>
                 </button>
-                <button type="button" class="action-dropdown-item delete" onclick="event.stopPropagation(); closeAllActionMenus(); deleteProductionLog('${l.id}')">
+                <button type="button" class="action-dropdown-item delete" data-id="${escapeHtml(l.id)}" onclick="event.stopPropagation(); closeAllActionMenus(); deleteProductionLog(this.getAttribute('data-id'))">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                   <span>Delete</span>
                 </button>
@@ -8770,11 +8770,11 @@
         const lotStyle = getLotColorStyle(lotKey, allLots);
 
         return `
-          <div class="yarn-mobile-card ${isSold ? 'is-sold' : 'is-instock'} ${isChecked ? 'is-selected' : ''}" id="prod-card-${l.id}">
+          <div class="yarn-mobile-card ${isSold ? 'is-sold' : 'is-instock'} ${isChecked ? 'is-selected' : ''}" id="prod-card-${escapeHtml(l.id)}">
             <!-- Move 1: Header -->
             <div class="mobile-card-header">
               <label class="mobile-card-select-wrap" onclick="event.stopPropagation();" title="Select Box for Batch Sell or Packing Slip">
-                <input type="checkbox" class="prod-select-checkbox" value="${l.id}" ${isChecked ? 'checked' : ''} onchange="onProdCheckboxChange(this)">
+                <input type="checkbox" class="prod-select-checkbox" value="${escapeHtml(l.id)}" ${isChecked ? 'checked' : ''} onchange="onProdCheckboxChange(this)">
               </label>
               <div class="mobile-card-title-group">
                 <div class="mobile-card-meta">
@@ -8822,7 +8822,7 @@
               </div>
               <div class="mobile-kv-item">
                 <span class="mobile-kv-label">Denier / Count</span>
-                <span class="mobile-kv-val font-mono">${(dyn.denier || l.denier)}D</span>
+                <span class="mobile-kv-val font-mono">${escapeHtml(dyn.denier || l.denier || '')}D</span>
               </div>
               <div class="mobile-kv-item">
                 <span class="mobile-kv-label">Color</span>
@@ -8830,12 +8830,12 @@
               </div>
               <div class="mobile-kv-item">
                 <span class="mobile-kv-label">TPM / Twist</span>
-                <span class="mobile-kv-val font-mono">${dyn.tpm || l.tpm || '-'} / ${dyn.twist || l.twist || '-'}</span>
+                <span class="mobile-kv-val font-mono">${escapeHtml(dyn.tpm || l.tpm || '-')} / ${escapeHtml(dyn.twist || l.twist || '-')}</span>
               </div>
             </div>
 
             <!-- Move 4: Progressive Disclosure Accordion Drawer -->
-            <div class="mobile-card-drawer ${isExpanded ? 'is-expanded' : ''}" id="prod-drawer-${l.id}">
+            <div class="mobile-card-drawer ${isExpanded ? 'is-expanded' : ''}" id="prod-drawer-${escapeHtml(l.id)}">
               <div class="mobile-card-drawer-grid">
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">Total Rolls</span>
@@ -8851,28 +8851,28 @@
                 </div>
                 <div class="mobile-kv-item">
                   <span class="mobile-kv-label">Division</span>
-                  <span class="mobile-kv-val" style="text-transform: capitalize;">${activeDivision}</span>
+                  <span class="mobile-kv-val" style="text-transform: capitalize;">${escapeHtml(activeDivision)}</span>
                 </div>
               </div>
             </div>
 
             <!-- Move 6: Mobile Card Actions Bar -->
             <div class="mobile-card-actions">
-              <button type="button" class="mobile-toggle-btn ${isExpanded ? 'is-expanded' : ''}" id="prod-toggle-btn-${l.id}" onclick="toggleProdCardDetails('${l.id}')">
+              <button type="button" class="mobile-toggle-btn ${isExpanded ? 'is-expanded' : ''}" id="prod-toggle-btn-${escapeHtml(l.id)}" data-id="${escapeHtml(l.id)}" onclick="toggleProdCardDetails(this.getAttribute('data-id'))">
                 <span>${isExpanded ? 'Hide' : 'Details'}</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
 
               <div class="mobile-action-btn-group">
-                <button type="button" class="mobile-btn-pill" onclick="printProductionPackingSlip('${l.id}')" title="Packing Slip">
+                <button type="button" class="mobile-btn-pill" data-id="${escapeHtml(l.id)}" onclick="printProductionPackingSlip(this.getAttribute('data-id'))" title="Packing Slip">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                   <span>Slip</span>
                 </button>
-                <button type="button" class="mobile-btn-pill" onclick="editProductionLog('${l.id}')" title="Edit Entry">
+                <button type="button" class="mobile-btn-pill" data-id="${escapeHtml(l.id)}" onclick="editProductionLog(this.getAttribute('data-id'))" title="Edit Entry">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   <span>Edit</span>
                 </button>
-                <button type="button" class="mobile-btn-pill primary" onclick="openProdMobileActionSheet('${l.id}')" title="More Actions">
+                <button type="button" class="mobile-btn-pill primary" data-id="${escapeHtml(l.id)}" onclick="openProdMobileActionSheet(this.getAttribute('data-id'))" title="More Actions">
                   <span>•••</span>
                 </button>
               </div>

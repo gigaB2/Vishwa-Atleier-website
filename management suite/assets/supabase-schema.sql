@@ -157,12 +157,17 @@ CREATE OR REPLACE FUNCTION public.vf_issue_yarn_boxes(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, auth, pg_temp
 AS $$
 DECLARE
     v_updated_count INT := 0;
     v_box_rec RECORD;
 BEGIN
+    -- Authorization guard
+    IF NOT (auth.role() = 'service_role' OR coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), (auth.jwt() -> 'user_metadata' ->> 'role'), 'operator') IN ('admin', 'operator', 'editor')) THEN
+        RAISE EXCEPTION 'Unauthorized: Caller does not possess operator permissions';
+    END IF;
+
     IF p_box_ids IS NULL OR array_length(p_box_ids, 1) IS NULL THEN
         RETURN jsonb_build_object('success', false, 'error', 'No box IDs provided');
     END IF;
@@ -273,13 +278,18 @@ CREATE OR REPLACE FUNCTION public.vf_bulk_delete_entities(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, auth, pg_temp
 AS $$
 DECLARE
     v_deleted_count INT := 0;
     v_sql TEXT;
     v_col TEXT;
 BEGIN
+    -- Authorization guard: Admin only
+    IF NOT (auth.role() = 'service_role' OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin' OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin') THEN
+        RAISE EXCEPTION 'Unauthorized: vf_bulk_delete_entities requires administrator privileges';
+    END IF;
+
     IF p_table IS NULL OR p_ids IS NULL OR array_length(p_ids, 1) IS NULL THEN
         RETURN jsonb_build_object('success', false, 'deleted_count', 0, 'error', 'Invalid arguments');
     END IF;
@@ -407,12 +417,17 @@ CREATE OR REPLACE FUNCTION public.vf_record_weft_issues(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, auth, pg_temp
 AS $$
 DECLARE
     issue_record JSONB;
     inserted_count INT := 0;
 BEGIN
+    -- Authorization guard
+    IF NOT (auth.role() = 'service_role' OR coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), (auth.jwt() -> 'user_metadata' ->> 'role'), 'operator') IN ('admin', 'operator', 'editor')) THEN
+        RAISE EXCEPTION 'Unauthorized: Caller does not possess operator permissions';
+    END IF;
+
     FOR issue_record IN SELECT * FROM jsonb_array_elements(p_issues)
     LOOP
         INSERT INTO public.vf_weft_issues (
@@ -1163,6 +1178,20 @@ CREATE TABLE IF NOT EXISTS public.vf_auth_users (
 CREATE INDEX IF NOT EXISTS idx_vf_auth_users_email ON public.vf_auth_users(lower(email));
 CREATE INDEX IF NOT EXISTS idx_vf_auth_users_role ON public.vf_auth_users(role);
 CREATE INDEX IF NOT EXISTS idx_vf_auth_users_updated_at ON public.vf_auth_users(updated_at DESC);
+
+-- Safe profile view excluding pass_hash
+CREATE OR REPLACE VIEW public.vf_auth_user_profiles AS
+SELECT 
+    id,
+    email,
+    name,
+    role,
+    permissions,
+    is_active,
+    metadata,
+    created_at,
+    updated_at
+FROM public.vf_auth_users;
 
 ALTER TABLE public.vf_auth_users ENABLE ROW LEVEL SECURITY;
 

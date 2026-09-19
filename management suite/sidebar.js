@@ -3067,17 +3067,17 @@
       <div style="background: var(--surface, #1e293b); border: 1px solid var(--border, #334155); border-top: 4px solid #ef4444; border-radius: 16px; padding: 1.75rem; width: 100%; max-width: 440px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); color: var(--fg, #f8fafc); font-family: var(--font-body), sans-serif; position: relative;">
         <button type="button" class="cut-beam-close-btn" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.25rem; cursor: pointer; color: var(--muted, #94a3b8);">&times;</button>
         <h3 style="margin: 0 0 0.5rem 0; font-size: 1.15rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #ef4444; font-family: var(--font-display), sans-serif; display: flex; align-items: center; gap: 0.5rem;">
-          <i class="ri-scissors-cut-line" style="font-size: 1.3rem;"></i> Cut Beam #${beamNumber || ''}
+          <i class="ri-scissors-cut-line" style="font-size: 1.3rem;"></i> Cut Beam #${escapeHtml(beamNumber || '')}
         </h3>
         <p style="margin: 0 0 1.25rem 0; font-size: 0.85rem; color: var(--muted, #94a3b8); line-height: 1.4;">
-          Unloading beam from <strong>${mDisp}</strong>. Please enter the cut date and reason for cut.
+          Unloading beam from <strong>${escapeHtml(mDisp)}</strong>. Please enter the cut date and reason for cut.
         </p>
           <form class="cut-beam-form">
           <div style="margin-bottom: 1rem;">
             <label style="display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted, #94a3b8); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem;">Date of Cut</label>
             <input type="date" class="cut-beam-date-input" value="${today}" min="${lastProdDate || ''}" max="${tomorrowStr}" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border, #334155); background: rgba(0,0,0,0.2); color: var(--fg, #f8fafc); font-size: 0.9rem; outline: none; box-sizing: border-box; color-scheme: dark;">
             <div style="font-size: 0.75rem; color: var(--muted, #94a3b8); margin-top: 0.35rem; font-weight: 600;">
-              Last Production Date: <span style="color: var(--fg, #f8fafc); font-weight: 700;">${formattedLastProdDate}</span>
+              Last Production Date: <span style="color: var(--fg, #f8fafc); font-weight: 700;">${escapeHtml(formattedLastProdDate)}</span>
             </div>
             <div class="cut-beam-date-warning" style="display: none; font-size: 0.72rem; color: #ef4444; font-weight: 700; margin-top: 0.35rem; background: rgba(239, 68, 68, 0.1); padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.3);"></div>
           </div>
@@ -4216,8 +4216,8 @@
                 <button type="button" class="close-btn" onclick="document.getElementById('global-beamcard-overlay').style.display='none'">&times;</button>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                     <div>
-                        <h2 style="margin: 0; font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 1.3rem;">BEAM CARD #${beam.beamNumber}</h2>
-                        <p style="color: var(--muted); font-size: 0.85rem; margin: 0.25rem 0 0 0;">${beam.quality || ''} | ${beam.code || ''} / ${beam.color || ''}</p>
+                        <h2 style="margin: 0; font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 1.3rem;">BEAM CARD #${escapeHtml(beam.beamNumber)}</h2>
+                        <p style="color: var(--muted); font-size: 0.85rem; margin: 0.25rem 0 0 0;">${escapeHtml(beam.quality || '')} | ${escapeHtml(beam.code || '')} / ${escapeHtml(beam.color || '')}</p>
                     </div>
                 </div>
                 
@@ -4225,11 +4225,11 @@
                 <div style="display: grid; grid-template-columns: repeat(${isCompleted ? 6 : 5}, 1fr); gap: 0.75rem; margin-bottom: 2rem;">
                     <div class="card" style="background: var(--bg); margin: 0; padding: 1rem; border: 1px solid var(--border); border-radius: 12px;">
                         <div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">ENDS</div>
-                        <div style="font-size: 1.25rem; font-weight: 700; font-family: monospace;">${beam.ends}</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; font-family: monospace;">${escapeHtml(beam.ends)}</div>
                     </div>
                     <div class="card" style="background: var(--bg); margin: 0; padding: 1rem; border: 1px solid var(--border); border-radius: 12px;">
                         <div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">INITIAL METERS</div>
-                        <div style="font-size: 1.25rem; font-weight: 700; font-family: monospace;">${beam.meters} m</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; font-family: monospace;">${escapeHtml(beam.meters)} m</div>
                     </div>
                     <div class="card" style="background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.15); margin: 0; padding: 1rem; border-radius: 12px;">
                         <div style="font-size: 0.7rem; color: var(--muted); font-weight: 600;">USED</div>
@@ -4247,7 +4247,7 @@
                     ` : ''}
                     <div class="card" style="background: var(--bg); margin: 0; padding: 1rem; position: relative; border: 1px solid var(--border); border-radius: 12px;">
                         <div style="font-size: 0.7rem; color: var(--muted); margin-bottom: 0.25rem; font-weight: 600;">STATUS</div>
-                        <div class="badge badge-${beam.status.toLowerCase().replace(' ', '-')}" style="font-size: 0.6rem;">${beam.status}</div>
+                        <div class="badge badge-${escapeHtml(beam.status.toLowerCase().replace(' ', '-'))}" style="font-size: 0.6rem;">${escapeHtml(beam.status)}</div>
                     </div>
                 </div>
 
@@ -4306,7 +4306,7 @@
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; border-bottom: none; color: var(--fg); vertical-align: top; width: 20%;">
                                             ${g.foldingDates.length > 0 ? g.foldingDates.map(d => `<div>${formatDate(d)}</div>`).join('') : '—'}
                                         </td>
-                                        <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; font-weight: 500; color: var(--fg); vertical-align: top; width: 20%;">${g.takaSerial}</td>
+                                        <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; font-weight: 500; color: var(--fg); vertical-align: top; width: 20%;">${escapeHtml(g.takaSerial)}</td>
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; font-weight: 600; border-bottom: none; color: var(--fg); vertical-align: top; width: 20%;">${g.meters.toFixed(1)} m</td>
                                         <td style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-align: center; font-weight: 600; border-bottom: none; color: var(--fg); vertical-align: top; width: 20%;">${g.weight > 0 ? `${g.weight.toFixed(2)} kg` : '—'}</td>
                                     </tr>
@@ -4342,7 +4342,8 @@
           let cancelBtnHtml = '';
           if (h.historyIndex !== undefined && beam.history && h.historyIndex === (beam.history.length - 1) && !isOriginEvent) {
             cancelBtnHtml = `
-              <button onclick="event.stopPropagation(); window.revertLastBeamMove('${beam.id || beam.beamNumber}')" 
+              <button data-id="${escapeHtml(beam.id || beam.beamNumber)}"
+                      onclick="event.stopPropagation(); window.revertLastBeamMove(this.getAttribute('data-id'))" 
                       class="btn btn-outline" 
                       title="Cancel / Revert this move"
                       style="margin-left: 0.5rem; padding: 0.2rem 0.65rem; font-size: 0.72rem; color: #ef4444; border-color: #ef4444; border-radius: 6px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; background: rgba(239, 68, 68, 0.08);">
@@ -4358,7 +4359,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: ${h.type === 'production' ? '0.5rem' : '0'}; width: 100%;">
                         <div>
                             <div class="timeline-date">${h.hideDate ? '' : formatDate(h.date)}</div>
-                            <div style="font-weight: 600; color: var(--fg);">${h.event}</div>
+                            <div style="font-weight: 600; color: var(--fg);">${escapeHtml(h.event)}</div>
                         </div>
                         ${cancelBtnHtml}
                     </div>
@@ -5531,6 +5532,29 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  };
+
+  window.sanitizeUrl = function (url, allowData) {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+    const lower = trimmed.toLowerCase();
+    if (lower.startsWith('javascript:') || lower.startsWith('vbscript:')) {
+      return 'about:blank';
+    }
+    if (lower.startsWith('data:')) {
+      if (allowData && (lower.startsWith('data:image/') || lower.startsWith('data:application/pdf'))) {
+        return trimmed;
+      }
+      return 'about:blank';
+    }
+    if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('blob:') || trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('../')) {
+      return trimmed;
+    }
+    if (!trimmed.includes(':')) {
+      return trimmed;
+    }
+    return 'about:blank';
   };
 
   // Upgrade native filter <select>s to contained custom menus (mobile/tablet + DevTools).

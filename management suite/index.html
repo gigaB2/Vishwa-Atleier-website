@@ -711,140 +711,70 @@
             return hashed === storedHashOrPlain.toLowerCase();
         }
 
-        // 1. Employee Form Submit (Supabase Auth first, with legacy fallback)
+        // 1. Employee Form Submit (Authoritative VishwaAuth Layer)
         document.getElementById('employeeLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const emailInput = document.getElementById('empEmailInput').value.trim().toLowerCase();
             const passInput = document.getElementById('empPassInput').value;
 
-            showAuthMsg('Authenticating with Supabase Auth...', 'info');
+            if (!emailInput || !passInput) {
+                showAuthMsg('Please enter both email and password.', 'error');
+                return;
+            }
 
-            // Try Supabase Auth first
-            if (window.VishwaSupabase && typeof window.VishwaSupabase.signIn === 'function') {
-                const sbRes = await window.VishwaSupabase.signIn(emailInput, passInput);
-                if (sbRes && !sbRes.error && sbRes.data) {
-                    const session = window.VishwaSupabase.getSession() || {};
+            showAuthMsg('Authenticating...', 'info');
+
+            const authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
+            if (authClient && typeof authClient.signIn === 'function') {
+                const res = await authClient.signIn(emailInput, passInput);
+                if (res && res.error) {
+                    showAuthMsg(res.error.message || 'Authentication failed. Invalid email or password.', 'error');
+                    return;
+                }
+                if (res && res.data) {
+                    const session = (authClient.getSession && authClient.getSession()) || {};
                     showAuthMsg(`Welcome back, ${session.name || emailInput}! Redirecting...`, 'success');
                     const targetPage = getFirstAllowedPage(session.permissions);
                     setTimeout(() => window.location.href = targetPage, 400);
                     return;
                 }
             }
-
-            // Legacy local user check fallback
-            let users = [];
-            try { users = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS)) || []; } catch(e) {}
-
-            const foundIndex = users.findIndex(u => u.email && u.email.toLowerCase() === emailInput);
-            if (foundIndex === -1) {
-                showAuthMsg('Authentication failed. Invalid email or password.', 'error');
-                return;
-            }
-
-            const found = users[foundIndex];
-            const isMatch = await verifyPassword(passInput, found.passHash);
-            if (!isMatch) {
-                showAuthMsg('Invalid password. Please check and try again.', 'error');
-                return;
-            }
-
-            // Upgrade legacy plaintext password to secure SHA-256 hash automatically
-            if (found.passHash === passInput && !/^[a-f0-9]{64}$/i.test(found.passHash)) {
-                found.passHash = await hashPassword(passInput);
-                users[foundIndex] = found;
-                try { localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users)); } catch(e) {}
-            }
-
-            localStorage.setItem(STORAGE_KEY_USER, found.email);
-            localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(found));
-            showAuthMsg(`Welcome back, ${found.email}! Redirecting...`, 'success');
-            setTimeout(() => window.location.href = getFirstAllowedPage(found.permissions), 400);
+            showAuthMsg('Authentication system unavailable. Please try again.', 'error');
         });
 
-        // 2. Admin Form Submit (Supabase Auth & vf_auth_users First, Local Admin Fallback)
+        // 2. Admin Form Submit (Authoritative VishwaAuth Layer)
         document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const adminEmail = document.getElementById('adminEmailInput').value.trim().toLowerCase();
             const adminPass = document.getElementById('adminPassInput').value;
 
+            if (!adminEmail || !adminPass) {
+                showAuthMsg('Please enter both admin email and password.', 'error');
+                return;
+            }
+
             showAuthMsg('Verifying admin credentials...', 'info');
 
-            // 1. Try Supabase Auth and live vf_auth_users first
-            if (window.VishwaSupabase && typeof window.VishwaSupabase.signIn === 'function') {
-                try {
-                    const sbRes = await window.VishwaSupabase.signIn(adminEmail, adminPass);
-                    if (sbRes && !sbRes.error && sbRes.data) {
-                        const session = window.VishwaSupabase.getSession() || {};
-                        if (session.role === 'admin' || session.permissions === '*') {
-                            showAuthMsg('Admin Authenticated via Supabase! Redirecting to Settings...', 'success');
-                            setTimeout(() => window.location.href = 'modules/settings.html', 400);
-                            return;
-                        }
-                    }
-                } catch(sbErr) {
-                    console.warn('[Admin Auth] Supabase check error, falling back to local cache:', sbErr);
+            const authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
+            if (authClient && typeof authClient.signIn === 'function') {
+                const res = await authClient.signIn(adminEmail, adminPass);
+                if (res && res.error) {
+                    showAuthMsg(res.error.message || 'Invalid Admin Email or Password.', 'error');
+                    return;
                 }
-            }
-
-            // 2. Fallback to locally cached vf_admin_users
-            let admins = null;
-            try {
-                const raw = localStorage.getItem('vf_admin_users');
-                if (raw !== null) admins = JSON.parse(raw) || [];
-            } catch(e) {}
-
-            let cfg = { admin_email: 'admin@vishwafashions.com' };
-            try {
-                const cfgRaw = localStorage.getItem(STORAGE_KEY_AUTH_CONFIG);
-                if (cfgRaw) cfg = Object.assign(cfg, JSON.parse(cfgRaw));
-            } catch(e) {}
-
-            const validLegacyEmail = cfg.admin_email ? cfg.admin_email.toLowerCase() : 'admin@vishwafashions.com';
-            const validLegacyPass = cfg.admin_pass || 'admin123';
-
-            let matchedAdmin = null;
-            let matchedIndex = -1;
-            if (admins !== null && admins.length > 0) {
-                for (let i = 0; i < admins.length; i++) {
-                    const a = admins[i];
-                    if (a.email && a.email.toLowerCase() === adminEmail) {
-                        const isMatch = await verifyPassword(adminPass, a.passHash);
-                        if (isMatch) {
-                            matchedAdmin = a;
-                            matchedIndex = i;
-                            break;
-                        }
+                if (res && res.data) {
+                    const session = (authClient.getSession && authClient.getSession()) || {};
+                    if (session.role === 'admin' || session.permissions === '*') {
+                        showAuthMsg('Admin Authenticated! Redirecting to Settings...', 'success');
+                        setTimeout(() => window.location.href = 'modules/settings.html', 400);
+                        return;
+                    } else {
+                        showAuthMsg('Access denied. Administrator privileges required.', 'error');
+                        return;
                     }
                 }
-            } else {
-                const isMatch = await verifyPassword(adminPass, validLegacyPass);
-                if ((adminEmail === validLegacyEmail || adminEmail === 'admin@vishwafashions.com' || adminEmail === 'admin') && isMatch) {
-                    matchedAdmin = { id: 'admin-master', email: validLegacyEmail, name: validLegacyEmail, role: 'admin' };
-                }
             }
-
-            if (matchedAdmin) {
-                // Upgrade legacy plaintext password to secure SHA-256 hash
-                if (matchedIndex !== -1 && admins && admins[matchedIndex] && !/^[a-f0-9]{64}$/i.test(admins[matchedIndex].passHash)) {
-                    admins[matchedIndex].passHash = await hashPassword(adminPass);
-                    try { localStorage.setItem('vf_admin_users', JSON.stringify(admins)); } catch(e) {}
-                }
-
-                const adminSession = { 
-                    id: matchedAdmin.id || ('admin-' + Date.now()), 
-                    email: matchedAdmin.email || validLegacyEmail, 
-                    username: matchedAdmin.email || matchedAdmin.name || 'admin', 
-                    name: matchedAdmin.email || matchedAdmin.name || 'Admin', 
-                    role: 'admin', 
-                    permissions: '*' 
-                };
-                localStorage.setItem(STORAGE_KEY_USER, adminSession.email);
-                localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(adminSession));
-                showAuthMsg('Admin Authenticated! Redirecting to Settings...', 'success');
-                setTimeout(() => window.location.href = 'modules/settings.html', 400);
-            } else {
-                showAuthMsg('Invalid Admin Email or Password.', 'error');
-            }
+            showAuthMsg('Authentication system unavailable. Please try again.', 'error');
         });
 
         // Trigger background hydration from Supabase if online

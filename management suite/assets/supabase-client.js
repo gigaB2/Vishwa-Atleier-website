@@ -2,6 +2,64 @@
   // Native browser localStorage reference before overriding
   const nativeLocalStorage = (typeof window !== 'undefined' && window.localStorage) ? window.localStorage : (typeof localStorage !== 'undefined' ? localStorage : null);
 
+  // Universal Context-Aware HTML Escaper (Phase 5 DOM Hardening)
+  function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // Universal Safe URL Validator
+  function sanitizeUrl(url, allowData) {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+    const lower = trimmed.toLowerCase();
+    if (lower.startsWith('javascript:') || lower.startsWith('vbscript:')) {
+      return 'about:blank';
+    }
+    if (lower.startsWith('data:')) {
+      if (allowData && (lower.startsWith('data:image/') || lower.startsWith('data:application/pdf'))) {
+        return trimmed;
+      }
+      return 'about:blank';
+    }
+    if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('blob:') || trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('../')) {
+      return trimmed;
+    }
+    if (!trimmed.includes(':')) {
+      return trimmed;
+    }
+    return 'about:blank';
+  }
+
+  if (typeof window !== 'undefined') {
+    window.escapeHtml = escapeHtml;
+    window.sanitizeUrl = sanitizeUrl;
+  }
+
+  function isServiceRoleKey(token) {
+    if (!token || typeof token !== 'string') return false;
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const jsonStr = typeof atob === 'function' ? atob(base64) : (typeof Buffer !== 'undefined' ? Buffer.from(base64, 'base64').toString('utf8') : '');
+        if (jsonStr) {
+          const payload = JSON.parse(jsonStr);
+          if (payload && payload.role === 'service_role') {
+            return true;
+          }
+        }
+      }
+    } catch(e) {}
+    return false;
+  }
+
   // Resolve Supabase configuration dynamically:
   // 1. LocalStorage overrides (configured via Admin Settings in UI)
   // 2. Global window.APP_CONFIG (from assets/config.js)
@@ -31,6 +89,16 @@
 
     if (url && url.endsWith('/')) {
       url = url.substring(0, url.length - 1);
+    }
+
+    if (key && isServiceRoleKey(key)) {
+      console.error('CRITICAL SECURITY GUARD: Supabase service_role key detected in client configuration. Client-side applications must ONLY use public anon keys. Connection blocked to protect database security.');
+      return {
+        url: '',
+        anonKey: '',
+        isConfigured: false,
+        source: 'blocked_service_role'
+      };
     }
 
     const isPlaceholder = !url || !key || url.includes('your-project') || key.includes('your-anon');
@@ -2864,9 +2932,503 @@
     }
   }
 
+  // --- Enterprise VishwaAuth Adapter ---
+  const VishwaAuth = {
+    escapeHtml,
+    sanitizeUrl,
+    isLocalAuthFallbackEnabled() {
+      if (typeof window !== 'undefined' && window.VF_ENABLE_LOCAL_AUTH_FALLBACK === true) {
+        return true;
+      }
+      if (typeof nativeLocalStorage !== 'undefined' && nativeLocalStorage) {
+        try {
+          if (nativeLocalStorage.getItem('vf_allow_local_auth_fallback') === 'true') {
+            return true;
+          }
+        } catch(e) {}
+      }
+      if (!activeConfig.isConfigured || !SUPABASE_URL) {
+        return true;
+      }
+      return false;
+    },
+
+    getSession() {
+      try {
+        const sessRaw = nativeLocalStorage.getItem('vf_session') || cache['vf_session'];
+        if (!sessRaw) return null;
+        const sess = typeof sessRaw === 'string' ? JSON.parse(sessRaw) : sessRaw;
+        if (sess && typeof sess === 'object') {
+          delete sess.password;
+          delete sess.passHash;
+          delete sess.pass_hash;
+        }
+        return sess;
+      } catch(e) {
+        return null;
+      }
+    },
+
+    getCurrentProfile() {
+      const sess = this.getSession();
+      if (!sess) return null;
+      return {
+        id: sess.id,
+        email: sess.email,
+        name: sess.name || sess.username || (sess.email ? sess.email.split('@')[0] : 'Operator'),
+        role: sess.role || 'employee',
+        permissions: sess.permissions || (sess.role === 'admin' ? '*' : {})
+      };
+    },
+
+    hasPermission(permission, requiredLevel = 'view') {
+      if (!permission) return true;
+      const sess = this.getSession();
+      if (!sess) return false;
+      if (sess.role === 'admin' || sess.permissions === '*') return true;
+      if (!sess.permissions || typeof sess.permissions !== 'object') return false;
+
+      const val = sess.permissions[permission];
+      if (val === undefined || val === null || val === 'none' || val === false) {
+        return false;
+      }
+      if (val === true || val === 'full' || val === 'edit') {
+        return true;
+      }
+      if (val === 'view') {
+        return requiredLevel === 'view';
+      }
+      return true;
+    },
+
+    async signIn(email, password) {
+      if (!email || !password) return { data: null, error: new Error('Please enter email and password') };
+      const cleanEmail = String(email).trim().toLowerCase();
+
+      const getSha256 = async (str) => {
+        if (!str) return '';
+        if (/^[a-f0-9]{64}$/i.test(str)) return str.toLowerCase();
+        if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+          try {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(str);
+            const buf = await window.crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+          } catch(e) {}
+        }
+        return str;
+      };
+
+      const passHash = await getSha256(password);
+
+      // 1. Authoritative Supabase Auth
+      if (activeConfig.isConfigured && SUPABASE_URL) {
+        let authData = null;
+        let authError = null;
+        let isNetworkError = false;
+
+        try {
+          const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              email: cleanEmail,
+              password: String(password)
+            })
+          });
+
+          if (res.ok) {
+            authData = await res.json();
+          } else {
+            const errPayload = await res.json().catch(() => ({}));
+            authError = errPayload.error_description || errPayload.msg || errPayload.message || (res.status === 400 ? 'Invalid email or password.' : `Authentication failed (${res.status})`);
+
+            // Check legacy SHA-256 hash in auth.users
+            if (passHash && passHash !== password) {
+              try {
+                const hashRes = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+                  method: 'POST',
+                  headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    email: cleanEmail,
+                    password: passHash
+                  })
+                });
+                if (hashRes.ok) {
+                  authData = await hashRes.json();
+                  authError = null;
+                }
+              } catch(e) {}
+            }
+          }
+        } catch(fetchErr) {
+          isNetworkError = true;
+          authError = fetchErr.message || String(fetchErr);
+        }
+
+        if (authData && authData.access_token) {
+          const user = authData.user || {};
+          const meta = user.user_metadata || {};
+          let userRole = meta.role || (meta.is_admin ? 'admin' : 'employee');
+          let userPerms = meta.permissions || (userRole === 'admin' ? '*' : {});
+          let userName = meta.name || meta.full_name || cleanEmail.split('@')[0];
+
+          try {
+            const uRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?email=eq.${encodeURIComponent(cleanEmail)}&is_active=eq.true&limit=1`, {
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${authData.access_token || SUPABASE_ANON_KEY}`
+              }
+            });
+            if (uRes.ok) {
+              const uRows = await uRes.json();
+              if (Array.isArray(uRows) && uRows.length > 0) {
+                const dbU = uRows[0];
+                if (dbU.role) userRole = dbU.role;
+                if (dbU.permissions && Object.keys(dbU.permissions).length > 0) userPerms = dbU.permissions;
+                if (dbU.name) userName = dbU.name;
+              }
+            }
+          } catch(e) {}
+
+          const sessionPayload = {
+            id: user.id || ('sp-' + Date.now()),
+            email: cleanEmail,
+            username: userName,
+            name: userName,
+            role: userRole,
+            permissions: userPerms,
+            access_token: authData.access_token,
+            refresh_token: authData.refresh_token,
+            expires_at: authData.expires_at || (Math.floor(Date.now() / 1000) + (authData.expires_in || 3600)),
+            supabase_user: {
+              id: user.id,
+              email: user.email,
+              user_metadata: user.user_metadata
+            }
+          };
+
+          try {
+            nativeLocalStorage.setItem('vf_session', JSON.stringify(sessionPayload));
+            nativeLocalStorage.setItem('vf_user_name', sessionPayload.username);
+            nativeLocalStorage.setItem('vf_supabase_token', authData.access_token);
+            nativeLocalStorage.setItem('vf_supabase_session', JSON.stringify(authData));
+          } catch(e) {}
+
+          cache['vf_session'] = JSON.stringify(sessionPayload);
+          cache['vf_user_name'] = sessionPayload.username;
+
+          if (typeof supabaseApi !== 'undefined' && typeof supabaseApi.logAuditTrail === 'function') {
+            supabaseApi.logAuditTrail('login', 'auth', user.id || cleanEmail, { email: cleanEmail, role: sessionPayload.role, source: 'supabase_auth' });
+          }
+          return { data: { user: user, session: sessionPayload }, error: null };
+        }
+
+        // Authoritative Rejection when online: Return explicit error
+        if (!isNetworkError && !this.isLocalAuthFallbackEnabled()) {
+          return { data: null, error: new Error(authError || 'Invalid email or password.') };
+        }
+
+        // Network error when online check failed: only fallback if permitted
+        if (isNetworkError && !this.isLocalAuthFallbackEnabled()) {
+          return { data: null, error: new Error(`Authentication server unreachable: ${authError}`) };
+        }
+      }
+
+      // 2. Offline / Local fallback (strictly allowed only when fallback enabled)
+      if (!this.isLocalAuthFallbackEnabled() && activeConfig.isConfigured) {
+        return { data: null, error: new Error('Invalid email or password.') };
+      }
+
+      let localAdmins = [];
+      let localUsers = [];
+      try {
+        const rawA = cache['vf_admin_users'] || nativeLocalStorage.getItem('vf_admin_users');
+        if (rawA) localAdmins = typeof rawA === 'string' ? JSON.parse(rawA) : rawA;
+        const rawU = cache['vf_users'] || nativeLocalStorage.getItem('vf_users');
+        if (rawU) localUsers = typeof rawU === 'string' ? JSON.parse(rawU) : rawU;
+      } catch(e) {}
+
+      const matchedAdm = Array.isArray(localAdmins) && localAdmins.find(a => a && a.email && a.email.toLowerCase() === cleanEmail);
+      if (matchedAdm) {
+        const h = matchedAdm.passHash || matchedAdm.pass_hash || '';
+        if (h === password || h.toLowerCase() === passHash.toLowerCase() || !h) {
+          const sess = {
+            id: matchedAdm.id || ('admin-' + Date.now()),
+            email: matchedAdm.email,
+            username: matchedAdm.name || 'Admin',
+            name: matchedAdm.name || 'Admin',
+            role: 'admin',
+            permissions: '*'
+          };
+          nativeLocalStorage.setItem('vf_session', JSON.stringify(sess));
+          nativeLocalStorage.setItem('vf_user_name', sess.username);
+          cache['vf_session'] = JSON.stringify(sess);
+          cache['vf_user_name'] = sess.username;
+          return { data: { user: matchedAdm, session: sess }, error: null };
+        }
+      }
+
+      const matchedEmp = Array.isArray(localUsers) && localUsers.find(u => u && (u.email || u.username) && (u.email || u.username).toLowerCase() === cleanEmail);
+      if (matchedEmp) {
+        const h = matchedEmp.passHash || matchedEmp.pass_hash || '';
+        if (h === password || h.toLowerCase() === passHash.toLowerCase() || !h) {
+          const sess = {
+            id: matchedEmp.id || ('emp-' + Date.now()),
+            email: matchedEmp.email || cleanEmail,
+            username: matchedEmp.username || cleanEmail.split('@')[0],
+            name: matchedEmp.name || matchedEmp.username || cleanEmail.split('@')[0],
+            role: 'employee',
+            permissions: matchedEmp.permissions || {}
+          };
+          nativeLocalStorage.setItem('vf_session', JSON.stringify(sess));
+          nativeLocalStorage.setItem('vf_user_name', sess.username);
+          cache['vf_session'] = JSON.stringify(sess);
+          cache['vf_user_name'] = sess.username;
+          return { data: { user: matchedEmp, session: sess }, error: null };
+        }
+      }
+
+      return { data: null, error: new Error('Invalid email or password.') };
+    },
+
+    async refreshSession() {
+      try {
+        let refreshToken = null;
+        try {
+          const raw = nativeLocalStorage.getItem('vf_supabase_session');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            refreshToken = parsed.refresh_token;
+          }
+          if (!refreshToken) {
+            const sess = this.getSession();
+            if (sess && sess.refresh_token) refreshToken = sess.refresh_token;
+          }
+        } catch(e) {}
+
+        if (!refreshToken || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+        
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.access_token) {
+            nativeLocalStorage.setItem('vf_supabase_token', data.access_token);
+            nativeLocalStorage.setItem('vf_supabase_session', JSON.stringify(data));
+            
+            const currentSess = this.getSession();
+            if (currentSess) {
+              currentSess.access_token = data.access_token;
+              if (data.refresh_token) currentSess.refresh_token = data.refresh_token;
+              if (data.expires_at) currentSess.expires_at = data.expires_at;
+              const updated = JSON.stringify(currentSess);
+              nativeLocalStorage.setItem('vf_session', updated);
+              cache['vf_session'] = updated;
+            }
+            return data.access_token;
+          }
+        }
+      } catch(e) {
+        console.warn('[VishwaAuth] refreshSession notice:', e);
+      }
+      return null;
+    },
+
+    async signOut() {
+      try {
+        let token = null;
+        try { token = nativeLocalStorage.getItem('vf_supabase_token'); } catch(e) {}
+        if (token && SUPABASE_URL) {
+          fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${token}`
+            }
+          }).catch(() => {});
+        }
+      } catch(e) {}
+      
+      if (typeof supabaseApi !== 'undefined' && typeof supabaseApi.logAuditTrail === 'function') {
+        supabaseApi.logAuditTrail('logout', 'auth', null, {});
+      }
+
+      try {
+        nativeLocalStorage.removeItem('vf_session');
+        nativeLocalStorage.removeItem('vf_user_name');
+        nativeLocalStorage.removeItem('vf_supabase_token');
+        nativeLocalStorage.removeItem('vf_supabase_session');
+      } catch(e) {}
+      
+      delete cache['vf_session'];
+      delete cache['vf_user_name'];
+      return { error: null };
+    },
+
+    async getUser(accessToken) {
+      try {
+        const token = accessToken || (nativeLocalStorage ? nativeLocalStorage.getItem('vf_supabase_token') : null);
+        if (!token) return { data: { user: null }, error: new Error('No active token') };
+        
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await res.json();
+        if (!res.ok) return { data: { user: null }, error: new Error(data.message || 'Failed to fetch user') };
+        return { data: { user: data }, error: null };
+      } catch (e) {
+        return { data: { user: null }, error: e };
+      }
+    },
+
+    async signUp(email, password, metadata = {}) {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return { data: null, error: new Error('Supabase not configured') };
+      try {
+        const cleanEmail = String(email).trim().toLowerCase();
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: cleanEmail,
+            password: String(password),
+            data: {
+              name: metadata.name || cleanEmail.split('@')[0],
+              role: metadata.role || 'employee',
+              permissions: metadata.permissions || {},
+              ...metadata
+            }
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const errMsg = data.error_description || data.msg || data.message || JSON.stringify(data);
+          if (errMsg.toLowerCase().includes('already registered') || errMsg.toLowerCase().includes('user already exists')) {
+            return { data: { user: { email: cleanEmail } }, error: null, alreadyRegistered: true };
+          }
+          return { data: null, error: new Error(errMsg) };
+        }
+        if (typeof supabaseApi !== 'undefined' && typeof supabaseApi.logAuditTrail === 'function') {
+          supabaseApi.logAuditTrail('signup', 'auth', cleanEmail, { role: metadata.role || 'employee' });
+        }
+        return { data: data, error: null };
+      } catch (e) {
+        return { data: null, error: e };
+      }
+    },
+
+    async authenticatedFetch(url, options = {}) {
+      const makeHeaders = (token) => {
+        let bearer = token;
+        if (!bearer && typeof nativeLocalStorage !== 'undefined' && nativeLocalStorage) {
+          try { bearer = nativeLocalStorage.getItem('vf_supabase_token'); } catch(e) {}
+        }
+        bearer = bearer || SUPABASE_ANON_KEY;
+        return Object.assign({
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${bearer}`,
+          'Content-Type': 'application/json'
+        }, options.headers || {});
+      };
+
+      let token = null;
+      if (typeof nativeLocalStorage !== 'undefined' && nativeLocalStorage) {
+        try { token = nativeLocalStorage.getItem('vf_supabase_token'); } catch(e) {}
+      }
+      let opts = Object.assign({}, options, { headers: makeHeaders(token) });
+
+      let res = await fetch(url, opts);
+
+      if (res.status === 401 && SUPABASE_URL) {
+        const newToken = await this.refreshSession();
+        if (newToken) {
+          opts = Object.assign({}, options, { headers: makeHeaders(newToken) });
+          res = await fetch(url, opts);
+        }
+      }
+
+      return res;
+    },
+
+    generateMigrationReport() {
+      let localAdmins = [];
+      let localUsers = [];
+      try {
+        const rawA = cache['vf_admin_users'] || (nativeLocalStorage ? nativeLocalStorage.getItem('vf_admin_users') : null);
+        if (rawA) localAdmins = typeof rawA === 'string' ? JSON.parse(rawA) : rawA;
+        const rawU = cache['vf_users'] || (nativeLocalStorage ? nativeLocalStorage.getItem('vf_users') : null);
+        if (rawU) localUsers = typeof rawU === 'string' ? JSON.parse(rawU) : rawU;
+      } catch(e) {}
+
+      const allAccounts = [];
+      if (Array.isArray(localAdmins)) {
+        localAdmins.forEach(a => {
+          if (a && a.email) allAccounts.push({ ...a, role: 'admin', source: 'vf_admin_users' });
+        });
+      }
+      if (Array.isArray(localUsers)) {
+        localUsers.forEach(u => {
+          if (u && (u.email || u.username)) allAccounts.push({ ...u, role: u.role || 'employee', source: 'vf_users' });
+        });
+      }
+
+      let plainTextCount = 0;
+      let legacyHashedCount = 0;
+      let readyForMigration = [];
+
+      allAccounts.forEach(acc => {
+        const email = acc.email || acc.username;
+        const hash = acc.passHash || acc.pass_hash || '';
+        const isSha256 = /^[a-f0-9]{64}$/i.test(hash);
+        const isPlain = Boolean(hash && !isSha256);
+
+        if (isPlain) plainTextCount++;
+        if (isSha256) legacyHashedCount++;
+
+        readyForMigration.push({
+          email: email,
+          role: acc.role,
+          name: acc.name || (email.includes('@') ? email.split('@')[0] : email),
+          credentialType: isSha256 ? 'legacy_sha256' : (isPlain ? 'plaintext' : 'empty'),
+          migrationAction: isPlain ? 'direct_auth_signup_ready' : (isSha256 ? 'password_reset_or_dual_auth' : 'unconfigured_password')
+        });
+      });
+
+      return {
+        totalAccounts: allAccounts.length,
+        localOnlyUsers: allAccounts.length,
+        plainTextUsers: plainTextCount,
+        legacyHashedUsers: legacyHashedCount,
+        accounts: readyForMigration,
+        timestamp: new Date().toISOString()
+      };
+    }
+  };
+
 
   // Supabase REST API Client
   const supabaseApi = {
+    auth: VishwaAuth,
     isHydrated: () => isHydrated,
     getStatus: () => currentStatus,
     async get(key) {
@@ -4850,317 +5412,19 @@
       }
     },
     async signIn(email, password) {
-      if (!email || !password) return { data: null, error: new Error('Please enter email and password') };
-      const cleanEmail = String(email).trim().toLowerCase();
-
-      // Compute SHA-256 hash helper for legacy hash matches
-      const getSha256 = async (str) => {
-        if (!str) return '';
-        if (/^[a-f0-9]{64}$/i.test(str)) return str.toLowerCase();
-        if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
-          try {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(str);
-            const buf = await window.crypto.subtle.digest('SHA-256', data);
-            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-          } catch(e) {}
-        }
-        return str;
-      };
-
-      const passHash = await getSha256(password);
-
-      try {
-        let authData = null;
-
-        // 1. Attempt standard Supabase Auth token authentication with plain password
-        if (activeConfig.isConfigured && SUPABASE_URL) {
-          try {
-            const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-              method: 'POST',
-              headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                email: cleanEmail,
-                password: String(password)
-              })
-            });
-            if (res.ok) {
-              authData = await res.json();
-            } else if (passHash && passHash !== password) {
-              // 1b. Check if user was registered with SHA-256 hash
-              const hashRes = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-                method: 'POST',
-                headers: {
-                  'apikey': SUPABASE_ANON_KEY,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  email: cleanEmail,
-                  password: passHash
-                })
-              });
-              if (hashRes.ok) {
-                authData = await hashRes.json();
-              }
-            }
-          } catch(sbErr) {
-            console.warn('[Supabase Auth] Direct token auth error:', sbErr);
-          }
-        }
-
-        // 2. If direct Supabase Auth token succeeded, load permissions and save session
-        if (authData && authData.access_token) {
-          const user = authData.user || {};
-          const meta = user.user_metadata || {};
-          let userRole = meta.role || (meta.is_admin ? 'admin' : 'employee');
-          let userPerms = meta.permissions || (userRole === 'admin' ? '*' : {});
-          let userName = meta.name || meta.full_name || cleanEmail.split('@')[0];
-
-          // Reconcile with vf_auth_users table to ensure latest permissions
-          if (activeConfig.isConfigured && SUPABASE_URL) {
-            try {
-              const uRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?email=eq.${encodeURIComponent(cleanEmail)}&is_active=eq.true&limit=1`, {
-                headers: {
-                  'apikey': SUPABASE_ANON_KEY,
-                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                }
-              });
-              if (uRes.ok) {
-                const uRows = await uRes.json();
-                if (Array.isArray(uRows) && uRows.length > 0) {
-                  const dbU = uRows[0];
-                  if (dbU.role) userRole = dbU.role;
-                  if (dbU.permissions && Object.keys(dbU.permissions).length > 0) userPerms = dbU.permissions;
-                  if (dbU.name) userName = dbU.name;
-                }
-              }
-            } catch(e) {}
-          }
-
-          const sessionPayload = {
-            id: user.id || ('sp-' + Date.now()),
-            email: cleanEmail,
-            username: userName,
-            name: userName,
-            role: userRole,
-            permissions: userPerms,
-            access_token: authData.access_token,
-            refresh_token: authData.refresh_token,
-            expires_at: authData.expires_at || (Math.floor(Date.now() / 1000) + (authData.expires_in || 3600)),
-            supabase_user: user
-          };
-
-          try {
-            nativeLocalStorage.setItem('vf_session', JSON.stringify(sessionPayload));
-            nativeLocalStorage.setItem('vf_user_name', sessionPayload.username);
-            nativeLocalStorage.setItem('vf_supabase_token', authData.access_token);
-            nativeLocalStorage.setItem('vf_supabase_session', JSON.stringify(authData));
-          } catch(e) {}
-
-          cache['vf_session'] = JSON.stringify(sessionPayload);
-          cache['vf_user_name'] = sessionPayload.username;
-
-          this.logAuditTrail('login', 'auth', user.id || cleanEmail, { email: cleanEmail, role: sessionPayload.role, source: 'supabase_auth' });
-          return { data: authData, error: null };
-        }
-
-        // 3. Fallback: Check live public.vf_auth_users relational table
-        if (activeConfig.isConfigured && SUPABASE_URL) {
-          try {
-            const uRes = await fetch(`${SUPABASE_URL}/rest/v1/vf_auth_users?email=eq.${encodeURIComponent(cleanEmail)}&is_active=eq.true&limit=1`, {
-              headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-              }
-            });
-            if (uRes.ok) {
-              const uRows = await uRes.json();
-              if (Array.isArray(uRows) && uRows.length > 0) {
-                const dbUser = uRows[0];
-                let isMatch = false;
-                const dbHash = String(dbUser.pass_hash || '').trim().toLowerCase();
-
-                if (!dbHash) {
-                  isMatch = true; // Password managed purely in Supabase Auth or no restriction
-                } else if (dbHash === password.toLowerCase() || dbHash === passHash.toLowerCase()) {
-                  isMatch = true;
-                }
-
-                if (isMatch) {
-                  const sessionPayload = {
-                    id: dbUser.id || ('usr-' + Date.now()),
-                    email: dbUser.email,
-                    username: dbUser.name || dbUser.email.split('@')[0],
-                    name: dbUser.name || dbUser.email.split('@')[0],
-                    role: dbUser.role || 'employee',
-                    permissions: dbUser.permissions || (dbUser.role === 'admin' ? '*' : {}),
-                    access_token: 'sb_token_' + Date.now(),
-                    source: 'supabase_vf_auth_users'
-                  };
-
-                  try {
-                    nativeLocalStorage.setItem('vf_session', JSON.stringify(sessionPayload));
-                    nativeLocalStorage.setItem('vf_user_name', sessionPayload.username);
-                  } catch(e) {}
-                  cache['vf_session'] = JSON.stringify(sessionPayload);
-                  cache['vf_user_name'] = sessionPayload.username;
-
-                  // Proactively auto-register into Supabase Auth auth.users in background if not registered
-                  if (password && password.length >= 6) {
-                    supabaseApi.signUp(cleanEmail, password, {
-                      name: sessionPayload.name,
-                      role: sessionPayload.role,
-                      permissions: sessionPayload.permissions
-                    }).catch(() => {});
-                  }
-
-                  this.logAuditTrail('login', 'auth', dbUser.id || cleanEmail, { email: cleanEmail, role: sessionPayload.role, source: 'vf_auth_users' });
-                  return { data: { user: dbUser, session: sessionPayload }, error: null };
-                }
-              }
-            }
-          } catch(e) {}
-        }
-
-        // 4. Offline / Local fallback
-        let localAdmins = [];
-        let localUsers = [];
-        try {
-          const rawA = cache['vf_admin_users'] || nativeLocalStorage.getItem('vf_admin_users');
-          if (rawA) localAdmins = JSON.parse(rawA) || [];
-          const rawU = cache['vf_users'] || nativeLocalStorage.getItem('vf_users');
-          if (rawU) localUsers = JSON.parse(rawU) || [];
-        } catch(e) {}
-
-        const matchedAdm = localAdmins.find(a => a && a.email && a.email.toLowerCase() === cleanEmail);
-        if (matchedAdm) {
-          const h = matchedAdm.passHash || matchedAdm.pass_hash || '';
-          if (h === password || h.toLowerCase() === passHash.toLowerCase() || !h) {
-            const sess = {
-              id: matchedAdm.id || ('admin-' + Date.now()),
-              email: matchedAdm.email,
-              username: matchedAdm.name || 'Admin',
-              name: matchedAdm.name || 'Admin',
-              role: 'admin',
-              permissions: '*'
-            };
-            nativeLocalStorage.setItem('vf_session', JSON.stringify(sess));
-            nativeLocalStorage.setItem('vf_user_name', sess.username);
-            cache['vf_session'] = JSON.stringify(sess);
-            cache['vf_user_name'] = sess.username;
-            return { data: { user: matchedAdm, session: sess }, error: null };
-          }
-        }
-
-        const matchedEmp = localUsers.find(u => u && (u.email || u.username) && (u.email || u.username).toLowerCase() === cleanEmail);
-        if (matchedEmp) {
-          const h = matchedEmp.passHash || matchedEmp.pass_hash || '';
-          if (h === password || h.toLowerCase() === passHash.toLowerCase() || !h) {
-            const sess = {
-              id: matchedEmp.id || ('emp-' + Date.now()),
-              email: matchedEmp.email || cleanEmail,
-              username: matchedEmp.username || cleanEmail.split('@')[0],
-              name: matchedEmp.name || matchedEmp.username || cleanEmail.split('@')[0],
-              role: 'employee',
-              permissions: matchedEmp.permissions || {}
-            };
-            nativeLocalStorage.setItem('vf_session', JSON.stringify(sess));
-            nativeLocalStorage.setItem('vf_user_name', sess.username);
-            cache['vf_session'] = JSON.stringify(sess);
-            cache['vf_user_name'] = sess.username;
-            return { data: { user: matchedEmp, session: sess }, error: null };
-          }
-        }
-
-        return { data: null, error: new Error('Invalid email or password.') };
-      } catch (e) {
-        return { data: null, error: e };
-      }
+      return VishwaAuth.signIn(email, password);
     },
     async refreshToken() {
-      try {
-        let session = null;
-        try {
-          const raw = nativeLocalStorage.getItem('vf_supabase_session');
-          if (raw) session = JSON.parse(raw);
-        } catch(e) {}
-        if (!session || !session.refresh_token || !SUPABASE_URL) return null;
-        
-        const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ refresh_token: session.refresh_token })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.access_token) {
-            nativeLocalStorage.setItem('vf_supabase_token', data.access_token);
-            nativeLocalStorage.setItem('vf_supabase_session', JSON.stringify(data));
-            return data.access_token;
-          }
-        }
-      } catch(e) {}
-      return null;
+      return VishwaAuth.refreshSession();
     },
     async signOut() {
-      try {
-        let token = null;
-        try { token = nativeLocalStorage.getItem('vf_supabase_token'); } catch(e) {}
-        if (token && SUPABASE_URL) {
-          fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${token}`
-            }
-          }).catch(() => {});
-        }
-      } catch(e) {}
-      
-      this.logAuditTrail('logout', 'auth', null, {});
-
-      try {
-        nativeLocalStorage.removeItem('vf_session');
-        nativeLocalStorage.removeItem('vf_user_name');
-        nativeLocalStorage.removeItem('vf_supabase_token');
-        nativeLocalStorage.removeItem('vf_supabase_session');
-      } catch(e) {}
-      
-      delete cache['vf_session'];
-      delete cache['vf_user_name'];
-      return { error: null };
+      return VishwaAuth.signOut();
     },
     async getUser(accessToken) {
-      try {
-        const token = accessToken || nativeLocalStorage.getItem('vf_supabase_token');
-        if (!token) return { data: { user: null }, error: new Error('No active token') };
-        
-        const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const data = await res.json();
-        if (!res.ok) return { data: { user: null }, error: new Error(data.message || 'Failed to fetch user') };
-        return { data: { user: data }, error: null };
-      } catch (e) {
-        return { data: { user: null }, error: e };
-      }
+      return VishwaAuth.getUser(accessToken);
     },
     getSession() {
-      try {
-        const sessRaw = nativeLocalStorage.getItem('vf_session');
-        return sessRaw ? JSON.parse(sessRaw) : null;
-      } catch(e) {
-        return null;
-      }
+      return VishwaAuth.getSession();
     },
     // --- Enterprise Audit Logging API ---
     async logAuditTrail(action, entityType, entityId = null, details = {}) {
@@ -9368,21 +9632,75 @@
         meta: {
           export_date: new Date().toISOString(),
           version: '2.0.0',
-          app: 'Vishwa Fashions Management Suite'
+          schema_version: '2.0.0',
+          app: 'Vishwa Fashions Management Suite',
+          section_counts: {}
         },
+        localStorage: {},
         local_storage_raw: {},
+        indexedDB: {},
         supabase_relational: {}
       };
 
-      // 1. Gather all local storage keys
+      // 1. Gather all local storage keys (preserving full state, session, and configurations)
       try {
         for (let i = 0; i < nativeLocalStorage.length; i++) {
           const k = nativeLocalStorage.key(i);
-          if (k) backup.local_storage_raw[k] = nativeLocalStorage.getItem(k);
+          if (k) {
+            const v = nativeLocalStorage.getItem(k);
+            backup.local_storage_raw[k] = v;
+            backup.localStorage[k] = v;
+          }
         }
       } catch(e) {}
 
-      // 2. Gather cloud relational tables if configured
+      // 2. Gather IndexedDB (VishwaFashionsDB) object stores if supported
+      try {
+        if (typeof indexedDB !== 'undefined') {
+          await new Promise((resolve) => {
+            const req = indexedDB.open('VishwaFashionsDB', 1);
+            req.onerror = () => resolve();
+            req.onsuccess = (e) => {
+              const db = e.target.result;
+              const storeNames = Array.from(db.objectStoreNames || []);
+              if (storeNames.length === 0) {
+                db.close();
+                return resolve();
+              }
+              let readCount = 0;
+              const tx = db.transaction(storeNames, 'readonly');
+              storeNames.forEach(storeName => {
+                const store = tx.objectStore(storeName);
+                const storeData = [];
+                const cursorReq = store.openCursor();
+                cursorReq.onsuccess = (evt) => {
+                  const cursor = evt.target.result;
+                  if (cursor) {
+                    storeData.push({ key: cursor.key, value: cursor.value });
+                    cursor.continue();
+                  } else {
+                    backup.indexedDB[storeName] = storeData;
+                    readCount++;
+                    if (readCount === storeNames.length) {
+                      db.close();
+                      resolve();
+                    }
+                  }
+                };
+                cursorReq.onerror = () => {
+                  readCount++;
+                  if (readCount === storeNames.length) {
+                    db.close();
+                    resolve();
+                  }
+                };
+              });
+            };
+          });
+        }
+      } catch(e) {}
+
+      // 3. Gather cloud relational tables if configured
       if (this.isConfigured()) {
         const tables = [
           'vf_yarn_rm_lots', 'vf_yarn_rm_boxes', 'vf_yarn_orders', 'vf_yarn_order_batches', 'vf_yarn_order_boxes',
@@ -9401,7 +9719,30 @@
         }
       }
 
-      // 3. Trigger Browser Download
+      // 4. Compute section counts manifest
+      const sectionCounts = {
+        localStorageKeys: Object.keys(backup.local_storage_raw).length,
+        indexedDbStores: Object.keys(backup.indexedDB).length,
+        cloudTables: Object.keys(backup.supabase_relational).length
+      };
+      try {
+        if (backup.local_storage_raw['vishwa_yarn_rm_orders_data']) {
+          const ords = JSON.parse(backup.local_storage_raw['vishwa_yarn_rm_orders_data']);
+          if (Array.isArray(ords)) sectionCounts.yarnOrders = ords.length;
+        }
+        if (backup.local_storage_raw['vishwa_yarn_rm_stock_data']) {
+          const stock = JSON.parse(backup.local_storage_raw['vishwa_yarn_rm_stock_data']);
+          if (Array.isArray(stock)) sectionCounts.yarnStock = stock.length;
+        }
+        if (backup.local_storage_raw['aethertasks_db_state_v7']) {
+          const state = JSON.parse(backup.local_storage_raw['aethertasks_db_state_v7']);
+          if (state && Array.isArray(state.employees)) sectionCounts.employees = state.employees.length;
+          if (state && Array.isArray(state.salarySettlements)) sectionCounts.salarySettlements = state.salarySettlements.length;
+        }
+      } catch(e) {}
+      backup.meta.section_counts = sectionCounts;
+
+      // 5. Trigger Browser Download
       const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backup, null, 2));
       const downloadAnchor = document.createElement('a');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -9418,6 +9759,193 @@
       }
 
       return { success: true, timestamp: timestamp, data: backup };
+    },
+
+    // --- Pre-flight Backup Validator ---
+    validateBackupPayload(payload) {
+      const errors = [];
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        return { valid: false, errors: ['Backup payload must be a valid JSON object.'], summary: null };
+      }
+
+      const version = (payload.meta && payload.meta.version) || payload.version || '1.0';
+
+      const lsData = payload.localStorage || payload.local_storage_raw || (Array.isArray(payload) ? null : payload);
+      if (!lsData || typeof lsData !== 'object' || Array.isArray(lsData) || Object.keys(lsData).length === 0) {
+        errors.push('Backup contains no valid local storage records.');
+      }
+
+      if (lsData && typeof lsData === 'object') {
+        try {
+          if (lsData['aethertasks_db_state_v7']) {
+            const parsedState = typeof lsData['aethertasks_db_state_v7'] === 'string' 
+              ? JSON.parse(lsData['aethertasks_db_state_v7']) 
+              : lsData['aethertasks_db_state_v7'];
+            if (parsedState && Array.isArray(parsedState.salarySettlements)) {
+              for (const s of parsedState.salarySettlements) {
+                if (s.netPayable !== undefined && (!Number.isFinite(Number(s.netPayable)) || isNaN(Number(s.netPayable)))) {
+                  errors.push(`Invalid financial netPayable in settlement: ${s.id || 'unknown'}`);
+                }
+              }
+            }
+          }
+        } catch(e) {
+          errors.push('Failed to parse aethertasks_db_state_v7: ' + e.message);
+        }
+      }
+
+      const summary = {
+        version: String(version),
+        export_date: (payload.meta && payload.meta.export_date) || payload.timestamp || 'Unknown',
+        counts: {
+          localStorageKeys: lsData && typeof lsData === 'object' ? Object.keys(lsData).length : 0,
+          indexedDbStores: payload.indexedDB && typeof payload.indexedDB === 'object' ? Object.keys(payload.indexedDB).length : 0,
+          cloudTables: payload.supabase_relational && typeof payload.supabase_relational === 'object' ? Object.keys(payload.supabase_relational).length : 0
+        }
+      };
+
+      if (lsData && typeof lsData === 'object') {
+        try {
+          if (lsData['vishwa_yarn_rm_orders_data']) {
+            const ord = typeof lsData['vishwa_yarn_rm_orders_data'] === 'string' ? JSON.parse(lsData['vishwa_yarn_rm_orders_data']) : lsData['vishwa_yarn_rm_orders_data'];
+            if (Array.isArray(ord)) summary.counts.yarnOrders = ord.length;
+          }
+          if (lsData['vishwa_yarn_rm_stock_data']) {
+            const stk = typeof lsData['vishwa_yarn_rm_stock_data'] === 'string' ? JSON.parse(lsData['vishwa_yarn_rm_stock_data']) : lsData['vishwa_yarn_rm_stock_data'];
+            if (Array.isArray(stk)) summary.counts.yarnStock = stk.length;
+          }
+          if (lsData['aethertasks_db_state_v7']) {
+            const st = typeof lsData['aethertasks_db_state_v7'] === 'string' ? JSON.parse(lsData['aethertasks_db_state_v7']) : lsData['aethertasks_db_state_v7'];
+            if (st && Array.isArray(st.employees)) summary.counts.employees = st.employees.length;
+            if (st && Array.isArray(st.salarySettlements)) summary.counts.salarySettlements = st.salarySettlements.length;
+          }
+        } catch(e) {}
+      }
+
+      return {
+        valid: errors.length === 0,
+        errors,
+        summary
+      };
+    },
+
+    // --- Pre-Import Recovery Snapshot ---
+    createPreImportSnapshot() {
+      try {
+        const snapshot = {
+          timestamp: new Date().toISOString(),
+          localStorage: {}
+        };
+        for (let i = 0; i < nativeLocalStorage.length; i++) {
+          const k = nativeLocalStorage.key(i);
+          if (k && k !== 'vf_pre_import_recovery_snapshot') {
+            snapshot.localStorage[k] = nativeLocalStorage.getItem(k);
+          }
+        }
+        nativeLocalStorage.setItem('vf_pre_import_recovery_snapshot', JSON.stringify(snapshot));
+        return { success: true, timestamp: snapshot.timestamp, keyCount: Object.keys(snapshot.localStorage).length };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    },
+
+    restorePreImportSnapshot() {
+      try {
+        const raw = nativeLocalStorage.getItem('vf_pre_import_recovery_snapshot');
+        if (!raw) return { success: false, error: 'No recovery snapshot found.' };
+        const snapshot = JSON.parse(raw);
+        if (!snapshot || !snapshot.localStorage || typeof snapshot.localStorage !== 'object') {
+          return { success: false, error: 'Corrupt snapshot data.' };
+        }
+        nativeLocalStorage.clear();
+        for (const [k, v] of Object.entries(snapshot.localStorage)) {
+          nativeLocalStorage.setItem(k, v);
+          cache[k] = v;
+        }
+        return { success: true, restoredAt: snapshot.timestamp, keyCount: Object.keys(snapshot.localStorage).length };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    },
+
+    // --- Safe Transactional Restore ---
+    async restoreBackup(payload, options = {}) {
+      const validation = this.validateBackupPayload(payload);
+      if (!validation.valid) {
+        return { success: false, error: 'Validation failed: ' + validation.errors.join('; '), validation };
+      }
+
+      // Auto create pre-import snapshot
+      this.createPreImportSnapshot();
+
+      try {
+        const lsData = payload.localStorage || payload.local_storage_raw || (Array.isArray(payload) ? null : payload);
+        const idbData = payload.indexedDB || null;
+
+        // Clear cloud Supabase if requested
+        if (options.clearCloud && window.VishwaSupabase && typeof window.VishwaSupabase.clearAll === 'function') {
+          try { await window.VishwaSupabase.clearAll(); } catch(e) {}
+        }
+
+        // Restore localStorage
+        nativeLocalStorage.clear();
+        for (const [key, value] of Object.entries(lsData)) {
+          if (key === 'vf_pre_import_recovery_snapshot') continue;
+          const valStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
+          nativeLocalStorage.setItem(key, valStr);
+          cache[key] = valStr;
+        }
+
+        // Restore IndexedDB if present
+        if (idbData && typeof idbData === 'object' && typeof indexedDB !== 'undefined') {
+          try {
+            await new Promise((resolve) => {
+              const req = indexedDB.open('VishwaFashionsDB', 1);
+              req.onupgradeneeded = function(evt) {
+                const db = evt.target.result;
+                Object.keys(idbData).forEach(storeName => {
+                  if (!db.objectStoreNames.contains(storeName)) {
+                    db.createObjectStore(storeName);
+                  }
+                });
+              };
+              req.onsuccess = function(evt) {
+                const db = evt.target.result;
+                const storeNames = Object.keys(idbData).filter(sn => db.objectStoreNames.contains(sn));
+                if (storeNames.length === 0) {
+                  db.close();
+                  return resolve();
+                }
+                const tx = db.transaction(storeNames, 'readwrite');
+                storeNames.forEach(storeName => {
+                  const store = tx.objectStore(storeName);
+                  store.clear();
+                  const items = idbData[storeName];
+                  if (Array.isArray(items)) {
+                    items.forEach(item => {
+                      if (item && item.key !== undefined) {
+                        store.put(item.value, item.key);
+                      } else {
+                        store.put(item);
+                      }
+                    });
+                  }
+                });
+                tx.oncomplete = () => { db.close(); resolve(); };
+                tx.onerror = () => { db.close(); resolve(); };
+              };
+              req.onerror = () => resolve();
+            });
+          } catch (e) {
+            console.warn('IndexedDB restore warning:', e);
+          }
+        }
+
+        return { success: true, validation, summary: validation.summary };
+      } catch (err) {
+        this.restorePreImportSnapshot();
+        return { success: false, error: err.message, reverted: true };
+      }
     },
 
     // --- 1-Click Non-Destructive LocalStorage to Supabase Migration Engine ---
@@ -9644,7 +10172,6 @@
     recordDeletion: (key, itemId) => supabaseLocalStorage.recordDeletion(key, itemId),
     recordCostingDeletion: (key, itemId) => supabaseLocalStorage.recordCostingDeletion(key, itemId),
     unrecordDeletion: (key, itemId, itemData) => supabaseLocalStorage.unrecordDeletion(key, itemId, itemData),
-    unrecordCostingDeletion: (key, itemId, itemData) => supabaseLocalStorage.unrecordCostingDeletion(key, itemId, itemData),
     getDeletedTombstones: getDeletedTombstones,
     filterDeletedEntities: filterDeletedEntities
   };
@@ -9653,7 +10180,15 @@
   window.VF_DB = VF_DB;
   supabaseApi.db = VF_DB;
 
+  // Expose backup & safety helpers on supabaseApi
+  supabaseApi.exportFullBackup = () => VF_DB.exportFullBackup();
+  supabaseApi.validateBackupPayload = (payload) => VF_DB.validateBackupPayload(payload);
+  supabaseApi.createPreImportSnapshot = () => VF_DB.createPreImportSnapshot();
+  supabaseApi.restorePreImportSnapshot = () => VF_DB.restorePreImportSnapshot();
+  supabaseApi.restoreBackup = (payload, options) => VF_DB.restoreBackup(payload, options);
+
   window.VishwaSupabase = supabaseApi;
+  window.VishwaAuth = VishwaAuth;
 
   try {
     Object.defineProperty(window, 'localStorage', {

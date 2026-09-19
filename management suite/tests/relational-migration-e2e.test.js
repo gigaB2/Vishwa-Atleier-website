@@ -46,9 +46,13 @@ test('End-to-End VF_DB Relational Migration and Operations Suite', async (t) => 
       },
       navigator: { onLine: true },
       console: console,
-      setTimeout: setTimeout,
+      setTimeout: (fn, delay) => {
+        const t = setTimeout(fn, delay !== undefined ? Math.min(delay, 0) : 0);
+        if (t && typeof t.unref === 'function') t.unref();
+        return t;
+      },
       clearTimeout: clearTimeout,
-      setInterval: setInterval,
+      setInterval: () => ({ unref: () => {} }),
       clearInterval: clearInterval,
       Date: Date
     };

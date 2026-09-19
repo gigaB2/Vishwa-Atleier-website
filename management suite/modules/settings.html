@@ -2042,6 +2042,52 @@
         </label>
         
         <button type="button" onclick="resetSystemToDefault()" class="save-btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1.5px solid rgba(239, 68, 68, 0.25); box-shadow: none;"><i class="ri-restart-line"></i> Factory Reset</button>
+    </div>
+
+    <!-- Dry-Run Database Restore Preview Modal -->
+    <div id="import-preview-modal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(4, 6, 12, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); align-items: center; justify-content: center; padding: 1rem;">
+      <div style="width: 100%; max-width: 540px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 1.5rem; padding: 1.75rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+          <h3 style="font-size: 1.15rem; font-weight: 700; font-family: var(--font-display); color: var(--fg); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="ri-shield-check-line" style="color: var(--accent); font-size: 1.35rem;"></i>
+            Backup Restore Verification
+          </h3>
+          <button type="button" onclick="closeImportPreviewModal()" style="background: none; border: none; color: var(--muted); font-size: 1.35rem; cursor: pointer;"><i class="ri-close-line"></i></button>
+        </div>
+
+        <div style="background: rgba(139, 92, 246, 0.06); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+            <span style="color: var(--muted);">Backup Format:</span>
+            <strong id="preview-backup-version" style="color: var(--fg);">v2.0.0</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+            <span style="color: var(--muted);">Export Date:</span>
+            <strong id="preview-backup-date" style="color: var(--fg);">-</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+            <span style="color: var(--muted);">Total Stored Keys:</span>
+            <strong id="preview-backup-keys" style="color: var(--accent);">-</strong>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.25rem;">
+          <h4 style="font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.75rem;">Detected Business Data</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem;" id="preview-counts-grid">
+            <!-- Populated dynamically with safe escapeHtml -->
+          </div>
+        </div>
+
+        <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 0.85rem; margin-bottom: 1.5rem; font-size: 0.825rem; color: #f59e0b; display: flex; gap: 0.65rem; align-items: flex-start;">
+          <i class="ri-alert-line" style="font-size: 1.1rem; flex-shrink: 0; margin-top: 1px;"></i>
+          <div>
+            <strong>Safety Notice:</strong> An automatic recovery snapshot will be saved before restoring. Restoring will replace your current workspace data with this backup.
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+          <button type="button" onclick="closeImportPreviewModal()" class="save-btn" style="background: var(--surface); color: var(--fg); border: 1.5px solid var(--border); box-shadow: none;">Cancel</button>
+          <button type="button" id="confirm-restore-btn" onclick="executePendingRestore()" class="save-btn" style="background: var(--accent);"><i class="ri-check-line"></i> Confirm &amp; Restore</button>
+        </div>
       </div>
     </div>
 
@@ -2372,80 +2418,28 @@
     showToast("Company profile removed.", "info");
   }
 
+  let pendingBackupPayload = null;
+
+  function closeImportPreviewModal() {
+    const modal = document.getElementById('import-preview-modal');
+    if (modal) modal.style.display = 'none';
+    pendingBackupPayload = null;
+    const fileInput = document.getElementById('import-state-file');
+    if (fileInput) fileInput.value = '';
+  }
+
   async function exportState() {
     try {
       showToast("Preparing full database backup (including IndexedDB & Cloud state)...", "info");
-      const backup = {
-        version: "2.0",
-        timestamp: new Date().toISOString(),
-        localStorage: {},
-        indexedDB: {}
-      };
-
-      // 1. Export all localStorage entries
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        backup.localStorage[key] = localStorage.getItem(key);
+      const client = window.VF_DB || window.VishwaSupabase;
+      if (client && typeof client.exportFullBackup === 'function') {
+        const res = await client.exportFullBackup();
+        if (res && res.success) {
+          showToast("Full database backup file exported successfully!", "success");
+          return;
+        }
       }
-
-      // 2. Export IndexedDB (VishwaFashionsDB) object stores if supported
-      try {
-        await new Promise((resolve) => {
-          const req = indexedDB.open('VishwaFashionsDB', 1);
-          req.onerror = function() { resolve(); };
-          req.onsuccess = function(e) {
-            const db = e.target.result;
-            const storeNames = Array.from(db.objectStoreNames || []);
-            if (storeNames.length === 0) {
-              db.close();
-              return resolve();
-            }
-            let readCount = 0;
-            const tx = db.transaction(storeNames, 'readonly');
-            storeNames.forEach(storeName => {
-              const store = tx.objectStore(storeName);
-              const getAllReq = store.getAllKeys ? store.getAllKeys() : null;
-              
-              // Fallback to cursor iterate if getAllKeys not available
-              const storeData = [];
-              const cursorReq = store.openCursor();
-              cursorReq.onsuccess = function(evt) {
-                const cursor = evt.target.result;
-                if (cursor) {
-                  storeData.push({ key: cursor.key, value: cursor.value });
-                  cursor.continue();
-                } else {
-                  backup.indexedDB[storeName] = storeData;
-                  readCount++;
-                  if (readCount === storeNames.length) {
-                    db.close();
-                    resolve();
-                  }
-                }
-              };
-              cursorReq.onerror = function() {
-                readCount++;
-                if (readCount === storeNames.length) {
-                  db.close();
-                  resolve();
-                }
-              };
-            });
-          };
-        });
-      } catch (idbErr) {
-        console.warn("IndexedDB export fallback warning:", idbErr);
-      }
-
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      const today = new Date().toISOString().slice(0, 10);
-      downloadAnchor.setAttribute("download", `vishwafashions_database_${today}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      showToast("Full database backup file exported successfully!", "success");
+      showToast("Export completed.", "success");
     } catch (e) {
       console.error(e);
       showToast("Failed to export database backup", "error");
@@ -2457,164 +2451,185 @@
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = async function(e) {
+    reader.onload = function(e) {
       try {
         const parsed = JSON.parse(e.target.result);
-        if (!parsed || typeof parsed !== 'object') {
-          showToast("Invalid backup file structure", "error");
+        const client = window.VF_DB || window.VishwaSupabase;
+        if (!client || typeof client.validateBackupPayload !== 'function') {
+          showToast("Backup service not initialized", "error");
           return;
         }
 
-        // Support both Legacy Backup format (flat key-value object) and v2.0 Backup format ({ localStorage, indexedDB })
-        const lsData = parsed.localStorage ? parsed.localStorage : (Array.isArray(parsed) ? null : parsed);
-        const idbData = parsed.indexedDB || null;
-
-        if (!lsData || typeof lsData !== 'object' || Array.isArray(lsData)) {
-          showToast("Invalid backup file structure", "error");
+        const validation = client.validateBackupPayload(parsed);
+        if (!validation.valid) {
+          showToast("Invalid backup file: " + validation.errors.join("; "), "error");
           return;
         }
 
-        // 1. Clear cloud Supabase database
-        if (window.VishwaSupabase && typeof window.VishwaSupabase.clearAll === 'function') {
-          await window.VishwaSupabase.clearAll();
-        } else {
-          localStorage.clear();
+        // Store pending payload and populate preview modal
+        pendingBackupPayload = parsed;
+        const summary = validation.summary;
+
+        const versionEl = document.getElementById('preview-backup-version');
+        if (versionEl) versionEl.textContent = summary.version || '2.0.0';
+        
+        const dateEl = document.getElementById('preview-backup-date');
+        if (dateEl) {
+          dateEl.textContent = (summary.export_date && summary.export_date !== 'Unknown') 
+            ? new Date(summary.export_date).toLocaleString() 
+            : 'Not specified';
         }
 
-        // 2. Restore localStorage entries
-        for (const [key, value] of Object.entries(lsData)) {
-          // If legacy format included non-string key properties, stringify if object
-          const valStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
-          localStorage.setItem(key, valStr);
+        const keysEl = document.getElementById('preview-backup-keys');
+        if (keysEl) keysEl.textContent = summary.counts.localStorageKeys + ' items';
+
+        const countsGrid = document.getElementById('preview-counts-grid');
+        if (countsGrid) {
+          countsGrid.innerHTML = `
+            <div style="background: var(--surface); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+              <span style="color: var(--muted); font-size: 0.8rem;">Yarn Orders:</span> <strong>${summary.counts.yarnOrders !== undefined ? summary.counts.yarnOrders : 'Included'}</strong>
+            </div>
+            <div style="background: var(--surface); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+              <span style="color: var(--muted); font-size: 0.8rem;">Yarn RM Lots:</span> <strong>${summary.counts.yarnStock !== undefined ? summary.counts.yarnStock : 'Included'}</strong>
+            </div>
+            <div style="background: var(--surface); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+              <span style="color: var(--muted); font-size: 0.8rem;">Staff / Employees:</span> <strong>${summary.counts.employees !== undefined ? summary.counts.employees : 'Included'}</strong>
+            </div>
+            <div style="background: var(--surface); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+              <span style="color: var(--muted); font-size: 0.8rem;">Salary Settlements:</span> <strong>${summary.counts.salarySettlements !== undefined ? summary.counts.salarySettlements : 'Included'}</strong>
+            </div>
+            <div style="background: var(--surface); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+              <span style="color: var(--muted); font-size: 0.8rem;">IndexedDB Design Files:</span> <strong>${summary.counts.indexedDbStores} stores</strong>
+            </div>
+            <div style="background: var(--surface); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+              <span style="color: var(--muted); font-size: 0.8rem;">Cloud Database Tables:</span> <strong>${summary.counts.cloudTables} tables</strong>
+            </div>
+          `;
         }
 
-        // 3. Restore IndexedDB entries if present
-        if (idbData && typeof idbData === 'object') {
-          try {
-            await new Promise((resolve) => {
-              const req = indexedDB.open('VishwaFashionsDB', 1);
-              req.onupgradeneeded = function(evt) {
-                const db = evt.target.result;
-                Object.keys(idbData).forEach(storeName => {
-                  if (!db.objectStoreNames.contains(storeName)) {
-                    db.createObjectStore(storeName);
-                  }
-                });
-              };
-              req.onsuccess = function(evt) {
-                const db = evt.target.result;
-                const storeNames = Object.keys(idbData).filter(sn => db.objectStoreNames.contains(sn));
-                if (storeNames.length === 0) {
-                  db.close();
-                  return resolve();
-                }
-                const tx = db.transaction(storeNames, 'readwrite');
-                storeNames.forEach(storeName => {
-                  const store = tx.objectStore(storeName);
-                  store.clear();
-                  const items = idbData[storeName];
-                  if (Array.isArray(items)) {
-                    items.forEach(item => {
-                      if (item && item.key !== undefined) {
-                        store.put(item.value, item.key);
-                      } else {
-                        store.put(item);
-                      }
-                    });
-                  }
-                });
-                tx.oncomplete = function() {
-                  db.close();
-                  resolve();
-                };
-                tx.onerror = function() {
-                  db.close();
-                  resolve();
-                };
-              };
-              req.onerror = function() { resolve(); };
-            });
-          } catch(idbImportErr) {
-            console.warn("IndexedDB import error:", idbImportErr);
-          }
-        }
-
-        showToast("Database restored successfully! Reloading page...", "success");
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
-      } catch(err) {
+        const modal = document.getElementById('import-preview-modal');
+        if (modal) modal.style.display = 'flex';
+      } catch (err) {
         console.error(err);
-        showToast("Failed to parse JSON backup file", "error");
+        showToast("Failed to parse JSON backup file: " + err.message, "error");
       }
     };
     reader.readAsText(file);
   }
 
-  async function resetSystemToDefault() {
-    if (confirm("Are you sure you want to reset all data for the entire application? This will permanently delete all task records, RM orders, stock books, salary records, and settings across the entire app!")) {
-      // 1. Clear cloud Supabase database
-      if (window.VishwaSupabase && typeof window.VishwaSupabase.clearAll === 'function') {
-        try {
-          await window.VishwaSupabase.clearAll();
-        } catch(e) {
-          console.error("Supabase clearAll error:", e);
+  async function executePendingRestore() {
+    if (!pendingBackupPayload) return;
+    const confirmBtn = document.getElementById('confirm-restore-btn');
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Restoring...';
+    }
+
+    try {
+      const client = window.VF_DB || window.VishwaSupabase;
+      const res = await client.restoreBackup(pendingBackupPayload, { clearCloud: true });
+      if (res && res.success) {
+        showToast("Database restored successfully! Reloading...", "success");
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      } else {
+        showToast("Restore failed: " + (res.error || "Unknown error") + (res.reverted ? " (Workspace reverted to snapshot)" : ""), "error");
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = '<i class="ri-check-line"></i> Confirm &amp; Restore';
         }
       }
-
-      // 2. Delete IndexedDB database
-      try {
-        const req = indexedDB.deleteDatabase('VishwaFashionsDB');
-        req.onsuccess = function () {
-          console.log("Deleted database VishwaFashionsDB successfully");
-        };
-        req.onerror = function () {
-          console.error("Couldn't delete database VishwaFashionsDB");
-        };
-        req.onblocked = function () {
-          console.warn("Couldn't delete database VishwaFashionsDB because it is blocked");
-        };
-      } catch (e) {
-        console.error("Error attempting to delete IndexedDB:", e);
+    } catch(e) {
+      console.error(e);
+      showToast("Failed to restore backup: " + e.message, "error");
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="ri-check-line"></i> Confirm &amp; Restore';
       }
-
-      // 3. Clear localStorage
-      localStorage.clear();
-
-      // 4. Set all data structures to empty to prevent sample/demo data reload
-      localStorage.setItem('yarn-orders', JSON.stringify([]));
-      localStorage.setItem('yarn-qualities', JSON.stringify([]));
-      localStorage.setItem('yarn-suppliers', JSON.stringify([]));
-      localStorage.setItem('vishwa_yarn_rm_stock_data', JSON.stringify([]));
-      localStorage.setItem('warp-issues', JSON.stringify([]));
-      localStorage.setItem('warp-beams', JSON.stringify([]));
-      localStorage.setItem('warp-beam-loadings', JSON.stringify([]));
-      localStorage.setItem('machines', JSON.stringify([]));
-      localStorage.setItem('productionLogs', JSON.stringify([]));
-      localStorage.setItem('manage-looms', JSON.stringify([]));
-      localStorage.setItem('manage-jacquards', JSON.stringify([]));
-      localStorage.setItem('manage-jalas', JSON.stringify([]));
-      localStorage.setItem('manage-fanis', JSON.stringify([]));
-      localStorage.setItem('yarn-issues', JSON.stringify([]));
-      localStorage.setItem('deleted-designs', JSON.stringify([]));
-      localStorage.setItem('costing-products-v4', JSON.stringify([]));
-      localStorage.setItem('costing-tfo-products-v1', JSON.stringify([]));
-      localStorage.setItem('costing-doubler-products-v1', JSON.stringify([]));
-      localStorage.setItem('costing-covering-products-v1', JSON.stringify([]));
-      localStorage.setItem('vishwa_fashions_costing_links', JSON.stringify({}));
-      localStorage.setItem('vishwa_fashions_manual_avg_weights', JSON.stringify({}));
-      localStorage.setItem('aethertasks_db_state_v7', JSON.stringify({
-        employees: [],
-        tasks: [],
-        logs: [],
-        salaryPayments: {}
-      }));
-
-      showToast("All databases cleared successfully! Reloading page...", "success");
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
     }
+  }
+
+  async function resetSystemToDefault() {
+    const userInput = prompt("⚠️ DANGER: This will permanently delete all task records, RM orders, stock books, salary records, and settings across the entire app!\n\nTo confirm, type RESET in capital letters below:");
+    if (userInput !== "RESET") {
+      if (userInput !== null) {
+        showToast("Factory reset cancelled (confirmation text did not match RESET).", "info");
+      }
+      return;
+    }
+
+    // Auto-create recovery snapshot before wiping
+    const client = window.VF_DB || window.VishwaSupabase;
+    if (client && typeof client.createPreImportSnapshot === 'function') {
+      client.createPreImportSnapshot();
+    }
+
+    // 1. Clear cloud Supabase database
+    if (window.VishwaSupabase && typeof window.VishwaSupabase.clearAll === 'function') {
+      try {
+        await window.VishwaSupabase.clearAll();
+      } catch(e) {
+        console.error("Supabase clearAll error:", e);
+      }
+    }
+
+    // 2. Delete IndexedDB database
+    try {
+      const req = indexedDB.deleteDatabase('VishwaFashionsDB');
+      req.onsuccess = function () {
+        console.log("Deleted database VishwaFashionsDB successfully");
+      };
+      req.onerror = function () {
+        console.error("Couldn't delete database VishwaFashionsDB");
+      };
+      req.onblocked = function () {
+        console.warn("Couldn't delete database VishwaFashionsDB because it is blocked");
+      };
+    } catch (e) {
+      console.error("Error attempting to delete IndexedDB:", e);
+    }
+
+    // 3. Clear localStorage (except the recovery snapshot)
+    const snapshot = localStorage.getItem('vf_pre_import_recovery_snapshot');
+    localStorage.clear();
+    if (snapshot) {
+      localStorage.setItem('vf_pre_import_recovery_snapshot', snapshot);
+    }
+
+    // 4. Set all data structures to empty to prevent sample/demo data reload
+    localStorage.setItem('yarn-orders', JSON.stringify([]));
+    localStorage.setItem('yarn-qualities', JSON.stringify([]));
+    localStorage.setItem('yarn-suppliers', JSON.stringify([]));
+    localStorage.setItem('vishwa_yarn_rm_stock_data', JSON.stringify([]));
+    localStorage.setItem('warp-issues', JSON.stringify([]));
+    localStorage.setItem('warp-beams', JSON.stringify([]));
+    localStorage.setItem('warp-beam-loadings', JSON.stringify([]));
+    localStorage.setItem('machines', JSON.stringify([]));
+    localStorage.setItem('productionLogs', JSON.stringify([]));
+    localStorage.setItem('manage-looms', JSON.stringify([]));
+    localStorage.setItem('manage-jacquards', JSON.stringify([]));
+    localStorage.setItem('manage-jalas', JSON.stringify([]));
+    localStorage.setItem('manage-fanis', JSON.stringify([]));
+    localStorage.setItem('yarn-issues', JSON.stringify([]));
+    localStorage.setItem('deleted-designs', JSON.stringify([]));
+    localStorage.setItem('costing-products-v4', JSON.stringify([]));
+    localStorage.setItem('costing-tfo-products-v1', JSON.stringify([]));
+    localStorage.setItem('costing-doubler-products-v1', JSON.stringify([]));
+    localStorage.setItem('costing-covering-products-v1', JSON.stringify([]));
+    localStorage.setItem('vishwa_fashions_costing_links', JSON.stringify({}));
+    localStorage.setItem('vishwa_fashions_manual_avg_weights', JSON.stringify({}));
+    localStorage.setItem('aethertasks_db_state_v7', JSON.stringify({
+      employees: [],
+      tasks: [],
+      logs: [],
+      salaryPayments: {}
+    }));
+
+    showToast("All databases cleared successfully! Reloading page...", "success");
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
   }
 
   function loadGroupNameSetting() {
