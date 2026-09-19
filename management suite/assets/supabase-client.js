@@ -240,6 +240,7 @@
   });
 
   // Track last local writes to prevent race conditions from overwriting active user edits
+  // Track last local writes to prevent race conditions from overwriting active user edits
   const lastLocalWrites = {};
   const lastSavedHashes = {};
   const debouncedWriteTimers = {};
@@ -287,6 +288,123 @@
       }
     }
     return Array.from(map.values());
+  }
+
+  // --- Universal PostgreSQL & PostgREST Error Interceptor & Safeguards ---
+  function handlePostgresError(error, context = {}) {
+    if (!error) return { handled: false, code: null, message: '' };
+    
+    let code = error.code || null;
+    let message = String(error.message || error.details || error.hint || (typeof error === 'string' ? error : '') || '');
+    let status = error.status || null;
+
+    // Detect 42501 (RLS Policy Violation / Insufficient Privilege)
+    if (code === '42501' || message.includes('violates row-level security') || message.includes('permission denied') || status === 403) {
+      console.warn('[Supabase Safeguard: 42501 RLS Violation on ' + (context.table || 'query') + '] Falling back to client-safe store without crash.');
+      return {
+        handled: true,
+        type: 'RLS_VIOLATION',
+        code: '42501',
+        message: 'Row Level Security policy restricted operation. Gracefully fallen back to localized store.',
+        fallbackToKv: true,
+        retry: false
+      };
+    }
+
+    // Detect 23505 (Unique Constraint Collision)
+    if (code === '23505' || message.includes('unique constraint') || message.includes('duplicate key')) {
+      console.warn('[Supabase Safeguard: 23505 Unique Collision on ' + (context.table || 'entity') + '] Re-applying conflict deduplication.');
+      return {
+        handled: true,
+        type: 'UNIQUE_COLLISION',
+        code: '23505',
+        message: 'Unique constraint collision detected. Merged and deduplicated.',
+        retry: true,
+        dedupeRequired: true
+      };
+    }
+
+    // Detect 23503 (Foreign Key Constraint Violation)
+    if (code === '23503' || message.includes('violates foreign key constraint') || message.includes('is not present in table')) {
+      console.warn('[Supabase Safeguard: 23503 Foreign Key Violation on ' + (context.table || 'entity') + '] Parent record missing or pending sync.');
+      return {
+        handled: true,
+        type: 'FOREIGN_KEY_VIOLATION',
+        code: '23503',
+        message: 'Foreign key parent constraint missing. Queued for deferred parent resolution.',
+        orphanTarget: true,
+        retry: false
+      };
+    }
+
+    // Detect 21000 (Cardinality / ON CONFLICT Target Multiple Rows)
+    if (code === '21000' || message.includes('cardinality violation') || message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) {
+      console.warn('[Supabase Safeguard: 21000 Cardinality Violation on ' + (context.table || 'batch') + '] Deduplicating conflict targets.');
+      return {
+        handled: true,
+        type: 'CARDINALITY_VIOLATION',
+        code: '21000',
+        message: 'Multiple batch updates targeting identical conflict key. Deduplicating payload.',
+        dedupeRequired: true,
+        retry: true
+      };
+    }
+
+    // Detect 57014 (Statement Timeout / Large Payload Query Cancellation)
+    if (code === '57014' || message.includes('statement timeout') || message.includes('canceling statement due to statement timeout') || status === 504) {
+      console.warn('[Supabase Safeguard: 57014 Statement Timeout on ' + (context.table || 'query') + '] Reducing batch page size.');
+      return {
+        handled: true,
+        type: 'STATEMENT_TIMEOUT',
+        code: '57014',
+        message: 'Query timeout encountered. Automatically throttling page size.',
+        reducePageSize: true,
+        retry: true
+      };
+    }
+
+    // Detect 42P01 (Undefined Table) or 42703 (Undefined Column)
+    if (code === '42P01' || code === '42703' || message.includes('does not exist')) {
+      console.warn('[Supabase Safeguard: Schema Mismatch (' + code + ') on ' + (context.table || 'field') + '] Schema migration recommended.');
+      return {
+        handled: true,
+        type: 'SCHEMA_MISMATCH',
+        code: code,
+        message: 'Schema field or table not yet provisioned in database. Using KV store.',
+        fallbackToKv: true,
+        retry: false
+      };
+    }
+
+    // Detect PostgREST specific codes
+    if (code === 'PGRST116') {
+      return {
+        handled: true,
+        type: 'PGRST_ROW_COUNT_MISMATCH',
+        code: 'PGRST116',
+        message: 'Zero or multiple rows returned when single row was expected.',
+        retry: false
+      };
+    }
+
+    if (code === 'PGRST301' || message.includes('JWT expired')) {
+      console.warn('[Supabase Safeguard: PGRST301 JWT Expired] Session refresh recommended.');
+      return {
+        handled: true,
+        type: 'PGRST_JWT_EXPIRED',
+        code: 'PGRST301',
+        message: 'Authentication token expired.',
+        refreshAuth: true,
+        retry: false
+      };
+    }
+
+    return {
+      handled: false,
+      code: code,
+      message: message,
+      status: status
+    };
   }
 
   // --- Universal Intelligent Merge Engine (Eliminates Concurrent Multi-User Overwrites) ---
@@ -1212,6 +1330,7 @@
         if (cleanRemote.length > 0 && !isLocallyActive) {
           return cleanRemote;
         }
+        
         const authMap = new Map();
         cleanRemote.forEach(item => {
           const id = getItemIdentifier(item);
@@ -3621,6 +3740,8 @@
   // Supabase REST API Client
   const supabaseApi = {
     auth: VishwaAuth,
+    handlePostgresError: handlePostgresError,
+    dedupeByConflictKey: dedupeByConflictKey,
     isHydrated: () => isHydrated,
     getStatus: () => currentStatus,
     async get(key) {
@@ -10487,6 +10608,7 @@
     mergeYarnStockDatasets: mergeYarnStockDatasets,
     mergeYarnOrdersDatasets: mergeYarnOrdersDatasets,
     mergeDatasets: mergeDatasets,
+    handlePostgresError: handlePostgresError,
     recordDeletion: (key, itemId) => supabaseLocalStorage.recordDeletion(key, itemId),
     recordCostingDeletion: (key, itemId) => supabaseLocalStorage.recordCostingDeletion(key, itemId),
     unrecordDeletion: (key, itemId, itemData) => supabaseLocalStorage.unrecordDeletion(key, itemId, itemData),

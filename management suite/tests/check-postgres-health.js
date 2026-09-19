@@ -1,11 +1,16 @@
 const fs = require('fs');
 const path = require('path');
+const dns = require('dns');
+
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 const configPath = path.join(__dirname, '..', 'assets', 'config.js');
 const configContent = fs.readFileSync(configPath, 'utf8');
 
-const urlMatch = configContent.match(/SUPABASE_URL:\s*["']([^"']+)["']/);
-const keyMatch = configContent.match(/SUPABASE_ANON_KEY:\s*["']([^"']+)["']/);
+const urlMatch = configContent.match(/SUPABASE_URL:\s*(?:[^"'\n]*\|\|\s*)?["']([^"']+)["']/);
+const keyMatch = configContent.match(/SUPABASE_ANON_KEY:\s*(?:[^"'\n]*\|\|\s*)?["']([^"']+)["']/);
 
 if (!urlMatch || !keyMatch) {
   console.error('Could not extract SUPABASE_URL or SUPABASE_ANON_KEY from config.js');
@@ -49,7 +54,8 @@ const tables = [
   'vf_rm_suppliers',
   'vf_fabric_designs',
   'vf_machinery_assets',
-  'vf_companies'
+  'vf_companies',
+  'vf_auth_users'
 ];
 
 async function runDiagnostics() {

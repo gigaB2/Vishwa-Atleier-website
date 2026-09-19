@@ -24,6 +24,7 @@ const testFiles = [
   path.join(__dirname, 'auth-settings-sync.test.js'),
   path.join(__dirname, 'auth-adapter.test.js'),
   path.join(__dirname, 'rls-hardening.test.js'),
+  path.join(__dirname, 'supabase-error-audit.test.js'),
   path.join(__dirname, 'characterization-e2e.test.js'),
   path.join(__dirname, 'relational-migration-e2e.test.js')
 ];
