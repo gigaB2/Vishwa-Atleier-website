@@ -711,6 +711,18 @@
             return hashed === storedHashOrPlain.toLowerCase();
         }
 
+        // Robust resolver for VishwaAuth client with retry buffer
+        async function getAuthClient() {
+            let authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
+            if (authClient && typeof authClient.signIn === 'function') return authClient;
+            for (let i = 0; i < 15; i++) {
+                await new Promise(r => setTimeout(r, 100));
+                authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
+                if (authClient && typeof authClient.signIn === 'function') return authClient;
+            }
+            return null;
+        }
+
         // 1. Employee Form Submit (Authoritative VishwaAuth Layer)
         document.getElementById('employeeLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -725,7 +737,7 @@
             showAuthMsg('Authenticating...', 'info');
 
             try {
-                const authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
+                const authClient = await getAuthClient();
                 if (authClient && typeof authClient.signIn === 'function') {
                     const res = await authClient.signIn(emailInput, passInput);
                     if (res && res.error) {
@@ -740,7 +752,7 @@
                         return;
                     }
                 }
-                showAuthMsg('Authentication service is initializing. Please try again.', 'error');
+                showAuthMsg('Authentication service is initializing. Please try again in a moment.', 'error');
             } catch (err) {
                 showAuthMsg(err.message || 'Authentication failed. Please check your credentials.', 'error');
             }
@@ -760,7 +772,7 @@
             showAuthMsg('Verifying admin credentials...', 'info');
 
             try {
-                const authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
+                const authClient = await getAuthClient();
                 if (authClient && typeof authClient.signIn === 'function') {
                     const res = await authClient.signIn(adminEmail, adminPass);
                     if (res && res.error) {
@@ -779,7 +791,7 @@
                         }
                     }
                 }
-                showAuthMsg('Authentication service is initializing. Please try again.', 'error');
+                showAuthMsg('Authentication service is initializing. Please try again in a moment.', 'error');
             } catch (err) {
                 showAuthMsg(err.message || 'Authentication failed. Please check your credentials.', 'error');
             }

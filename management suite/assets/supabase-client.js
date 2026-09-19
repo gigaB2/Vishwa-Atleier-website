@@ -3425,6 +3425,9 @@
     }
   };
 
+  if (typeof window !== 'undefined') {
+    window.VishwaAuth = VishwaAuth;
+  }
 
   // Supabase REST API Client
   const supabaseApi = {
