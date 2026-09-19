@@ -724,22 +724,26 @@
 
             showAuthMsg('Authenticating...', 'info');
 
-            const authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
-            if (authClient && typeof authClient.signIn === 'function') {
-                const res = await authClient.signIn(emailInput, passInput);
-                if (res && res.error) {
-                    showAuthMsg(res.error.message || 'Authentication failed. Invalid email or password.', 'error');
-                    return;
+            try {
+                const authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
+                if (authClient && typeof authClient.signIn === 'function') {
+                    const res = await authClient.signIn(emailInput, passInput);
+                    if (res && res.error) {
+                        showAuthMsg(res.error.message || 'Authentication failed. Invalid email or password.', 'error');
+                        return;
+                    }
+                    if (res && res.data) {
+                        const session = (authClient.getSession && authClient.getSession()) || {};
+                        showAuthMsg(`Welcome back, ${session.name || emailInput}! Redirecting...`, 'success');
+                        const targetPage = getFirstAllowedPage(session.permissions);
+                        setTimeout(() => window.location.href = targetPage, 400);
+                        return;
+                    }
                 }
-                if (res && res.data) {
-                    const session = (authClient.getSession && authClient.getSession()) || {};
-                    showAuthMsg(`Welcome back, ${session.name || emailInput}! Redirecting...`, 'success');
-                    const targetPage = getFirstAllowedPage(session.permissions);
-                    setTimeout(() => window.location.href = targetPage, 400);
-                    return;
-                }
+                showAuthMsg('Authentication service is initializing. Please try again.', 'error');
+            } catch (err) {
+                showAuthMsg(err.message || 'Authentication failed. Please check your credentials.', 'error');
             }
-            showAuthMsg('Authentication system unavailable. Please try again.', 'error');
         });
 
         // 2. Admin Form Submit (Authoritative VishwaAuth Layer)
@@ -755,26 +759,30 @@
 
             showAuthMsg('Verifying admin credentials...', 'info');
 
-            const authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
-            if (authClient && typeof authClient.signIn === 'function') {
-                const res = await authClient.signIn(adminEmail, adminPass);
-                if (res && res.error) {
-                    showAuthMsg(res.error.message || 'Invalid Admin Email or Password.', 'error');
-                    return;
-                }
-                if (res && res.data) {
-                    const session = (authClient.getSession && authClient.getSession()) || {};
-                    if (session.role === 'admin' || session.permissions === '*') {
-                        showAuthMsg('Admin Authenticated! Redirecting to Settings...', 'success');
-                        setTimeout(() => window.location.href = 'modules/settings.html', 400);
-                        return;
-                    } else {
-                        showAuthMsg('Access denied. Administrator privileges required.', 'error');
+            try {
+                const authClient = window.VishwaAuth || (window.VishwaSupabase ? window.VishwaSupabase.auth : null) || window.VishwaSupabase;
+                if (authClient && typeof authClient.signIn === 'function') {
+                    const res = await authClient.signIn(adminEmail, adminPass);
+                    if (res && res.error) {
+                        showAuthMsg(res.error.message || 'Invalid Admin Email or Password.', 'error');
                         return;
                     }
+                    if (res && res.data) {
+                        const session = (authClient.getSession && authClient.getSession()) || {};
+                        if (session.role === 'admin' || session.permissions === '*') {
+                            showAuthMsg('Admin Authenticated! Redirecting to Settings...', 'success');
+                            setTimeout(() => window.location.href = 'modules/settings.html', 400);
+                            return;
+                        } else {
+                            showAuthMsg('Access denied. Administrator privileges required.', 'error');
+                            return;
+                        }
+                    }
                 }
+                showAuthMsg('Authentication service is initializing. Please try again.', 'error');
+            } catch (err) {
+                showAuthMsg(err.message || 'Authentication failed. Please check your credentials.', 'error');
             }
-            showAuthMsg('Authentication system unavailable. Please try again.', 'error');
         });
 
         // Trigger background hydration from Supabase if online
