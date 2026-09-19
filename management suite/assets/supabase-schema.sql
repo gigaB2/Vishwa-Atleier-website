@@ -1513,12 +1513,15 @@ USING (public.vf_is_admin());
 -- D. Key-Value Store Policies (vf_kv_store)
 -- ------------------------------------------------------------------------------
 DROP POLICY IF EXISTS "vf_kv_store_select_auth" ON public.vf_kv_store;
+DROP POLICY IF EXISTS "vf_kv_store_select_all" ON public.vf_kv_store;
 DROP POLICY IF EXISTS "vf_kv_store_insert_operator" ON public.vf_kv_store;
+DROP POLICY IF EXISTS "vf_kv_store_insert_all" ON public.vf_kv_store;
 DROP POLICY IF EXISTS "vf_kv_store_update_operator" ON public.vf_kv_store;
+DROP POLICY IF EXISTS "vf_kv_store_update_all" ON public.vf_kv_store;
 DROP POLICY IF EXISTS "vf_kv_store_delete_admin" ON public.vf_kv_store;
 
-CREATE POLICY "vf_kv_store_select_auth" ON public.vf_kv_store
-FOR SELECT TO authenticated
+CREATE POLICY "vf_kv_store_select_all" ON public.vf_kv_store
+FOR SELECT TO anon, authenticated
 USING (
     CASE 
         WHEN key IN ('gemini_api_key', 'vf_master_credentials', 'vf_backup_manifest', 'vf_cloud_credentials')
@@ -1527,30 +1530,30 @@ USING (
     END
 );
 
-CREATE POLICY "vf_kv_store_insert_operator" ON public.vf_kv_store
-FOR INSERT TO authenticated
+CREATE POLICY "vf_kv_store_insert_all" ON public.vf_kv_store
+FOR INSERT TO anon, authenticated
 WITH CHECK (
     CASE 
         WHEN key IN ('gemini_api_key', 'vf_master_credentials', 'vf_backup_manifest', 'vf_cloud_credentials')
         THEN public.vf_is_admin()
-        ELSE public.vf_is_operator_or_above()
+        ELSE true
     END
 );
 
-CREATE POLICY "vf_kv_store_update_operator" ON public.vf_kv_store
-FOR UPDATE TO authenticated
+CREATE POLICY "vf_kv_store_update_all" ON public.vf_kv_store
+FOR UPDATE TO anon, authenticated
 USING (
     CASE 
         WHEN key IN ('gemini_api_key', 'vf_master_credentials', 'vf_backup_manifest', 'vf_cloud_credentials')
         THEN public.vf_is_admin()
-        ELSE public.vf_is_operator_or_above()
+        ELSE true
     END
 )
 WITH CHECK (
     CASE 
         WHEN key IN ('gemini_api_key', 'vf_master_credentials', 'vf_backup_manifest', 'vf_cloud_credentials')
         THEN public.vf_is_admin()
-        ELSE public.vf_is_operator_or_above()
+        ELSE true
     END
 );
 
