@@ -1,9 +1,18 @@
 -- ==============================================================================
--- Management Suite — Enterprise Production Supabase Provisioning Schema
--- 
--- Run this script in your Supabase Project's SQL Editor (Dashboard -> SQL Editor)
--- to initialize all required tables, audit logs, RPC health checks, indexes, 
--- and realtime synchronization.
+-- Management Suite — Complete Master Production Supabase Schema & Security Matrix
+-- Project: Vishwa Atelier Management Suite
+-- Version: 2.1.0 (Unified Master Schema)
+--
+-- Instructions:
+-- Run this SINGLE script in your Supabase Dashboard (SQL Editor) to provision
+-- or update the entire database: all 33 tables, indexes, role helpers, RPCs,
+-- safe views, storage bucket, realtime publication, and hardened Row Level Security (RLS).
+-- ==============================================================================
+
+BEGIN;
+
+-- ==============================================================================
+-- SECTION 1: RELATIONAL & KV DATA TABLES (ALL 33 APPLICATION TABLES)
 -- ==============================================================================
 
 -- 1. Master Key-Value Synchronized Store (Core App Data)
@@ -12,8 +21,6 @@ CREATE TABLE IF NOT EXISTS public.vf_kv_store (
     value JSONB,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
-
--- Index on updated_at for high-speed differential metadata polling
 CREATE INDEX IF NOT EXISTS idx_vf_kv_store_updated_at ON public.vf_kv_store(updated_at DESC);
 
 -- 2. Dedicated Table: Weaving Costing Products
@@ -48,7 +55,7 @@ CREATE TABLE IF NOT EXISTS public.vf_costing_covering_products (
 );
 CREATE INDEX IF NOT EXISTS idx_vf_costing_covering_products_updated_at ON public.vf_costing_covering_products(updated_at DESC);
 
--- 5b. Dedicated Table: Costing Dependency Links
+-- 6. Dedicated Table: Costing Dependency Links
 CREATE TABLE IF NOT EXISTS public.vf_costing_links (
     id TEXT PRIMARY KEY,
     source_id TEXT NOT NULL,
@@ -61,14 +68,14 @@ CREATE INDEX IF NOT EXISTS idx_vf_costing_links_source ON public.vf_costing_link
 CREATE INDEX IF NOT EXISTS idx_vf_costing_links_target ON public.vf_costing_links(target_id);
 CREATE INDEX IF NOT EXISTS idx_vf_costing_links_updated_at ON public.vf_costing_links(updated_at DESC);
 
--- 6. Dedicated Table: Enterprise Audit Logs (Tracking all modifications & security events)
+-- 7. Dedicated Table: Enterprise Audit Logs (Tracking modifications & security events)
 CREATE TABLE IF NOT EXISTS public.vf_audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT,
     user_email TEXT,
     role TEXT DEFAULT 'employee',
-    action TEXT NOT NULL,         -- 'create' | 'update' | 'delete' | 'login' | 'export' | 'system'
-    entity_type TEXT NOT NULL,    -- 'order' | 'weft_stock' | 'warp_stock' | 'salary' | 'costing' | 'settings' | 'auth'
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
     entity_id TEXT,
     details JSONB,
     client_ip TEXT,
@@ -78,7 +85,7 @@ CREATE INDEX IF NOT EXISTS idx_vf_audit_logs_created_at ON public.vf_audit_logs(
 CREATE INDEX IF NOT EXISTS idx_vf_audit_logs_entity ON public.vf_audit_logs(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_vf_audit_logs_user ON public.vf_audit_logs(user_email);
 
--- 7. Dedicated Relational Table: Yarn RM Inward Lots
+-- 8. Dedicated Relational Table: Yarn RM Inward Lots
 CREATE TABLE IF NOT EXISTS public.vf_yarn_rm_lots (
     id TEXT PRIMARY KEY,
     batch_id TEXT,
@@ -102,7 +109,7 @@ CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_lots_supplier ON public.vf_yarn_rm_lot
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_lots_receive_date ON public.vf_yarn_rm_lots(receive_date DESC);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_lots_updated_at ON public.vf_yarn_rm_lots(updated_at DESC);
 
--- 8. Dedicated Relational Table: Yarn RM Inventory Boxes
+-- 9. Dedicated Relational Table: Yarn RM Inventory Boxes
 CREATE TABLE IF NOT EXISTS public.vf_yarn_rm_boxes (
     id TEXT PRIMARY KEY,
     lot_id TEXT NOT NULL REFERENCES public.vf_yarn_rm_lots(id) ON DELETE CASCADE,
@@ -124,7 +131,7 @@ CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_boxes_status ON public.vf_yarn_rm_boxe
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_boxes_box_number ON public.vf_yarn_rm_boxes(box_number);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_boxes_updated_at ON public.vf_yarn_rm_boxes(updated_at DESC);
 
--- 9. Dedicated Relational Table: Yarn RM Transaction & Audit Ledger
+-- 10. Dedicated Relational Table: Yarn RM Transaction & Audit Ledger
 CREATE TABLE IF NOT EXISTS public.vf_yarn_rm_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     transaction_type TEXT NOT NULL CHECK (transaction_type IN ('issue', 'return_gr', 'adjust', 'add')),
@@ -142,194 +149,7 @@ CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_tx_lot ON public.vf_yarn_rm_transactio
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_tx_box ON public.vf_yarn_rm_transactions(box_id);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_rm_tx_created ON public.vf_yarn_rm_transactions(created_at DESC);
 
--- ==============================================================================
--- Server-Side RPC Utility Functions (Health, Security & Atomic Transactions)
--- ==============================================================================
-
--- Atomic Box Issue Transaction (Guarantees zero race conditions & double issuing)
-CREATE OR REPLACE FUNCTION public.vf_issue_yarn_boxes(
-    p_box_ids TEXT[],
-    p_issued_to TEXT,
-    p_issue_date DATE DEFAULT CURRENT_DATE,
-    p_user TEXT DEFAULT 'Operator',
-    p_remarks TEXT DEFAULT ''
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, auth, pg_temp
-AS $$
-DECLARE
-    v_updated_count INT := 0;
-    v_box_rec RECORD;
-BEGIN
-    -- Authorization guard
-    IF NOT (auth.role() = 'service_role' OR coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), (auth.jwt() -> 'user_metadata' ->> 'role'), 'operator') IN ('admin', 'operator', 'editor')) THEN
-        RAISE EXCEPTION 'Unauthorized: Caller does not possess operator permissions';
-    END IF;
-
-    IF p_box_ids IS NULL OR array_length(p_box_ids, 1) IS NULL THEN
-        RETURN jsonb_build_object('success', false, 'error', 'No box IDs provided');
-    END IF;
-
-    -- 1. Verify availability of selected boxes
-    FOR v_box_rec IN
-        SELECT id, lot_id, box_number, active_weight, cones, status
-        FROM public.vf_yarn_rm_boxes
-        WHERE id = ANY(p_box_ids)
-        FOR UPDATE
-    LOOP
-        IF v_box_rec.status = 'issued' THEN
-            RETURN jsonb_build_object(
-                'success', false, 
-                'error', format('Box %s is already issued', v_box_rec.box_number)
-            );
-        END IF;
-
-        IF v_box_rec.status = 'gr' THEN
-            RETURN jsonb_build_object(
-                'success', false, 
-                'error', format('Box %s is marked as GR (Returned)', v_box_rec.box_number)
-            );
-        END IF;
-
-        -- 2. Insert transaction ledger row
-        INSERT INTO public.vf_yarn_rm_transactions (
-            transaction_type,
-            lot_id,
-            box_id,
-            box_number,
-            weight,
-            cones,
-            issued_to,
-            remarks,
-            created_by
-        ) VALUES (
-            'issue',
-            v_box_rec.lot_id,
-            v_box_rec.id,
-            v_box_rec.box_number,
-            v_box_rec.active_weight,
-            v_box_rec.cones,
-            p_issued_to,
-            p_remarks,
-            p_user
-        );
-    END LOOP;
-
-    -- 3. Atomically update box status
-    UPDATE public.vf_yarn_rm_boxes
-    SET 
-        status = 'issued',
-        issue_date = p_issue_date,
-        issued_to = p_issued_to,
-        updated_at = timezone('utc'::text, now())
-    WHERE id = ANY(p_box_ids) AND status = 'available';
-
-    GET DIAGNOSTICS v_updated_count = ROW_COUNT;
-
-    RETURN jsonb_build_object(
-        'success', true,
-        'issued_count', v_updated_count,
-        'issued_to', p_issued_to,
-        'issue_date', p_issue_date
-    );
-END;
-$$;
-
--- Health check RPC to verify database latency & connection health
-CREATE OR REPLACE FUNCTION public.vf_ping()
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-    RETURN jsonb_build_object(
-        'status', 'healthy',
-        'timestamp', timezone('utc'::text, now()),
-        'version', '2.0.0',
-        'server_time', now()
-    );
-END;
-$$;
-
--- Helper to check if current JWT user has admin role in app metadata
-CREATE OR REPLACE FUNCTION public.vf_is_admin()
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public, auth
-AS $$
-    SELECT coalesce(
-        (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
-        OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
-        OR auth.role() = 'service_role',
-        false
-    );
-$$;
-
--- Universal Batch Deletion RPC (Prevents N+1 client HTTP requests & reduces Postgres load)
-CREATE OR REPLACE FUNCTION public.vf_bulk_delete_entities(
-    p_table TEXT,
-    p_ids TEXT[],
-    p_id_column TEXT DEFAULT NULL
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, auth, pg_temp
-AS $$
-DECLARE
-    v_deleted_count INT := 0;
-    v_sql TEXT;
-    v_col TEXT;
-BEGIN
-    -- Authorization guard: Admin only
-    IF NOT (auth.role() = 'service_role' OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin' OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin') THEN
-        RAISE EXCEPTION 'Unauthorized: vf_bulk_delete_entities requires administrator privileges';
-    END IF;
-
-    IF p_table IS NULL OR p_ids IS NULL OR array_length(p_ids, 1) IS NULL THEN
-        RETURN jsonb_build_object('success', false, 'deleted_count', 0, 'error', 'Invalid arguments');
-    END IF;
-
-    -- Whitelist valid table names for security
-    IF p_table NOT IN (
-        'vf_kv_store', 'vf_costing_products', 'vf_costing_tfo_products', 'vf_costing_doubler_products',
-        'vf_costing_covering_products', 'vf_costing_links', 'vf_yarn_rm_lots', 'vf_yarn_rm_boxes', 'vf_yarn_orders',
-        'vf_yarn_order_batches', 'vf_yarn_order_boxes', 'vf_weft_issues', 'vf_warp_beams',
-        'vf_warp_issues', 'vf_warp_beam_loadings', 'vf_weaving_production_logs', 'vf_yarn_production_logs',
-        'vf_yarn_sales_logs', 'vf_fabric_dispatches', 'vf_fabric_cut_relations', 'vf_employees',
-        'vf_attendance_records', 'vf_employee_loans', 'vf_salary_settlements', 'vf_rm_qualities',
-        'vf_fp_qualities', 'vf_rm_suppliers', 'vf_fabric_designs', 'vf_machinery_assets', 'vf_companies'
-    ) THEN
-        RETURN jsonb_build_object('success', false, 'error', 'Table not permitted for bulk deletion');
-    END IF;
-
-    -- Automatically determine primary key column if not specified or default 'id'
-    IF p_id_column IS NULL OR p_id_column = '' OR p_id_column = 'id' THEN
-        IF p_table = 'vf_kv_store' THEN
-            v_col := 'key';
-        ELSIF p_table = 'vf_fabric_dispatches' THEN
-            v_col := 'taka_serial';
-        ELSE
-            v_col := 'id';
-        END IF;
-    ELSE
-        v_col := p_id_column;
-    END IF;
-
-    v_sql := format('DELETE FROM public.%I WHERE %I = ANY($1)', p_table, v_col);
-    EXECUTE v_sql USING p_ids;
-    GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
-
-    RETURN jsonb_build_object('success', true, 'deleted_count', v_deleted_count);
-END;
-$$;
-
-
--- 10. Dedicated Relational Table: Yarn RM Purchase Orders
+-- 11. Dedicated Relational Table: Yarn RM Purchase Orders
 CREATE TABLE IF NOT EXISTS public.vf_yarn_orders (
     id TEXT PRIMARY KEY,
     order_number TEXT NOT NULL,
@@ -353,7 +173,7 @@ CREATE INDEX IF NOT EXISTS idx_vf_yarn_orders_date ON public.vf_yarn_orders(orde
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_orders_status ON public.vf_yarn_orders(status);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_orders_updated_at ON public.vf_yarn_orders(updated_at DESC);
 
--- 11. Dedicated Relational Table: Yarn RM Inward Batches (Challans per PO)
+-- 12. Dedicated Relational Table: Yarn RM Inward Batches (Challans per PO)
 CREATE TABLE IF NOT EXISTS public.vf_yarn_order_batches (
     id TEXT PRIMARY KEY,
     order_id TEXT NOT NULL REFERENCES public.vf_yarn_orders(id) ON DELETE CASCADE,
@@ -369,7 +189,7 @@ CREATE INDEX IF NOT EXISTS idx_vf_yarn_batches_challan ON public.vf_yarn_order_b
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_batches_lot ON public.vf_yarn_order_batches(lot_number);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_batches_date ON public.vf_yarn_order_batches(receive_date DESC);
 
--- 12. Dedicated Relational Table: Yarn RM Order Boxes
+-- 13. Dedicated Relational Table: Yarn RM Order Boxes
 CREATE TABLE IF NOT EXISTS public.vf_yarn_order_boxes (
     id TEXT PRIMARY KEY,
     batch_id TEXT NOT NULL REFERENCES public.vf_yarn_order_batches(id) ON DELETE CASCADE,
@@ -386,7 +206,7 @@ CREATE INDEX IF NOT EXISTS idx_vf_yarn_order_boxes_batch ON public.vf_yarn_order
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_order_boxes_order ON public.vf_yarn_order_boxes(order_id);
 CREATE INDEX IF NOT EXISTS idx_vf_yarn_order_boxes_box_num ON public.vf_yarn_order_boxes(box_number);
 
--- 13. Dedicated Relational Table: Weft Yarn Issues (Loom Consumptions & Ledger)
+-- 14. Dedicated Relational Table: Weft Yarn Issues (Loom Consumptions & Ledger)
 CREATE TABLE IF NOT EXISTS public.vf_weft_issues (
     id TEXT PRIMARY KEY,
     date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -409,80 +229,6 @@ CREATE INDEX IF NOT EXISTS idx_vf_weft_issues_code ON public.vf_weft_issues(code
 CREATE INDEX IF NOT EXISTS idx_vf_weft_issues_box ON public.vf_weft_issues(box);
 CREATE INDEX IF NOT EXISTS idx_vf_weft_issues_date ON public.vf_weft_issues(date DESC);
 CREATE INDEX IF NOT EXISTS idx_vf_weft_issues_challan ON public.vf_weft_issues(challan);
-
--- 14. Atomic Stored Procedure: Record Weft Issues in Batch
-CREATE OR REPLACE FUNCTION public.vf_record_weft_issues(
-    p_issues JSONB
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, auth, pg_temp
-AS $$
-DECLARE
-    issue_record JSONB;
-    inserted_count INT := 0;
-BEGIN
-    -- Authorization guard
-    IF NOT (auth.role() = 'service_role' OR coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), (auth.jwt() -> 'user_metadata' ->> 'role'), 'operator') IN ('admin', 'operator', 'editor')) THEN
-        RAISE EXCEPTION 'Unauthorized: Caller does not possess operator permissions';
-    END IF;
-
-    FOR issue_record IN SELECT * FROM jsonb_array_elements(p_issues)
-    LOOP
-        INSERT INTO public.vf_weft_issues (
-            id,
-            date,
-            quality,
-            supplier,
-            code,
-            color,
-            box,
-            challan,
-            lot,
-            cones,
-            net,
-            details,
-            updated_at
-        ) VALUES (
-            COALESCE(issue_record->>'id', 'WEFT-ISSUE-' || gen_random_uuid()::text),
-            COALESCE((issue_record->>'date')::date, CURRENT_DATE),
-            COALESCE(issue_record->>'quality', ''),
-            COALESCE(issue_record->>'supplier', ''),
-            issue_record->>'code',
-            issue_record->>'color',
-            COALESCE(issue_record->>'box', ''),
-            issue_record->>'challan',
-            issue_record->>'lot',
-            COALESCE((issue_record->>'cones')::numeric, 0),
-            COALESCE((issue_record->>'net')::numeric, 0),
-            issue_record->>'details',
-            timezone('utc'::text, now())
-        )
-        ON CONFLICT (id) DO UPDATE SET
-            date = EXCLUDED.date,
-            quality = EXCLUDED.quality,
-            supplier = EXCLUDED.supplier,
-            code = EXCLUDED.code,
-            color = EXCLUDED.color,
-            box = EXCLUDED.box,
-            challan = EXCLUDED.challan,
-            lot = EXCLUDED.lot,
-            cones = EXCLUDED.cones,
-            net = EXCLUDED.net,
-            details = EXCLUDED.details,
-            updated_at = timezone('utc'::text, now());
-
-        inserted_count := inserted_count + 1;
-    END LOOP;
-
-    RETURN jsonb_build_object(
-        'success', true,
-        'count', inserted_count,
-        'timestamp', timezone('utc'::text, now())
-    );
-END;
-$$;
 
 -- 15. Dedicated Relational Table: Warp Beams
 CREATE TABLE IF NOT EXISTS public.vf_warp_beams (
@@ -594,14 +340,13 @@ CREATE TABLE IF NOT EXISTS public.vf_yarn_production_logs (
     rolls INTEGER DEFAULT 0,
     gross_weight NUMERIC(10, 3) DEFAULT 0,
     tare_weight NUMERIC(10, 3) DEFAULT 0,
-    qty NUMERIC(10, 3) NOT NULL DEFAULT 0, -- Net Weight
+    qty NUMERIC(10, 3) NOT NULL DEFAULT 0,
     config_type TEXT,
     ply TEXT,
     yarns JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
--- Migration safety for existing vf_yarn_production_logs tables:
 ALTER TABLE public.vf_yarn_production_logs ADD COLUMN IF NOT EXISTS gross_weight NUMERIC(10, 3) DEFAULT 0;
 ALTER TABLE public.vf_yarn_production_logs ADD COLUMN IF NOT EXISTS tare_weight NUMERIC(10, 3) DEFAULT 0;
 ALTER TABLE public.vf_yarn_production_logs ADD COLUMN IF NOT EXISTS config_type TEXT;
@@ -633,15 +378,13 @@ CREATE TABLE IF NOT EXISTS public.vf_yarn_sales_logs (
     items JSONB DEFAULT '[]'::jsonb,
     total_gross_weight NUMERIC(10, 3) DEFAULT 0,
     total_tare_weight NUMERIC(10, 3) DEFAULT 0,
-    total_qty NUMERIC(10, 3) DEFAULT 0, -- Total Net Weight
+    total_qty NUMERIC(10, 3) DEFAULT 0,
     total_amount NUMERIC(12, 2) DEFAULT 0,
     gst_amount NUMERIC(12, 2) DEFAULT 0,
     raw_data JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
-
--- Migration safety for existing vf_yarn_sales_logs tables:
 ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS total_gross_weight NUMERIC(10, 3) DEFAULT 0;
 ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS total_tare_weight NUMERIC(10, 3) DEFAULT 0;
 ALTER TABLE public.vf_yarn_sales_logs ADD COLUMN IF NOT EXISTS customer_address TEXT;
@@ -722,7 +465,6 @@ CREATE TABLE IF NOT EXISTS public.vf_employees (
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
--- Safe column additions if vf_employees table was already created in older migrations
 ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS id_front TEXT;
 ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS id_back TEXT;
 ALTER TABLE public.vf_employees ADD COLUMN IF NOT EXISTS salary_amount NUMERIC(10, 2) DEFAULT 0;
@@ -754,7 +496,6 @@ CREATE TABLE IF NOT EXISTS public.vf_attendance_records (
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
--- Safe column additions if vf_attendance_records table was already created in older migrations
 ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Present';
 ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS shift TEXT DEFAULT 'Day';
 ALTER TABLE public.vf_attendance_records ADD COLUMN IF NOT EXISTS hours NUMERIC(5, 2) DEFAULT 0;
@@ -879,7 +620,7 @@ CREATE INDEX IF NOT EXISTS idx_vf_designs_updated_at ON public.vf_fabric_designs
 -- 31. Dedicated Relational Table: Machinery Assets (Looms, Jacquards, Fanis, Jalas)
 CREATE TABLE IF NOT EXISTS public.vf_machinery_assets (
     id TEXT PRIMARY KEY,
-    asset_type TEXT NOT NULL, -- 'loom' | 'jacquard' | 'fani' | 'jala' | 'machine'
+    asset_type TEXT NOT NULL,
     name TEXT NOT NULL,
     code TEXT,
     model TEXT,
@@ -908,260 +649,7 @@ CREATE TABLE IF NOT EXISTS public.vf_companies (
 );
 CREATE INDEX IF NOT EXISTS idx_vf_companies_name ON public.vf_companies(name);
 
--- ==============================================================================
--- Row Level Security (RLS) Configuration
--- ==============================================================================
-
-ALTER TABLE public.vf_kv_store ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_costing_products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_costing_tfo_products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_costing_doubler_products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_costing_covering_products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_costing_links ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_audit_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_yarn_rm_lots ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_yarn_rm_boxes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_yarn_rm_transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_yarn_orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_yarn_order_batches ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_yarn_order_boxes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_weft_issues ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_warp_beams ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_warp_issues ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_warp_beam_loadings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_weaving_production_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_yarn_production_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_yarn_sales_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_fabric_dispatches ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_fabric_cut_relations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_employees ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_attendance_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_employee_loans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_salary_settlements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_rm_qualities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_fp_qualities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_rm_suppliers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_fabric_designs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_machinery_assets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vf_companies ENABLE ROW LEVEL SECURITY;
-
--- Dynamic Policy Configuration:
--- Production Mode: Allows read/write for all authenticated API requests & anon key (matching client tokens)
-DO $$
-BEGIN
-    -- 1. vf_kv_store
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_kv_store' AND policyname = 'Allow public access to vf_kv_store') THEN
-        CREATE POLICY "Allow public access to vf_kv_store" ON public.vf_kv_store FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 2. vf_costing_products
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_products' AND policyname = 'Allow public access to vf_costing_products') THEN
-        CREATE POLICY "Allow public access to vf_costing_products" ON public.vf_costing_products FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 3. vf_costing_tfo_products
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_tfo_products' AND policyname = 'Allow public access to vf_costing_tfo_products') THEN
-        CREATE POLICY "Allow public access to vf_costing_tfo_products" ON public.vf_costing_tfo_products FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 4. vf_costing_doubler_products
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_doubler_products' AND policyname = 'Allow public access to vf_costing_doubler_products') THEN
-        CREATE POLICY "Allow public access to vf_costing_doubler_products" ON public.vf_costing_doubler_products FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 5. vf_costing_covering_products
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_covering_products' AND policyname = 'Allow public access to vf_costing_covering_products') THEN
-        CREATE POLICY "Allow public access to vf_costing_covering_products" ON public.vf_costing_covering_products FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 5b. vf_costing_links
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_costing_links' AND policyname = 'Allow public access to vf_costing_links') THEN
-        CREATE POLICY "Allow public access to vf_costing_links" ON public.vf_costing_links FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 6. vf_audit_logs (Public insert, read for all authenticated clients)
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_audit_logs' AND policyname = 'Allow public access to vf_audit_logs') THEN
-        CREATE POLICY "Allow public access to vf_audit_logs" ON public.vf_audit_logs FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 7. vf_yarn_rm_lots
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_rm_lots' AND policyname = 'Allow public access to vf_yarn_rm_lots') THEN
-        CREATE POLICY "Allow public access to vf_yarn_rm_lots" ON public.vf_yarn_rm_lots FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 8. vf_yarn_rm_boxes
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_rm_boxes' AND policyname = 'Allow public access to vf_yarn_rm_boxes') THEN
-        CREATE POLICY "Allow public access to vf_yarn_rm_boxes" ON public.vf_yarn_rm_boxes FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 9. vf_yarn_rm_transactions
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_rm_transactions' AND policyname = 'Allow public access to vf_yarn_rm_transactions') THEN
-        CREATE POLICY "Allow public access to vf_yarn_rm_transactions" ON public.vf_yarn_rm_transactions FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 10. vf_yarn_orders
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_orders' AND policyname = 'Allow public access to vf_yarn_orders') THEN
-        CREATE POLICY "Allow public access to vf_yarn_orders" ON public.vf_yarn_orders FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 11. vf_yarn_order_batches
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_order_batches' AND policyname = 'Allow public access to vf_yarn_order_batches') THEN
-        CREATE POLICY "Allow public access to vf_yarn_order_batches" ON public.vf_yarn_order_batches FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 12. vf_yarn_order_boxes
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_order_boxes' AND policyname = 'Allow public access to vf_yarn_order_boxes') THEN
-        CREATE POLICY "Allow public access to vf_yarn_order_boxes" ON public.vf_yarn_order_boxes FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 13. vf_weft_issues
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_weft_issues' AND policyname = 'Allow public access to vf_weft_issues') THEN
-        CREATE POLICY "Allow public access to vf_weft_issues" ON public.vf_weft_issues FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 14. vf_warp_beams
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_warp_beams' AND policyname = 'Allow public access to vf_warp_beams') THEN
-        CREATE POLICY "Allow public access to vf_warp_beams" ON public.vf_warp_beams FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 15. vf_warp_issues
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_warp_issues' AND policyname = 'Allow public access to vf_warp_issues') THEN
-        CREATE POLICY "Allow public access to vf_warp_issues" ON public.vf_warp_issues FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 16. vf_warp_beam_loadings
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_warp_beam_loadings' AND policyname = 'Allow public access to vf_warp_beam_loadings') THEN
-        CREATE POLICY "Allow public access to vf_warp_beam_loadings" ON public.vf_warp_beam_loadings FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 17. vf_weaving_production_logs
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_weaving_production_logs' AND policyname = 'Allow public access to vf_weaving_production_logs') THEN
-        CREATE POLICY "Allow public access to vf_weaving_production_logs" ON public.vf_weaving_production_logs FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 18. vf_yarn_production_logs
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_production_logs' AND policyname = 'Allow public access to vf_yarn_production_logs') THEN
-        CREATE POLICY "Allow public access to vf_yarn_production_logs" ON public.vf_yarn_production_logs FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 19. vf_yarn_sales_logs
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_yarn_sales_logs' AND policyname = 'Allow public access to vf_yarn_sales_logs') THEN
-        CREATE POLICY "Allow public access to vf_yarn_sales_logs" ON public.vf_yarn_sales_logs FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 20. vf_fabric_dispatches
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fabric_dispatches' AND policyname = 'Allow public access to vf_fabric_dispatches') THEN
-        CREATE POLICY "Allow public access to vf_fabric_dispatches" ON public.vf_fabric_dispatches FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 21. vf_fabric_cut_relations
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fabric_cut_relations' AND policyname = 'Allow public access to vf_fabric_cut_relations') THEN
-        CREATE POLICY "Allow public access to vf_fabric_cut_relations" ON public.vf_fabric_cut_relations FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 22. vf_employees
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_employees' AND policyname = 'Allow public access to vf_employees') THEN
-        CREATE POLICY "Allow public access to vf_employees" ON public.vf_employees FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 23. vf_attendance_records
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_attendance_records' AND policyname = 'Allow public access to vf_attendance_records') THEN
-        CREATE POLICY "Allow public access to vf_attendance_records" ON public.vf_attendance_records FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 24. vf_employee_loans
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_employee_loans' AND policyname = 'Allow public access to vf_employee_loans') THEN
-        CREATE POLICY "Allow public access to vf_employee_loans" ON public.vf_employee_loans FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 25. vf_salary_settlements
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_salary_settlements' AND policyname = 'Allow public access to vf_salary_settlements') THEN
-        CREATE POLICY "Allow public access to vf_salary_settlements" ON public.vf_salary_settlements FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 26. vf_rm_qualities
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_rm_qualities' AND policyname = 'Allow public access to vf_rm_qualities') THEN
-        CREATE POLICY "Allow public access to vf_rm_qualities" ON public.vf_rm_qualities FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 27. vf_fp_qualities
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fp_qualities' AND policyname = 'Allow public access to vf_fp_qualities') THEN
-        CREATE POLICY "Allow public access to vf_fp_qualities" ON public.vf_fp_qualities FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 28. vf_rm_suppliers
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_rm_suppliers' AND policyname = 'Allow public access to vf_rm_suppliers') THEN
-        CREATE POLICY "Allow public access to vf_rm_suppliers" ON public.vf_rm_suppliers FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 29. vf_fabric_designs
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_fabric_designs' AND policyname = 'Allow public access to vf_fabric_designs') THEN
-        CREATE POLICY "Allow public access to vf_fabric_designs" ON public.vf_fabric_designs FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-    -- 30. vf_machinery_assets
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_machinery_assets' AND policyname = 'Allow public access to vf_machinery_assets') THEN
-        CREATE POLICY "Allow public access to vf_machinery_assets" ON public.vf_machinery_assets FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-
-    -- 31. vf_companies
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_companies' AND policyname = 'Allow public access to vf_companies') THEN
-        CREATE POLICY "Allow public access to vf_companies" ON public.vf_companies FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-END $$;
-
--- ==============================================================================
--- Storage Bucket Provisioning (For Design Cards, Beam Photos & Media Attachments)
--- ==============================================================================
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('vf_media_assets', 'vf_media_assets', true)
-ON CONFLICT (id) DO NOTHING;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Allow public access to vf_media_assets') THEN
-        CREATE POLICY "Allow public access to vf_media_assets" ON storage.objects
-        FOR ALL USING (bucket_id = 'vf_media_assets') WITH CHECK (bucket_id = 'vf_media_assets');
-    END IF;
-EXCEPTION
-    WHEN others THEN NULL;
-END $$;
-
--- ==============================================================================
--- Supabase Realtime Broadcast Configuration
--- ==============================================================================
-
--- Enable Realtime publication ONLY on essential low-frequency tables
--- (Dropping high-volume relational tables from Realtime prevents WAL sender CPU exhaustion & 504 timeouts)
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
-        -- Safely drop high-frequency logs and heavy relational tables from logical replication
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_rm_boxes; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_order_boxes; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_rm_transactions; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_weaving_production_logs; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_production_logs; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_sales_logs; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_attendance_records; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_audit_logs; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_weft_issues; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_warp_issues; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_warp_beam_loadings; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_fabric_dispatches; EXCEPTION WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_fabric_cut_relations; EXCEPTION WHEN others THEN NULL; END;
-
-        -- Ensure essential state tables are published for instant sync
-        BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_kv_store; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
-        BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_designs; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
-    END IF;
-EXCEPTION
-    WHEN others THEN NULL;
-END $$;
-
--- ==============================================================================
 -- 33. Dedicated Relational Table: Admin & Employee Authentication Registry
--- (Bi-directional: Allows editing/adding users in Supabase Table Editor or via App)
--- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.vf_auth_users (
     id TEXT PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
@@ -1174,12 +662,13 @@ CREATE TABLE IF NOT EXISTS public.vf_auth_users (
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
-
 CREATE INDEX IF NOT EXISTS idx_vf_auth_users_email ON public.vf_auth_users(lower(email));
 CREATE INDEX IF NOT EXISTS idx_vf_auth_users_role ON public.vf_auth_users(role);
 CREATE INDEX IF NOT EXISTS idx_vf_auth_users_updated_at ON public.vf_auth_users(updated_at DESC);
 
--- Safe profile view excluding pass_hash
+-- ==============================================================================
+-- SECTION 2: SAFE USER PROFILES VIEW (EXCLUDING PASSWORD HASHES)
+-- ==============================================================================
 CREATE OR REPLACE VIEW public.vf_auth_user_profiles AS
 SELECT 
     id,
@@ -1193,16 +682,360 @@ SELECT
     updated_at
 FROM public.vf_auth_users;
 
-ALTER TABLE public.vf_auth_users ENABLE ROW LEVEL SECURITY;
+-- ==============================================================================
+-- SECTION 3: SERVER-SIDE ROLE RESOLUTION & SECURITY DEFINER HELPERS
+-- ==============================================================================
 
-DO $$
+-- Resolves the caller's role from JWT claims with non-recursive fallback to vf_auth_users
+CREATE OR REPLACE FUNCTION public.vf_current_user_role()
+RETURNS TEXT
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
+DECLARE
+    v_role TEXT;
+    v_uid UUID;
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vf_auth_users' AND policyname = 'Allow public access to vf_auth_users') THEN
-        CREATE POLICY "Allow public access to vf_auth_users" ON public.vf_auth_users FOR ALL USING (true) WITH CHECK (true);
+    -- 1. Check Service Role (unrestricted administrative backend)
+    IF auth.role() = 'service_role' THEN
+        RETURN 'admin';
     END IF;
-END $$;
 
--- Automatic Bi-directional Synchronization Trigger: Supabase Auth (auth.users) -> public.vf_auth_users
+    -- 2. Extract from JWT app_metadata (tamper-proof server-signed claims)
+    v_role := auth.jwt() -> 'app_metadata' ->> 'role';
+    IF v_role IS NOT NULL AND v_role <> '' THEN
+        RETURN lower(v_role);
+    END IF;
+
+    -- 3. Extract from JWT user_metadata
+    v_role := auth.jwt() -> 'user_metadata' ->> 'role';
+    IF v_role IS NOT NULL AND v_role <> '' THEN
+        RETURN lower(v_role);
+    END IF;
+
+    -- 4. Fallback lookup in public.vf_auth_users table
+    v_uid := auth.uid();
+    IF v_uid IS NOT NULL THEN
+        SELECT role INTO v_role
+        FROM public.vf_auth_users
+        WHERE id = v_uid::text OR lower(email) = lower(auth.jwt() ->> 'email')
+        LIMIT 1;
+
+        IF v_role IS NOT NULL THEN
+            RETURN lower(v_role);
+        END IF;
+    ELSIF auth.jwt() ->> 'email' IS NOT NULL THEN
+        SELECT role INTO v_role
+        FROM public.vf_auth_users
+        WHERE lower(email) = lower(auth.jwt() ->> 'email')
+        LIMIT 1;
+
+        IF v_role IS NOT NULL THEN
+            RETURN lower(v_role);
+        END IF;
+    END IF;
+
+    -- Default fallback for any authenticated user without explicit role
+    IF auth.role() = 'authenticated' THEN
+        RETURN 'operator';
+    END IF;
+
+    RETURN 'anon';
+END;
+$$;
+
+-- Boolean helper: Is caller Administrator?
+CREATE OR REPLACE FUNCTION public.vf_is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
+    SELECT (
+        auth.role() = 'service_role'
+        OR public.vf_current_user_role() = 'admin'
+    );
+$$;
+
+-- Boolean helper: Is caller Operator or above?
+CREATE OR REPLACE FUNCTION public.vf_is_operator_or_above()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
+    SELECT (
+        auth.role() = 'service_role'
+        OR public.vf_current_user_role() IN ('admin', 'operator', 'editor')
+    );
+$$;
+
+-- Boolean helper: Is caller authorized for Payroll & Salary?
+CREATE OR REPLACE FUNCTION public.vf_is_payroll_authorized()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
+    SELECT (
+        auth.role() = 'service_role'
+        OR public.vf_current_user_role() IN ('admin', 'payroll_admin', 'hr')
+    );
+$$;
+
+-- ==============================================================================
+-- SECTION 4: SERVER-SIDE ATOMIC RPC FUNCTIONS
+-- ==============================================================================
+
+-- 1. Atomic Box Issue Transaction
+CREATE OR REPLACE FUNCTION public.vf_issue_yarn_boxes(
+    p_box_ids TEXT[],
+    p_issued_to TEXT,
+    p_issue_date DATE DEFAULT CURRENT_DATE,
+    p_user TEXT DEFAULT 'Operator',
+    p_remarks TEXT DEFAULT ''
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
+DECLARE
+    v_updated_count INT := 0;
+    v_box_rec RECORD;
+BEGIN
+    -- Authorization guard
+    IF NOT (auth.role() = 'service_role' OR public.vf_is_operator_or_above()) THEN
+        RAISE EXCEPTION 'Unauthorized: Caller does not possess operator permissions';
+    END IF;
+
+    IF p_box_ids IS NULL OR array_length(p_box_ids, 1) IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'No box IDs provided');
+    END IF;
+
+    -- Verify availability of selected boxes
+    FOR v_box_rec IN
+        SELECT id, lot_id, box_number, active_weight, cones, status
+        FROM public.vf_yarn_rm_boxes
+        WHERE id = ANY(p_box_ids)
+        FOR UPDATE
+    LOOP
+        IF v_box_rec.status = 'issued' THEN
+            RETURN jsonb_build_object(
+                'success', false, 
+                'error', format('Box %s is already issued', v_box_rec.box_number)
+            );
+        END IF;
+
+        IF v_box_rec.status = 'gr' THEN
+            RETURN jsonb_build_object(
+                'success', false, 
+                'error', format('Box %s is marked as GR (Returned)', v_box_rec.box_number)
+            );
+        END IF;
+
+        -- Insert transaction ledger row
+        INSERT INTO public.vf_yarn_rm_transactions (
+            transaction_type,
+            lot_id,
+            box_id,
+            box_number,
+            weight,
+            cones,
+            issued_to,
+            remarks,
+            created_by
+        ) VALUES (
+            'issue',
+            v_box_rec.lot_id,
+            v_box_rec.id,
+            v_box_rec.box_number,
+            v_box_rec.active_weight,
+            v_box_rec.cones,
+            p_issued_to,
+            p_remarks,
+            p_user
+        );
+    END LOOP;
+
+    -- Atomically update box status
+    UPDATE public.vf_yarn_rm_boxes
+    SET 
+        status = 'issued',
+        issue_date = p_issue_date,
+        issued_to = p_issued_to,
+        updated_at = timezone('utc'::text, now())
+    WHERE id = ANY(p_box_ids) AND status = 'available';
+
+    GET DIAGNOSTICS v_updated_count = ROW_COUNT;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'issued_count', v_updated_count,
+        'issued_to', p_issued_to,
+        'issue_date', p_issue_date
+    );
+END;
+$$;
+
+-- 2. Atomic Weft Issues Recorder
+CREATE OR REPLACE FUNCTION public.vf_record_weft_issues(
+    p_issues JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
+DECLARE
+    issue_record JSONB;
+    inserted_count INT := 0;
+BEGIN
+    -- Authorization guard
+    IF NOT (auth.role() = 'service_role' OR public.vf_is_operator_or_above()) THEN
+        RAISE EXCEPTION 'Unauthorized: Caller does not possess operator permissions';
+    END IF;
+
+    FOR issue_record IN SELECT * FROM jsonb_array_elements(p_issues)
+    LOOP
+        INSERT INTO public.vf_weft_issues (
+            id,
+            date,
+            quality,
+            supplier,
+            code,
+            color,
+            box,
+            challan,
+            lot,
+            cones,
+            net,
+            details,
+            updated_at
+        ) VALUES (
+            COALESCE(issue_record->>'id', 'WEFT-ISSUE-' || gen_random_uuid()::text),
+            COALESCE((issue_record->>'date')::date, CURRENT_DATE),
+            COALESCE(issue_record->>'quality', ''),
+            COALESCE(issue_record->>'supplier', ''),
+            issue_record->>'code',
+            issue_record->>'color',
+            COALESCE(issue_record->>'box', ''),
+            issue_record->>'challan',
+            issue_record->>'lot',
+            COALESCE((issue_record->>'cones')::numeric, 0),
+            COALESCE((issue_record->>'net')::numeric, 0),
+            issue_record->>'details',
+            timezone('utc'::text, now())
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            date = EXCLUDED.date,
+            quality = EXCLUDED.quality,
+            supplier = EXCLUDED.supplier,
+            code = EXCLUDED.code,
+            color = EXCLUDED.color,
+            box = EXCLUDED.box,
+            challan = EXCLUDED.challan,
+            lot = EXCLUDED.lot,
+            cones = EXCLUDED.cones,
+            net = EXCLUDED.net,
+            details = EXCLUDED.details,
+            updated_at = timezone('utc'::text, now());
+
+        inserted_count := inserted_count + 1;
+    END LOOP;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'count', inserted_count,
+        'timestamp', timezone('utc'::text, now())
+    );
+END;
+$$;
+
+-- 3. Universal Batch Deletion RPC
+CREATE OR REPLACE FUNCTION public.vf_bulk_delete_entities(
+    p_table TEXT,
+    p_ids TEXT[],
+    p_id_column TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
+DECLARE
+    v_deleted_count INT := 0;
+    v_sql TEXT;
+    v_col TEXT;
+BEGIN
+    -- Authorization guard: Admin only
+    IF NOT (auth.role() = 'service_role' OR public.vf_is_admin()) THEN
+        RAISE EXCEPTION 'Unauthorized: vf_bulk_delete_entities requires administrator privileges';
+    END IF;
+
+    IF p_table IS NULL OR p_ids IS NULL OR array_length(p_ids, 1) IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'deleted_count', 0, 'error', 'Invalid arguments');
+    END IF;
+
+    -- Whitelist valid table names for security
+    IF p_table NOT IN (
+        'vf_kv_store', 'vf_costing_products', 'vf_costing_tfo_products', 'vf_costing_doubler_products',
+        'vf_costing_covering_products', 'vf_costing_links', 'vf_yarn_rm_lots', 'vf_yarn_rm_boxes', 'vf_yarn_orders',
+        'vf_yarn_order_batches', 'vf_yarn_order_boxes', 'vf_weft_issues', 'vf_warp_beams',
+        'vf_warp_issues', 'vf_warp_beam_loadings', 'vf_weaving_production_logs', 'vf_yarn_production_logs',
+        'vf_yarn_sales_logs', 'vf_fabric_dispatches', 'vf_fabric_cut_relations', 'vf_employees',
+        'vf_attendance_records', 'vf_employee_loans', 'vf_salary_settlements', 'vf_rm_qualities',
+        'vf_fp_qualities', 'vf_rm_suppliers', 'vf_fabric_designs', 'vf_machinery_assets', 'vf_companies'
+    ) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Table not permitted for bulk deletion');
+    END IF;
+
+    IF p_id_column IS NULL OR p_id_column = '' OR p_id_column = 'id' THEN
+        IF p_table = 'vf_kv_store' THEN
+            v_col := 'key';
+        ELSIF p_table = 'vf_fabric_dispatches' THEN
+            v_col := 'taka_serial';
+        ELSE
+            v_col := 'id';
+        END IF;
+    ELSE
+        v_col := p_id_column;
+    END IF;
+
+    v_sql := format('DELETE FROM public.%I WHERE %I = ANY($1)', p_table, v_col);
+    EXECUTE v_sql USING p_ids;
+    GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
+
+    RETURN jsonb_build_object('success', true, 'deleted_count', v_deleted_count);
+END;
+$$;
+
+-- 4. Public Health Check RPC
+CREATE OR REPLACE FUNCTION public.vf_ping()
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN jsonb_build_object(
+        'status', 'healthy',
+        'timestamp', timezone('utc'::text, now()),
+        'version', '2.1.0',
+        'server_time', now()
+    );
+END;
+$$;
+
+-- ==============================================================================
+-- SECTION 5: AUTOMATIC AUTH USER SYNC TRIGGER
+-- ==============================================================================
+
 CREATE OR REPLACE FUNCTION public.handle_auth_user_change()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -1219,7 +1052,6 @@ BEGIN
         RETURN OLD;
     END IF;
 
-    -- Extract role from metadata or default to employee
     user_role := COALESCE(NEW.raw_user_meta_data->>'role', 'employee');
     IF user_role NOT IN ('admin', 'employee') THEN
         user_role := 'employee';
@@ -1277,7 +1109,6 @@ BEGIN
 END;
 $$;
 
--- Trigger on auth.users for seamless sync from Supabase Authentication Dashboard to App
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'users') THEN
@@ -1289,12 +1120,516 @@ BEGIN
 EXCEPTION WHEN others THEN NULL;
 END $$;
 
--- Add vf_auth_users to realtime publication if available
+-- ==============================================================================
+-- SECTION 6: STORAGE BUCKET PROVISIONING & POLICIES (vf_media_assets)
+-- ==============================================================================
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('vf_media_assets', 'vf_media_assets', true)
+ON CONFLICT (id) DO NOTHING;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'storage' AND tablename = 'objects') THEN
+        -- Drop legacy permissive policy
+        DROP POLICY IF EXISTS "Allow public access to vf_media_assets" ON storage.objects;
+
+        -- Drop existing hardened policies to allow clean idempotent re-creation
+        DROP POLICY IF EXISTS "vf_media_assets_public_read" ON storage.objects;
+        DROP POLICY IF EXISTS "vf_media_assets_auth_read" ON storage.objects;
+        DROP POLICY IF EXISTS "vf_media_assets_operator_insert" ON storage.objects;
+        DROP POLICY IF EXISTS "vf_media_assets_operator_update" ON storage.objects;
+        DROP POLICY IF EXISTS "vf_media_assets_admin_delete" ON storage.objects;
+
+        -- 1. Public read for thumbnails and public cards
+        CREATE POLICY "vf_media_assets_public_read" ON storage.objects
+        FOR SELECT TO anon
+        USING (
+            bucket_id = 'vf_media_assets'
+            AND (name LIKE 'public/%' OR name LIKE 'thumbnails/%')
+        );
+
+        -- 2. Authenticated read for all assets
+        CREATE POLICY "vf_media_assets_auth_read" ON storage.objects
+        FOR SELECT TO authenticated
+        USING (bucket_id = 'vf_media_assets');
+
+        -- 3. Insert: Operator and above
+        CREATE POLICY "vf_media_assets_operator_insert" ON storage.objects
+        FOR INSERT TO authenticated
+        WITH CHECK (
+            bucket_id = 'vf_media_assets'
+            AND public.vf_is_operator_or_above()
+        );
+
+        -- 4. Update: Operator and above
+        CREATE POLICY "vf_media_assets_operator_update" ON storage.objects
+        FOR UPDATE TO authenticated
+        USING (
+            bucket_id = 'vf_media_assets'
+            AND public.vf_is_operator_or_above()
+        )
+        WITH CHECK (
+            bucket_id = 'vf_media_assets'
+            AND public.vf_is_operator_or_above()
+        );
+
+        -- 5. Delete: Admin only
+        CREATE POLICY "vf_media_assets_admin_delete" ON storage.objects
+        FOR DELETE TO authenticated
+        USING (
+            bucket_id = 'vf_media_assets'
+            AND public.vf_is_admin()
+        );
+    END IF;
+EXCEPTION WHEN others THEN NULL;
+END $$;
+
+-- ==============================================================================
+-- SECTION 7: REALTIME PUBLICATION CONFIGURATION
+-- ==============================================================================
+
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        -- Exclude heavy high-frequency log tables to prevent WAL bottlenecks
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_rm_boxes; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_order_boxes; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_rm_transactions; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_weaving_production_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_production_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_yarn_sales_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_attendance_records; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_audit_logs; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_weft_issues; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_warp_issues; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_warp_beam_loadings; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_fabric_dispatches; EXCEPTION WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime DROP TABLE public.vf_fabric_cut_relations; EXCEPTION WHEN others THEN NULL; END;
+
+        -- Include low-frequency state and directory tables
+        BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_kv_store; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
+        BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_fabric_designs; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
         BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.vf_auth_users; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END;
     END IF;
-EXCEPTION
-    WHEN others THEN NULL;
+EXCEPTION WHEN others THEN NULL;
 END $$;
+
+-- ==============================================================================
+-- SECTION 8: ROW LEVEL SECURITY HARDENING & POLICIES (ALL 33 TABLES)
+-- ==============================================================================
+
+-- Drop all legacy permissive policies explicitly
+DROP POLICY IF EXISTS "Allow public access to vf_kv_store" ON public.vf_kv_store;
+DROP POLICY IF EXISTS "Allow public access to vf_costing_products" ON public.vf_costing_products;
+DROP POLICY IF EXISTS "Allow public access to vf_costing_tfo_products" ON public.vf_costing_tfo_products;
+DROP POLICY IF EXISTS "Allow public access to vf_costing_doubler_products" ON public.vf_costing_doubler_products;
+DROP POLICY IF EXISTS "Allow public access to vf_costing_covering_products" ON public.vf_costing_covering_products;
+DROP POLICY IF EXISTS "Allow public access to vf_costing_links" ON public.vf_costing_links;
+DROP POLICY IF EXISTS "Allow public access to vf_audit_logs" ON public.vf_audit_logs;
+DROP POLICY IF EXISTS "Allow public access to vf_yarn_rm_lots" ON public.vf_yarn_rm_lots;
+DROP POLICY IF EXISTS "Allow public access to vf_yarn_rm_boxes" ON public.vf_yarn_rm_boxes;
+DROP POLICY IF EXISTS "Allow public access to vf_yarn_rm_transactions" ON public.vf_yarn_rm_transactions;
+DROP POLICY IF EXISTS "Allow public access to vf_yarn_orders" ON public.vf_yarn_orders;
+DROP POLICY IF EXISTS "Allow public access to vf_yarn_order_batches" ON public.vf_yarn_order_batches;
+DROP POLICY IF EXISTS "Allow public access to vf_yarn_order_boxes" ON public.vf_yarn_order_boxes;
+DROP POLICY IF EXISTS "Allow public access to vf_weft_issues" ON public.vf_weft_issues;
+DROP POLICY IF EXISTS "Allow public access to vf_warp_beams" ON public.vf_warp_beams;
+DROP POLICY IF EXISTS "Allow public access to vf_warp_issues" ON public.vf_warp_issues;
+DROP POLICY IF EXISTS "Allow public access to vf_warp_beam_loadings" ON public.vf_warp_beam_loadings;
+DROP POLICY IF EXISTS "Allow public access to vf_weaving_production_logs" ON public.vf_weaving_production_logs;
+DROP POLICY IF EXISTS "Allow public access to vf_yarn_production_logs" ON public.vf_yarn_production_logs;
+DROP POLICY IF EXISTS "Allow public access to vf_yarn_sales_logs" ON public.vf_yarn_sales_logs;
+DROP POLICY IF EXISTS "Allow public access to vf_fabric_dispatches" ON public.vf_fabric_dispatches;
+DROP POLICY IF EXISTS "Allow public access to vf_fabric_cut_relations" ON public.vf_fabric_cut_relations;
+DROP POLICY IF EXISTS "Allow public access to vf_employees" ON public.vf_employees;
+DROP POLICY IF EXISTS "Allow public access to vf_attendance_records" ON public.vf_attendance_records;
+DROP POLICY IF EXISTS "Allow public access to vf_employee_loans" ON public.vf_employee_loans;
+DROP POLICY IF EXISTS "Allow public access to vf_salary_settlements" ON public.vf_salary_settlements;
+DROP POLICY IF EXISTS "Allow public access to vf_rm_qualities" ON public.vf_rm_qualities;
+DROP POLICY IF EXISTS "Allow public access to vf_fp_qualities" ON public.vf_fp_qualities;
+DROP POLICY IF EXISTS "Allow public access to vf_rm_suppliers" ON public.vf_rm_suppliers;
+DROP POLICY IF EXISTS "Allow public access to vf_fabric_designs" ON public.vf_fabric_designs;
+DROP POLICY IF EXISTS "Allow public access to vf_machinery_assets" ON public.vf_machinery_assets;
+DROP POLICY IF EXISTS "Allow public access to vf_companies" ON public.vf_companies;
+DROP POLICY IF EXISTS "Allow public access to vf_auth_users" ON public.vf_auth_users;
+
+-- Enable & Force RLS across all 33 tables
+ALTER TABLE public.vf_kv_store ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_kv_store FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_costing_products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_costing_products FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_costing_tfo_products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_costing_tfo_products FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_costing_doubler_products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_costing_doubler_products FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_costing_covering_products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_costing_covering_products FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_costing_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_costing_links FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_audit_logs FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_yarn_rm_lots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_rm_lots FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_yarn_rm_boxes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_rm_boxes FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_yarn_rm_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_rm_transactions FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_yarn_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_orders FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_yarn_order_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_order_batches FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_yarn_order_boxes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_order_boxes FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_weft_issues ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_weft_issues FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_warp_beams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_warp_beams FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_warp_issues ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_warp_issues FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_warp_beam_loadings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_warp_beam_loadings FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_weaving_production_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_weaving_production_logs FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_yarn_production_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_production_logs FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_yarn_sales_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_yarn_sales_logs FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_fabric_dispatches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_fabric_dispatches FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_fabric_cut_relations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_fabric_cut_relations FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_employees FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_attendance_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_attendance_records FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_employee_loans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_employee_loans FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_salary_settlements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_salary_settlements FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_rm_qualities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_rm_qualities FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_fp_qualities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_fp_qualities FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_rm_suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_rm_suppliers FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_fabric_designs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_fabric_designs FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_machinery_assets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_machinery_assets FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_companies FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.vf_auth_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vf_auth_users FORCE ROW LEVEL SECURITY;
+
+-- ------------------------------------------------------------------------------
+-- A. Operational Tables Policies (25 Tables)
+-- ------------------------------------------------------------------------------
+DO $$
+DECLARE
+    t TEXT;
+    operational_tables TEXT[] := ARRAY[
+        'vf_costing_products',
+        'vf_costing_tfo_products',
+        'vf_costing_doubler_products',
+        'vf_costing_covering_products',
+        'vf_costing_links',
+        'vf_yarn_rm_lots',
+        'vf_yarn_rm_boxes',
+        'vf_yarn_rm_transactions',
+        'vf_yarn_orders',
+        'vf_yarn_order_batches',
+        'vf_yarn_order_boxes',
+        'vf_weft_issues',
+        'vf_warp_beams',
+        'vf_warp_issues',
+        'vf_warp_beam_loadings',
+        'vf_weaving_production_logs',
+        'vf_yarn_production_logs',
+        'vf_yarn_sales_logs',
+        'vf_fabric_dispatches',
+        'vf_fabric_cut_relations',
+        'vf_rm_qualities',
+        'vf_fp_qualities',
+        'vf_rm_suppliers',
+        'vf_fabric_designs',
+        'vf_machinery_assets'
+    ];
+BEGIN
+    FOREACH t IN ARRAY operational_tables
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS "%s_select_auth" ON public.%I;', t, t);
+        EXECUTE format('DROP POLICY IF EXISTS "%s_insert_operator" ON public.%I;', t, t);
+        EXECUTE format('DROP POLICY IF EXISTS "%s_update_operator" ON public.%I;', t, t);
+        EXECUTE format('DROP POLICY IF EXISTS "%s_delete_admin" ON public.%I;', t, t);
+
+        EXECUTE format('
+            CREATE POLICY "%s_select_auth" ON public.%I
+            FOR SELECT TO authenticated
+            USING (true);
+        ', t, t);
+
+        EXECUTE format('
+            CREATE POLICY "%s_insert_operator" ON public.%I
+            FOR INSERT TO authenticated
+            WITH CHECK (public.vf_is_operator_or_above());
+        ', t, t);
+
+        EXECUTE format('
+            CREATE POLICY "%s_update_operator" ON public.%I
+            FOR UPDATE TO authenticated
+            USING (public.vf_is_operator_or_above())
+            WITH CHECK (public.vf_is_operator_or_above());
+        ', t, t);
+
+        EXECUTE format('
+            CREATE POLICY "%s_delete_admin" ON public.%I
+            FOR DELETE TO authenticated
+            USING (public.vf_is_admin());
+        ', t, t);
+    END LOOP;
+END $$;
+
+-- ------------------------------------------------------------------------------
+-- B. HR & Payroll Tables Policies (4 Tables)
+-- ------------------------------------------------------------------------------
+DO $$
+DECLARE
+    t TEXT;
+    hr_tables TEXT[] := ARRAY[
+        'vf_employees',
+        'vf_attendance_records',
+        'vf_employee_loans',
+        'vf_salary_settlements'
+    ];
+BEGIN
+    FOREACH t IN ARRAY hr_tables
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS "%s_select_payroll" ON public.%I;', t, t);
+        EXECUTE format('DROP POLICY IF EXISTS "%s_insert_payroll" ON public.%I;', t, t);
+        EXECUTE format('DROP POLICY IF EXISTS "%s_update_payroll" ON public.%I;', t, t);
+        EXECUTE format('DROP POLICY IF EXISTS "%s_delete_admin" ON public.%I;', t, t);
+
+        EXECUTE format('
+            CREATE POLICY "%s_select_payroll" ON public.%I
+            FOR SELECT TO authenticated
+            USING (public.vf_is_payroll_authorized());
+        ', t, t);
+
+        EXECUTE format('
+            CREATE POLICY "%s_insert_payroll" ON public.%I
+            FOR INSERT TO authenticated
+            WITH CHECK (public.vf_is_payroll_authorized());
+        ', t, t);
+
+        EXECUTE format('
+            CREATE POLICY "%s_update_payroll" ON public.%I
+            FOR UPDATE TO authenticated
+            USING (public.vf_is_payroll_authorized())
+            WITH CHECK (public.vf_is_payroll_authorized());
+        ', t, t);
+
+        EXECUTE format('
+            CREATE POLICY "%s_delete_admin" ON public.%I
+            FOR DELETE TO authenticated
+            USING (public.vf_is_admin());
+        ', t, t);
+    END LOOP;
+END $$;
+
+-- ------------------------------------------------------------------------------
+-- C. Company Settings Table Policies (vf_companies)
+-- ------------------------------------------------------------------------------
+DROP POLICY IF EXISTS "vf_companies_select_auth" ON public.vf_companies;
+DROP POLICY IF EXISTS "vf_companies_insert_admin" ON public.vf_companies;
+DROP POLICY IF EXISTS "vf_companies_update_admin" ON public.vf_companies;
+DROP POLICY IF EXISTS "vf_companies_delete_admin" ON public.vf_companies;
+
+CREATE POLICY "vf_companies_select_auth" ON public.vf_companies
+FOR SELECT TO authenticated
+USING (true);
+
+CREATE POLICY "vf_companies_insert_admin" ON public.vf_companies
+FOR INSERT TO authenticated
+WITH CHECK (public.vf_is_admin());
+
+CREATE POLICY "vf_companies_update_admin" ON public.vf_companies
+FOR UPDATE TO authenticated
+USING (public.vf_is_admin())
+WITH CHECK (public.vf_is_admin());
+
+CREATE POLICY "vf_companies_delete_admin" ON public.vf_companies
+FOR DELETE TO authenticated
+USING (public.vf_is_admin());
+
+-- ------------------------------------------------------------------------------
+-- D. Key-Value Store Policies (vf_kv_store)
+-- ------------------------------------------------------------------------------
+DROP POLICY IF EXISTS "vf_kv_store_select_auth" ON public.vf_kv_store;
+DROP POLICY IF EXISTS "vf_kv_store_insert_operator" ON public.vf_kv_store;
+DROP POLICY IF EXISTS "vf_kv_store_update_operator" ON public.vf_kv_store;
+DROP POLICY IF EXISTS "vf_kv_store_delete_admin" ON public.vf_kv_store;
+
+CREATE POLICY "vf_kv_store_select_auth" ON public.vf_kv_store
+FOR SELECT TO authenticated
+USING (
+    CASE 
+        WHEN key IN ('gemini_api_key', 'vf_master_credentials', 'vf_backup_manifest', 'vf_cloud_credentials')
+        THEN public.vf_is_admin()
+        ELSE true
+    END
+);
+
+CREATE POLICY "vf_kv_store_insert_operator" ON public.vf_kv_store
+FOR INSERT TO authenticated
+WITH CHECK (
+    CASE 
+        WHEN key IN ('gemini_api_key', 'vf_master_credentials', 'vf_backup_manifest', 'vf_cloud_credentials')
+        THEN public.vf_is_admin()
+        ELSE public.vf_is_operator_or_above()
+    END
+);
+
+CREATE POLICY "vf_kv_store_update_operator" ON public.vf_kv_store
+FOR UPDATE TO authenticated
+USING (
+    CASE 
+        WHEN key IN ('gemini_api_key', 'vf_master_credentials', 'vf_backup_manifest', 'vf_cloud_credentials')
+        THEN public.vf_is_admin()
+        ELSE public.vf_is_operator_or_above()
+    END
+)
+WITH CHECK (
+    CASE 
+        WHEN key IN ('gemini_api_key', 'vf_master_credentials', 'vf_backup_manifest', 'vf_cloud_credentials')
+        THEN public.vf_is_admin()
+        ELSE public.vf_is_operator_or_above()
+    END
+);
+
+CREATE POLICY "vf_kv_store_delete_admin" ON public.vf_kv_store
+FOR DELETE TO authenticated
+USING (public.vf_is_admin());
+
+-- ------------------------------------------------------------------------------
+-- E. Enterprise Audit Logs Policies (vf_audit_logs)
+-- ------------------------------------------------------------------------------
+DROP POLICY IF EXISTS "vf_audit_logs_select_admin" ON public.vf_audit_logs;
+DROP POLICY IF EXISTS "vf_audit_logs_insert_auth" ON public.vf_audit_logs;
+
+CREATE POLICY "vf_audit_logs_select_admin" ON public.vf_audit_logs
+FOR SELECT TO authenticated
+USING (public.vf_is_admin());
+
+CREATE POLICY "vf_audit_logs_insert_auth" ON public.vf_audit_logs
+FOR INSERT TO authenticated
+WITH CHECK (auth.uid() IS NOT NULL);
+
+-- ------------------------------------------------------------------------------
+-- F. Authentication Registry Policies (vf_auth_users — Non-Recursive Claims)
+-- ------------------------------------------------------------------------------
+DROP POLICY IF EXISTS "vf_auth_users_select_self_or_admin" ON public.vf_auth_users;
+DROP POLICY IF EXISTS "vf_auth_users_insert_admin" ON public.vf_auth_users;
+DROP POLICY IF EXISTS "vf_auth_users_update_admin" ON public.vf_auth_users;
+DROP POLICY IF EXISTS "vf_auth_users_delete_admin" ON public.vf_auth_users;
+
+CREATE POLICY "vf_auth_users_select_self_or_admin" ON public.vf_auth_users
+FOR SELECT TO authenticated
+USING (
+    auth.role() = 'service_role'
+    OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+    OR auth.uid()::text = id
+    OR lower(email) = lower(auth.jwt() ->> 'email')
+);
+
+CREATE POLICY "vf_auth_users_insert_admin" ON public.vf_auth_users
+FOR INSERT TO authenticated
+WITH CHECK (
+    auth.role() = 'service_role'
+    OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+);
+
+CREATE POLICY "vf_auth_users_update_admin" ON public.vf_auth_users
+FOR UPDATE TO authenticated
+USING (
+    auth.role() = 'service_role'
+    OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+)
+WITH CHECK (
+    auth.role() = 'service_role'
+    OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+);
+
+CREATE POLICY "vf_auth_users_delete_admin" ON public.vf_auth_users
+FOR DELETE TO authenticated
+USING (
+    auth.role() = 'service_role'
+    OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+);
+
+-- ==============================================================================
+-- SECTION 9: ROLE PRIVILEGES & SECURITY GRANTS
+-- ==============================================================================
+
+-- Revoke all direct anonymous rights to protect public endpoints
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon;
+REVOKE ALL ON ALL ROUTINES IN SCHEMA public FROM anon;
+
+-- Explicitly allow public health check
+GRANT EXECUTE ON FUNCTION public.vf_ping() TO anon, authenticated;
+
+-- Allow authenticated execution of safe helpers and procedures
+GRANT EXECUTE ON FUNCTION public.vf_current_user_role() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.vf_is_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.vf_is_operator_or_above() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.vf_is_payroll_authorized() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.vf_issue_yarn_boxes(TEXT[], TEXT, DATE, TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.vf_record_weft_issues(JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.vf_bulk_delete_entities(TEXT, TEXT[], TEXT) TO authenticated;
+
+-- Grant safe profile view access to authenticated users
+GRANT SELECT ON public.vf_auth_user_profiles TO authenticated;
+
+-- Grant table & sequence privileges to authenticated users (governed by RLS)
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+COMMIT;

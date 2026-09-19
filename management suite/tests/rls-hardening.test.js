@@ -11,9 +11,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-// Target files
-const MIGRATION_PATH = path.join(__dirname, '..', 'ops', 'migrations', '001_harden_rls_and_access_control.sql');
-const ROLLBACK_PATH = path.join(__dirname, '..', 'ops', 'migrations', '001_harden_rls_and_access_control_rollback.sql');
+// Target file: Single Unified Master Schema
 const SCHEMA_PATH = path.join(__dirname, '..', 'assets', 'supabase-schema.sql');
 
 // Complete list of all 33 production application tables
@@ -96,34 +94,28 @@ const SENSITIVE_KV_KEYS = [
 ];
 
 test('RLS & Access-Control Hardening Suite (Phase 4)', async (t) => {
-  assert.ok(fs.existsSync(MIGRATION_PATH), '001_harden_rls_and_access_control.sql must exist');
-  assert.ok(fs.existsSync(ROLLBACK_PATH), '001_harden_rls_and_access_control_rollback.sql must exist');
   assert.ok(fs.existsSync(SCHEMA_PATH), 'supabase-schema.sql must exist');
 
-  const migrationSql = fs.readFileSync(MIGRATION_PATH, 'utf8');
-  const rollbackSql = fs.readFileSync(ROLLBACK_PATH, 'utf8');
   const schemaSql = fs.readFileSync(SCHEMA_PATH, 'utf8');
 
   // ============================================================================
-  // Suite 1: Migration Structural & Syntactic Integrity
+  // Suite 1: Master Schema Structural & Syntactic Integrity
   // ============================================================================
-  await t.test('1. Migration wraps execution in transactional boundary (BEGIN/COMMIT)', () => {
-    assert.ok(migrationSql.includes('BEGIN;'), 'Migration must contain BEGIN;');
-    assert.ok(migrationSql.trim().endsWith('COMMIT;'), 'Migration must end with COMMIT;');
-    assert.ok(rollbackSql.includes('BEGIN;'), 'Rollback must contain BEGIN;');
-    assert.ok(rollbackSql.trim().endsWith('COMMIT;'), 'Rollback must end with COMMIT;');
+  await t.test('1. Master schema wraps execution in transactional boundary (BEGIN/COMMIT)', () => {
+    assert.ok(schemaSql.includes('BEGIN;'), 'Schema must contain BEGIN;');
+    assert.ok(schemaSql.trim().endsWith('COMMIT;'), 'Schema must end with COMMIT;');
   });
 
   await t.test('2. Every single one of the 33 tables has its permissive policy explicitly dropped', () => {
     for (const table of ALL_33_TABLES) {
       const dropStmt = `DROP POLICY IF EXISTS "Allow public access to ${table}" ON public.${table};`;
       assert.ok(
-        migrationSql.includes(dropStmt),
-        `Migration must explicitly drop permissive policy on ${table}`
+        schemaSql.includes(dropStmt),
+        `Master schema must explicitly drop permissive policy on ${table}`
       );
     }
     assert.ok(
-      migrationSql.includes('DROP POLICY IF EXISTS "Allow public access to vf_media_assets" ON storage.objects;'),
+      schemaSql.includes('DROP POLICY IF EXISTS "Allow public access to vf_media_assets" ON storage.objects;'),
       'Storage permissive policy must be dropped'
     );
   });
@@ -131,11 +123,11 @@ test('RLS & Access-Control Hardening Suite (Phase 4)', async (t) => {
   await t.test('3. Row Level Security is both ENABLED and FORCED on all 33 tables', () => {
     for (const table of ALL_33_TABLES) {
       assert.ok(
-        migrationSql.includes(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY;`),
+        schemaSql.includes(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY;`),
         `RLS must be enabled on ${table}`
       );
       assert.ok(
-        migrationSql.includes(`ALTER TABLE public.${table} FORCE ROW LEVEL SECURITY;`),
+        schemaSql.includes(`ALTER TABLE public.${table} FORCE ROW LEVEL SECURITY;`),
         `RLS must be forced on ${table} to protect table owners`
       );
     }
@@ -150,12 +142,12 @@ test('RLS & Access-Control Hardening Suite (Phase 4)', async (t) => {
     ];
 
     for (const helper of requiredHelpers) {
-      assert.ok(migrationSql.includes(helper), `Helper function ${helper} must be defined`);
+      assert.ok(schemaSql.includes(helper), `Helper function ${helper} must be defined`);
     }
 
     // Must pin search_path to prevent malicious path hijacking
     assert.ok(
-      migrationSql.includes('SET search_path = public, auth, pg_temp'),
+      schemaSql.includes('SET search_path = public, auth, pg_temp'),
       'Security definer functions must pin search_path to public, auth, pg_temp'
     );
   });
@@ -168,54 +160,36 @@ test('RLS & Access-Control Hardening Suite (Phase 4)', async (t) => {
     ];
 
     for (const rpc of rpcs) {
-      assert.ok(migrationSql.includes(`public.${rpc}`), `${rpc} must be defined in migration`);
-      assert.ok(schemaSql.includes(`public.${rpc}`), `${rpc} must be updated in base schema`);
+      assert.ok(schemaSql.includes(`public.${rpc}`), `${rpc} must be defined in master schema`);
     }
 
     assert.ok(
-      migrationSql.includes("RAISE EXCEPTION 'Unauthorized: Caller does not possess operator permissions';"),
+      schemaSql.includes("RAISE EXCEPTION 'Unauthorized: Caller does not possess operator permissions';"),
       'vf_issue_yarn_boxes and vf_record_weft_issues must verify operator permissions'
     );
     assert.ok(
-      migrationSql.includes("RAISE EXCEPTION 'Unauthorized: vf_bulk_delete_entities requires administrator privileges';"),
+      schemaSql.includes("RAISE EXCEPTION 'Unauthorized: vf_bulk_delete_entities requires administrator privileges';"),
       'vf_bulk_delete_entities must verify administrator privileges'
     );
   });
 
   await t.test('6. Safe user profile view excludes pass_hash and anonymous privileges are revoked', () => {
     assert.ok(
-      migrationSql.includes('CREATE OR REPLACE VIEW public.vf_auth_user_profiles AS'),
+      schemaSql.includes('CREATE OR REPLACE VIEW public.vf_auth_user_profiles AS'),
       'Safe profile view must exist'
     );
     assert.ok(
-      !migrationSql.includes('pass_hash\nFROM public.vf_auth_users') &&
-      !migrationSql.includes('pass_hash,\nFROM public.vf_auth_users'),
+      !schemaSql.includes('pass_hash\nFROM public.vf_auth_users') &&
+      !schemaSql.includes('pass_hash,\nFROM public.vf_auth_users'),
       'Safe profile view must NEVER include pass_hash'
     );
     assert.ok(
-      migrationSql.includes('REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;'),
+      schemaSql.includes('REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;'),
       'All table grants must be revoked from anon'
     );
     assert.ok(
-      migrationSql.includes('GRANT EXECUTE ON FUNCTION public.vf_ping() TO anon, authenticated;'),
+      schemaSql.includes('GRANT EXECUTE ON FUNCTION public.vf_ping() TO anon, authenticated;'),
       'Public ping health check must remain available to anon'
-    );
-  });
-
-  await t.test('7. Rollback migration cleanly restores baseline policies and grants', () => {
-    assert.ok(
-      rollbackSql.includes('CREATE POLICY "Allow public access to %s" ON public.%I'),
-      'Rollback must restore public policies via dynamic loop'
-    );
-    for (const table of ALL_33_TABLES) {
-      assert.ok(
-        rollbackSql.includes(`'${table}'`),
-        `Rollback array must include ${table}`
-      );
-    }
-    assert.ok(
-      rollbackSql.includes('GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;'),
-      'Rollback must re-grant table privileges to anon'
     );
   });
 
