@@ -787,6 +787,14 @@
                     }
                     if (res && res.data) {
                         const session = (authClient.getSession && authClient.getSession()) || {};
+                        // Strict Role Isolation: Admins cannot log in from the Employee tab
+                        if (session.role === 'admin' || session.permissions === '*') {
+                            if (typeof authClient.signOut === 'function') {
+                                await authClient.signOut();
+                            }
+                            showAuthMsg('Administrator accounts must sign in using the Admin Login tab.', 'error');
+                            return;
+                        }
                         showAuthMsg(`Welcome back, ${session.name || emailInput}! Redirecting...`, 'success');
                         const targetPage = resolveSuiteUrl(getFirstAllowedPage(session.permissions));
                         setTimeout(() => window.location.href = targetPage, 400);
@@ -828,7 +836,10 @@
                             setTimeout(() => window.location.href = targetPage, 400);
                             return;
                         } else {
-                            showAuthMsg('Access denied. Administrator privileges required.', 'error');
+                            if (typeof authClient.signOut === 'function') {
+                                await authClient.signOut();
+                            }
+                            showAuthMsg('Access denied. Administrator privileges required. Please use Employee Login.', 'error');
                             return;
                         }
                     }
